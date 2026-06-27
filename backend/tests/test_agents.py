@@ -281,7 +281,7 @@ def test_support_agent_routes_privacy_complaint_to_human_review(client: TestClie
     assert body["final_answer"] is None
 
 
-def test_support_agent_routes_model_context_failure_to_human_review(
+def test_support_agent_routes_proactive_model_budget_failure_to_human_review(
     client: TestClient, db_session: Session
 ) -> None:
     register(client, "model-context@example.com")
@@ -325,18 +325,85 @@ def test_support_agent_routes_model_context_failure_to_human_review(
         step for step in trace_body["steps"] if step["step_name"] == "classify_intent"
     )
     assert classify_step["status"] == "failed"
-    assert "model_context_exceeded" in classify_step["error_message"]
-    assert classify_step["ai_run"]["status"] == "failed"
-    assert classify_step["ai_run"]["provider"] == "mock-limit"
-    assert classify_step["ai_run"]["model"] == "mock-tiny-classifier"
+    assert "token_budget_exceeded" in classify_step["error_message"]
+    assert classify_step["ai_run"] is None
+    assert not trace_body["ai_runs"]
     assert any(
-        guardrail["guardrail_type"] == "model_provider_failure"
+        guardrail["guardrail_type"] == "model_budget_failure"
         and guardrail["passed"] is False
         for guardrail in trace_body["guardrails"]
     )
     reviews = db_session.scalars(select(HumanReview)).all()
     assert len(reviews) == 1
-    assert "model_provider_failure" in reviews[0].reason
+    assert "model_budget_failure" in reviews[0].reason
+
+
+def test_support_agent_trims_retrieved_context_before_draft_model_call(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "trim-context@example.com")
+    token = login(client, "trim-context@example.com")
+    workspace = create_workspace(client, token)
+    draft_config = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/model-configs",
+        headers=auth_headers(token),
+        json={
+            "provider": "mock-trim",
+            "model": "mock-trim-drafter",
+            "purpose": "draft_response",
+            "prompt_token_cost_per_1k": 0.001,
+            "completion_token_cost_per_1k": 0.002,
+            "max_context_tokens": 512,
+            "active": True,
+        },
+    )
+    assert draft_config.status_code == 201
+    content = " ".join(
+        f"Refund policy section {index} says eligible customers can request refunds "
+        f"within 30 days for account {index}."
+        for index in range(1, 620)
+    )
+    document = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        json={
+            "title": "Large Refund Policy",
+            "content_type": "text/plain",
+            "language": "en",
+            "content": content,
+        },
+    )
+    assert document.status_code == 201
+    agent = create_agent(client, token, workspace["id"])
+
+    response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["route_decision"] == "finalize"
+
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{body['id']}/trace",
+        headers=auth_headers(token),
+    )
+    assert trace.status_code == 200
+    trace_body = trace.json()
+    draft_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "draft_response"
+    )
+    output = safe_json(draft_step["output_json"])
+    assert output["token_budget_action"] == "trimmed_retrieved_context"
+    assert output["trimmed_context_count"] > 0
+    assert len(output["retrieved_chunks"]) < 4
+    assert draft_step["ai_run"]["status"] == "succeeded"
+    assert draft_step["ai_run"]["model"] == "mock-trim-drafter"
+    assert draft_step["ai_run"]["total_tokens"] <= 512
+    assert db_session.scalars(select(AIRun)).all()
 
 
 def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:
@@ -375,3 +442,9 @@ def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:
     assert forbidden_trace.json()["detail"]["code"] == "graph_run_not_found"
     assert forbidden_agent_run.status_code == 404
     assert forbidden_agent_run.json()["detail"]["code"] == "agent_not_found"
+
+
+def safe_json(value: str):
+    import json
+
+    return json.loads(value)

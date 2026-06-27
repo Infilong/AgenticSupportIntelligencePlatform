@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, AIRunStatus, CacheEntry
 from app.services.model_provider import MockModelProvider, MockModelProviderError
-from app.services.token_accounting import estimate_cost, estimate_tokens
+from app.services.token_accounting import ModelPricing, estimate_cost, estimate_tokens
 from app.services.token_budget import TokenBudgetPlanner
 
 
@@ -82,6 +82,28 @@ def test_token_budget_planner_selects_cheaper_model_and_denies_over_budget() -> 
     assert too_expensive.allowed is False
     assert too_expensive.route_to_human_review is True
     assert too_expensive.reason == "cost_budget_exceeded"
+
+
+def test_model_call_budget_planner_uses_active_context_window() -> None:
+    pricing = ModelPricing("mock", "mock-small", 0.001, 0.002, 20)
+    allowed = TokenBudgetPlanner().plan_model_call(
+        prompt_text="classify refund",
+        completion_text="refund_request",
+        language=SupportedLanguage.en,
+        pricing=pricing,
+    )
+    denied = TokenBudgetPlanner().plan_model_call(
+        prompt_text="token " * 30,
+        completion_text="refund_request",
+        language=SupportedLanguage.en,
+        pricing=pricing,
+    )
+
+    assert allowed.allowed is True
+    assert allowed.model == "mock-small"
+    assert denied.allowed is False
+    assert denied.route_to_human_review is True
+    assert denied.reason == "token_budget_exceeded"
 
 
 def test_mock_model_provider_records_successful_ai_run(

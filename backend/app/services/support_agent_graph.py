@@ -14,15 +14,19 @@ from app.models.ai import AIRun
 from app.services.langchain_support import (
     CLASSIFICATION_TEMPLATE_TEXT,
     DRAFT_RESPONSE_TEMPLATE_TEXT,
+    build_classification_prompt,
+    build_draft_response_prompt,
     chunk_payloads_to_documents,
     retrieval_results_to_documents,
     run_classification_chain,
     run_draft_response_chain,
 )
+from app.services.model_config_service import ModelConfigService
 from app.services.model_provider import MockModelProvider, MockModelProviderError
 from app.services.prompt_template_service import PromptTemplateService
 from app.services.retrieval_service import RetrievalService
 from app.services.support_agent_state import SupportAgentState
+from app.services.token_budget import ModelCallBudgetPlan, TokenBudgetPlanner
 
 
 class SupportAgentGraphRunner:
@@ -83,6 +87,26 @@ class SupportAgentGraphRunner:
             language=language,
             template_text=CLASSIFICATION_TEMPLATE_TEXT,
         )
+        budget_plan = _plan_model_call(
+            db=self.db,
+            workspace_id=UUID(state["workspace_id"]),
+            purpose="classification",
+            fallback_model="mock-cheap",
+            prompt_text=build_classification_prompt(state["input_message"]),
+            completion_text=intent,
+            language=language,
+        )
+        if not budget_plan.allowed:
+            output = _budget_failure_output(state, budget_plan, purpose="classification")
+            self._record_step(
+                "classify_intent",
+                state,
+                output,
+                started,
+                status=GraphStepStatus.failed,
+                error_message=output["model_budget_failure"],
+            )
+            return output
         try:
             ai_response = run_classification_chain(
                 provider=MockModelProvider(self.db),
@@ -112,7 +136,7 @@ class SupportAgentGraphRunner:
     def retrieve_evidence(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
         language = SupportedLanguage(state["detected_language"])
-        if state.get("model_provider_failure"):
+        if state.get("model_provider_failure") or state.get("model_budget_failure"):
             output: SupportAgentState = {
                 "retrieved_chunks": [],
                 "citations": [],
@@ -168,30 +192,58 @@ class SupportAgentGraphRunner:
     def draft_response(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
         language = SupportedLanguage(state["detected_language"])
-        if state.get("model_provider_failure") or not state.get("retrieved_chunks"):
+        if (
+            state.get("model_provider_failure")
+            or state.get("model_budget_failure")
+            or not state.get("retrieved_chunks")
+        ):
             output: SupportAgentState = {"draft_answer": None}
             self._record_step("draft_response", state, output, started)
             return output
+        chunks = state.get("retrieved_chunks") or []
         completion = _mock_answer(
             language=language,
             intent=state.get("intent"),
             input_message=state["input_message"],
-            chunks=state.get("retrieved_chunks") or [],
+            chunks=chunks,
         )
-        documents = chunk_payloads_to_documents(state.get("retrieved_chunks") or [])
+        documents = chunk_payloads_to_documents(chunks)
         prompt_template = PromptTemplateService(self.db).get_active_or_create_default(
             workspace_id=UUID(state["workspace_id"]),
             name="support_response_drafter",
             language=language,
             template_text=DRAFT_RESPONSE_TEMPLATE_TEXT,
         )
+        budget_documents, budget_plan, trimmed_count = _fit_draft_documents_to_budget(
+            db=self.db,
+            workspace_id=UUID(state["workspace_id"]),
+            input_message=state["input_message"],
+            language=language,
+            documents=documents,
+            completion_text=completion,
+        )
+        if not budget_plan.allowed:
+            output = _budget_failure_output(state, budget_plan, purpose="draft_response")
+            output["draft_answer"] = None
+            self._record_step(
+                "draft_response",
+                state,
+                output,
+                started,
+                status=GraphStepStatus.failed,
+                error_message=output["model_budget_failure"],
+            )
+            return output
+        if trimmed_count:
+            chunks = chunks[: len(budget_documents)]
+            documents = budget_documents
         try:
             ai_response = run_draft_response_chain(
                 provider=MockModelProvider(self.db),
                 workspace_id=UUID(state["workspace_id"]),
                 language=language,
                 input_message=state["input_message"],
-                documents=documents,
+                documents=budget_documents,
                 graph_run_id=UUID(state["graph_run_id"]),
                 prompt_template=prompt_template,
                 completion_text=completion,
@@ -210,6 +262,15 @@ class SupportAgentGraphRunner:
             )
             return output
         output: SupportAgentState = {"draft_answer": ai_response.content}
+        if trimmed_count:
+            output.update(
+                {
+                    "retrieved_chunks": chunks,
+                    "citations": [str(chunk.get("citation")) for chunk in chunks],
+                    "token_budget_action": "trimmed_retrieved_context",
+                    "trimmed_context_count": trimmed_count,
+                }
+            )
         self._record_step("draft_response", state, output, started, ai_response.ai_run.id)
         return output
 
@@ -229,6 +290,7 @@ class SupportAgentGraphRunner:
         started = time.perf_counter()
         review_required = (
             bool(state.get("model_provider_failure"))
+            or bool(state.get("model_budget_failure"))
             or state.get("confidence_score", 0) < 0.5
             or state.get("intent") in {"prompt_injection", "privacy_complaint"}
             or not state.get("citations")
@@ -289,6 +351,73 @@ class SupportAgentGraphRunner:
         self.db.refresh(step)
 
 
+def _plan_model_call(
+    *,
+    db: Session,
+    workspace_id: UUID,
+    purpose: str,
+    fallback_model: str,
+    prompt_text: str,
+    completion_text: str,
+    language: SupportedLanguage,
+) -> ModelCallBudgetPlan:
+    pricing = ModelConfigService(db).resolve_pricing(
+        workspace_id=workspace_id, purpose=purpose, fallback_model=fallback_model
+    )
+    return TokenBudgetPlanner().plan_model_call(
+        prompt_text=prompt_text,
+        completion_text=completion_text,
+        language=language,
+        pricing=pricing,
+    )
+
+
+def _fit_draft_documents_to_budget(
+    *,
+    db: Session,
+    workspace_id: UUID,
+    input_message: str,
+    language: SupportedLanguage,
+    documents: list,
+    completion_text: str,
+) -> tuple[list, ModelCallBudgetPlan, int]:
+    current_documents = list(documents)
+    trimmed_count = 0
+    while True:
+        prompt_text = build_draft_response_prompt(
+            input_message=input_message, language=language, documents=current_documents
+        )
+        plan = _plan_model_call(
+            db=db,
+            workspace_id=workspace_id,
+            purpose="draft_response",
+            fallback_model="mock-standard",
+            prompt_text=prompt_text,
+            completion_text=completion_text,
+            language=language,
+        )
+        if plan.allowed or not current_documents:
+            return current_documents, plan, trimmed_count
+        current_documents = current_documents[:-1]
+        trimmed_count += 1
+
+
+def _budget_failure_output(
+    state: SupportAgentState, plan: ModelCallBudgetPlan, *, purpose: str
+) -> SupportAgentState:
+    message = (
+        f"token_budget_exceeded: {purpose} requested {plan.total_tokens} tokens "
+        f"but {plan.model} allows {plan.max_context_tokens}"
+    )
+    errors = [*state.get("errors", []), message]
+    return {
+        "model_budget_failure": message,
+        "errors": errors,
+        "confidence_score": 0.0,
+        "route_decision": "human_review",
+    }
+
+
 def _provider_failure_output(
     state: SupportAgentState, exc: MockModelProviderError
 ) -> SupportAgentState:
@@ -330,6 +459,9 @@ def _compact_state(state: SupportAgentState) -> dict:
         "citations",
         "no_source",
         "model_provider_failure",
+        "model_budget_failure",
+        "token_budget_action",
+        "trimmed_context_count",
         "errors",
     ]
     return {key: state.get(key) for key in allowed if key in state}

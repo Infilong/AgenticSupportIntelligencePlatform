@@ -18,3 +18,6 @@ class SupportAgentState(TypedDict, total=False):
     citations: list[str]
     errors: list[str]
     model_provider_failure: str | None
+    trimmed_context_count: int
+    token_budget_action: str | None
+    model_budget_failure: str | None

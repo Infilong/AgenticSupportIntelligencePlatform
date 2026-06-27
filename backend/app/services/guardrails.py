@@ -75,6 +75,16 @@ def evaluate_guardrails(state: SupportAgentState) -> list[GuardrailDecision]:
                 f"Model provider failure requires human review: {provider_failure}",
             )
         )
+    budget_failure = state.get("model_budget_failure")
+    if budget_failure:
+        decisions.append(
+            GuardrailDecision(
+                "model_budget_failure",
+                False,
+                "high",
+                f"Model budget failure requires human review: {budget_failure}",
+            )
+        )
     decisions.extend([
         GuardrailDecision(
             "prompt_injection",

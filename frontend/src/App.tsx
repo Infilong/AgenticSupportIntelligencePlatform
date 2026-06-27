@@ -1667,7 +1667,7 @@ function toneForStatus(status: string): "neutral" | "good" | "warn" | "bad" {
 
 function friendlyReviewReason(reason: string) {
   const parts = reason.split(",").map((part) => part.trim()).filter(Boolean);
-  if (parts.includes("model_provider_failure")) {
+  if (parts.includes("model_provider_failure") || parts.includes("model_budget_failure")) {
     return "Model or token budget failure needs review";
   }
   if (parts.includes("prompt_injection")) {
@@ -1687,7 +1687,8 @@ function friendlyReviewReason(reason: string) {
 
 function friendlyGuardrailName(reason: string) {
   const labels: Record<string, string> = {
-    model_provider_failure: "Model budget failure",
+    model_provider_failure: "Model provider failure",
+    model_budget_failure: "Token budget exceeded",
     prompt_injection: "Prompt injection",
     citation_required: "Missing citations",
     unsupported_answer: "Unsupported answer",
@@ -1759,7 +1760,16 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
   const record = asRecord(value);
   if (!record) return [];
   const signals: Array<{ label: string; value: string }> = [];
-  for (const key of ["detected_language", "intent", "route_decision", "confidence_score", "no_source"]) {
+  for (const key of [
+    "detected_language",
+    "intent",
+    "route_decision",
+    "confidence_score",
+    "no_source",
+    "token_budget_action",
+    "trimmed_context_count",
+    "model_budget_failure",
+  ]) {
     if (record[key] !== undefined && record[key] !== null) {
       signals.push({ label: formatStepName(key), value: String(record[key]) });
     }
