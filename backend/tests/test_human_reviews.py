@@ -157,6 +157,69 @@ def test_reviewer_can_edit_and_resolve_review(client: TestClient) -> None:
     assert second_resolve.json()["detail"]["code"] == "human_review_already_resolved"
 
 
+def test_reviewer_cannot_approve_missing_proposed_answer(client: TestClient) -> None:
+    register(client, "owner-invalid-review@example.com")
+    token = login(client, "owner-invalid-review@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"])
+    agent = create_agent(client, token, workspace["id"])
+    client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "How do I permanently delete my account?"},
+    )
+    review = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews",
+        headers=auth_headers(token),
+    ).json()[0]
+    assert review["proposed_answer"] is None
+
+    invalid = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/resolve",
+        headers=auth_headers(token),
+        json={"decision": "approved"},
+    )
+    invalid_edit = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/resolve",
+        headers=auth_headers(token),
+        json={"decision": "edited"},
+    )
+
+    assert invalid.status_code == 400
+    assert invalid.json()["detail"]["code"] == "human_review_invalid_decision"
+    assert "without a proposed answer" in invalid.json()["detail"]["message"]
+    assert invalid_edit.status_code == 400
+    assert invalid_edit.json()["detail"]["code"] == "human_review_invalid_decision"
+    assert "edited answer" in invalid_edit.json()["detail"]["message"]
+
+
+def test_reviewer_can_reject_missing_proposed_answer(client: TestClient) -> None:
+    register(client, "owner-reject-review@example.com")
+    token = login(client, "owner-reject-review@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"])
+    agent = create_agent(client, token, workspace["id"])
+    client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "How do I permanently delete my account?"},
+    )
+    review = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews",
+        headers=auth_headers(token),
+    ).json()[0]
+
+    resolved = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/resolve",
+        headers=auth_headers(token),
+        json={"decision": "rejected", "comments": "Unsupported by current policy."},
+    )
+
+    assert resolved.status_code == 200
+    assert resolved.json()["reviewer_decision"] == "rejected"
+    assert resolved.json()["comments"] == "Unsupported by current policy."
+
+
 def test_human_reviews_enforce_workspace_isolation(client: TestClient) -> None:
     register(client, "owner@example.com")
     owner_token = login(client, "owner@example.com")

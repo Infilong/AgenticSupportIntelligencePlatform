@@ -19,6 +19,7 @@ from app.schemas.human_review import (
 )
 from app.services.human_review_service import (
     HumanReviewAlreadyResolvedError,
+    HumanReviewInvalidDecisionError,
     HumanReviewNotFoundError,
     HumanReviewService,
 )
@@ -81,6 +82,11 @@ def resolve_human_review(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "human_review_already_resolved", "message": str(exc)},
+        ) from exc
+    except HumanReviewInvalidDecisionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "human_review_invalid_decision", "message": str(exc)},
         ) from exc
     return _review_response(review, db)
 

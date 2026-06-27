@@ -18,6 +18,10 @@ class HumanReviewAlreadyResolvedError(ValueError):
     pass
 
 
+class HumanReviewInvalidDecisionError(ValueError):
+    pass
+
+
 class HumanReviewService:
     def __init__(self, db: Session):
         self.db = db
@@ -75,6 +79,12 @@ class HumanReviewService:
         review = self.get_review(workspace_id=workspace_id, review_id=review_id)
         if review.reviewer_decision != ReviewDecision.pending:
             raise HumanReviewAlreadyResolvedError("Human review was already resolved.")
+        if decision == ReviewDecision.approved and not review.proposed_answer:
+            raise HumanReviewInvalidDecisionError(
+                "Cannot approve a review without a proposed answer."
+            )
+        if decision == ReviewDecision.edited and not edited_answer:
+            raise HumanReviewInvalidDecisionError("Edited reviews require an edited answer.")
         review.reviewer_id = reviewer.id
         review.reviewer_decision = decision
         review.edited_answer = edited_answer

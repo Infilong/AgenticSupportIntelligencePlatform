@@ -771,9 +771,10 @@ export function App() {
   }
 
   function reviewDraft(review: HumanReview): ReviewDraft {
+    const hasProposedAnswer = Boolean(review.proposed_answer ?? review.run?.final_answer);
     return reviewDrafts[review.id] ?? {
-      decision: "approved",
-      edited_answer: review.proposed_answer ?? "",
+      decision: hasProposedAnswer ? "approved" : "rejected",
+      edited_answer: review.proposed_answer ?? review.run?.final_answer ?? "",
       comments: "",
     };
   }
@@ -1378,6 +1379,7 @@ export function App() {
               const guardrailParts = review.reason.split(",").map((part) => part.trim()).filter(Boolean);
               const run = review.run;
               const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? null;
+              const canApprove = Boolean(proposedAnswer);
               return (
                 <article className="review-row pending-review review-card" key={review.id}>
                   <div className="row-head">
@@ -1421,9 +1423,9 @@ export function App() {
                           })
                         }
                       >
-                        <option value="approved">Approve proposed answer</option>
+                        <option value="approved" disabled={!canApprove}>Approve proposed answer</option>
                         <option value="edited">Approve with edited answer</option>
-                        <option value="rejected">Reject answer</option>
+                        <option value="rejected">Reject unsupported answer</option>
                       </select>
                     </label>
                     <label>
@@ -1446,11 +1448,14 @@ export function App() {
                       />
                     </label>
                   </div>
+                  {!canApprove && draft.decision === "rejected" && (
+                    <p className="muted">This item has no model draft. Reject it or choose edited to write a human-approved response.</p>
+                  )}
                   <div className="review-actions">
-                    <button onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
+                    <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
                       Inspect trace
                     </button>
-                    <button className="primary" onClick={() => void resolveReview(review)}>
+                    <button type="button" className="primary" onClick={() => void resolveReview(review)}>
                       Resolve review
                     </button>
                   </div>
