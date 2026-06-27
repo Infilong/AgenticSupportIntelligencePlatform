@@ -202,6 +202,9 @@ type ReviewDraft = {
   comments: string;
 };
 
+type ReviewFilter = "all" | "critical" | "evidence" | "model" | "language";
+type ReviewSort = "severity" | "newest" | "oldest";
+
 type EvaluationRun = {
   id: string;
   name: string;
@@ -470,6 +473,8 @@ export function App() {
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
+  const [reviewSort, setReviewSort] = useState<ReviewSort>("severity");
 
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
@@ -1457,7 +1462,17 @@ export function App() {
 
   function ReviewsPanel() {
     const pendingReviewItems = reviews.filter((review) => review.reviewer_decision === "pending");
-    const resolvedReviewItems = reviews.filter((review) => review.reviewer_decision !== "pending");
+    const filteredPendingReviewItems = sortReviews(
+      pendingReviewItems.filter((review) => reviewMatchesFilter(review, reviewFilter)),
+      reviewSort,
+    );
+    const resolvedReviewItems = sortReviews(
+      reviews.filter((review) => review.reviewer_decision !== "pending"),
+      "newest",
+    );
+    const criticalCount = pendingReviewItems.filter((review) => reviewSeverity(review.reason) === "critical").length;
+    const evidenceCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "evidence")).length;
+    const modelCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "model")).length;
 
     return (
       <div className="stack">
@@ -1479,9 +1494,38 @@ export function App() {
                 <button onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh</button>
               </div>
             </div>
-            {pendingReviewItems.map((review) => {
+            <div className="review-queue-controls">
+              <div className="segmented review-filter" aria-label="Review queue filter">
+                {reviewFilterOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option.id}
+                    className={reviewFilter === option.id ? "selected" : ""}
+                    onClick={() => setReviewFilter(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <label>
+                Sort
+                <select value={reviewSort} onChange={(event) => setReviewSort(event.target.value as ReviewSort)}>
+                  <option value="severity">Severity first</option>
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                </select>
+              </label>
+            </div>
+            <div className="metric-grid compact">
+              <Metric label="Critical" value={criticalCount} />
+              <Metric label="Evidence" value={evidenceCount} />
+              <Metric label="Model/budget" value={modelCount} />
+              <Metric label="Showing" value={filteredPendingReviewItems.length} />
+            </div>
+            {filteredPendingReviewItems.map((review) => {
               const draft = reviewDraft(review);
-              const guardrailParts = review.reason.split(",").map((part) => part.trim()).filter(Boolean);
+              const guardrailParts = reviewReasonParts(review.reason);
+              const severity = reviewSeverity(review.reason);
               const run = review.run;
               const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? null;
               const canApprove = Boolean(proposedAnswer);
@@ -1493,7 +1537,10 @@ export function App() {
                       <strong>{friendlyReviewReason(review.reason)}</strong>
                       <p className="muted">Created {formatDate(review.created_at)}</p>
                     </div>
-                    <Badge tone="warn">waiting for reviewer</Badge>
+                    <div className="review-actions">
+                      <Badge tone={toneForReviewSeverity(severity)}>{severity}</Badge>
+                      <Badge tone="warn">waiting for reviewer</Badge>
+                    </div>
                   </div>
 
                   <div className="review-context-grid">
@@ -1505,11 +1552,12 @@ export function App() {
                       <div className="signal"><span>Language</span><strong>{run?.language ?? "unknown"}</strong></div>
                       <div className="signal"><span>Run status</span><strong>{run?.status ?? "unknown"}</strong></div>
                       <div className="signal"><span>Route</span><strong>{run?.route_decision ?? "human_review"}</strong></div>
+                      <div className="signal"><span>Severity</span><strong>{severity}</strong></div>
                     </div>
                   </div>
 
                   <div className="guardrail-list">
-                    {guardrailParts.map((part) => <Badge key={part} tone="warn">{friendlyGuardrailName(part)}</Badge>)}
+                    {guardrailParts.map((part) => <Badge key={part} tone={toneForReviewReason(part)}>{friendlyGuardrailName(part)}</Badge>)}
                   </div>
 
                   <div className="answer-box">
@@ -1573,11 +1621,18 @@ export function App() {
                 detail="Run a privacy complaint, prompt injection, or unsupported request to create a review item."
               />
             )}
+            {pendingReviewItems.length > 0 && filteredPendingReviewItems.length === 0 && (
+              <EmptyState
+                title="No reviews match this filter"
+                detail="Change the filter or refresh the queue."
+              />
+            )}
           </div>
 
           <aside className="panel stack">
             <h3>Review policy</h3>
             <Metric label="Pending" value={pendingReviewItems.length} />
+            <Metric label="Critical" value={criticalCount} />
             <Metric label="Resolved" value={resolvedReviewItems.length} />
             <div className="policy-list">
               <span>Citations missing or weak</span>
@@ -1915,6 +1970,70 @@ function toneForStatus(status: string): "neutral" | "good" | "warn" | "bad" {
   if (["pending", "needs_human_review", "indexing", "waiting"].includes(status)) return "warn";
   if (["failed", "rejected", "error"].includes(status)) return "bad";
   return "neutral";
+}
+
+const reviewFilterOptions: Array<{ id: ReviewFilter; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "critical", label: "Critical" },
+  { id: "evidence", label: "Evidence" },
+  { id: "model", label: "Model/budget" },
+  { id: "language", label: "Language" },
+];
+
+function reviewReasonParts(reason: string): string[] {
+  return reason.split(",").map((part) => part.trim()).filter(Boolean);
+}
+
+function reviewSeverity(reason: string): "critical" | "high" | "medium" {
+  const parts = reviewReasonParts(reason);
+  if (parts.some((part) => ["prompt_injection", "privacy_complaint", "model_provider_failure"].includes(part))) {
+    return "critical";
+  }
+  if (parts.some((part) => ["model_budget_failure", "unsupported_answer", "citation_required"].includes(part))) {
+    return "high";
+  }
+  return "medium";
+}
+
+function reviewSeverityScore(reason: string): number {
+  const severity = reviewSeverity(reason);
+  if (severity === "critical") return 3;
+  if (severity === "high") return 2;
+  return 1;
+}
+
+function toneForReviewSeverity(severity: "critical" | "high" | "medium"): "neutral" | "good" | "warn" | "bad" {
+  if (severity === "critical") return "bad";
+  if (severity === "high") return "warn";
+  return "neutral";
+}
+
+function toneForReviewReason(reason: string): "neutral" | "good" | "warn" | "bad" {
+  if (["prompt_injection", "privacy_complaint", "model_provider_failure"].includes(reason)) return "bad";
+  if (["model_budget_failure", "unsupported_answer", "citation_required", "confidence_threshold"].includes(reason)) return "warn";
+  return "neutral";
+}
+
+function reviewMatchesFilter(review: HumanReview, filter: ReviewFilter): boolean {
+  const parts = reviewReasonParts(review.reason);
+  if (filter === "all") return true;
+  if (filter === "critical") return reviewSeverity(review.reason) === "critical";
+  if (filter === "evidence") return parts.some((part) => ["unsupported_answer", "citation_required", "confidence_threshold"].includes(part));
+  if (filter === "model") return parts.some((part) => ["model_provider_failure", "model_budget_failure"].includes(part));
+  if (filter === "language") return parts.includes("language_preservation");
+  return true;
+}
+
+function sortReviews(reviews: HumanReview[], sort: ReviewSort): HumanReview[] {
+  return [...reviews].sort((left, right) => {
+    if (sort === "severity") {
+      const severityDelta = reviewSeverityScore(right.reason) - reviewSeverityScore(left.reason);
+      if (severityDelta !== 0) return severityDelta;
+    }
+    const leftTime = new Date(left.created_at).getTime();
+    const rightTime = new Date(right.created_at).getTime();
+    return sort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
+  });
 }
 
 function friendlyReviewReason(reason: string) {
