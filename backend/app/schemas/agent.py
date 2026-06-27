@@ -17,6 +17,25 @@ class AgentCreateRequest(BaseModel):
         return stripped
 
 
+class AgentUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    active: bool | None = None
+    token_budget: int | None = Field(default=None, ge=500, le=32000)
+    confidence_threshold: float | None = Field(default=None, ge=0.1, le=0.95)
+    retrieval_top_k: int | None = Field(default=None, ge=1, le=8)
+    retrieval_min_score: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    @field_validator("name")
+    @classmethod
+    def strip_optional_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("name cannot be blank")
+        return stripped
+
+
 class AgentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

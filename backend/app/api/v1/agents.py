@@ -16,6 +16,7 @@ from app.schemas.agent import (
     AgentCreateRequest,
     AgentResponse,
     AgentRunRequest,
+    AgentUpdateRequest,
     AIRunTraceResponse,
     GraphRunResponse,
     GraphStepResponse,
@@ -48,6 +49,39 @@ def create_agent(
 def list_agents(workspace: WorkspaceMemberAccess, db: DbSession) -> list[AgentResponse]:
     agents = AgentService(db).list_agents(workspace_id=workspace.id)
     return [AgentResponse.model_validate(agent) for agent in agents]
+
+
+@router.patch("/agents/{agent_id}", response_model=AgentResponse)
+def update_agent(
+    agent_id: AgentId,
+    payload: AgentUpdateRequest,
+    workspace: WorkspaceMemberAccess,
+    db: DbSession,
+) -> AgentResponse:
+    settings = {
+        key: value
+        for key, value in {
+            "confidence_threshold": payload.confidence_threshold,
+            "retrieval_top_k": payload.retrieval_top_k,
+            "retrieval_min_score": payload.retrieval_min_score,
+        }.items()
+        if value is not None
+    }
+    try:
+        agent = AgentService(db).update_agent(
+            workspace_id=workspace.id,
+            agent_id=agent_id,
+            name=payload.name,
+            active=payload.active,
+            token_budget=payload.token_budget,
+            settings=settings or None,
+        )
+    except AgentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
+    return AgentResponse.model_validate(agent)
 
 
 @router.post("/agents/{agent_id}/runs", response_model=GraphRunResponse, status_code=201)

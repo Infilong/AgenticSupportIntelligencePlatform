@@ -406,6 +406,93 @@ def test_support_agent_trims_retrieved_context_before_draft_model_call(
     assert db_session.scalars(select(AIRun)).all()
 
 
+def test_agent_runtime_settings_can_be_updated_and_are_workspace_scoped(client: TestClient) -> None:
+    register(client, "agent-admin@example.com")
+    owner_token = login(client, "agent-admin@example.com")
+    owner_workspace = create_workspace(client, owner_token, "Owner Workspace")
+    agent = create_agent(client, owner_token, owner_workspace["id"])
+
+    updated = client.patch(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(owner_token),
+        json={
+            "name": "Strict Support Agent",
+            "token_budget": 2400,
+            "confidence_threshold": 0.9,
+            "retrieval_top_k": 2,
+            "retrieval_min_score": 0.4,
+        },
+    )
+
+    register(client, "agent-other@example.com")
+    other_token = login(client, "agent-other@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Workspace")
+    forbidden = client.patch(
+        f"/api/v1/workspaces/{other_workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(other_token),
+        json={"name": "Stolen Agent"},
+    )
+
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["name"] == "Strict Support Agent"
+    assert body["token_budget"] == 2400
+    assert '"confidence_threshold": 0.9' in body["settings_json"]
+    assert '"retrieval_top_k": 2' in body["settings_json"]
+    assert '"retrieval_min_score": 0.4' in body["settings_json"]
+    assert forbidden.status_code == 404
+    assert forbidden.json()["detail"]["code"] == "agent_not_found"
+
+
+def test_agent_confidence_threshold_setting_changes_routing_and_trace(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "strict-agent@example.com")
+    token = login(client, "strict-agent@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"], "en")
+    agent = create_agent(client, token, workspace["id"])
+    updated = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(token),
+        json={"confidence_threshold": 0.9, "retrieval_top_k": 2, "retrieval_min_score": 0.1},
+    )
+    assert updated.status_code == 200
+
+    response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "needs_human_review"
+    assert body["route_decision"] == "human_review"
+    assert body["final_answer"] is None
+
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{body['id']}/trace",
+        headers=auth_headers(token),
+    )
+    assert trace.status_code == 200
+    trace_body = trace.json()
+    retrieval_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "retrieve_evidence"
+    )
+    route_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "route_review_or_finalize"
+    )
+    tool_input = safe_json(retrieval_step["tool_calls"][0]["input_json"])
+    route_output = safe_json(route_step["output_json"])
+    assert tool_input["top_k"] == 2
+    assert tool_input["min_score"] == 0.1
+    assert route_output["confidence_threshold"] == 0.9
+    reviews = db_session.scalars(select(HumanReview)).all()
+    assert len(reviews) == 1
+    assert "confidence_threshold" in reviews[0].reason
+
+
 def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:
     register(client, "owner@example.com")
     owner_token = login(client, "owner@example.com")

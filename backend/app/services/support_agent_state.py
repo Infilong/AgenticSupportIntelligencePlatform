@@ -7,13 +7,17 @@ class SupportAgentState(TypedDict, total=False):
     agent_config_id: str
     graph_run_id: str
     input_message: str
+    agent_token_budget: int
+    agent_settings: dict
     detected_language: str
     intent: str
     retrieved_chunks: list[dict]
     retrieval_trace_id: str | None
     draft_answer: str | None
     confidence_score: float
+    confidence_threshold: float
     route_decision: str
+    route_reasons: list[str]
     final_answer: str | None
     citations: list[str]
     errors: list[str]

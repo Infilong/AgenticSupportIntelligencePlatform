@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -41,6 +43,33 @@ class AgentService:
             ).all()
         )
 
+    def update_agent(
+        self,
+        *,
+        workspace_id: UUID,
+        agent_id: UUID,
+        name: str | None = None,
+        active: bool | None = None,
+        token_budget: int | None = None,
+        settings: dict[str, Any] | None = None,
+    ) -> AgentConfig:
+        agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
+        if agent is None:
+            raise AgentNotFoundError("Agent was not found.")
+        if name is not None:
+            agent.name = name.strip()
+        if active is not None:
+            agent.active = active
+        if token_budget is not None:
+            agent.token_budget = token_budget
+        if settings is not None:
+            current_settings = _agent_settings(agent)
+            current_settings.update(settings)
+            agent.settings_json = json.dumps(current_settings, sort_keys=True)
+        self.db.commit()
+        self.db.refresh(agent)
+        return agent
+
     def run_agent(
         self,
         *,
@@ -68,6 +97,8 @@ class AgentService:
             "user_id": str(current_user.id),
             "graph_run_id": str(graph_run.id),
             "input_message": input_message.strip(),
+            "agent_token_budget": agent.token_budget,
+            "agent_settings": _agent_settings(agent),
             "errors": [],
         }
         final_state = SupportAgentGraphRunner(self.db).run(state)
@@ -78,9 +109,11 @@ class AgentService:
             state=final_state,
         )
         if graph_run.status != GraphRunStatus.completed or has_blocking_guardrail(decisions):
+            route_reasons = list(final_state.get("route_reasons", []))
             failed_types = [
                 decision.guardrail_type for decision in decisions if not decision.passed
             ]
+            review_reasons = sorted(set(route_reasons + failed_types))
             graph_run.status = GraphRunStatus.needs_human_review
             graph_run.route_decision = "human_review"
             graph_run.final_answer = None
@@ -89,7 +122,7 @@ class AgentService:
             HumanReviewService(self.db).create_pending(
                 workspace_id=workspace_id,
                 graph_run_id=graph_run.id,
-                reason=", ".join(failed_types) or "human_review_route",
+                reason=", ".join(review_reasons) or "human_review_route",
                 proposed_answer=final_state.get("draft_answer"),
             )
         return graph_run
@@ -120,3 +153,11 @@ class AgentService:
             raise GraphRunNotFoundError("Graph run was not found.")
         run.steps.sort(key=lambda step: step.created_at)
         return run
+
+
+def _agent_settings(agent: AgentConfig) -> dict[str, Any]:
+    try:
+        loaded = json.loads(agent.settings_json or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return loaded if isinstance(loaded, dict) else {}

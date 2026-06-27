@@ -81,6 +81,7 @@ type Agent = {
   name: string;
   active: boolean;
   token_budget: number;
+  settings_json: string;
   created_at: string;
 };
 
@@ -435,6 +436,10 @@ export function App() {
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [agentName, setAgentName] = useState("Support Agent");
+  const [agentTokenBudget, setAgentTokenBudget] = useState(4000);
+  const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
+  const [agentRetrievalTopK, setAgentRetrievalTopK] = useState(4);
+  const [agentRetrievalMinScore, setAgentRetrievalMinScore] = useState(0.2);
   const [agentMessage, setAgentMessage] = useState("Can I get a refund within 30 days?");
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [latestRun, setLatestRun] = useState<GraphRun | null>(null);
@@ -480,6 +485,10 @@ export function App() {
   const selectedWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
     [selectedWorkspaceId, workspaces],
+  );
+  const selectedAgent = useMemo(
+    () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
+    [agents, selectedAgentId],
   );
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
@@ -720,7 +729,9 @@ export function App() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<Agent[]>(workspacePath("/agents"), { token });
     setAgents(data);
-    setSelectedAgentId((current) => current || data[0]?.id || "");
+    const nextAgent = data.find((agent) => agent.id === selectedAgentId) ?? data[0];
+    setSelectedAgentId(nextAgent?.id ?? "");
+    if (nextAgent) applyAgentControls(nextAgent);
   }
 
   async function createAgent(event: FormEvent) {
@@ -729,10 +740,45 @@ export function App() {
       const agent = await apiRequest<Agent>(workspacePath("/agents"), {
         method: "POST",
         token,
-        body: { name: agentName, token_budget: 4000 },
+        body: { name: agentName, token_budget: agentTokenBudget },
       });
       await loadAgents();
       setSelectedAgentId(agent.id);
+      applyAgentControls(agent);
+    });
+  }
+
+  function applyAgentControls(agent: Agent) {
+    const settings = safeJson(agent.settings_json);
+    const record = typeof settings === "object" && settings !== null ? settings as Record<string, unknown> : {};
+    setAgentName(agent.name);
+    setAgentTokenBudget(agent.token_budget);
+    setAgentConfidenceThreshold(Number(record.confidence_threshold ?? 0.5));
+    setAgentRetrievalTopK(Number(record.retrieval_top_k ?? 4));
+    setAgentRetrievalMinScore(Number(record.retrieval_min_score ?? 0.2));
+  }
+
+  async function updateAgentRuntime(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedAgentId) {
+      setError("Select an agent before saving runtime controls.");
+      return;
+    }
+    await runAction("Agent runtime controls saved", async () => {
+      const agent = await apiRequest<Agent>(workspacePath(`/agents/${selectedAgentId}`), {
+        method: "PATCH",
+        token,
+        body: {
+          name: agentName,
+          token_budget: agentTokenBudget,
+          confidence_threshold: agentConfidenceThreshold,
+          retrieval_top_k: agentRetrievalTopK,
+          retrieval_min_score: agentRetrievalMinScore,
+        },
+      });
+      await loadAgents();
+      setSelectedAgentId(agent.id);
+      applyAgentControls(agent);
     });
   }
 
@@ -1293,11 +1339,35 @@ export function App() {
             <input value={agentName} onChange={(event) => setAgentName(event.target.value)} />
             <button>Create</button>
           </form>
-          <select value={selectedAgentId} onChange={(event) => setSelectedAgentId(event.target.value)}>
+          <select
+            value={selectedAgentId}
+            onChange={(event) => {
+              const nextAgent = agents.find((agent) => agent.id === event.target.value);
+              setSelectedAgentId(event.target.value);
+              if (nextAgent) applyAgentControls(nextAgent);
+            }}
+          >
             <option value="">Select agent</option>
             {agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
           </select>
         </section>
+        <form className="panel stack" onSubmit={updateAgentRuntime}>
+          <div className="row-head">
+            <div>
+              <h3>Runtime controls</h3>
+              <p className="muted">Tune the graph harness without changing code. Settings are saved per workspace agent.</p>
+            </div>
+            <Badge tone={selectedAgent ? "good" : "warn"}>{selectedAgent ? "editable" : "select agent"}</Badge>
+          </div>
+          <label>Agent name<input value={agentName} onChange={(event) => setAgentName(event.target.value)} /></label>
+          <div className="grid two">
+            <label>Token budget<input type="number" min="500" max="32000" step="100" value={agentTokenBudget} onChange={(event) => setAgentTokenBudget(Number(event.target.value))} /></label>
+            <label>Confidence threshold<input type="number" min="0.1" max="0.95" step="0.05" value={agentConfidenceThreshold} onChange={(event) => setAgentConfidenceThreshold(Number(event.target.value))} /></label>
+            <label>Retrieval top K<input type="number" min="1" max="8" step="1" value={agentRetrievalTopK} onChange={(event) => setAgentRetrievalTopK(Number(event.target.value))} /></label>
+            <label>Retrieval min score<input type="number" min="0" max="1" step="0.05" value={agentRetrievalMinScore} onChange={(event) => setAgentRetrievalMinScore(Number(event.target.value))} /></label>
+          </div>
+          <button className="primary" disabled={loading || !selectedAgentId}>Save runtime controls</button>
+        </form>
         <form className="panel stack" onSubmit={runAgent}>
           <div className="row-head">
             <h3>Run support workflow</h3>

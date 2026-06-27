@@ -148,7 +148,7 @@ class SupportAgentGraphRunner:
             workspace_id=UUID(state["workspace_id"]),
             query=state["input_message"],
             language=language,
-            top_k=4,
+            top_k=_retrieval_top_k(state),
             min_score=_retrieval_threshold(state),
             document_id=None,
         )
@@ -173,7 +173,12 @@ class SupportAgentGraphRunner:
                 graph_step_id=step.id,
                 tool_name="search_documents",
                 input_json=json.dumps(
-                    {"query": state["input_message"], "language": language.value}
+                    {
+                        "query": state["input_message"],
+                        "language": language.value,
+                        "top_k": _retrieval_top_k(state),
+                        "min_score": _retrieval_threshold(state),
+                    }
                 ),
                 output_json=json.dumps(
                     {
@@ -288,16 +293,14 @@ class SupportAgentGraphRunner:
 
     def route_review_or_finalize(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
-        review_required = (
-            bool(state.get("model_provider_failure"))
-            or bool(state.get("model_budget_failure"))
-            or state.get("confidence_score", 0) < 0.5
-            or state.get("intent") in {"prompt_injection", "privacy_complaint"}
-            or not state.get("citations")
-            or state.get("no_source")
-        )
-        decision = "human_review" if review_required else "finalize"
-        output: SupportAgentState = {"route_decision": decision}
+        confidence_threshold = _confidence_threshold(state)
+        route_reasons = _route_reasons(state, confidence_threshold)
+        decision = "human_review" if route_reasons else "finalize"
+        output: SupportAgentState = {
+            "route_decision": decision,
+            "route_reasons": route_reasons,
+            "confidence_threshold": confidence_threshold,
+        }
         self._record_step("route_review_or_finalize", state, output, started)
         return output
 
@@ -455,6 +458,7 @@ def _compact_state(state: SupportAgentState) -> dict:
         "draft_answer",
         "confidence_score",
         "route_decision",
+        "route_reasons",
         "final_answer",
         "citations",
         "no_source",
@@ -462,18 +466,62 @@ def _compact_state(state: SupportAgentState) -> dict:
         "model_budget_failure",
         "token_budget_action",
         "trimmed_context_count",
+        "confidence_threshold",
+        "agent_token_budget",
+        "agent_settings",
         "errors",
     ]
     return {key: state.get(key) for key in allowed if key in state}
 
 
+def _route_reasons(state: SupportAgentState, confidence_threshold: float) -> list[str]:
+    reasons: list[str] = []
+    if state.get("model_provider_failure"):
+        reasons.append("model_provider_failure")
+    if state.get("model_budget_failure"):
+        reasons.append("model_budget_failure")
+    if state.get("confidence_score", 0) < confidence_threshold:
+        reasons.append("confidence_threshold")
+    if state.get("intent") == "prompt_injection":
+        reasons.append("prompt_injection")
+    if state.get("intent") == "privacy_complaint":
+        reasons.append("privacy_complaint")
+    if not state.get("citations"):
+        reasons.append("citation_required")
+    if state.get("no_source"):
+        reasons.append("unsupported_answer")
+    return reasons
+
+
+def _retrieval_top_k(state: SupportAgentState) -> int:
+    value = _agent_settings(state).get("retrieval_top_k")
+    if isinstance(value, int):
+        return min(8, max(1, value))
+    return 4
+
+
 def _retrieval_threshold(state: SupportAgentState) -> float:
+    configured = _agent_settings(state).get("retrieval_min_score")
+    if isinstance(configured, int | float):
+        return min(1.0, max(0.0, float(configured)))
     intent = state.get("intent")
     if intent in {"prompt_injection", "privacy_complaint"}:
         return 0.35
     if intent == "general_support":
         return 0.45
     return 0.2
+
+
+def _confidence_threshold(state: SupportAgentState) -> float:
+    configured = _agent_settings(state).get("confidence_threshold")
+    if isinstance(configured, int | float):
+        return min(0.95, max(0.1, float(configured)))
+    return 0.5
+
+
+def _agent_settings(state: SupportAgentState) -> dict:
+    settings = state.get("agent_settings") or {}
+    return settings if isinstance(settings, dict) else {}
 
 
 def _has_prompt_injection(text: str) -> bool:
