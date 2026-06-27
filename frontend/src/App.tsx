@@ -4,6 +4,12 @@ type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
 type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
 
+type CurrentUser = {
+  id: string;
+  email: string;
+  display_name: string;
+};
+
 type Workspace = {
   id: string;
   name: string;
@@ -202,7 +208,7 @@ type ReviewDraft = {
   comments: string;
 };
 
-type ReviewFilter = "all" | "critical" | "evidence" | "model" | "language";
+type ReviewFilter = "all" | "mine" | "unassigned" | "critical" | "evidence" | "model" | "language";
 type ReviewSort = "severity" | "newest" | "oldest";
 
 type EvaluationRun = {
@@ -437,6 +443,7 @@ export function App() {
   const [email, setEmail] = useState("demo@example.com");
   const [password, setPassword] = useState("strong-password");
   const [displayName, setDisplayName] = useState("Demo User");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceName, setWorkspaceName] = useState("Support Intelligence Demo");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
@@ -543,7 +550,11 @@ export function App() {
   const latestRunTone = latestRun?.route_decision === "human_review" ? "warn" : latestRun ? "good" : "neutral";
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setCurrentUser(null);
+      return;
+    }
+    void loadCurrentUser();
     void loadWorkspaces();
   }, [token]);
 
@@ -590,6 +601,11 @@ export function App() {
       });
       setSessionToken(response.access_token);
     });
+  }
+
+  async function loadCurrentUser() {
+    const data = await apiRequest<CurrentUser>("/api/v1/auth/me", { token });
+    setCurrentUser(data);
   }
 
   async function loadWorkspaces() {
@@ -844,6 +860,28 @@ export function App() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<HumanReview[]>(workspacePath("/human-reviews"), { token });
     setReviews(data);
+  }
+
+  async function claimReview(review: HumanReview) {
+    await runAction("Review claimed", async () => {
+      await apiRequest(workspacePath(`/human-reviews/${review.id}/claim`), {
+        method: "POST",
+        token,
+      });
+      await loadReviews();
+      await loadAuditLogs();
+    });
+  }
+
+  async function releaseReview(review: HumanReview) {
+    await runAction("Review released", async () => {
+      await apiRequest(workspacePath(`/human-reviews/${review.id}/release`), {
+        method: "POST",
+        token,
+      });
+      await loadReviews();
+      await loadAuditLogs();
+    });
   }
 
   function reviewDraft(review: HumanReview): ReviewDraft {
@@ -1108,7 +1146,7 @@ export function App() {
             </div>
           ))}
         </nav>
-        <button className="secondary logout-button" onClick={() => { localStorage.removeItem("asi_token"); setToken(""); }}>Logout</button>
+        <button className="secondary logout-button" onClick={() => { localStorage.removeItem("asi_token"); setCurrentUser(null); setToken(""); }}>Logout</button>
       </aside>
 
       <section className="workspace-main">
@@ -1463,7 +1501,7 @@ export function App() {
   function ReviewsPanel() {
     const pendingReviewItems = reviews.filter((review) => review.reviewer_decision === "pending");
     const filteredPendingReviewItems = sortReviews(
-      pendingReviewItems.filter((review) => reviewMatchesFilter(review, reviewFilter)),
+      pendingReviewItems.filter((review) => reviewMatchesFilter(review, reviewFilter, currentUser)),
       reviewSort,
     );
     const resolvedReviewItems = sortReviews(
@@ -1471,8 +1509,10 @@ export function App() {
       "newest",
     );
     const criticalCount = pendingReviewItems.filter((review) => reviewSeverity(review.reason) === "critical").length;
-    const evidenceCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "evidence")).length;
-    const modelCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "model")).length;
+    const mineCount = pendingReviewItems.filter((review) => review.reviewer_id === currentUser?.id).length;
+    const unassignedCount = pendingReviewItems.filter((review) => review.reviewer_id === null).length;
+    const evidenceCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "evidence", currentUser)).length;
+    const modelCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "model", currentUser)).length;
 
     return (
       <div className="stack">
@@ -1517,15 +1557,18 @@ export function App() {
               </label>
             </div>
             <div className="metric-grid compact">
+              <Metric label="Mine" value={mineCount} />
+              <Metric label="Unassigned" value={unassignedCount} />
               <Metric label="Critical" value={criticalCount} />
-              <Metric label="Evidence" value={evidenceCount} />
-              <Metric label="Model/budget" value={modelCount} />
               <Metric label="Showing" value={filteredPendingReviewItems.length} />
             </div>
             {filteredPendingReviewItems.map((review) => {
               const draft = reviewDraft(review);
               const guardrailParts = reviewReasonParts(review.reason);
               const severity = reviewSeverity(review.reason);
+              const assignedToMe = review.reviewer_id === currentUser?.id;
+              const assignedToOther = Boolean(review.reviewer_id && !assignedToMe);
+              const unassigned = review.reviewer_id === null;
               const run = review.run;
               const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? null;
               const canApprove = Boolean(proposedAnswer);
@@ -1539,7 +1582,7 @@ export function App() {
                     </div>
                     <div className="review-actions">
                       <Badge tone={toneForReviewSeverity(severity)}>{severity}</Badge>
-                      <Badge tone="warn">waiting for reviewer</Badge>
+                      <Badge tone={assignedToMe ? "good" : assignedToOther ? "neutral" : "warn"}>{assignedToMe ? "assigned to me" : assignedToOther ? "assigned" : "unassigned"}</Badge>
                     </div>
                   </div>
 
@@ -1553,6 +1596,7 @@ export function App() {
                       <div className="signal"><span>Run status</span><strong>{run?.status ?? "unknown"}</strong></div>
                       <div className="signal"><span>Route</span><strong>{run?.route_decision ?? "human_review"}</strong></div>
                       <div className="signal"><span>Severity</span><strong>{severity}</strong></div>
+                      <div className="signal"><span>Owner</span><strong>{assignedToMe ? "me" : review.reviewer_id ? "another reviewer" : "unassigned"}</strong></div>
                     </div>
                   </div>
 
@@ -1608,8 +1652,10 @@ export function App() {
                     <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
                       Inspect trace
                     </button>
-                    <button type="button" className="primary" onClick={() => void resolveReview(review)}>
-                      Resolve review
+                    {unassigned && <button type="button" onClick={() => void claimReview(review)}>Claim</button>}
+                    {assignedToMe && <button type="button" onClick={() => void releaseReview(review)}>Release</button>}
+                    <button type="button" className="primary" disabled={assignedToOther} onClick={() => void resolveReview(review)}>
+                      {assignedToOther ? "Assigned to another reviewer" : "Resolve review"}
                     </button>
                   </div>
                 </article>
@@ -1632,6 +1678,8 @@ export function App() {
           <aside className="panel stack">
             <h3>Review policy</h3>
             <Metric label="Pending" value={pendingReviewItems.length} />
+            <Metric label="Mine" value={mineCount} />
+            <Metric label="Unassigned" value={unassignedCount} />
             <Metric label="Critical" value={criticalCount} />
             <Metric label="Resolved" value={resolvedReviewItems.length} />
             <div className="policy-list">
@@ -1974,6 +2022,8 @@ function toneForStatus(status: string): "neutral" | "good" | "warn" | "bad" {
 
 const reviewFilterOptions: Array<{ id: ReviewFilter; label: string }> = [
   { id: "all", label: "All" },
+  { id: "mine", label: "Mine" },
+  { id: "unassigned", label: "Unassigned" },
   { id: "critical", label: "Critical" },
   { id: "evidence", label: "Evidence" },
   { id: "model", label: "Model/budget" },
@@ -2014,9 +2064,11 @@ function toneForReviewReason(reason: string): "neutral" | "good" | "warn" | "bad
   return "neutral";
 }
 
-function reviewMatchesFilter(review: HumanReview, filter: ReviewFilter): boolean {
+function reviewMatchesFilter(review: HumanReview, filter: ReviewFilter, user: CurrentUser | null = null): boolean {
   const parts = reviewReasonParts(review.reason);
   if (filter === "all") return true;
+  if (filter === "mine") return Boolean(user && review.reviewer_id === user.id);
+  if (filter === "unassigned") return review.reviewer_id === null;
   if (filter === "critical") return reviewSeverity(review.reason) === "critical";
   if (filter === "evidence") return parts.some((part) => ["unsupported_answer", "citation_required", "confidence_threshold"].includes(part));
   if (filter === "model") return parts.some((part) => ["model_provider_failure", "model_budget_failure"].includes(part));

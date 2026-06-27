@@ -24,6 +24,10 @@ class HumanReviewInvalidDecisionError(ValueError):
     pass
 
 
+class HumanReviewAssignmentConflictError(ValueError):
+    pass
+
+
 class HumanReviewService:
     def __init__(self, db: Session):
         self.db = db
@@ -68,6 +72,32 @@ class HumanReviewService:
             raise HumanReviewNotFoundError("Human review was not found.")
         return review
 
+    def claim(self, *, workspace_id: UUID, review_id: UUID, reviewer: User) -> HumanReview:
+        review = self.get_review(workspace_id=workspace_id, review_id=review_id)
+        if review.reviewer_decision != ReviewDecision.pending:
+            raise HumanReviewAlreadyResolvedError("Human review was already resolved.")
+        if review.reviewer_id is not None and review.reviewer_id != reviewer.id:
+            raise HumanReviewAssignmentConflictError(
+                "Human review is assigned to another reviewer."
+            )
+        review.reviewer_id = reviewer.id
+        self.db.commit()
+        self.db.refresh(review)
+        return review
+
+    def release(self, *, workspace_id: UUID, review_id: UUID, reviewer: User) -> HumanReview:
+        review = self.get_review(workspace_id=workspace_id, review_id=review_id)
+        if review.reviewer_decision != ReviewDecision.pending:
+            raise HumanReviewAlreadyResolvedError("Human review was already resolved.")
+        if review.reviewer_id is not None and review.reviewer_id != reviewer.id:
+            raise HumanReviewAssignmentConflictError(
+                "Human review is assigned to another reviewer."
+            )
+        review.reviewer_id = None
+        self.db.commit()
+        self.db.refresh(review)
+        return review
+
     def resolve(
         self,
         *,
@@ -81,6 +111,10 @@ class HumanReviewService:
         review = self.get_review(workspace_id=workspace_id, review_id=review_id)
         if review.reviewer_decision != ReviewDecision.pending:
             raise HumanReviewAlreadyResolvedError("Human review was already resolved.")
+        if review.reviewer_id is not None and review.reviewer_id != reviewer.id:
+            raise HumanReviewAssignmentConflictError(
+                "Human review is assigned to another reviewer."
+            )
         if decision == ReviewDecision.approved and not review.proposed_answer:
             raise HumanReviewInvalidDecisionError(
                 "Cannot approve a review without a proposed answer."

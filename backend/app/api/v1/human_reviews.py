@@ -20,6 +20,7 @@ from app.schemas.human_review import (
 from app.services.audit_log_service import AuditLogService
 from app.services.human_review_service import (
     HumanReviewAlreadyResolvedError,
+    HumanReviewAssignmentConflictError,
     HumanReviewInvalidDecisionError,
     HumanReviewNotFoundError,
     HumanReviewService,
@@ -57,6 +58,80 @@ def get_human_review(
     return _review_response(review, db)
 
 
+@router.post("/{review_id}/claim", response_model=HumanReviewResponse)
+def claim_human_review(
+    review_id: ReviewId,
+    workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> HumanReviewResponse:
+    try:
+        review = HumanReviewService(db).claim(
+            workspace_id=workspace.id, review_id=review_id, reviewer=current_user
+        )
+    except HumanReviewNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "human_review_not_found", "message": "Human review was not found."},
+        ) from exc
+    except HumanReviewAlreadyResolvedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "human_review_already_resolved", "message": str(exc)},
+        ) from exc
+    except HumanReviewAssignmentConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "human_review_assignment_conflict", "message": str(exc)},
+        ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="human_review.claimed",
+        resource_type="human_review",
+        resource_id=review.id,
+        metadata={"graph_run_id": str(review.graph_run_id), "reason": review.reason},
+    )
+    return _review_response(review, db)
+
+
+@router.post("/{review_id}/release", response_model=HumanReviewResponse)
+def release_human_review(
+    review_id: ReviewId,
+    workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> HumanReviewResponse:
+    try:
+        review = HumanReviewService(db).release(
+            workspace_id=workspace.id, review_id=review_id, reviewer=current_user
+        )
+    except HumanReviewNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "human_review_not_found", "message": "Human review was not found."},
+        ) from exc
+    except HumanReviewAlreadyResolvedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "human_review_already_resolved", "message": str(exc)},
+        ) from exc
+    except HumanReviewAssignmentConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "human_review_assignment_conflict", "message": str(exc)},
+        ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="human_review.released",
+        resource_type="human_review",
+        resource_id=review.id,
+        metadata={"graph_run_id": str(review.graph_run_id), "reason": review.reason},
+    )
+    return _review_response(review, db)
+
+
 @router.post("/{review_id}/resolve", response_model=HumanReviewResponse)
 def resolve_human_review(
     review_id: ReviewId,
@@ -83,6 +158,11 @@ def resolve_human_review(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "human_review_already_resolved", "message": str(exc)},
+        ) from exc
+    except HumanReviewAssignmentConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "human_review_assignment_conflict", "message": str(exc)},
         ) from exc
     except HumanReviewInvalidDecisionError as exc:
         raise HTTPException(

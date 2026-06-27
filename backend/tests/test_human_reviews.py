@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.agent import Checkpoint, GraphRun
 from app.models.review import GuardrailResult, HumanReview
+from app.models.workspace import WorkspaceMember, WorkspaceRole
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -45,6 +46,18 @@ def upload_document(client: TestClient, token: str, workspace_id: str) -> None:
         },
     )
     assert response.status_code == 201
+
+
+
+def add_workspace_member(db_session: Session, workspace_id: str, user_id: str) -> None:
+    db_session.add(
+        WorkspaceMember(
+            workspace_id=UUID(workspace_id),
+            user_id=UUID(user_id),
+            role=WorkspaceRole.member,
+        )
+    )
+    db_session.commit()
 
 
 def create_agent(client: TestClient, token: str, workspace_id: str) -> dict:
@@ -249,6 +262,64 @@ def test_reviewer_can_reject_missing_proposed_answer(client: TestClient) -> None
     assert body["run"]["status"] == "failed"
     assert body["run"]["route_decision"] == "human_rejected"
     assert body["run"]["final_answer"] is None
+
+
+
+def test_review_claim_release_and_assignment_conflict(
+    client: TestClient, db_session: Session
+) -> None:
+    owner = register(client, "claim-owner@example.com")
+    owner_token = login(client, "claim-owner@example.com")
+    workspace = create_workspace(client, owner_token)
+    upload_document(client, owner_token, workspace["id"])
+    agent = create_agent(client, owner_token, workspace["id"])
+    client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(owner_token),
+        json={"input_message": "How do I permanently delete my account?"},
+    )
+    review = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews",
+        headers=auth_headers(owner_token),
+    ).json()[0]
+
+    reviewer = register(client, "claim-reviewer@example.com")
+    reviewer_token = login(client, "claim-reviewer@example.com")
+    add_workspace_member(db_session, workspace["id"], reviewer["id"])
+
+    claimed = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/claim",
+        headers=auth_headers(reviewer_token),
+    )
+    owner_resolve = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/resolve",
+        headers=auth_headers(owner_token),
+        json={"decision": "rejected", "comments": "Owner should not resolve claimed review."},
+    )
+    owner_release = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/release",
+        headers=auth_headers(owner_token),
+    )
+    released = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/release",
+        headers=auth_headers(reviewer_token),
+    )
+
+    assert claimed.status_code == 200
+    assert claimed.json()["reviewer_id"] == reviewer["id"]
+    assert owner_resolve.status_code == 409
+    assert owner_resolve.json()["detail"]["code"] == "human_review_assignment_conflict"
+    assert owner_release.status_code == 409
+    assert owner_release.json()["detail"]["code"] == "human_review_assignment_conflict"
+    assert released.status_code == 200
+    assert released.json()["reviewer_id"] is None
+
+    owner_claim = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/claim",
+        headers=auth_headers(owner_token),
+    )
+    assert owner_claim.status_code == 200
+    assert owner_claim.json()["reviewer_id"] == owner["id"]
 
 
 def test_human_reviews_enforce_workspace_isolation(client: TestClient) -> None:
