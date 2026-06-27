@@ -24,6 +24,7 @@ from app.schemas.agent import (
     GuardrailTraceResponse,
 )
 from app.services.agent_service import AgentNotFoundError, AgentService, GraphRunNotFoundError
+from app.services.audit_log_service import AuditLogService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["agents"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -37,10 +38,19 @@ RunId = Annotated[UUID, Path()]
 def create_agent(
     payload: AgentCreateRequest,
     workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
     db: DbSession,
 ) -> AgentResponse:
     agent = AgentService(db).create_agent(
         workspace_id=workspace.id, name=payload.name, token_budget=payload.token_budget
+    )
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="agent.created",
+        resource_type="agent",
+        resource_id=agent.id,
+        metadata={"name": agent.name, "token_budget": agent.token_budget},
     )
     return AgentResponse.model_validate(agent)
 
@@ -56,6 +66,7 @@ def update_agent(
     agent_id: AgentId,
     payload: AgentUpdateRequest,
     workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
     db: DbSession,
 ) -> AgentResponse:
     settings = {
@@ -81,6 +92,14 @@ def update_agent(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "agent_not_found", "message": "Agent was not found."},
         ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="agent.updated",
+        resource_type="agent",
+        resource_id=agent.id,
+        metadata={"name": agent.name, "token_budget": agent.token_budget},
+    )
     return AgentResponse.model_validate(agent)
 
 
@@ -104,6 +123,14 @@ def run_agent(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "agent_not_found", "message": "Agent was not found."},
         ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="agent.run_completed",
+        resource_type="graph_run",
+        resource_id=run.id,
+        metadata={"agent_id": str(agent_id), "status": run.status},
+    )
     return GraphRunResponse.model_validate(run)
 
 

@@ -17,6 +17,7 @@ from app.schemas.human_review import (
     HumanReviewResponse,
     HumanReviewRunContext,
 )
+from app.services.audit_log_service import AuditLogService
 from app.services.human_review_service import (
     HumanReviewAlreadyResolvedError,
     HumanReviewInvalidDecisionError,
@@ -88,6 +89,18 @@ def resolve_human_review(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "human_review_invalid_decision", "message": str(exc)},
         ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="human_review.resolved",
+        resource_type="human_review",
+        resource_id=review.id,
+        metadata={
+            "decision": review.reviewer_decision,
+            "graph_run_id": str(review.graph_run_id),
+            "reason": review.reason,
+        },
+    )
     return _review_response(review, db)
 
 

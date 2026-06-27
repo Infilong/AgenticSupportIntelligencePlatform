@@ -18,6 +18,7 @@ from app.schemas.knowledge import (
     KnowledgeDocumentResponse,
     KnowledgeDocumentUploadRequest,
 )
+from app.services.audit_log_service import AuditLogService
 from app.services.knowledge_service import (
     KnowledgeDocumentIndexError,
     KnowledgeDocumentNotFoundError,
@@ -56,6 +57,18 @@ def upload_knowledge_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "knowledge_document_index_failed", "message": str(exc)},
         ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="knowledge_document.uploaded",
+        resource_type="knowledge_document",
+        resource_id=result.document.id,
+        metadata={
+            "title": result.document.title,
+            "language": result.document.language,
+            "chunk_count": result.chunk_count,
+        },
+    )
     return _index_response(result)
 
 
@@ -105,6 +118,7 @@ def reindex_knowledge_document(
     document_id: DocumentId,
     payload: KnowledgeDocumentReindexRequest,
     workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
     db: DbSession,
 ) -> KnowledgeDocumentIndexResponse:
     try:
@@ -126,6 +140,19 @@ def reindex_knowledge_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "knowledge_document_index_failed", "message": str(exc)},
         ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="knowledge_document.reindexed",
+        resource_type="knowledge_document",
+        resource_id=result.document.id,
+        metadata={
+            "title": result.document.title,
+            "language": result.document.language,
+            "version": result.latest_version.version,
+            "chunk_count": result.chunk_count,
+        },
+    )
     return _index_response(result)
 
 
@@ -133,6 +160,7 @@ def reindex_knowledge_document(
 def delete_knowledge_document(
     document_id: DocumentId,
     workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
     db: DbSession,
 ) -> None:
     try:
@@ -142,6 +170,13 @@ def delete_knowledge_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "knowledge_document_not_found", "message": "Document was not found."},
         ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="knowledge_document.deleted",
+        resource_type="knowledge_document",
+        resource_id=document_id,
+    )
 
 
 def _index_response(result) -> KnowledgeDocumentIndexResponse:

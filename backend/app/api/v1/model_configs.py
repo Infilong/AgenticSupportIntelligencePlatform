@@ -5,14 +5,18 @@ from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.dependencies.auth import get_current_user
 from app.dependencies.workspace import require_workspace_member
+from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.model_config import ModelConfigCreateRequest, ModelConfigResponse
+from app.services.audit_log_service import AuditLogService
 from app.services.model_config_service import ModelConfigNotFoundError, ModelConfigService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/model-configs", tags=["model-configs"])
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 ModelConfigId = Annotated[UUID, Path()]
 
 
@@ -28,6 +32,7 @@ def list_model_configs(
 def create_model_config(
     payload: ModelConfigCreateRequest,
     workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
     db: DbSession,
 ) -> ModelConfigResponse:
     config = ModelConfigService(db).create_config(
@@ -40,6 +45,19 @@ def create_model_config(
         max_context_tokens=payload.max_context_tokens,
         active=payload.active,
     )
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="model_config.created",
+        resource_type="model_config",
+        resource_id=config.id,
+        metadata={
+            "provider": config.provider,
+            "model": config.model,
+            "purpose": config.purpose,
+            "active": config.active,
+        },
+    )
     return ModelConfigResponse.model_validate(config)
 
 
@@ -47,6 +65,7 @@ def create_model_config(
 def activate_model_config(
     model_config_id: ModelConfigId,
     workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
     db: DbSession,
 ) -> ModelConfigResponse:
     try:
@@ -61,4 +80,12 @@ def activate_model_config(
                 "message": "Model config was not found.",
             },
         ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="model_config.activated",
+        resource_type="model_config",
+        resource_id=config.id,
+        metadata={"provider": config.provider, "model": config.model, "purpose": config.purpose},
+    )
     return ModelConfigResponse.model_validate(config)

@@ -1,5 +1,6 @@
 from app.models.agent import AgentConfig, Checkpoint, GraphRun, GraphStep, ToolCall
 from app.models.ai import AIRun, CacheEntry, ModelConfig, PromptTemplate
+from app.models.audit import AuditLog
 from app.models.dataset import ConversationExample, Dataset, ImportBatch, Label, Message
 from app.models.evaluation import EvaluationCase, EvaluationMetric, EvaluationResult, EvaluationRun
 from app.models.knowledge import DocumentChunk, DocumentVersion, Embedding, KnowledgeDocument
@@ -17,6 +18,7 @@ __all__ = [
     "GraphStep",
     "ToolCall",
     "AIRun",
+    "AuditLog",
     "CacheEntry",
     "ModelConfig",
     "PromptTemplate",

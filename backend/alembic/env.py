@@ -6,6 +6,7 @@ from alembic import context
 from app.core.config import get_settings
 from app.db.base import Base
 from app.models import (  # noqa: F401
+    AuditLog,
     ConversationExample,
     Dataset,
     ImportBatch,

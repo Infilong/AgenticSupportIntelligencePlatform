@@ -15,7 +15,7 @@
 
 ## Security Limitations
 - V1 has JWT auth and workspace isolation, but not enterprise SSO.
-- Audit logs are designed but not fully implemented across every write path.
+- Audit logs now cover key admin and workflow actions, but they are not a full immutable event-sourcing system and do not yet cover every low-risk read operation.
 - PII detection/redaction is postponed to Phase 2.
 
 ## Scale Limitations

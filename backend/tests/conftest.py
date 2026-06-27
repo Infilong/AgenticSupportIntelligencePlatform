@@ -13,6 +13,7 @@ from app.main import create_app
 from app.models import (  # noqa: F401
     AgentConfig,
     AIRun,
+    AuditLog,
     CacheEntry,
     Checkpoint,
     ConversationExample,

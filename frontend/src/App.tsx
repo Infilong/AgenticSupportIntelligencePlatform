@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "prompts" | "models";
+type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
 
 type Workspace = {
   id: string;
@@ -245,6 +245,18 @@ type CostSummary = {
   by_model: Array<{ provider: string; model: string; runs: number; tokens: number; estimated_cost: number }>;
 };
 
+type AuditLog = {
+  id: string;
+  workspace_id: string;
+  actor_user_id: string | null;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  metadata_json: string;
+  created_at: string;
+};
+
+
 type PromptTemplate = {
   id: string;
   workspace_id: string;
@@ -285,8 +297,9 @@ const tabs: Array<{ id: Tab; label: string; number: string; group: "Setup" | "Op
   { id: "reviews", label: "Human review", number: "6", group: "Operate", purpose: "Resolve guardrail and low-confidence cases." },
   { id: "evaluations", label: "Evaluation", number: "7", group: "Observe", purpose: "Compare quality, routing, language, and baselines." },
   { id: "costs", label: "Cost ledger", number: "8", group: "Observe", purpose: "Monitor token, latency, cache, and purpose cost." },
-  { id: "prompts", label: "Prompt settings", number: "9", group: "Observe", purpose: "Version and activate LangChain prompt templates." },
-  { id: "models", label: "Model settings", number: "10", group: "Observe", purpose: "Control model purpose, context, and token pricing." },
+  { id: "audit", label: "Audit logs", number: "9", group: "Observe", purpose: "Inspect workspace admin and AI operations changes." },
+  { id: "prompts", label: "Prompt settings", number: "10", group: "Observe", purpose: "Version and activate LangChain prompt templates." },
+  { id: "models", label: "Model settings", number: "11", group: "Observe", purpose: "Control model purpose, context, and token pricing." },
 ];
 
 const navSections = [
@@ -456,6 +469,7 @@ export function App() {
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [promptName, setPromptName] = useState("support_response_drafter");
   const [promptLanguage, setPromptLanguage] = useState<Language>("en");
@@ -501,6 +515,7 @@ export function App() {
     { label: "Review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
     { label: "Evaluation", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
     { label: "Cost", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
+    { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
     { label: "Model settings", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
   ];
   const nextStep = setupSteps.find((step) => !step.done);
@@ -590,6 +605,7 @@ export function App() {
       loadReviews(),
       loadEvaluations(),
       loadCosts(),
+      loadAuditLogs(),
       loadPromptTemplates(),
       loadModelConfigs(),
     ]);
@@ -892,6 +908,12 @@ export function App() {
     setCostSummary(data);
   }
 
+  async function loadAuditLogs() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<AuditLog[]>(workspacePath("/audit-logs"), { token });
+    setAuditLogs(data);
+  }
+
   async function loadPromptTemplates() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<PromptTemplate[]>(workspacePath("/prompt-templates"), { token });
@@ -1100,6 +1122,7 @@ export function App() {
             <Metric label="Pending reviews" value={pendingReviews} />
             <Metric label="AI runs" value={costSummary?.total_runs ?? 0} />
             <Metric label="Token cost" value={formatCost(costSummary?.total_estimated_cost)} />
+            <Metric label="Audit events" value={auditLogs.length} />
           </section>
         )}
         <Status notice={notice} error={error} />
@@ -1124,6 +1147,8 @@ export function App() {
         return EvaluationsPanel();
       case "costs":
         return CostsPanel();
+      case "audit":
+        return AuditPanel();
       case "prompts":
         return PromptsPanel();
       case "models":
@@ -1192,6 +1217,7 @@ export function App() {
             <button onClick={() => setActiveTab("evaluations")}>Run evaluation</button>
             <button onClick={() => setActiveTab("costs")}>Open cost ledger</button>
             <button onClick={() => setActiveTab("models")}>Model settings</button>
+            <button onClick={() => setActiveTab("audit")}>Audit logs</button>
           </section>
         </section>
 
@@ -1602,6 +1628,49 @@ export function App() {
           {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} /> : <EmptyState title="No evaluation selected" detail="Metrics will show language-specific quality and cost signals." />}
         </section>
       </div>
+    );
+  }
+
+  function AuditPanel() {
+    return (
+      <section className="panel stack">
+        <ActionGuide
+          title="Audit logs make operations accountable"
+          detail="Every high-risk admin action should leave a workspace-scoped record: who changed it, what resource was affected, and when it happened."
+          action="Refresh audit logs"
+          onAction={() => void runAction("Audit logs refreshed", loadAuditLogs)}
+        />
+        <div className="row-head">
+          <div>
+            <h3>Workspace audit trail</h3>
+            <p className="muted">Recent agent, knowledge, prompt, model, and review operations.</p>
+          </div>
+          <Badge tone={auditLogs.length ? "good" : "neutral"}>{auditLogs.length} events</Badge>
+        </div>
+        {auditLogs.length ? (
+          <div className="result-list">
+            {auditLogs.map((log) => (
+              <article className="result-row" key={log.id}>
+                <div className="row-head">
+                  <div>
+                    <strong>{log.action}</strong>
+                    <p className="muted">{log.resource_type}{log.resource_id ? ` · ${log.resource_id}` : ""}</p>
+                  </div>
+                  <Badge>{formatDate(log.created_at)}</Badge>
+                </div>
+                <div className="metric-grid compact">
+                  <Metric label="Actor" value={log.actor_user_id ?? "system"} />
+                  <Metric label="Resource" value={log.resource_type} />
+                  <Metric label="Action" value={log.action} />
+                </div>
+                <details><summary>Metadata</summary><JsonBlock value={safeJson(log.metadata_json)} /></details>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="No audit events yet" detail="Create or update an agent, model config, prompt, document, or review to create audit records." />
+        )}
+      </section>
     );
   }
 
