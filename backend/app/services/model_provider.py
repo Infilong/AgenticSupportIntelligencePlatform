@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, AIRunStatus, PromptTemplate
-from app.services.token_accounting import estimate_cost, estimate_tokens, pricing_for_model
+from app.services.model_config_service import ModelConfigService
+from app.services.token_accounting import estimate_cost, estimate_tokens
 
 
 class MockModelProviderError(RuntimeError):
@@ -43,7 +44,9 @@ class MockModelProvider:
         fail: bool = False,
     ) -> MockModelResponse:
         started = time.perf_counter()
-        pricing = pricing_for_model(model)
+        pricing = ModelConfigService(self.db).resolve_pricing(
+            workspace_id=workspace_id, purpose=purpose, fallback_model=model
+        )
         prompt_tokens = estimate_tokens(prompt, language)
         completion_tokens = 0 if fail else estimate_tokens(completion_text, language)
         total_tokens = prompt_tokens + completion_tokens

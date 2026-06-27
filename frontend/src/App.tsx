@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "prompts";
+type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "prompts" | "models";
 
 type Workspace = {
   id: string;
@@ -242,6 +242,19 @@ type PromptTemplate = {
   created_at: string;
 };
 
+type ModelConfig = {
+  id: string;
+  workspace_id: string | null;
+  provider: string;
+  model: string;
+  purpose: string;
+  prompt_token_cost_per_1k: number;
+  completion_token_cost_per_1k: number;
+  max_context_tokens: number;
+  active: boolean;
+  created_at: string;
+};
+
 type ApiOptions = {
   method?: string;
   token?: string | null;
@@ -259,6 +272,7 @@ const tabs: Array<{ id: Tab; label: string; number: string; group: "Setup" | "Op
   { id: "evaluations", label: "Evaluation", number: "7", group: "Observe", purpose: "Compare quality, routing, language, and baselines." },
   { id: "costs", label: "Cost ledger", number: "8", group: "Observe", purpose: "Monitor token, latency, cache, and purpose cost." },
   { id: "prompts", label: "Prompt settings", number: "9", group: "Observe", purpose: "Version and activate LangChain prompt templates." },
+  { id: "models", label: "Model settings", number: "10", group: "Observe", purpose: "Control model purpose, context, and token pricing." },
 ];
 
 const navSections = [
@@ -292,6 +306,8 @@ User message:
 
 Cited evidence:
 {evidence}`;
+
+const modelPurposes = ["classification", "draft_response", "evaluation", "context_compression"];
 
 async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -399,6 +415,15 @@ export function App() {
   const [promptText, setPromptText] = useState(defaultPromptTemplateText);
   const [promptActive, setPromptActive] = useState(true);
 
+  const [modelConfigs, setModelConfigs] = useState<ModelConfig[]>([]);
+  const [modelProvider, setModelProvider] = useState("mock");
+  const [modelName, setModelName] = useState("mock-cheap");
+  const [modelPurpose, setModelPurpose] = useState("classification");
+  const [modelPromptCost, setModelPromptCost] = useState(0.0001);
+  const [modelCompletionCost, setModelCompletionCost] = useState(0.0002);
+  const [modelMaxContext, setModelMaxContext] = useState(4096);
+  const [modelActive, setModelActive] = useState(true);
+
   const selectedWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
     [selectedWorkspaceId, workspaces],
@@ -414,6 +439,7 @@ export function App() {
     { label: "Review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
     { label: "Evaluation", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
     { label: "Cost", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
+    { label: "Model settings", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
   ];
   const nextStep = setupSteps.find((step) => !step.done);
   const completedStepCount = setupSteps.filter((step) => step.done).length;
@@ -503,6 +529,7 @@ export function App() {
       loadEvaluations(),
       loadCosts(),
       loadPromptTemplates(),
+      loadModelConfigs(),
     ]);
   }
 
@@ -786,6 +813,43 @@ export function App() {
     });
   }
 
+  async function loadModelConfigs() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<ModelConfig[]>(workspacePath("/model-configs"), { token });
+    setModelConfigs(data);
+  }
+
+  async function createModelConfig(event: FormEvent) {
+    event.preventDefault();
+    await runAction("Model configuration created", async () => {
+      await apiRequest<ModelConfig>(workspacePath("/model-configs"), {
+        method: "POST",
+        token,
+        body: {
+          provider: modelProvider,
+          model: modelName,
+          purpose: modelPurpose,
+          prompt_token_cost_per_1k: modelPromptCost,
+          completion_token_cost_per_1k: modelCompletionCost,
+          max_context_tokens: modelMaxContext,
+          active: modelActive,
+        },
+      });
+      await loadModelConfigs();
+      await loadCosts();
+    });
+  }
+
+  async function activateModelConfig(configId: string) {
+    await runAction("Model configuration activated", async () => {
+      await apiRequest<ModelConfig>(workspacePath(`/model-configs/${configId}/activate`), {
+        method: "POST",
+        token,
+      });
+      await loadModelConfigs();
+    });
+  }
+
   function toggleMode(mode: Mode) {
     setEvaluationModes((current) =>
       current.includes(mode) ? current.filter((item) => item !== mode) : [...current, mode],
@@ -950,6 +1014,8 @@ export function App() {
         return CostsPanel();
       case "prompts":
         return PromptsPanel();
+      case "models":
+        return ModelsPanel();
       default:
         return OverviewPanel();
     }
@@ -1013,6 +1079,7 @@ export function App() {
             <button onClick={() => setActiveTab("trace")}>Inspect graph state</button>
             <button onClick={() => setActiveTab("evaluations")}>Run evaluation</button>
             <button onClick={() => setActiveTab("costs")}>Open cost ledger</button>
+            <button onClick={() => setActiveTab("models")}>Model settings</button>
           </section>
         </section>
 
@@ -1462,6 +1529,112 @@ export function App() {
             ))}
           </div>
           {promptTemplates.length === 0 && <EmptyState title="No prompt templates" detail="Defaults are created on first agent run, or create a version manually." />}
+        </section>
+      </div>
+    );
+  }
+
+  function ModelsPanel() {
+    const activeConfigs = modelConfigs.filter((config) => config.active);
+    const purposeSummary = modelPurposes.map((purpose) => {
+      const active = modelConfigs.find((config) => config.purpose === purpose && config.active);
+      return { purpose, active };
+    });
+    return (
+      <div className="grid two-wide-left">
+        <ActionGuide
+          title="Model settings make token economy operational"
+          detail="Assign a model and price profile to each AI purpose. The provider records the active provider, model, context limit, and estimated cost in the next AI run ledger entry."
+          action="Run agent after activation"
+          onAction={() => setActiveTab("agent")}
+        />
+        <form className="panel stack" onSubmit={createModelConfig}>
+          <div className="row-head">
+            <div>
+              <h3>Create model config</h3>
+              <p className="muted">Use cheaper models for classification and stronger models for drafted answers.</p>
+            </div>
+            <Badge tone={modelActive ? "good" : "neutral"}>{modelActive ? "active" : "draft"}</Badge>
+          </div>
+          <label>
+            Purpose
+            <select value={modelPurpose} onChange={(event) => setModelPurpose(event.target.value)}>
+              {modelPurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
+            </select>
+          </label>
+          <label>
+            Provider
+            <input value={modelProvider} onChange={(event) => setModelProvider(event.target.value)} />
+          </label>
+          <label>
+            Model
+            <input value={modelName} onChange={(event) => setModelName(event.target.value)} />
+          </label>
+          <div className="grid two">
+            <label>
+              Prompt cost / 1K
+              <input type="number" min="0" step="0.0001" value={modelPromptCost} onChange={(event) => setModelPromptCost(Number(event.target.value))} />
+            </label>
+            <label>
+              Completion cost / 1K
+              <input type="number" min="0" step="0.0001" value={modelCompletionCost} onChange={(event) => setModelCompletionCost(Number(event.target.value))} />
+            </label>
+          </div>
+          <label>
+            Max context tokens
+            <input type="number" min="256" step="256" value={modelMaxContext} onChange={(event) => setModelMaxContext(Number(event.target.value))} />
+          </label>
+          <label className="check-row single-check">
+            <input type="checkbox" checked={modelActive} onChange={(event) => setModelActive(event.target.checked)} />
+            Activate this config immediately
+          </label>
+          <button className="primary" disabled={loading}>Create config</button>
+        </form>
+        <section className="panel stack">
+          <h3>Active routing</h3>
+          {purposeSummary.map(({ purpose, active }) => (
+            <article className={active ? "model-card active-model" : "model-card"} key={purpose}>
+              <div className="row-head">
+                <strong>{purpose}</strong>
+                {active ? <Badge tone="good">active</Badge> : <Badge tone="warn">default</Badge>}
+              </div>
+              <small>{active ? `${active.provider} / ${active.model}` : "Fallback mock pricing"}</small>
+              <small>{active ? `${formatNumber(active.max_context_tokens)} context tokens` : "No workspace override"}</small>
+            </article>
+          ))}
+        </section>
+        <section className="panel full-width stack">
+          <div className="row-head">
+            <div>
+              <h3>Model configurations</h3>
+              <p className="muted">Activating a config deactivates other configs for the same purpose in this workspace.</p>
+            </div>
+            <button onClick={() => void runAction("Model configs refreshed", loadModelConfigs)}>Refresh</button>
+          </div>
+          <div className="model-config-list">
+            {modelConfigs.map((config) => (
+              <article className={config.active ? "model-card active-model" : "model-card"} key={config.id}>
+                <div className="row-head">
+                  <div>
+                    <strong>{config.purpose}</strong>
+                    <p className="muted">{config.provider} / {config.model}</p>
+                  </div>
+                  <div className="review-actions">
+                    {config.active && <Badge tone="good">active</Badge>}
+                    <button disabled={config.active || loading} onClick={() => void activateModelConfig(config.id)}>Activate</button>
+                  </div>
+                </div>
+                <div className="metric-grid compact">
+                  <Metric label="Prompt / 1K" value={formatCost(config.prompt_token_cost_per_1k)} />
+                  <Metric label="Completion / 1K" value={formatCost(config.completion_token_cost_per_1k)} />
+                  <Metric label="Context" value={formatNumber(config.max_context_tokens)} />
+                  <Metric label="Created" value={formatDate(config.created_at)} />
+                </div>
+              </article>
+            ))}
+          </div>
+          {modelConfigs.length === 0 && <EmptyState title="No model configs" detail="The backend falls back to default mock pricing until a workspace override is created." />}
+          {activeConfigs.length > 0 && <p className="muted">Active configs are used by the provider before token and cost are recorded.</p>}
         </section>
       </div>
     );

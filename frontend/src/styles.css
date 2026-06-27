@@ -903,12 +903,14 @@ th {
   background: #fffbeb;
 }
 
-.prompt-template-list {
+.prompt-template-list,
+.model-config-list {
   display: grid;
   gap: 12px;
 }
 
-.prompt-card {
+.prompt-card,
+.model-card {
   display: grid;
   gap: 10px;
   border: 1px solid #d8dee7;
@@ -917,7 +919,8 @@ th {
   padding: 14px;
 }
 
-.prompt-card.active-prompt {
+.prompt-card.active-prompt,
+.model-card.active-model {
   border-color: #9bd4c7;
   background: #f0fdfa;
 }
