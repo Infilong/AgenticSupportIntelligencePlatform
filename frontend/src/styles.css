@@ -902,3 +902,28 @@ th {
   border-color: #f3c968;
   background: #fffbeb;
 }
+
+.prompt-template-list {
+  display: grid;
+  gap: 12px;
+}
+
+.prompt-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.prompt-card.active-prompt {
+  border-color: #9bd4c7;
+  background: #f0fdfa;
+}
+
+.single-check {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}

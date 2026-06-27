@@ -79,7 +79,7 @@ class SupportAgentGraphRunner:
         else:
             intent = "general_support"
         classification_prompt = build_classification_prompt(state["input_message"])
-        prompt_template = PromptTemplateService(self.db).get_or_create_default(
+        prompt_template = PromptTemplateService(self.db).get_active_or_create_default(
             workspace_id=UUID(state["workspace_id"]),
             name="support_intent_classifier",
             language=language,
@@ -166,7 +166,7 @@ class SupportAgentGraphRunner:
             language=language,
             documents=documents,
         )
-        prompt_template = PromptTemplateService(self.db).get_or_create_default(
+        prompt_template = PromptTemplateService(self.db).get_active_or_create_default(
             workspace_id=UUID(state["workspace_id"]),
             name="support_response_drafter",
             language=language,

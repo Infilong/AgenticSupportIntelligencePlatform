@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs";
+type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "prompts";
 
 type Workspace = {
   id: string;
@@ -231,6 +231,17 @@ type CostSummary = {
   by_purpose: Array<{ purpose: string; runs: number; tokens: number; estimated_cost: number }>;
 };
 
+type PromptTemplate = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  language: Language;
+  version: number;
+  template_text: string;
+  active: boolean;
+  created_at: string;
+};
+
 type ApiOptions = {
   method?: string;
   token?: string | null;
@@ -247,6 +258,7 @@ const tabs: Array<{ id: Tab; label: string; number: string; group: "Setup" | "Op
   { id: "reviews", label: "Human review", number: "6", group: "Operate", purpose: "Resolve guardrail and low-confidence cases." },
   { id: "evaluations", label: "Evaluation", number: "7", group: "Observe", purpose: "Compare quality, routing, language, and baselines." },
   { id: "costs", label: "Cost ledger", number: "8", group: "Observe", purpose: "Monitor token, latency, cache, and purpose cost." },
+  { id: "prompts", label: "Prompt settings", number: "9", group: "Observe", purpose: "Version and activate LangChain prompt templates." },
 ];
 
 const navSections = [
@@ -272,6 +284,14 @@ Refunds are available within 30 days after purchase when the account is in good 
 const demoEvaluation = `{"id":"en_refund_001","language":"en","input_message":"Can I get a refund within 30 days?","expected_route":"finalize","must_include":["30 days"]}
 {"id":"ja_no_source_001","language":"ja","input_message":"アカウントを完全に削除する方法を教えてください。","expected_route":"human_review","must_not_include":["できます"]}
 {"id":"zh_refund_001","language":"zh","input_message":"我可以在30天内申请退款吗？","expected_route":"finalize","must_include":["30天"]}`;
+
+const defaultPromptTemplateText = `system: Draft a same-language support answer using only the cited evidence. Do not invent policy details.
+human: Language: {language}
+User message:
+{input_message}
+
+Cited evidence:
+{evidence}`;
 
 async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -373,6 +393,11 @@ export function App() {
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
+  const [promptName, setPromptName] = useState("support_response_drafter");
+  const [promptLanguage, setPromptLanguage] = useState<Language>("en");
+  const [promptText, setPromptText] = useState(defaultPromptTemplateText);
+  const [promptActive, setPromptActive] = useState(true);
 
   const selectedWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
@@ -477,6 +502,7 @@ export function App() {
       loadReviews(),
       loadEvaluations(),
       loadCosts(),
+      loadPromptTemplates(),
     ]);
   }
 
@@ -727,6 +753,39 @@ export function App() {
     setCostSummary(data);
   }
 
+  async function loadPromptTemplates() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<PromptTemplate[]>(workspacePath("/prompt-templates"), { token });
+    setPromptTemplates(data);
+  }
+
+  async function createPromptTemplateVersion(event: FormEvent) {
+    event.preventDefault();
+    await runAction("Prompt template version created", async () => {
+      await apiRequest<PromptTemplate>(workspacePath("/prompt-templates"), {
+        method: "POST",
+        token,
+        body: {
+          name: promptName,
+          language: promptLanguage,
+          template_text: promptText,
+          active: promptActive,
+        },
+      });
+      await loadPromptTemplates();
+    });
+  }
+
+  async function activatePromptTemplate(templateId: string) {
+    await runAction("Prompt template activated", async () => {
+      await apiRequest<PromptTemplate>(workspacePath(`/prompt-templates/${templateId}/activate`), {
+        method: "POST",
+        token,
+      });
+      await loadPromptTemplates();
+    });
+  }
+
   function toggleMode(mode: Mode) {
     setEvaluationModes((current) =>
       current.includes(mode) ? current.filter((item) => item !== mode) : [...current, mode],
@@ -889,6 +948,8 @@ export function App() {
         return EvaluationsPanel();
       case "costs":
         return CostsPanel();
+      case "prompts":
+        return PromptsPanel();
       default:
         return OverviewPanel();
     }
@@ -1314,6 +1375,93 @@ export function App() {
         <section className="panel full-width">
           <h3>Metrics by mode and language</h3>
           {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} /> : <EmptyState title="No evaluation selected" detail="Metrics will show language-specific quality and cost signals." />}
+        </section>
+      </div>
+    );
+  }
+
+  function PromptsPanel() {
+    const activeTemplates = promptTemplates.filter((template) => template.active);
+    return (
+      <div className="grid two-wide-left">
+        <ActionGuide
+          title="Prompt settings control model behavior"
+          detail="Create prompt versions, activate the version a workflow should use, then inspect the exact prompt version in Trace after the next agent run."
+          action="Run agent after activation"
+          onAction={() => setActiveTab("agent")}
+        />
+        <form className="panel stack" onSubmit={createPromptTemplateVersion}>
+          <div className="row-head">
+            <div>
+              <h3>Create prompt version</h3>
+              <p className="muted">New versions are workspace-scoped and can be activated immediately.</p>
+            </div>
+            <Badge tone={promptActive ? "good" : "neutral"}>{promptActive ? "activate" : "draft"}</Badge>
+          </div>
+          <label>
+            Template name
+            <select value={promptName} onChange={(event) => setPromptName(event.target.value)}>
+              <option value="support_intent_classifier">support_intent_classifier</option>
+              <option value="support_response_drafter">support_response_drafter</option>
+            </select>
+          </label>
+          <label>
+            Language
+            <select value={promptLanguage} onChange={(event) => setPromptLanguage(event.target.value as Language)}>
+              <option value="en">English</option>
+              <option value="ja">Japanese</option>
+              <option value="zh">Chinese</option>
+            </select>
+          </label>
+          <label>
+            Template source
+            <textarea rows={12} value={promptText} onChange={(event) => setPromptText(event.target.value)} />
+          </label>
+          <label className="check-row single-check">
+            <input type="checkbox" checked={promptActive} onChange={(event) => setPromptActive(event.target.checked)} />
+            Activate this version immediately
+          </label>
+          <button className="primary" disabled={loading}>Create version</button>
+        </form>
+        <section className="panel stack">
+          <h3>Active prompts</h3>
+          {activeTemplates.map((template) => (
+            <article className="prompt-card active-prompt" key={template.id}>
+              <div className="row-head">
+                <strong>{template.name}</strong>
+                <Badge tone="good">v{template.version}</Badge>
+              </div>
+              <small>{template.language} · {formatDate(template.created_at)}</small>
+            </article>
+          ))}
+          {activeTemplates.length === 0 && <EmptyState title="No active prompts" detail="Run an agent to create defaults or create an active version here." />}
+        </section>
+        <section className="panel full-width stack">
+          <div className="row-head">
+            <div>
+              <h3>Prompt versions</h3>
+              <p className="muted">Activate a version to make the next graph run use it.</p>
+            </div>
+            <button onClick={() => void runAction("Prompt templates refreshed", loadPromptTemplates)}>Refresh</button>
+          </div>
+          <div className="prompt-template-list">
+            {promptTemplates.map((template) => (
+              <article className={template.active ? "prompt-card active-prompt" : "prompt-card"} key={template.id}>
+                <div className="row-head">
+                  <div>
+                    <strong>{template.name}</strong>
+                    <p className="muted">{template.language} · version {template.version}</p>
+                  </div>
+                  <div className="review-actions">
+                    {template.active && <Badge tone="good">active</Badge>}
+                    <button disabled={template.active || loading} onClick={() => void activatePromptTemplate(template.id)}>Activate</button>
+                  </div>
+                </div>
+                <JsonBlock value={template.template_text} />
+              </article>
+            ))}
+          </div>
+          {promptTemplates.length === 0 && <EmptyState title="No prompt templates" detail="Defaults are created on first agent run, or create a version manually." />}
         </section>
       </div>
     );
