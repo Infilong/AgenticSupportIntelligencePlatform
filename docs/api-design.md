@@ -111,6 +111,24 @@ GET  /api/v1/workspaces/{workspace_id}/evaluations
 GET  /api/v1/workspaces/{workspace_id}/evaluations/{evaluation_id}
 ```
 
+Current v1 payload:
+```json
+{
+  "name": "Smoke evaluation",
+  "jsonl_cases": "{...}\\n{...}",
+  "modes": ["direct_llm", "vector_rag", "system_v1"],
+  "agent_id": null
+}
+```
+
+Current v1 behavior:
+- stores uploaded JSONL cases as workspace-scoped `EvaluationCase` rows.
+- runs selected modes synchronously for local v1.
+- stores one `EvaluationResult` per case and mode.
+- stores aggregate `EvaluationMetric` rows by mode and language.
+- enforces workspace membership on create, list, and detail routes.
+- uses mock providers in tests; no test calls a real model provider.
+
 ## Observability And Cost
 ```text
 GET /api/v1/workspaces/{workspace_id}/costs/summary

@@ -143,10 +143,10 @@ Multilingual Agentic Support Intelligence Platform
 |   |-- Milestone 5: hybrid retrieval, citations, no-source detection, retrieval traces
 |   |-- Milestone 6: AI run ledger, token/cost accounting, token budget planner
 |   |-- Milestone 7: LangGraph support-agent workflow, graph traces, tool calls
-|   `-- Milestone 8: deterministic guardrails and human review workflow
+|   |-- Milestone 8: deterministic guardrails and human review workflow
+|   `-- Milestone 9: evaluation runner, baseline modes, per-language metrics
 |
 `-- Future Milestones
-    |-- Milestone 9: evaluation runner
     |-- Milestone 10: frontend trace and evaluation UI
     `-- Milestone 11: portfolio packaging
 ```
@@ -158,7 +158,7 @@ Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, PyJWT, pytest, ruff
 Frontend: React, TypeScript, Vite, npm
 Database: PostgreSQL, pgvector
 Queue/cache: Redis, future Celery/RQ/Arq worker
-AI: LangChain, LangGraph, OpenAI-compatible provider abstraction, deterministic mock embedding provider, future mock LLM provider
+AI: LangChain, LangGraph, OpenAI-compatible provider abstraction, deterministic mock embedding provider, mock LLM provider
 DevOps: Docker Compose, Dockerfiles, uv, Makefile, GitHub Actions CI
 Docs/process: AGENTS.md, docs/PROJECT_CONTEXT.md, docs/PLANS.md, docs/tickets/*, docs/learning/*
 ```

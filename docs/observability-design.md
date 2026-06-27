@@ -49,3 +49,9 @@ Show token usage, estimated cost, latency, model choice, cache hit rate, purpose
 - Trace endpoint for graph runs.
 - Graph steps can link to `AIRun` rows.
 - Retrieval node links workflow execution to retrieval trace/tool-call evidence.
+
+## Implemented In Milestone 9
+- `EvaluationRun`, `EvaluationResult`, and `EvaluationMetric` persistence.
+- Baseline comparison across `direct_llm`, `vector_rag`, and `system_v1`.
+- Metrics are grouped by language and mode.
+- Evaluation detail responses include per-case answers, citations, route decisions, prompt-token estimates, estimated cost, and errors.

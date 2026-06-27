@@ -5,6 +5,7 @@ from app.api.v1 import (
     auth,
     costs,
     datasets,
+    evaluations,
     human_reviews,
     knowledge,
     retrieval,
@@ -17,6 +18,7 @@ api_router.include_router(workspaces.router)
 api_router.include_router(agents.router)
 api_router.include_router(human_reviews.router)
 api_router.include_router(datasets.router)
+api_router.include_router(evaluations.router)
 api_router.include_router(knowledge.router)
 api_router.include_router(retrieval.router)
 api_router.include_router(costs.router)

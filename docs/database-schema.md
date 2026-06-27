@@ -317,6 +317,7 @@ Every model call should create an `AIRun`. Every AI run should record prompt tem
 EvaluationCase
 - id
 - workspace_id
+- external_id
 - language
 - input_message
 - expected_intent nullable
@@ -327,15 +328,18 @@ EvaluationCase
 - expected_route
 - safety_risk
 - max_prompt_tokens nullable
+- metadata_json
 - created_at
 
 EvaluationRun
 - id
 - workspace_id
 - name
-- baseline_mode
-- status
-- started_at
+- modes_json
+- status: running / completed / failed
+- total_cases
+- created_by_user_id nullable
+- created_at
 - completed_at nullable
 
 EvaluationResult
@@ -343,21 +347,31 @@ EvaluationResult
 - workspace_id
 - evaluation_run_id
 - evaluation_case_id
-- graph_run_id nullable
+- mode: direct_llm / vector_rag / system_v1
+- language
+- actual_route
+- answer nullable
+- citations_json
 - passed
-- metrics_json
-- failure_reason nullable
+- scores_json
+- latency_ms
+- prompt_tokens
+- estimated_cost
+- error_message nullable
 - created_at
 
 EvaluationMetric
 - id
 - workspace_id
 - evaluation_run_id
+- mode
 - language
 - metric_name
 - metric_value
 - created_at
 ```
+
+Evaluation data is workspace-owned. Results and metrics must always be queried through the parent workspace and run IDs, never by global IDs alone.
 
 ## Required Permission Tests
 Add permission tests for documents, datasets, examples, labels, graph runs, human reviews, evaluations, cost summaries, and audit logs.
