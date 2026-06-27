@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.dependencies.workspace import require_workspace_member
 from app.models.workspace import Workspace
-from app.schemas.costs import CostPurposeSummaryResponse, CostSummaryResponse
+from app.schemas.costs import (
+    CostModelSummaryResponse,
+    CostPurposeSummaryResponse,
+    CostSummaryResponse,
+)
 from app.services.cost_service import CostService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/costs", tags=["costs"])
@@ -32,5 +36,15 @@ def get_cost_summary(workspace: WorkspaceMemberAccess, db: DbSession) -> CostSum
                 estimated_cost=item.estimated_cost,
             )
             for item in summary.by_purpose
+        ],
+        by_model=[
+            CostModelSummaryResponse(
+                provider=item.provider,
+                model=item.model,
+                runs=item.runs,
+                tokens=item.tokens,
+                estimated_cost=item.estimated_cost,
+            )
+            for item in summary.by_model
         ],
     )

@@ -229,6 +229,7 @@ type CostSummary = {
   average_latency_ms: number;
   cache_hit_rate: number;
   by_purpose: Array<{ purpose: string; runs: number; tokens: number; estimated_cost: number }>;
+  by_model: Array<{ provider: string; model: string; runs: number; tokens: number; estimated_cost: number }>;
 };
 
 type PromptTemplate = {
@@ -1650,7 +1651,7 @@ export function App() {
           onAction={() => setActiveTab("overview")}
         />
         <div className="row-head"><h3>Token and cost summary</h3><button onClick={() => void runAction("Costs refreshed", loadCosts)}>Refresh costs</button></div>
-        {costSummary ? <><div className="metric-grid"><Metric label="AI runs" value={costSummary.total_runs} /><Metric label="Tokens" value={formatNumber(costSummary.total_tokens)} /><Metric label="Estimated cost" value={formatCost(costSummary.total_estimated_cost)} /><Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} /><Metric label="Cache hit rate" value={`${(costSummary.cache_hit_rate * 100).toFixed(1)}%`} /></div><table><thead><tr><th>Purpose</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr></thead><tbody>{costSummary.by_purpose.map((item) => <tr key={item.purpose}><td>{item.purpose}</td><td>{item.runs}</td><td>{formatNumber(item.tokens)}</td><td>{formatCost(item.estimated_cost)}</td></tr>)}</tbody></table></> : <EmptyState title="No cost data" detail="Model calls create AI run ledger entries with token and latency estimates." />}
+        {costSummary ? <><div className="metric-grid"><Metric label="AI runs" value={costSummary.total_runs} /><Metric label="Tokens" value={formatNumber(costSummary.total_tokens)} /><Metric label="Estimated cost" value={formatCost(costSummary.total_estimated_cost)} /><Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} /><Metric label="Cache hit rate" value={`${(costSummary.cache_hit_rate * 100).toFixed(1)}%`} /></div><h3>By purpose</h3><table><thead><tr><th>Purpose</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr></thead><tbody>{costSummary.by_purpose.map((item) => <tr key={item.purpose}><td>{item.purpose}</td><td>{item.runs}</td><td>{formatNumber(item.tokens)}</td><td>{formatCost(item.estimated_cost)}</td></tr>)}</tbody></table><h3>By model</h3><table><thead><tr><th>Provider</th><th>Model</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr></thead><tbody>{costSummary.by_model.map((item) => <tr key={`${item.provider}:${item.model}`}><td>{item.provider}</td><td>{item.model}</td><td>{item.runs}</td><td>{formatNumber(item.tokens)}</td><td>{formatCost(item.estimated_cost)}</td></tr>)}</tbody></table></> : <EmptyState title="No cost data" detail="Model calls create AI run ledger entries with token and latency estimates." />}
       </section>
     );
   }

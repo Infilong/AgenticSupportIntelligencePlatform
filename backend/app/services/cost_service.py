@@ -18,6 +18,15 @@ class CostPurposeSummary:
 
 
 @dataclass(frozen=True)
+class CostModelSummary:
+    provider: str
+    model: str
+    runs: int
+    tokens: int
+    estimated_cost: float
+
+
+@dataclass(frozen=True)
 class CostSummary:
     workspace_id: UUID
     total_runs: int
@@ -26,6 +35,7 @@ class CostSummary:
     average_latency_ms: float
     cache_hit_rate: float
     by_purpose: list[CostPurposeSummary]
+    by_model: list[CostModelSummary]
 
 
 class CostService:
@@ -65,6 +75,18 @@ class CostService:
             .group_by(AIRun.purpose)
             .order_by(AIRun.purpose.asc())
         ).all()
+        grouped_by_model = self.db.execute(
+            select(
+                AIRun.provider,
+                AIRun.model,
+                func.count(AIRun.id),
+                func.coalesce(func.sum(AIRun.total_tokens), 0),
+                func.coalesce(func.sum(AIRun.estimated_cost), 0.0),
+            )
+            .where(AIRun.workspace_id == workspace_id)
+            .group_by(AIRun.provider, AIRun.model)
+            .order_by(AIRun.provider.asc(), AIRun.model.asc())
+        ).all()
         return CostSummary(
             workspace_id=workspace_id,
             total_runs=int(total_runs),
@@ -80,5 +102,15 @@ class CostService:
                     estimated_cost=round(float(cost), 8),
                 )
                 for purpose, runs, tokens, cost in grouped
+            ],
+            by_model=[
+                CostModelSummary(
+                    provider=provider,
+                    model=model,
+                    runs=int(runs),
+                    tokens=int(tokens),
+                    estimated_cost=round(float(cost), 8),
+                )
+                for provider, model, runs, tokens, cost in grouped_by_model
             ],
         )

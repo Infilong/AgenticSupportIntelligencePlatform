@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, ModelConfig
-from app.services.model_provider import MockModelProvider
+from app.services.model_provider import MockModelProvider, MockModelProviderError
 from app.services.token_accounting import estimate_cost, estimate_tokens
 
 
@@ -171,3 +171,49 @@ def test_active_model_config_controls_provider_pricing_and_ai_run(
     assert stored.provider == "mock-admin"
     assert stored.model == "mock-admin-classifier"
     assert stored.estimated_cost == expected_cost
+
+
+def test_active_model_config_context_limit_records_failed_ai_run(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "model-limit@example.com")
+    token = login(client, "model-limit@example.com")
+    workspace = create_workspace(client, token)
+    workspace_id = UUID(workspace["id"])
+    created = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/model-configs",
+        headers=auth_headers(token),
+        json={
+            "provider": "mock-limit",
+            "model": "mock-tiny-context",
+            "purpose": "classification",
+            "prompt_token_cost_per_1k": 0.01,
+            "completion_token_cost_per_1k": 0.02,
+            "max_context_tokens": 256,
+            "active": True,
+        },
+    )
+    assert created.status_code == 201
+
+    try:
+        MockModelProvider(db_session).complete(
+            workspace_id=workspace_id,
+            purpose="classification",
+            language=SupportedLanguage.en,
+            prompt="token " * 300,
+            model="mock-cheap",
+            completion_text="refund_request",
+        )
+    except MockModelProviderError as exc:
+        assert "model_context_exceeded" in str(exc)
+    else:
+        raise AssertionError("expected model context error")
+
+    stored = db_session.scalar(select(AIRun).where(AIRun.workspace_id == workspace_id))
+    assert stored is not None
+    assert stored.provider == "mock-limit"
+    assert stored.model == "mock-tiny-context"
+    assert stored.status == "failed"
+    assert stored.error_message is not None
+    assert "model_context_exceeded" in stored.error_message
+    assert stored.estimated_cost == 0

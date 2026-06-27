@@ -10,6 +10,14 @@ class CostPurposeSummaryResponse(BaseModel):
     estimated_cost: float
 
 
+class CostModelSummaryResponse(BaseModel):
+    provider: str
+    model: str
+    runs: int
+    tokens: int
+    estimated_cost: float
+
+
 class CostSummaryResponse(BaseModel):
     workspace_id: UUID
     total_runs: int
@@ -18,3 +26,4 @@ class CostSummaryResponse(BaseModel):
     average_latency_ms: float
     cache_hit_rate: float
     by_purpose: list[CostPurposeSummaryResponse]
+    by_model: list[CostModelSummaryResponse]

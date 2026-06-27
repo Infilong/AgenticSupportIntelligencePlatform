@@ -48,14 +48,25 @@ class MockModelProvider:
             workspace_id=workspace_id, purpose=purpose, fallback_model=model
         )
         prompt_tokens = estimate_tokens(prompt, language)
-        completion_tokens = 0 if fail else estimate_tokens(completion_text, language)
+        requested_completion_tokens = 0 if fail else estimate_tokens(completion_text, language)
+        requested_total_tokens = prompt_tokens + requested_completion_tokens
+        context_exceeded = requested_total_tokens > pricing.max_context_tokens
+        completion_tokens = 0 if fail or context_exceeded else requested_completion_tokens
         total_tokens = prompt_tokens + completion_tokens
-        estimated = estimate_cost(
+        estimated = 0.0 if context_exceeded else estimate_cost(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             prompt_token_cost_per_1k=pricing.prompt_token_cost_per_1k,
             completion_token_cost_per_1k=pricing.completion_token_cost_per_1k,
         )
+        error_message = None
+        if context_exceeded:
+            error_message = (
+                f"model_context_exceeded: requested {requested_total_tokens} tokens "
+                f"but {pricing.model} allows {pricing.max_context_tokens}"
+            )
+        elif fail:
+            error_message = "mock provider failure"
         ai_run = AIRun(
             workspace_id=workspace_id,
             graph_run_id=graph_run_id,
@@ -72,12 +83,14 @@ class MockModelProvider:
             estimated_cost=estimated,
             latency_ms=max(1, int((time.perf_counter() - started) * 1000)),
             cache_hit=cache_hit,
-            status=AIRunStatus.failed if fail else AIRunStatus.succeeded,
-            error_message="mock provider failure" if fail else None,
+            status=AIRunStatus.failed if fail or context_exceeded else AIRunStatus.succeeded,
+            error_message=error_message,
         )
         self.db.add(ai_run)
         self.db.commit()
         self.db.refresh(ai_run)
+        if context_exceeded:
+            raise MockModelProviderError(error_message or "model context exceeded")
         if fail:
             raise MockModelProviderError("mock provider failure")
         return MockModelResponse(content=completion_text, ai_run=ai_run)

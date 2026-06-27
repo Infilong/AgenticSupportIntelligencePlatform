@@ -186,6 +186,7 @@ def test_cost_summary_is_workspace_scoped(client: TestClient, db_session: Sessio
         "classification",
         "final_answer",
     }
+    assert {item["model"] for item in body["by_model"]} == {"mock-cheap", "mock-standard"}
     assert forbidden.status_code == 404
     assert forbidden.json()["detail"]["code"] == "workspace_not_found"
 
