@@ -64,7 +64,18 @@ def evaluate_guardrails(state: SupportAgentState) -> list[GuardrailDecision]:
     confidence = state.get("confidence_score", 0.0)
     lowered = input_message.lower()
     injection = any(marker in lowered for marker in PROMPT_INJECTION_MARKERS)
-    decisions = [
+    decisions = []
+    provider_failure = state.get("model_provider_failure")
+    if provider_failure:
+        decisions.append(
+            GuardrailDecision(
+                "model_provider_failure",
+                False,
+                "high",
+                f"Model provider failure requires human review: {provider_failure}",
+            )
+        )
+    decisions.extend([
         GuardrailDecision(
             "prompt_injection",
             not injection,
@@ -101,7 +112,7 @@ def evaluate_guardrails(state: SupportAgentState) -> list[GuardrailDecision]:
             "medium" if confidence < 0.5 else "low",
             f"Confidence score is {confidence}.",
         ),
-    ]
+    ])
     if draft_answer and language in {"en", "ja", "zh"}:
         try:
             answer_language = detect_language(draft_answer).value

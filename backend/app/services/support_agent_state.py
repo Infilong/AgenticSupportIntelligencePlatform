@@ -17,3 +17,4 @@ class SupportAgentState(TypedDict, total=False):
     final_answer: str | None
     citations: list[str]
     errors: list[str]
+    model_provider_failure: str | None

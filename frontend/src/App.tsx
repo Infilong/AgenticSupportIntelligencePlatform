@@ -1319,7 +1319,7 @@ export function App() {
                     <Badge tone="warn">waiting for reviewer</Badge>
                   </div>
                   <div className="guardrail-list">
-                    {guardrailParts.map((part) => <Badge key={part} tone="warn">{part}</Badge>)}
+                    {guardrailParts.map((part) => <Badge key={part} tone="warn">{friendlyGuardrailName(part)}</Badge>)}
                   </div>
                   <div className="answer-box">
                     <span>Proposed answer</span>
@@ -1394,6 +1394,7 @@ export function App() {
               <span>Privacy or safety escalation</span>
               <span>Low confidence score</span>
               <span>Language preservation issue</span>
+              <span>Model or token budget failure</span>
             </div>
           </aside>
         </section>
@@ -1666,6 +1667,9 @@ function toneForStatus(status: string): "neutral" | "good" | "warn" | "bad" {
 
 function friendlyReviewReason(reason: string) {
   const parts = reason.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.includes("model_provider_failure")) {
+    return "Model or token budget failure needs review";
+  }
   if (parts.includes("prompt_injection")) {
     return "Prompt injection attempt needs review";
   }
@@ -1679,6 +1683,18 @@ function friendlyReviewReason(reason: string) {
     return "Language mismatch needs review";
   }
   return "Agent run needs human review";
+}
+
+function friendlyGuardrailName(reason: string) {
+  const labels: Record<string, string> = {
+    model_provider_failure: "Model budget failure",
+    prompt_injection: "Prompt injection",
+    citation_required: "Missing citations",
+    unsupported_answer: "Unsupported answer",
+    confidence_threshold: "Low confidence",
+    language_preservation: "Language mismatch",
+  };
+  return labels[reason] ?? reason;
 }
 
 function ActionGuide({

@@ -19,7 +19,7 @@ from app.services.langchain_support import (
     run_classification_chain,
     run_draft_response_chain,
 )
-from app.services.model_provider import MockModelProvider
+from app.services.model_provider import MockModelProvider, MockModelProviderError
 from app.services.prompt_template_service import PromptTemplateService
 from app.services.retrieval_service import RetrievalService
 from app.services.support_agent_state import SupportAgentState
@@ -83,15 +83,28 @@ class SupportAgentGraphRunner:
             language=language,
             template_text=CLASSIFICATION_TEMPLATE_TEXT,
         )
-        ai_response = run_classification_chain(
-            provider=MockModelProvider(self.db),
-            workspace_id=UUID(state["workspace_id"]),
-            language=language,
-            input_message=state["input_message"],
-            graph_run_id=UUID(state["graph_run_id"]),
-            prompt_template=prompt_template,
-            completion_text=intent,
-        )
+        try:
+            ai_response = run_classification_chain(
+                provider=MockModelProvider(self.db),
+                workspace_id=UUID(state["workspace_id"]),
+                language=language,
+                input_message=state["input_message"],
+                graph_run_id=UUID(state["graph_run_id"]),
+                prompt_template=prompt_template,
+                completion_text=intent,
+            )
+        except MockModelProviderError as exc:
+            output = _provider_failure_output(state, exc)
+            self._record_step(
+                "classify_intent",
+                state,
+                output,
+                started,
+                exc.ai_run.id if exc.ai_run else None,
+                status=GraphStepStatus.failed,
+                error_message=str(exc),
+            )
+            return output
         output: SupportAgentState = {"intent": ai_response.content}
         self._record_step("classify_intent", state, output, started, ai_response.ai_run.id)
         return output
@@ -99,6 +112,14 @@ class SupportAgentGraphRunner:
     def retrieve_evidence(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
         language = SupportedLanguage(state["detected_language"])
+        if state.get("model_provider_failure"):
+            output: SupportAgentState = {
+                "retrieved_chunks": [],
+                "citations": [],
+                "no_source": True,
+            }
+            self._record_step("retrieve_evidence", state, output, started)
+            return output
         retrieval = RetrievalService(self.db).search(
             workspace_id=UUID(state["workspace_id"]),
             query=state["input_message"],
@@ -147,7 +168,7 @@ class SupportAgentGraphRunner:
     def draft_response(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
         language = SupportedLanguage(state["detected_language"])
-        if not state.get("retrieved_chunks"):
+        if state.get("model_provider_failure") or not state.get("retrieved_chunks"):
             output: SupportAgentState = {"draft_answer": None}
             self._record_step("draft_response", state, output, started)
             return output
@@ -164,16 +185,30 @@ class SupportAgentGraphRunner:
             language=language,
             template_text=DRAFT_RESPONSE_TEMPLATE_TEXT,
         )
-        ai_response = run_draft_response_chain(
-            provider=MockModelProvider(self.db),
-            workspace_id=UUID(state["workspace_id"]),
-            language=language,
-            input_message=state["input_message"],
-            documents=documents,
-            graph_run_id=UUID(state["graph_run_id"]),
-            prompt_template=prompt_template,
-            completion_text=completion,
-        )
+        try:
+            ai_response = run_draft_response_chain(
+                provider=MockModelProvider(self.db),
+                workspace_id=UUID(state["workspace_id"]),
+                language=language,
+                input_message=state["input_message"],
+                documents=documents,
+                graph_run_id=UUID(state["graph_run_id"]),
+                prompt_template=prompt_template,
+                completion_text=completion,
+            )
+        except MockModelProviderError as exc:
+            output = _provider_failure_output(state, exc)
+            output["draft_answer"] = None
+            self._record_step(
+                "draft_response",
+                state,
+                output,
+                started,
+                exc.ai_run.id if exc.ai_run else None,
+                status=GraphStepStatus.failed,
+                error_message=str(exc),
+            )
+            return output
         output: SupportAgentState = {"draft_answer": ai_response.content}
         self._record_step("draft_response", state, output, started, ai_response.ai_run.id)
         return output
@@ -193,7 +228,8 @@ class SupportAgentGraphRunner:
     def route_review_or_finalize(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
         review_required = (
-            state.get("confidence_score", 0) < 0.5
+            bool(state.get("model_provider_failure"))
+            or state.get("confidence_score", 0) < 0.5
             or state.get("intent") in {"prompt_injection", "privacy_complaint"}
             or not state.get("citations")
             or state.get("no_source")
@@ -219,6 +255,8 @@ class SupportAgentGraphRunner:
         output: SupportAgentState,
         started: float,
         ai_run_id: UUID | None = None,
+        status: GraphStepStatus = GraphStepStatus.succeeded,
+        error_message: str | None = None,
     ) -> GraphStep:
         step = GraphStep(
             workspace_id=UUID(input_state["workspace_id"]),
@@ -226,9 +264,10 @@ class SupportAgentGraphRunner:
             step_name=step_name,
             input_json=json.dumps(_compact_state(input_state), ensure_ascii=False, default=str),
             output_json=json.dumps(output, ensure_ascii=False, default=str),
-            status=GraphStepStatus.succeeded,
+            status=status,
             latency_ms=max(1, int((time.perf_counter() - started) * 1000)),
             ai_run_id=ai_run_id,
+            error_message=error_message,
             retry_count=0,
         )
         self.db.add(step)
@@ -248,6 +287,19 @@ class SupportAgentGraphRunner:
         step.estimated_cost = ai_run.estimated_cost
         self.db.commit()
         self.db.refresh(step)
+
+
+def _provider_failure_output(
+    state: SupportAgentState, exc: MockModelProviderError
+) -> SupportAgentState:
+    message = str(exc)
+    errors = [*state.get("errors", []), message]
+    return {
+        "model_provider_failure": message,
+        "errors": errors,
+        "confidence_score": 0.0,
+        "route_decision": "human_review",
+    }
 
 
 def complete_graph_run(db: Session, graph_run: GraphRun, state: SupportAgentState) -> GraphRun:
@@ -277,6 +329,8 @@ def _compact_state(state: SupportAgentState) -> dict:
         "final_answer",
         "citations",
         "no_source",
+        "model_provider_failure",
+        "errors",
     ]
     return {key: state.get(key) for key in allowed if key in state}
 

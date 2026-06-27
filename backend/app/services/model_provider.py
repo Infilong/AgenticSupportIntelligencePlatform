@@ -13,7 +13,9 @@ from app.services.token_accounting import estimate_cost, estimate_tokens
 
 
 class MockModelProviderError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, ai_run: AIRun | None = None):
+        super().__init__(message)
+        self.ai_run = ai_run
 
 
 @dataclass(frozen=True)
@@ -90,7 +92,7 @@ class MockModelProvider:
         self.db.commit()
         self.db.refresh(ai_run)
         if context_exceeded:
-            raise MockModelProviderError(error_message or "model context exceeded")
+            raise MockModelProviderError(error_message or "model context exceeded", ai_run=ai_run)
         if fail:
-            raise MockModelProviderError("mock provider failure")
+            raise MockModelProviderError("mock provider failure", ai_run=ai_run)
         return MockModelResponse(content=completion_text, ai_run=ai_run)

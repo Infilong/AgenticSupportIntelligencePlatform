@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.agent import GraphStep, ToolCall
 from app.models.ai import AIRun, PromptTemplate
+from app.models.review import HumanReview
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -278,6 +279,64 @@ def test_support_agent_routes_privacy_complaint_to_human_review(client: TestClie
     assert body["status"] == "needs_human_review"
     assert body["route_decision"] == "human_review"
     assert body["final_answer"] is None
+
+
+def test_support_agent_routes_model_context_failure_to_human_review(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "model-context@example.com")
+    token = login(client, "model-context@example.com")
+    workspace = create_workspace(client, token)
+    config = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/model-configs",
+        headers=auth_headers(token),
+        json={
+            "provider": "mock-limit",
+            "model": "mock-tiny-classifier",
+            "purpose": "classification",
+            "prompt_token_cost_per_1k": 0.01,
+            "completion_token_cost_per_1k": 0.02,
+            "max_context_tokens": 256,
+            "active": True,
+        },
+    )
+    assert config.status_code == 201
+    agent = create_agent(client, token, workspace["id"])
+
+    response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "refund " * 500},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "needs_human_review"
+    assert body["route_decision"] == "human_review"
+    assert body["final_answer"] is None
+
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{body['id']}/trace",
+        headers=auth_headers(token),
+    )
+    assert trace.status_code == 200
+    trace_body = trace.json()
+    classify_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "classify_intent"
+    )
+    assert classify_step["status"] == "failed"
+    assert "model_context_exceeded" in classify_step["error_message"]
+    assert classify_step["ai_run"]["status"] == "failed"
+    assert classify_step["ai_run"]["provider"] == "mock-limit"
+    assert classify_step["ai_run"]["model"] == "mock-tiny-classifier"
+    assert any(
+        guardrail["guardrail_type"] == "model_provider_failure"
+        and guardrail["passed"] is False
+        for guardrail in trace_body["guardrails"]
+    )
+    reviews = db_session.scalars(select(HumanReview)).all()
+    assert len(reviews) == 1
+    assert "model_provider_failure" in reviews[0].reason
 
 
 def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:
