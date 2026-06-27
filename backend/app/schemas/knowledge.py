@@ -23,11 +23,12 @@ class KnowledgeDocumentUploadRequest(BaseModel):
 
 
 class KnowledgeDocumentReindexRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
     content_type: str | None = Field(default=None, max_length=80)
     content: str | None = Field(default=None, min_length=1)
     language: SupportedLanguage | None = None
 
-    @field_validator("content_type", "content")
+    @field_validator("title", "content_type", "content")
     @classmethod
     def strip_optional_text(cls, value: str | None) -> str | None:
         if value is None:
@@ -47,6 +48,7 @@ class DocumentVersionResponse(BaseModel):
     version: int
     content_hash: str
     content_type: str
+    raw_text: str
     created_at: datetime
 
 

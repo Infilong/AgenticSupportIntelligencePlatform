@@ -51,8 +51,14 @@ def test_parser_accepts_text_and_rejects_unsupported_type() -> None:
 
 def test_language_aware_chunking_uses_word_and_cjk_windows() -> None:
     english = chunk_text(" ".join(f"word{i}" for i in range(240)), SupportedLanguage.en)
-    japanese = chunk_text("返金ポリシーです。" * 140, SupportedLanguage.ja)
-    chinese = chunk_text("退款政策适用于购买后三十天内。" * 120, SupportedLanguage.zh)
+    japanese = chunk_text(
+        "".join(f"返金ポリシー{i}です。" for i in range(220)),
+        SupportedLanguage.ja,
+    )
+    chinese = chunk_text(
+        "".join(f"退款政策适用于购买后{i}天内。" for i in range(220)),
+        SupportedLanguage.zh,
+    )
 
     assert len(english) > 1
     assert english[0].metadata["strategy"] == "word_window"
@@ -60,6 +66,14 @@ def test_language_aware_chunking_uses_word_and_cjk_windows() -> None:
     assert japanese[0].metadata["strategy"] == "cjk_char_window"
     assert len(chinese) > 1
     assert chinese[0].metadata["strategy"] == "cjk_char_window"
+
+
+def test_chunking_collapses_adjacent_duplicate_cjk_sentences() -> None:
+    chunks = chunk_text("退款政策适用于购买后三十天内。" * 80, SupportedLanguage.zh)
+
+    combined = "".join(chunk.content for chunk in chunks)
+
+    assert combined.count("退款政策适用于购买后三十天内。") == 1
 
 
 def test_mock_embedding_provider_is_deterministic_and_small() -> None:
@@ -192,18 +206,22 @@ def test_reindex_creates_new_version(client: TestClient) -> None:
         headers=auth_headers(token),
         json={
             "content_type": "text/plain",
+            "title": "Updated Billing FAQ",
             "content": "Billing plans can be changed from workspace settings. " * 30,
         },
     )
 
     assert reindex.status_code == 200
+    assert reindex.json()["document"]["title"] == "Updated Billing FAQ"
     assert reindex.json()["latest_version"]["version"] == 2
 
     detail = client.get(
         f"/api/v1/workspaces/{workspace['id']}/knowledge-documents/{document_id}",
         headers=auth_headers(token),
     )
+    assert detail.json()["document"]["title"] == "Updated Billing FAQ"
     assert detail.json()["latest_version"]["version"] == 2
+    assert "workspace settings" in detail.json()["latest_version"]["raw_text"]
 
 
 class FailingEmbeddingProvider(EmbeddingProvider):

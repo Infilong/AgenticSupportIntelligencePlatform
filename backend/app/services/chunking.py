@@ -28,7 +28,7 @@ def chunk_text(
     max_tokens: int = 180,
     overlap_tokens: int = 30,
 ) -> list[TextChunk]:
-    stripped = text.strip()
+    stripped = _collapse_adjacent_duplicate_units(text.strip(), language)
     if not stripped:
         return []
     if max_tokens <= 0:
@@ -87,3 +87,27 @@ def _chunk_cjk(text: str, *, max_tokens: int, overlap_tokens: int) -> list[TextC
             break
         start += step
     return chunks
+
+
+
+def _collapse_adjacent_duplicate_units(text: str, language: SupportedLanguage) -> str:
+    if not text:
+        return text
+    if language == SupportedLanguage.en:
+        units = re.findall(r"[^.!?]+[.!?]?|\n+", text)
+        separator = " "
+    else:
+        units = re.findall(r"[^。！？!?]+[。！？!?]?|\n+", text)
+        separator = ""
+    collapsed: list[str] = []
+    previous_normalized = ""
+    for unit in units:
+        cleaned = unit.strip()
+        if not cleaned:
+            continue
+        normalized = re.sub(r"\s+", "", cleaned).lower()
+        if normalized == previous_normalized:
+            continue
+        collapsed.append(cleaned)
+        previous_normalized = normalized
+    return separator.join(collapsed)

@@ -130,9 +130,10 @@ class KnowledgeService:
         *,
         workspace_id: UUID,
         document_id: UUID,
-        content_type: str | None,
-        content: str | None,
-        language: SupportedLanguage | None,
+        title: str | None = None,
+        content_type: str | None = None,
+        content: str | None = None,
+        language: SupportedLanguage | None = None,
     ) -> KnowledgeDocumentIndexResult:
         document = self.get_document(workspace_id=workspace_id, document_id=document_id)
         if document is None:
@@ -147,6 +148,8 @@ class KnowledgeService:
             content_type=content_type if content_type is not None else latest_version.content_type,
         )
         resolved_language = language or document.language or self._detect_or_raise(raw_text)
+        if title is not None:
+            document.title = title.strip()
         document.language = resolved_language
         next_version = self._next_version_number(workspace_id=workspace_id, document_id=document_id)
         return self._index_document_version(

@@ -111,6 +111,7 @@ def reindex_knowledge_document(
         result = KnowledgeService(db).reindex_document(
             workspace_id=workspace.id,
             document_id=document_id,
+            title=payload.title,
             content_type=payload.content_type,
             content=payload.content,
             language=payload.language,

@@ -639,3 +639,8 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+.selected-list-item {
+  border-color: #2f6f73;
+  background: #f2fbf8;
+}

@@ -61,8 +61,17 @@ type DocumentChunk = {
   token_count: number;
 };
 
+type DocumentVersion = {
+  id: string;
+  version: number;
+  content_type: string;
+  raw_text: string;
+  created_at: string;
+};
+
 type DocumentDetail = {
   document: KnowledgeDocument;
+  latest_version: DocumentVersion | null;
   chunks: DocumentChunk[];
   embedding_count: number;
 };
@@ -290,6 +299,7 @@ export function App() {
   const [documentTitle, setDocumentTitle] = useState("Refund Policy EN");
   const [documentLanguage, setDocumentLanguage] = useState<Language>("en");
   const [documentContent, setDocumentContent] = useState(demoDocument);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
 
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -489,7 +499,44 @@ export function App() {
     const detail = await apiRequest<DocumentDetail>(workspacePath(`/knowledge-documents/${documentId}`), {
       token,
     });
+    setSelectedDocumentId(documentId);
     setDocumentDetail(detail);
+    setDocumentTitle(detail.document.title);
+    setDocumentLanguage(detail.document.language);
+    setDocumentContent(detail.latest_version?.raw_text ?? "");
+  }
+
+  async function saveDocumentEdit(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedDocumentId) {
+      setError("Select a document before saving edits.");
+      return;
+    }
+    await runAction("Document updated and reindexed", async () => {
+      const response = await apiRequest<{ document: KnowledgeDocument }>(
+        workspacePath(`/knowledge-documents/${selectedDocumentId}/reindex`),
+        {
+          method: "POST",
+          token,
+          body: {
+            title: documentTitle,
+            content_type: "text/plain",
+            language: documentLanguage,
+            content: documentContent,
+          },
+        },
+      );
+      await loadDocuments();
+      await loadDocumentDetail(response.document.id);
+    });
+  }
+
+  function resetDocumentForm() {
+    setSelectedDocumentId("");
+    setDocumentDetail(null);
+    setDocumentTitle("Refund Policy EN");
+    setDocumentLanguage("en");
+    setDocumentContent(demoDocument);
   }
 
   async function loadAgents() {
@@ -838,29 +885,48 @@ export function App() {
       <div className="grid two-wide-left">
         <ActionGuide
           title="Knowledge powers RAG"
-          detail="Upload policies or FAQs. The backend chunks content, estimates tokens, stores embeddings, and returns cited evidence later."
+          detail="Upload policies or FAQs, then select any document you own in this workspace to edit and reindex it as a new version."
           action="Next after upload: create and run the agent"
           onAction={() => setActiveTab("agent")}
         />
-        <form className="panel stack" onSubmit={uploadDocument}>
-          <h3>Upload knowledge</h3>
+        <form className="panel stack" onSubmit={selectedDocumentId ? saveDocumentEdit : uploadDocument}>
+          <div className="row-head">
+            <div>
+              <h3>{selectedDocumentId ? "Edit selected knowledge" : "Upload knowledge"}</h3>
+              <p className="muted">
+                {selectedDocumentId
+                  ? "Saving creates a new indexed version; older versions remain in the database."
+                  : "Create a new policy or FAQ document for retrieval."}
+              </p>
+            </div>
+            {selectedDocumentId && <button type="button" onClick={resetDocumentForm}>New document</button>}
+          </div>
           <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
           <label>Language<select value={documentLanguage} onChange={(event) => setDocumentLanguage(event.target.value as Language)}><option value="en">English</option><option value="ja">Japanese</option><option value="zh">Chinese</option></select></label>
           <label>Content<textarea rows={14} value={documentContent} onChange={(event) => setDocumentContent(event.target.value)} /></label>
-          <button className="primary" disabled={loading}>Upload and index</button>
+          <div className="inline-form">
+            <button className="primary" disabled={loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
+            {documentDetail?.latest_version && <span className="muted">Current version: v{documentDetail.latest_version.version}</span>}
+          </div>
         </form>
         <section className="panel stack">
-          <h3>Documents</h3>
+          <h3>Your workspace documents</h3>
           {documents.map((document) => (
-            <button key={document.id} className="list-button" onClick={() => void loadDocumentDetail(document.id)}>
+            <button key={document.id} className={`list-button ${selectedDocumentId === document.id ? "selected-list-item" : ""}`} onClick={() => void loadDocumentDetail(document.id)}>
               <strong>{document.title}</strong><span>{document.language} · {document.status}</span>
             </button>
           ))}
           {documents.length === 0 && <EmptyState title="No documents" detail="Upload policy or FAQ text to build retrieval evidence." />}
         </section>
         <section className="panel full-width">
-          <h3>Document chunks</h3>
-          {documentDetail ? <div className="chunk-list">{documentDetail.chunks.map((chunk) => <article className="chunk" key={chunk.id}><div className="row-head"><strong>Chunk {chunk.chunk_index}</strong><span>{chunk.token_count} tokens</span></div><p>{chunk.content}</p></article>)}</div> : <EmptyState title="No document selected" detail="Select a document to inspect indexed chunks." />}
+          <div className="row-head">
+            <div>
+              <h3>Indexed chunks</h3>
+              <p className="muted">These are the exact chunks retrieval can cite after indexing.</p>
+            </div>
+            {documentDetail && <Badge>{documentDetail.embedding_count} embeddings</Badge>}
+          </div>
+          {documentDetail ? <div className="chunk-list">{documentDetail.chunks.map((chunk) => <article className="chunk" key={chunk.id}><div className="row-head"><strong>Chunk {chunk.chunk_index}</strong><span>{chunk.token_count} tokens</span></div><p>{chunk.content}</p></article>)}</div> : <EmptyState title="No document selected" detail="Select a document to inspect or edit its indexed content." />}
         </section>
       </div>
     );
