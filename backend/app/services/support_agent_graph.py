@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage, detect_language_for_messages
 from app.models.agent import GraphRun, GraphRunStatus, GraphStep, GraphStepStatus, ToolCall
+from app.models.ai import AIRun
 from app.services.langchain_support import (
     build_classification_prompt,
     build_draft_response_prompt,
@@ -81,6 +82,7 @@ class SupportAgentGraphRunner:
             language=language,
             prompt=classification_prompt,
             model="mock-cheap",
+            graph_run_id=UUID(state["graph_run_id"]),
             completion_text=parse_model_text(intent),
         )
         output: SupportAgentState = {"intent": intent}
@@ -160,6 +162,7 @@ class SupportAgentGraphRunner:
             language=language,
             prompt=draft_prompt,
             model="mock-standard",
+            graph_run_id=UUID(state["graph_run_id"]),
             completion_text=parse_model_text(completion),
         )
         output: SupportAgentState = {"draft_answer": completion}
@@ -222,7 +225,20 @@ class SupportAgentGraphRunner:
         self.db.add(step)
         self.db.commit()
         self.db.refresh(step)
+        if ai_run_id is not None:
+            self._attach_ai_run_to_step(ai_run_id=ai_run_id, step=step)
         return step
+
+    def _attach_ai_run_to_step(self, *, ai_run_id: UUID, step: GraphStep) -> None:
+        ai_run = self.db.get(AIRun, ai_run_id)
+        if ai_run is None or ai_run.workspace_id != step.workspace_id:
+            return
+        ai_run.graph_run_id = step.graph_run_id
+        ai_run.graph_step_id = step.id
+        step.token_count = ai_run.total_tokens
+        step.estimated_cost = ai_run.estimated_cost
+        self.db.commit()
+        self.db.refresh(step)
 
 
 def complete_graph_run(db: Session, graph_run: GraphRun, state: SupportAgentState) -> GraphRun:

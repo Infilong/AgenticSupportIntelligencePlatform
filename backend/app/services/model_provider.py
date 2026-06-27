@@ -37,6 +37,8 @@ class MockModelProvider:
         model: str = "mock-standard",
         completion_text: str = "mock response",
         prompt_template: PromptTemplate | None = None,
+        graph_run_id: UUID | None = None,
+        graph_step_id: UUID | None = None,
         cache_hit: bool = False,
         fail: bool = False,
     ) -> MockModelResponse:
@@ -53,6 +55,8 @@ class MockModelProvider:
         )
         ai_run = AIRun(
             workspace_id=workspace_id,
+            graph_run_id=graph_run_id,
+            graph_step_id=graph_step_id,
             provider=pricing.provider,
             model=pricing.model,
             purpose=purpose,

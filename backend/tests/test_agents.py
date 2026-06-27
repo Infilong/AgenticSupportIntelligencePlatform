@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -124,8 +126,15 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     tool_calls = db_session.scalars(select(ToolCall)).all()
     ai_runs = db_session.scalars(select(AIRun)).all()
     graph_steps = db_session.scalars(select(GraphStep)).all()
+    graph_run_id = UUID(run["id"])
     assert len(tool_calls) == 1
-    assert {run.purpose for run in ai_runs} >= {"classification", "draft_response"}
+    assert {ai_run.purpose for ai_run in ai_runs} >= {"classification", "draft_response"}
+    assert all(ai_run.graph_run_id == graph_run_id for ai_run in ai_runs)
+    assert all(ai_run.graph_step_id is not None for ai_run in ai_runs)
+    ai_steps = [step for step in graph_steps if step.ai_run_id is not None]
+    assert len(ai_steps) == len(ai_runs)
+    assert all(step.token_count and step.token_count > 0 for step in ai_steps)
+    assert all(step.estimated_cost is not None for step in ai_steps)
     assert len(graph_steps) == 7
 
 
