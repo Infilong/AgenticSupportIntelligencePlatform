@@ -101,6 +101,25 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     ]
     assert any(step["tool_calls"] for step in trace_body["steps"])
     assert any(step["ai_run_id"] for step in trace_body["steps"])
+    assert {run["purpose"] for run in trace_body["ai_runs"]} >= {
+        "classification",
+        "draft_response",
+    }
+    classification_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "classify_intent"
+    )
+    assert classification_step["ai_run"]["provider"] == "mock"
+    assert classification_step["ai_run"]["model"] == "mock-cheap"
+    assert classification_step["ai_run"]["prompt_tokens"] > 0
+    assert classification_step["ai_run"]["estimated_cost"] >= 0
+    assert {guardrail["guardrail_type"] for guardrail in trace_body["guardrails"]} >= {
+        "prompt_injection",
+        "citation_required",
+        "unsupported_answer",
+        "confidence_threshold",
+        "language_preservation",
+    }
+    assert all("severity" in guardrail for guardrail in trace_body["guardrails"])
 
     tool_calls = db_session.scalars(select(ToolCall)).all()
     ai_runs = db_session.scalars(select(AIRun)).all()

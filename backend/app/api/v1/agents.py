@@ -2,20 +2,25 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.workspace import require_workspace_member
+from app.models.ai import AIRun
+from app.models.review import GuardrailResult
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.agent import (
     AgentCreateRequest,
     AgentResponse,
     AgentRunRequest,
+    AIRunTraceResponse,
     GraphRunResponse,
     GraphStepResponse,
     GraphTraceResponse,
+    GuardrailTraceResponse,
 )
 from app.services.agent_service import AgentNotFoundError, AgentService, GraphRunNotFoundError
 
@@ -97,7 +102,36 @@ def get_agent_trace(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "graph_run_not_found", "message": "Graph run was not found."},
         ) from exc
+    ai_runs = list(
+        db.scalars(
+            select(AIRun)
+            .where(AIRun.workspace_id == workspace.id, AIRun.id.in_(_ai_run_ids(run.steps)))
+            .order_by(AIRun.created_at.asc())
+        ).all()
+    )
+    ai_runs_by_id = {ai_run.id: AIRunTraceResponse.model_validate(ai_run) for ai_run in ai_runs}
+    guardrails = list(
+        db.scalars(
+            select(GuardrailResult)
+            .where(
+                GuardrailResult.workspace_id == workspace.id,
+                GuardrailResult.graph_run_id == run.id,
+            )
+            .order_by(GuardrailResult.created_at.asc())
+        ).all()
+    )
     return GraphTraceResponse(
         run=GraphRunResponse.model_validate(run),
-        steps=[GraphStepResponse.model_validate(step) for step in run.steps],
+        steps=[
+            GraphStepResponse.model_validate(step).model_copy(
+                update={"ai_run": ai_runs_by_id.get(step.ai_run_id)}
+            )
+            for step in run.steps
+        ],
+        ai_runs=list(ai_runs_by_id.values()),
+        guardrails=[GuardrailTraceResponse.model_validate(item) for item in guardrails],
     )
+
+
+def _ai_run_ids(steps) -> list[UUID]:
+    return [step.ai_run_id for step in steps if step.ai_run_id is not None]

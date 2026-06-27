@@ -69,6 +69,39 @@ class ToolCallResponse(BaseModel):
     created_at: datetime
 
 
+class AIRunTraceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    provider: str
+    model: str
+    purpose: str
+    language: str
+    prompt_template_id: UUID | None
+    prompt_version: int | None
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost: float
+    latency_ms: int
+    cache_hit: bool
+    status: str
+    error_message: str | None
+    created_at: datetime
+
+
+class GuardrailTraceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    graph_step_id: UUID | None
+    guardrail_type: str
+    passed: bool
+    severity: str
+    message: str
+    created_at: datetime
+
+
 class GraphStepResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -85,8 +118,11 @@ class GraphStepResponse(BaseModel):
     retry_count: int
     created_at: datetime
     tool_calls: list[ToolCallResponse]
+    ai_run: AIRunTraceResponse | None = None
 
 
 class GraphTraceResponse(BaseModel):
     run: GraphRunResponse
     steps: list[GraphStepResponse]
+    ai_runs: list[AIRunTraceResponse]
+    guardrails: list[GuardrailTraceResponse]

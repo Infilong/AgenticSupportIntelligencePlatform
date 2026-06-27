@@ -106,6 +106,35 @@ type ToolCall = {
   created_at: string;
 };
 
+type AIRunTrace = {
+  id: string;
+  provider: string;
+  model: string;
+  purpose: string;
+  language: Language;
+  prompt_template_id: string | null;
+  prompt_version: number | null;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  estimated_cost: number;
+  latency_ms: number;
+  cache_hit: boolean;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+};
+
+type GuardrailTrace = {
+  id: string;
+  graph_step_id: string | null;
+  guardrail_type: string;
+  passed: boolean;
+  severity: string;
+  message: string;
+  created_at: string;
+};
+
 type GraphStep = {
   id: string;
   step_name: string;
@@ -120,11 +149,14 @@ type GraphStep = {
   retry_count: number;
   created_at: string;
   tool_calls: ToolCall[];
+  ai_run: AIRunTrace | null;
 };
 
 type GraphTrace = {
   run: GraphRun;
   steps: GraphStep[];
+  ai_runs: AIRunTrace[];
+  guardrails: GuardrailTrace[];
 };
 
 type HumanReview = {
@@ -1404,11 +1436,12 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
 }
 
 function TraceViewer({ trace }: { trace: GraphTrace }) {
-  const totalTokens = trace.steps.reduce((sum, step) => sum + (step.token_count ?? 0), 0);
-  const totalCost = trace.steps.reduce((sum, step) => sum + (step.estimated_cost ?? 0), 0);
+  const totalTokens = trace.ai_runs.reduce((sum, run) => sum + run.total_tokens, 0);
+  const totalCost = trace.ai_runs.reduce((sum, run) => sum + run.estimated_cost, 0);
   const totalLatency = trace.steps.reduce((sum, step) => sum + step.latency_ms, 0);
-  const modelCallCount = trace.steps.filter((step) => step.ai_run_id).length;
+  const modelCallCount = trace.ai_runs.length;
   const toolCallCount = trace.steps.reduce((sum, step) => sum + step.tool_calls.length, 0);
+  const failedGuardrails = trace.guardrails.filter((guardrail) => !guardrail.passed);
 
   return (
     <section className="trace-workbench">
@@ -1440,8 +1473,30 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
           <Metric label="Latency" value={`${totalLatency} ms`} />
           <Metric label="Tokens" value={totalTokens} />
           <Metric label="Cost" value={formatCost(totalCost)} />
+          <Metric label="Failed guardrails" value={failedGuardrails.length} />
         </div>
       </div>
+
+      <section className="panel stack full-width">
+        <div className="row-head">
+          <div>
+            <h3>Guardrail results</h3>
+            <p className="muted">Safety and quality checks persisted after graph execution.</p>
+          </div>
+          <Badge tone={failedGuardrails.length ? "warn" : "good"}>{failedGuardrails.length ? `${failedGuardrails.length} failed` : "all passed"}</Badge>
+        </div>
+        <div className="guardrail-result-grid">
+          {trace.guardrails.map((guardrail) => (
+            <article className={guardrail.passed ? "guardrail-result passed" : "guardrail-result failed"} key={guardrail.id}>
+              <div className="row-head">
+                <strong>{formatStepName(guardrail.guardrail_type)}</strong>
+                <Badge tone={guardrail.passed ? "good" : guardrail.severity === "high" ? "bad" : "warn"}>{guardrail.severity}</Badge>
+              </div>
+              <p>{guardrail.message}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="panel stack full-width">
         <div className="row-head">
@@ -1470,7 +1525,7 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
           <h3>{formatStepName(step.step_name)}</h3>
         </div>
         <div className="review-actions">
-          {step.ai_run_id && <Badge>model call</Badge>}
+          {step.ai_run && <Badge>{step.ai_run.model}</Badge>}
           {step.tool_calls.length > 0 && <Badge>{step.tool_calls.length} tools</Badge>}
           <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
         </div>
@@ -1487,10 +1542,11 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
       )}
       <div className="metric-grid compact">
         <Metric label="Latency" value={`${step.latency_ms} ms`} />
-        <Metric label="Tokens" value={step.token_count ?? 0} />
-        <Metric label="Cost" value={formatCost(step.estimated_cost)} />
+        <Metric label="Tokens" value={step.ai_run?.total_tokens ?? step.token_count ?? 0} />
+        <Metric label="Cost" value={formatCost(step.ai_run?.estimated_cost ?? step.estimated_cost)} />
         <Metric label="Retries" value={step.retry_count} />
       </div>
+      {step.ai_run && <AIRunPanel aiRun={step.ai_run} />}
       {step.error_message && <div className="status error">{step.error_message}</div>}
       {step.tool_calls.length > 0 && (
         <div className="tool-list">
@@ -1508,6 +1564,30 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
       <details><summary>Input state</summary><JsonBlock value={safeJson(step.input_json)} /></details>
       <details><summary>Output state</summary><JsonBlock value={output} /></details>
     </article>
+  );
+}
+
+function AIRunPanel({ aiRun }: { aiRun: AIRunTrace }) {
+  return (
+    <section className="ai-run-panel">
+      <div className="row-head">
+        <div>
+          <span>AI run</span>
+          <strong>{aiRun.provider} / {aiRun.model}</strong>
+        </div>
+        <Badge tone={toneForStatus(aiRun.status)}>{aiRun.status}</Badge>
+      </div>
+      <div className="metric-grid compact">
+        <Metric label="Purpose" value={aiRun.purpose} />
+        <Metric label="Prompt tokens" value={aiRun.prompt_tokens} />
+        <Metric label="Completion" value={aiRun.completion_tokens} />
+        <Metric label="Total tokens" value={aiRun.total_tokens} />
+        <Metric label="Cost" value={formatCost(aiRun.estimated_cost)} />
+        <Metric label="Cache" value={aiRun.cache_hit ? "hit" : "miss"} />
+      </div>
+      <small>Prompt template {aiRun.prompt_version ? `v${aiRun.prompt_version}` : "not versioned"}</small>
+      {aiRun.error_message && <div className="status error">{aiRun.error_message}</div>}
+    </section>
   );
 }
 
