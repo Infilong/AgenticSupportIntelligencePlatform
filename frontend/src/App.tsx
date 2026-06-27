@@ -192,6 +192,8 @@ type HumanReview = {
   id: string;
   graph_run_id: string;
   reviewer_id: string | null;
+  reviewer_display_name: string | null;
+  reviewer_email: string | null;
   reason: string;
   proposed_answer: string | null;
   reviewer_decision: string;
@@ -1569,6 +1571,7 @@ export function App() {
               const assignedToMe = review.reviewer_id === currentUser?.id;
               const assignedToOther = Boolean(review.reviewer_id && !assignedToMe);
               const unassigned = review.reviewer_id === null;
+              const ownerLabel = reviewOwnerLabel(review, currentUser);
               const run = review.run;
               const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? null;
               const canApprove = Boolean(proposedAnswer);
@@ -1582,7 +1585,7 @@ export function App() {
                     </div>
                     <div className="review-actions">
                       <Badge tone={toneForReviewSeverity(severity)}>{severity}</Badge>
-                      <Badge tone={assignedToMe ? "good" : assignedToOther ? "neutral" : "warn"}>{assignedToMe ? "assigned to me" : assignedToOther ? "assigned" : "unassigned"}</Badge>
+                      <Badge tone={assignedToMe ? "good" : assignedToOther ? "neutral" : "warn"}>{ownerLabel}</Badge>
                     </div>
                   </div>
 
@@ -1596,7 +1599,7 @@ export function App() {
                       <div className="signal"><span>Run status</span><strong>{run?.status ?? "unknown"}</strong></div>
                       <div className="signal"><span>Route</span><strong>{run?.route_decision ?? "human_review"}</strong></div>
                       <div className="signal"><span>Severity</span><strong>{severity}</strong></div>
-                      <div className="signal"><span>Owner</span><strong>{assignedToMe ? "me" : review.reviewer_id ? "another reviewer" : "unassigned"}</strong></div>
+                      <div className="signal"><span>Owner</span><strong>{ownerLabel}</strong></div>
                     </div>
                   </div>
 
@@ -1704,6 +1707,7 @@ export function App() {
                 </div>
                 <div className="review-actions">
                   <Badge tone={toneForStatus(review.reviewer_decision)}>{review.reviewer_decision}</Badge>
+                  {review.reviewer_id && <Badge>{reviewOwnerLabel(review, currentUser)}</Badge>}
                   {review.run && <Badge tone={toneForStatus(review.run.status)}>{review.run.route_decision ?? review.run.status}</Badge>}
                 </div>
               </div>
@@ -2029,6 +2033,12 @@ const reviewFilterOptions: Array<{ id: ReviewFilter; label: string }> = [
   { id: "model", label: "Model/budget" },
   { id: "language", label: "Language" },
 ];
+
+function reviewOwnerLabel(review: HumanReview, user: CurrentUser | null): string {
+  if (!review.reviewer_id) return "unassigned";
+  if (user && review.reviewer_id === user.id) return "me";
+  return review.reviewer_display_name ?? review.reviewer_email ?? "assigned";
+}
 
 function reviewReasonParts(reason: string): string[] {
   return reason.split(",").map((part) => part.trim()).filter(Boolean);

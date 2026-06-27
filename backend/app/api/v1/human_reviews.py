@@ -186,6 +186,13 @@ def resolve_human_review(
 
 def _review_response(review: HumanReview, db: Session) -> HumanReviewResponse:
     response = HumanReviewResponse.model_validate(review)
+    reviewer = db.get(User, review.reviewer_id) if review.reviewer_id else None
+    response = response.model_copy(
+        update={
+            "reviewer_display_name": reviewer.display_name if reviewer else None,
+            "reviewer_email": reviewer.email if reviewer else None,
+        }
+    )
     run = db.scalar(
         select(GraphRun).where(
             GraphRun.workspace_id == review.workspace_id,

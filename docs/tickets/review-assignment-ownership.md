@@ -15,10 +15,12 @@ The queue could filter and sort risk, but pending reviews were still effectively
 - Enforced assignment conflicts: a review assigned to another user cannot be released or resolved by the current user.
 - Added audit events for claim and release actions.
 - Added frontend queue filters for `Mine` and `Unassigned`.
-- Added claim/release controls and owner state on pending review cards.
+- Added claim/release controls and readable owner state on pending review cards.
+- Review responses now include reviewer display name and email for assigned/resolved reviews.
 
 ## Verification
 - `uv run pytest -s tests/test_human_reviews.py tests/test_auth_workspace.py` -> 16 passed
+- `uv run pytest -s tests/test_human_reviews.py` -> 7 passed after reviewer identity response update
 - `uv run ruff check .` -> passed
 - `uv run pytest -s` -> 86 passed
 - `npm run test` -> passed

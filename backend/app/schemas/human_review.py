@@ -24,6 +24,8 @@ class HumanReviewResponse(BaseModel):
     workspace_id: UUID
     graph_run_id: UUID
     reviewer_id: UUID | None
+    reviewer_display_name: str | None = None
+    reviewer_email: str | None = None
     reason: str
     proposed_answer: str | None
     reviewer_decision: ReviewDecision

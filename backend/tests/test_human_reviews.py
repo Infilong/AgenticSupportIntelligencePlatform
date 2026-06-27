@@ -307,12 +307,15 @@ def test_review_claim_release_and_assignment_conflict(
 
     assert claimed.status_code == 200
     assert claimed.json()["reviewer_id"] == reviewer["id"]
+    assert claimed.json()["reviewer_display_name"] == "Test User"
+    assert claimed.json()["reviewer_email"] == "claim-reviewer@example.com"
     assert owner_resolve.status_code == 409
     assert owner_resolve.json()["detail"]["code"] == "human_review_assignment_conflict"
     assert owner_release.status_code == 409
     assert owner_release.json()["detail"]["code"] == "human_review_assignment_conflict"
     assert released.status_code == 200
     assert released.json()["reviewer_id"] is None
+    assert released.json()["reviewer_display_name"] is None
 
     owner_claim = client.post(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/claim",
