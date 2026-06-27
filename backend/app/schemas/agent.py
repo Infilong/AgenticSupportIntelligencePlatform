@@ -78,6 +78,8 @@ class AIRunTraceResponse(BaseModel):
     purpose: str
     language: str
     prompt_template_id: UUID | None
+    prompt_template_name: str | None = None
+    prompt_template_text: str | None = None
     prompt_version: int | None
     prompt_tokens: int
     completion_tokens: int

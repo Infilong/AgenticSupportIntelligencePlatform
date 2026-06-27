@@ -113,6 +113,8 @@ type AIRunTrace = {
   purpose: string;
   language: Language;
   prompt_template_id: string | null;
+  prompt_template_name: string | null;
+  prompt_template_text: string | null;
   prompt_version: number | null;
   prompt_tokens: number;
   completion_tokens: number;
@@ -1585,7 +1587,16 @@ function AIRunPanel({ aiRun }: { aiRun: AIRunTrace }) {
         <Metric label="Cost" value={formatCost(aiRun.estimated_cost)} />
         <Metric label="Cache" value={aiRun.cache_hit ? "hit" : "miss"} />
       </div>
-      <small>Prompt template {aiRun.prompt_version ? `v${aiRun.prompt_version}` : "not versioned"}</small>
+      <small>
+        Prompt template {aiRun.prompt_template_name ?? "not named"}
+        {aiRun.prompt_version ? ` v${aiRun.prompt_version}` : ""}
+      </small>
+      {aiRun.prompt_template_text && (
+        <details>
+          <summary>Prompt template source</summary>
+          <JsonBlock value={aiRun.prompt_template_text} />
+        </details>
+      )}
       {aiRun.error_message && <div className="status error">{aiRun.error_message}</div>}
     </section>
   );

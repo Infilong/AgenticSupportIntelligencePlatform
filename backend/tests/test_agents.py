@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.agent import GraphStep, ToolCall
-from app.models.ai import AIRun
+from app.models.ai import AIRun, PromptTemplate
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -114,6 +114,9 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     assert classification_step["ai_run"]["model"] == "mock-cheap"
     assert classification_step["ai_run"]["prompt_tokens"] > 0
     assert classification_step["ai_run"]["estimated_cost"] >= 0
+    assert classification_step["ai_run"]["prompt_template_name"] == "support_intent_classifier"
+    assert classification_step["ai_run"]["prompt_template_text"]
+    assert classification_step["ai_run"]["prompt_version"] == 1
     assert {guardrail["guardrail_type"] for guardrail in trace_body["guardrails"]} >= {
         "prompt_injection",
         "citation_required",
@@ -131,7 +134,14 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     assert {ai_run.purpose for ai_run in ai_runs} >= {"classification", "draft_response"}
     assert all(ai_run.graph_run_id == graph_run_id for ai_run in ai_runs)
     assert all(ai_run.graph_step_id is not None for ai_run in ai_runs)
+    prompt_templates = db_session.scalars(select(PromptTemplate)).all()
     ai_steps = [step for step in graph_steps if step.ai_run_id is not None]
+    assert {template.name for template in prompt_templates} >= {
+        "support_intent_classifier",
+        "support_response_drafter",
+    }
+    assert all(ai_run.prompt_template_id is not None for ai_run in ai_runs)
+    assert all(ai_run.prompt_version == 1 for ai_run in ai_runs)
     assert len(ai_steps) == len(ai_runs)
     assert all(step.token_count and step.token_count > 0 for step in ai_steps)
     assert all(step.estimated_cost is not None for step in ai_steps)

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
@@ -105,11 +105,12 @@ def get_agent_trace(
     ai_runs = list(
         db.scalars(
             select(AIRun)
+            .options(joinedload(AIRun.prompt_template))
             .where(AIRun.workspace_id == workspace.id, AIRun.id.in_(_ai_run_ids(run.steps)))
             .order_by(AIRun.created_at.asc())
         ).all()
     )
-    ai_runs_by_id = {ai_run.id: AIRunTraceResponse.model_validate(ai_run) for ai_run in ai_runs}
+    ai_runs_by_id = {ai_run.id: _ai_run_trace_response(ai_run) for ai_run in ai_runs}
     guardrails = list(
         db.scalars(
             select(GuardrailResult)
@@ -135,3 +136,13 @@ def get_agent_trace(
 
 def _ai_run_ids(steps) -> list[UUID]:
     return [step.ai_run_id for step in steps if step.ai_run_id is not None]
+
+
+def _ai_run_trace_response(ai_run: AIRun) -> AIRunTraceResponse:
+    prompt_template = ai_run.prompt_template
+    return AIRunTraceResponse.model_validate(ai_run).model_copy(
+        update={
+            "prompt_template_name": prompt_template.name if prompt_template else None,
+            "prompt_template_text": prompt_template.template_text if prompt_template else None,
+        }
+    )

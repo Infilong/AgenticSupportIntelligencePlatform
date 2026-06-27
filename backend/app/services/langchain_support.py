@@ -9,34 +9,39 @@ from langchain_core.prompts import ChatPromptTemplate
 from app.core.language import SupportedLanguage
 from app.services.retrieval_service import RetrievalResult
 
+CLASSIFICATION_SYSTEM_TEMPLATE = (
+    "Classify the support message into one concise intent label. "
+    "Prefer deterministic labels used by the backend workflow: "
+    "refund_request, account_security, privacy_complaint, "
+    "prompt_injection, or general_support. Return only the label."
+)
+CLASSIFICATION_HUMAN_TEMPLATE = "Support message:\n{input_message}"
+CLASSIFICATION_TEMPLATE_TEXT = (
+    f"system: {CLASSIFICATION_SYSTEM_TEMPLATE}\n"
+    f"human: {CLASSIFICATION_HUMAN_TEMPLATE}"
+)
+
+DRAFT_RESPONSE_SYSTEM_TEMPLATE = (
+    "Draft a same-language support answer using only the cited evidence. "
+    "Do not invent policy details. If the evidence is insufficient, say the "
+    "case should be reviewed by a human support specialist."
+)
+DRAFT_RESPONSE_HUMAN_TEMPLATE = (
+    "Language: {language}\n"
+    "User message:\n{input_message}\n\n"
+    "Cited evidence:\n{evidence}"
+)
+DRAFT_RESPONSE_TEMPLATE_TEXT = (
+    f"system: {DRAFT_RESPONSE_SYSTEM_TEMPLATE}\n"
+    f"human: {DRAFT_RESPONSE_HUMAN_TEMPLATE}"
+)
+
 CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "Classify the support message into one concise intent label. "
-            "Prefer deterministic labels used by the backend workflow: "
-            "refund_request, account_security, privacy_complaint, "
-            "prompt_injection, or general_support. Return only the label.",
-        ),
-        ("human", "Support message:\n{input_message}"),
-    ]
+    [("system", CLASSIFICATION_SYSTEM_TEMPLATE), ("human", CLASSIFICATION_HUMAN_TEMPLATE)]
 )
 
 DRAFT_RESPONSE_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "Draft a same-language support answer using only the cited evidence. "
-            "Do not invent policy details. If the evidence is insufficient, say the "
-            "case should be reviewed by a human support specialist.",
-        ),
-        (
-            "human",
-            "Language: {language}\n"
-            "User message:\n{input_message}\n\n"
-            "Cited evidence:\n{evidence}",
-        ),
-    ]
+    [("system", DRAFT_RESPONSE_SYSTEM_TEMPLATE), ("human", DRAFT_RESPONSE_HUMAN_TEMPLATE)]
 )
 
 

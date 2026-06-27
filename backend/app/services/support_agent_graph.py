@@ -12,6 +12,8 @@ from app.core.language import SupportedLanguage, detect_language_for_messages
 from app.models.agent import GraphRun, GraphRunStatus, GraphStep, GraphStepStatus, ToolCall
 from app.models.ai import AIRun
 from app.services.langchain_support import (
+    CLASSIFICATION_TEMPLATE_TEXT,
+    DRAFT_RESPONSE_TEMPLATE_TEXT,
     build_classification_prompt,
     build_draft_response_prompt,
     chunk_payloads_to_documents,
@@ -19,6 +21,7 @@ from app.services.langchain_support import (
     retrieval_results_to_documents,
 )
 from app.services.model_provider import MockModelProvider
+from app.services.prompt_template_service import PromptTemplateService
 from app.services.retrieval_service import RetrievalService
 from app.services.support_agent_state import SupportAgentState
 
@@ -76,6 +79,12 @@ class SupportAgentGraphRunner:
         else:
             intent = "general_support"
         classification_prompt = build_classification_prompt(state["input_message"])
+        prompt_template = PromptTemplateService(self.db).get_or_create_default(
+            workspace_id=UUID(state["workspace_id"]),
+            name="support_intent_classifier",
+            language=language,
+            template_text=CLASSIFICATION_TEMPLATE_TEXT,
+        )
         ai_response = MockModelProvider(self.db).complete(
             workspace_id=UUID(state["workspace_id"]),
             purpose="classification",
@@ -83,6 +92,7 @@ class SupportAgentGraphRunner:
             prompt=classification_prompt,
             model="mock-cheap",
             graph_run_id=UUID(state["graph_run_id"]),
+            prompt_template=prompt_template,
             completion_text=parse_model_text(intent),
         )
         output: SupportAgentState = {"intent": intent}
@@ -156,6 +166,12 @@ class SupportAgentGraphRunner:
             language=language,
             documents=documents,
         )
+        prompt_template = PromptTemplateService(self.db).get_or_create_default(
+            workspace_id=UUID(state["workspace_id"]),
+            name="support_response_drafter",
+            language=language,
+            template_text=DRAFT_RESPONSE_TEMPLATE_TEXT,
+        )
         ai_response = MockModelProvider(self.db).complete(
             workspace_id=UUID(state["workspace_id"]),
             purpose="draft_response",
@@ -163,6 +179,7 @@ class SupportAgentGraphRunner:
             prompt=draft_prompt,
             model="mock-standard",
             graph_run_id=UUID(state["graph_run_id"]),
+            prompt_template=prompt_template,
             completion_text=parse_model_text(completion),
         )
         output: SupportAgentState = {"draft_answer": completion}
