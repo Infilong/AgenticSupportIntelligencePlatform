@@ -129,6 +129,21 @@ def reindex_knowledge_document(
     return _index_response(result)
 
 
+@router.delete("/knowledge-documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_knowledge_document(
+    document_id: DocumentId,
+    workspace: WorkspaceMemberAccess,
+    db: DbSession,
+) -> None:
+    try:
+        KnowledgeService(db).delete_document(workspace_id=workspace.id, document_id=document_id)
+    except KnowledgeDocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "knowledge_document_not_found", "message": "Document was not found."},
+        ) from exc
+
+
 def _index_response(result) -> KnowledgeDocumentIndexResponse:
     return KnowledgeDocumentIndexResponse(
         document=KnowledgeDocumentResponse.model_validate(result.document),

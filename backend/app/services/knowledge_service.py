@@ -161,6 +161,13 @@ class KnowledgeService:
             version_number=next_version,
         )
 
+    def delete_document(self, *, workspace_id: UUID, document_id: UUID) -> None:
+        document = self.get_document(workspace_id=workspace_id, document_id=document_id)
+        if document is None:
+            raise KnowledgeDocumentNotFoundError("Knowledge document was not found.")
+        self.db.delete(document)
+        self.db.commit()
+
     def get_document(
         self, *, workspace_id: UUID, document_id: UUID
     ) -> KnowledgeDocument | None:

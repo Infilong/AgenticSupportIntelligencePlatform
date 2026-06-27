@@ -49,6 +49,18 @@ button:disabled {
   opacity: 0.58;
 }
 
+
+.danger-button {
+  border-color: #fecaca;
+  background: #fff5f5;
+  color: #991b1b;
+}
+
+.danger-button:hover:not(:disabled) {
+  border-color: #dc2626;
+  background: #fee2e2;
+}
+
 .primary {
   border-color: #0f766e;
   background: #0f766e;
@@ -834,6 +846,27 @@ th {
   line-height: 1.55;
 }
 
+
+.review-card {
+  display: grid;
+  gap: 12px;
+}
+
+.review-context-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.review-question {
+  background: #ffffff;
+}
+
+.review-signals {
+  margin: 0;
+}
+
 .review-editor {
   display: grid;
   grid-template-columns: minmax(180px, 0.7fr) minmax(260px, 1.25fr) minmax(240px, 1fr);
@@ -859,7 +892,28 @@ th {
 @media (max-width: 1100px) {
   .trace-workbench,
   .review-workbench,
-  .review-editor {
+
+.review-card {
+  display: grid;
+  gap: 12px;
+}
+
+.review-context-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.review-question {
+  background: #ffffff;
+}
+
+.review-signals {
+  margin: 0;
+}
+
+.review-editor {
     grid-template-columns: 1fr;
   }
 }

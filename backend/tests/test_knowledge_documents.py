@@ -5,7 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
-from app.models.knowledge import DocumentStatus, KnowledgeDocument
+from app.models.knowledge import (
+    DocumentChunk,
+    DocumentStatus,
+    DocumentVersion,
+    Embedding,
+    KnowledgeDocument,
+)
 from app.models.user import User
 from app.services.chunking import chunk_text
 from app.services.document_parser import DocumentParseError, parse_text_document
@@ -222,6 +228,82 @@ def test_reindex_creates_new_version(client: TestClient) -> None:
     assert detail.json()["document"]["title"] == "Updated Billing FAQ"
     assert detail.json()["latest_version"]["version"] == 2
     assert "workspace settings" in detail.json()["latest_version"]["raw_text"]
+
+
+def test_delete_document_removes_workspace_document_and_index_rows(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "delete-owner@example.com")
+    token = login(client, "delete-owner@example.com")
+    workspace = create_workspace(client, token)
+    upload = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        json={
+            "title": "Obsolete Refund Policy",
+            "content_type": "text/plain",
+            "language": "en",
+            "content": "Refunds are available within 30 days. " * 40,
+        },
+    )
+    assert upload.status_code == 201
+    document_id = upload.json()["document"]["id"]
+
+    deleted = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents/{document_id}",
+        headers=auth_headers(token),
+    )
+    detail = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents/{document_id}",
+        headers=auth_headers(token),
+    )
+    listed = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+    )
+
+    assert deleted.status_code == 204
+    assert detail.status_code == 404
+    assert listed.json() == []
+    assert db_session.scalar(select(KnowledgeDocument)) is None
+    assert db_session.scalar(select(DocumentVersion)) is None
+    assert db_session.scalar(select(DocumentChunk)) is None
+    assert db_session.scalar(select(Embedding)) is None
+
+
+def test_delete_document_is_workspace_scoped(client: TestClient) -> None:
+    register(client, "delete-owner@example.com")
+    owner_token = login(client, "delete-owner@example.com")
+    owner_workspace = create_workspace(client, owner_token, "Owner Workspace")
+    upload = client.post(
+        f"/api/v1/workspaces/{owner_workspace['id']}/knowledge-documents",
+        headers=auth_headers(owner_token),
+        json={
+            "title": "Private Refund Policy",
+            "content_type": "text/plain",
+            "language": "en",
+            "content": "Refunds are available within 30 days. " * 40,
+        },
+    )
+    assert upload.status_code == 201
+    document_id = upload.json()["document"]["id"]
+
+    register(client, "delete-other@example.com")
+    other_token = login(client, "delete-other@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Workspace")
+
+    forbidden = client.delete(
+        f"/api/v1/workspaces/{other_workspace['id']}/knowledge-documents/{document_id}",
+        headers=auth_headers(other_token),
+    )
+    owner_detail = client.get(
+        f"/api/v1/workspaces/{owner_workspace['id']}/knowledge-documents/{document_id}",
+        headers=auth_headers(owner_token),
+    )
+
+    assert forbidden.status_code == 404
+    assert forbidden.json()["detail"]["code"] == "knowledge_document_not_found"
+    assert owner_detail.status_code == 200
 
 
 class FailingEmbeddingProvider(EmbeddingProvider):

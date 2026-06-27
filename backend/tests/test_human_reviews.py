@@ -84,7 +84,12 @@ def test_no_source_run_creates_guardrails_and_pending_review(
     )
     assert reviews.status_code == 200
     assert len(reviews.json()) == 1
-    assert reviews.json()[0]["reviewer_decision"] == "pending"
+    review_body = reviews.json()[0]
+    assert review_body["reviewer_decision"] == "pending"
+    assert review_body["run"] is not None
+    assert review_body["run"]["input_message"] == "How do I permanently delete my account?"
+    assert review_body["run"]["route_decision"] == "human_review"
+    assert review_body["run"]["status"] == "needs_human_review"
     stored_reviews = db_session.scalars(select(HumanReview)).all()
     assert len(stored_reviews) == 1
 
@@ -147,6 +152,7 @@ def test_reviewer_can_edit_and_resolve_review(client: TestClient) -> None:
     body = resolved.json()
     assert body["reviewer_decision"] == "edited"
     assert body["resolved_at"] is not None
+    assert body["run"]["input_message"] == "How do I permanently delete my account?"
     assert second_resolve.status_code == 409
     assert second_resolve.json()["detail"]["code"] == "human_review_already_resolved"
 

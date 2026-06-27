@@ -2,14 +2,21 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.workspace import require_workspace_member
+from app.models.agent import GraphRun
+from app.models.review import HumanReview
 from app.models.user import User
 from app.models.workspace import Workspace
-from app.schemas.human_review import HumanReviewResolveRequest, HumanReviewResponse
+from app.schemas.human_review import (
+    HumanReviewResolveRequest,
+    HumanReviewResponse,
+    HumanReviewRunContext,
+)
 from app.services.human_review_service import (
     HumanReviewAlreadyResolvedError,
     HumanReviewNotFoundError,
@@ -29,7 +36,7 @@ def list_human_reviews(
     db: DbSession,
 ) -> list[HumanReviewResponse]:
     reviews = HumanReviewService(db).list_reviews(workspace_id=workspace.id)
-    return [HumanReviewResponse.model_validate(review) for review in reviews]
+    return [_review_response(review, db) for review in reviews]
 
 
 @router.get("/{review_id}", response_model=HumanReviewResponse)
@@ -45,7 +52,7 @@ def get_human_review(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "human_review_not_found", "message": "Human review was not found."},
         ) from exc
-    return HumanReviewResponse.model_validate(review)
+    return _review_response(review, db)
 
 
 @router.post("/{review_id}/resolve", response_model=HumanReviewResponse)
@@ -75,4 +82,30 @@ def resolve_human_review(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "human_review_already_resolved", "message": str(exc)},
         ) from exc
-    return HumanReviewResponse.model_validate(review)
+    return _review_response(review, db)
+
+
+def _review_response(review: HumanReview, db: Session) -> HumanReviewResponse:
+    response = HumanReviewResponse.model_validate(review)
+    run = db.scalar(
+        select(GraphRun).where(
+            GraphRun.workspace_id == review.workspace_id,
+            GraphRun.id == review.graph_run_id,
+        )
+    )
+    if run is None:
+        return response
+    return response.model_copy(
+        update={
+            "run": HumanReviewRunContext(
+                graph_run_id=run.id,
+                input_message=run.input_message,
+                language=run.language,
+                status=run.status,
+                route_decision=run.route_decision,
+                final_answer=run.final_answer,
+                created_at=run.created_at,
+                completed_at=run.completed_at,
+            )
+        }
+    )

@@ -161,6 +161,17 @@ type GraphTrace = {
   guardrails: GuardrailTrace[];
 };
 
+type HumanReviewRunContext = {
+  graph_run_id: string;
+  input_message: string;
+  language: string | null;
+  status: string;
+  route_decision: string | null;
+  final_answer: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
 type HumanReview = {
   id: string;
   graph_run_id: string;
@@ -172,6 +183,7 @@ type HumanReview = {
   comments: string | null;
   created_at: string;
   resolved_at: string | null;
+  run: HumanReviewRunContext | null;
 };
 
 type ReviewDraft = {
@@ -690,6 +702,18 @@ export function App() {
     setDocumentTitle("Refund Policy EN");
     setDocumentLanguage("en");
     setDocumentContent(demoDocument);
+  }
+
+  async function deleteSelectedDocument() {
+    if (!selectedDocumentId) return;
+    await runAction("Document deleted", async () => {
+      await apiRequest(workspacePath(`/knowledge-documents/${selectedDocumentId}`), {
+        method: "DELETE",
+        token,
+      });
+      resetDocumentForm();
+      await loadDocuments();
+    });
   }
 
   async function loadAgents() {
@@ -1217,7 +1241,10 @@ export function App() {
                   : "Create a new policy or FAQ document for retrieval."}
               </p>
             </div>
-            {selectedDocumentId && <button type="button" onClick={resetDocumentForm}>New document</button>}
+            <div className="review-actions">
+              {selectedDocumentId && <button type="button" onClick={resetDocumentForm}>New document</button>}
+              {selectedDocumentId && <button type="button" className="danger-button" onClick={() => void deleteSelectedDocument()}>Delete</button>}
+            </div>
           </div>
           <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
           <label>Language<select value={documentLanguage} onChange={(event) => setDocumentLanguage(event.target.value as Language)}><option value="en">English</option><option value="ja">Japanese</option><option value="zh">Chinese</option></select></label>
@@ -1349,25 +1376,40 @@ export function App() {
             {pendingReviewItems.map((review) => {
               const draft = reviewDraft(review);
               const guardrailParts = review.reason.split(",").map((part) => part.trim()).filter(Boolean);
+              const run = review.run;
+              const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? null;
               return (
-                <article className="review-row pending-review" key={review.id}>
+                <article className="review-row pending-review review-card" key={review.id}>
                   <div className="row-head">
                     <div>
+                      <p className="mini-label">Review item</p>
                       <strong>{friendlyReviewReason(review.reason)}</strong>
                       <p className="muted">Created {formatDate(review.created_at)}</p>
                     </div>
                     <Badge tone="warn">waiting for reviewer</Badge>
                   </div>
+
+                  <div className="review-context-grid">
+                    <div className="answer-box review-question">
+                      <span>Customer request</span>
+                      <p>{run?.input_message ?? "Run context is unavailable."}</p>
+                    </div>
+                    <div className="signal-grid review-signals">
+                      <div className="signal"><span>Language</span><strong>{run?.language ?? "unknown"}</strong></div>
+                      <div className="signal"><span>Run status</span><strong>{run?.status ?? "unknown"}</strong></div>
+                      <div className="signal"><span>Route</span><strong>{run?.route_decision ?? "human_review"}</strong></div>
+                    </div>
+                  </div>
+
                   <div className="guardrail-list">
                     {guardrailParts.map((part) => <Badge key={part} tone="warn">{friendlyGuardrailName(part)}</Badge>)}
                   </div>
+
                   <div className="answer-box">
                     <span>Proposed answer</span>
-                    <p>
-                      {review.proposed_answer ??
-                        "No proposed answer was shown because guardrails blocked finalization."}
-                    </p>
+                    <p>{proposedAnswer ?? "No proposed answer was generated. The reviewer should reject or write a safe response after inspecting the trace."}</p>
                   </div>
+
                   <div className="review-editor">
                     <label>
                       Decision
@@ -1389,7 +1431,7 @@ export function App() {
                       <textarea
                         rows={5}
                         disabled={draft.decision !== "edited"}
-                        placeholder="Used only when decision is edited."
+                        placeholder="Required only when approving with edits."
                         value={draft.edited_answer}
                         onChange={(event) => updateReviewDraft(review.id, { edited_answer: event.target.value })}
                       />
@@ -1398,7 +1440,7 @@ export function App() {
                       Reviewer note
                       <textarea
                         rows={5}
-                        placeholder="Record why this answer is safe, edited, or rejected."
+                        placeholder="Explain why this is safe, edited, or rejected."
                         value={draft.comments}
                         onChange={(event) => updateReviewDraft(review.id, { comments: event.target.value })}
                       />
@@ -1409,10 +1451,9 @@ export function App() {
                       Inspect trace
                     </button>
                     <button className="primary" onClick={() => void resolveReview(review)}>
-                      Resolve this review
+                      Resolve review
                     </button>
                   </div>
-                  <small>Graph run {review.graph_run_id}</small>
                 </article>
               );
             })}

@@ -6,6 +6,17 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.review import ReviewDecision
 
 
+class HumanReviewRunContext(BaseModel):
+    graph_run_id: UUID
+    input_message: str
+    language: str | None
+    status: str
+    route_decision: str | None
+    final_answer: str | None
+    created_at: datetime
+    completed_at: datetime | None
+
+
 class HumanReviewResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -20,6 +31,7 @@ class HumanReviewResponse(BaseModel):
     comments: str | None
     created_at: datetime
     resolved_at: datetime | None
+    run: HumanReviewRunContext | None = None
 
 
 class HumanReviewResolveRequest(BaseModel):
