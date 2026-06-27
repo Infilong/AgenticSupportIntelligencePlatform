@@ -53,10 +53,18 @@ class SupportAgentGraphRunner:
         started = time.perf_counter()
         language = SupportedLanguage(state["detected_language"])
         text = state["input_message"].lower()
-        if any(term in text for term in ["refund", "返金", "退款"]):
-            intent = "refund_request"
-        elif any(term in text for term in ["privacy", "個人情報", "个人信息"]):
+        if _has_prompt_injection(text):
+            intent = "prompt_injection"
+        elif any(
+            term in text for term in ["privacy", "個人情報", "个人信息", "泄露"]
+        ):
             intent = "privacy_complaint"
+        elif any(
+            term in text for term in ["security", "login", "ログイン", "端末", "安全"]
+        ):
+            intent = "account_security"
+        elif any(term in text for term in ["refund", "返金", "退款"]):
+            intent = "refund_request"
         else:
             intent = "general_support"
         ai_response = MockModelProvider(self.db).complete(
@@ -79,7 +87,7 @@ class SupportAgentGraphRunner:
             query=state["input_message"],
             language=language,
             top_k=4,
-            min_score=0.2,
+            min_score=_retrieval_threshold(state),
             document_id=None,
         )
         chunks = [result.__dict__ for result in retrieval.results]
@@ -87,6 +95,7 @@ class SupportAgentGraphRunner:
             "retrieved_chunks": chunks,
             "retrieval_trace_id": str(retrieval.trace_id),
             "citations": [result.citation for result in retrieval.results],
+            "no_source": retrieval.no_source,
         }
         step = self._record_step("retrieve_evidence", state, output, started)
         tool_started = time.perf_counter()
@@ -116,7 +125,12 @@ class SupportAgentGraphRunner:
             output: SupportAgentState = {"draft_answer": None}
             self._record_step("draft_response", state, output, started)
             return output
-        completion = _mock_answer(language)
+        completion = _mock_answer(
+            language=language,
+            intent=state.get("intent"),
+            input_message=state["input_message"],
+            chunks=state.get("retrieved_chunks") or [],
+        )
         ai_response = MockModelProvider(self.db).complete(
             workspace_id=UUID(state["workspace_id"]),
             purpose="draft_response",
@@ -131,14 +145,25 @@ class SupportAgentGraphRunner:
 
     def score_confidence(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
-        confidence = 0.85 if state.get("retrieved_chunks") and state.get("draft_answer") else 0.1
+        if state.get("intent") in {"prompt_injection", "privacy_complaint"}:
+            confidence = 0.2
+        elif state.get("retrieved_chunks") and state.get("draft_answer"):
+            confidence = 0.85
+        else:
+            confidence = 0.1
         output: SupportAgentState = {"confidence_score": confidence}
         self._record_step("score_confidence", state, output, started)
         return output
 
     def route_review_or_finalize(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
-        decision = "finalize" if state.get("confidence_score", 0) >= 0.5 else "human_review"
+        review_required = (
+            state.get("confidence_score", 0) < 0.5
+            or state.get("intent") in {"prompt_injection", "privacy_complaint"}
+            or not state.get("citations")
+            or state.get("no_source")
+        )
+        decision = "human_review" if review_required else "finalize"
         output: SupportAgentState = {"route_decision": decision}
         self._record_step("route_review_or_finalize", state, output, started)
         return output
@@ -203,13 +228,87 @@ def _compact_state(state: SupportAgentState) -> dict:
         "route_decision",
         "final_answer",
         "citations",
+        "no_source",
     ]
     return {key: state.get(key) for key in allowed if key in state}
 
 
-def _mock_answer(language: SupportedLanguage) -> str:
+def _retrieval_threshold(state: SupportAgentState) -> float:
+    intent = state.get("intent")
+    if intent in {"prompt_injection", "privacy_complaint"}:
+        return 0.35
+    if intent == "general_support":
+        return 0.45
+    return 0.2
+
+
+def _has_prompt_injection(text: str) -> bool:
+    return any(
+        marker in text
+        for marker in [
+            "ignore previous instructions",
+            "ignore all previous instructions",
+            "ignore all instructions",
+            "system prompt",
+            "developer message",
+            "reveal private",
+            "private workspace",
+            "プロンプトを無視",
+            "忽略之前的指示",
+        ]
+    )
+
+
+def _mock_answer(
+    *,
+    language: SupportedLanguage,
+    intent: str | None,
+    input_message: str,
+    chunks: list[dict],
+) -> str:
+    evidence = " ".join(str(chunk.get("content", "")) for chunk in chunks[:2])
+    combined = f"{input_message} {evidence}".lower()
     if language == SupportedLanguage.ja:
-        return "関連資料によると、返金は30日以内に申請できます。"
+        if intent == "account_security" or any(
+            term in combined for term in ["ログイン", "端末", "パスワード"]
+        ):
+            return (
+                "関連資料によると、すぐにパスワードを変更し、"
+                "すべての端末からログアウトし、二要素認証を有効にしてください。"
+            )
+        if intent == "refund_request":
+            return (
+                "関連資料によると、返金は購入から30日以内に申請できます。"
+                "31日目以降は例外として人間の担当者が確認します。"
+            )
+        return "関連資料に基づき、人間のサポート担当者が確認できる範囲で対応します。"
     if language == SupportedLanguage.zh:
-        return "根据相关资料，退款可以在30天内申请。"
-    return "According to the retrieved policy, refunds can be requested within 30 days."
+        if intent == "privacy_complaint" or any(
+            term in combined for term in ["个人信息", "泄露", "隐私"]
+        ):
+            return (
+                "根据相关政策，个人信息泄露投诉必须升级给隐私与安全团队进行人工审核，"
+                "不能透露内部调查细节。"
+            )
+        if intent == "refund_request":
+            return "根据相关资料，购买后30天内可以申请退款。超过期限的情况需要人工审核。"
+        return "根据相关资料，支持团队会在有依据的范围内处理该请求。"
+    if intent == "account_security" or any(
+        term in combined for term in ["login", "security", "password"]
+    ):
+        return (
+            "According to the account security guide, change your password, "
+            "sign out of all devices, and enable two-factor authentication immediately."
+        )
+    if intent == "refund_request":
+        if any(term in combined for term in ["partial", "duplicate", "enterprise", "upgrade"]):
+            return (
+                "According to the retrieved policy, refunds are available within 30 days, "
+                "and partial refunds may be reviewed for duplicate enterprise purchases "
+                "in the same billing cycle."
+            )
+        return "According to the retrieved policy, refunds can be requested within 30 days."
+    return (
+        "The retrieved support policy does not provide enough detail for a final answer; "
+        "a human review is recommended."
+    )

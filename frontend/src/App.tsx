@@ -189,15 +189,15 @@ type ApiOptions = {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-const tabs: Array<{ id: Tab; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "datasets", label: "Datasets" },
-  { id: "documents", label: "Documents" },
-  { id: "agent", label: "Agent" },
-  { id: "trace", label: "Trace" },
-  { id: "reviews", label: "Reviews" },
-  { id: "evaluations", label: "Evaluations" },
-  { id: "costs", label: "Costs" },
+const tabs: Array<{ id: Tab; label: string; purpose: string }> = [
+  { id: "overview", label: "1. Workspace", purpose: "Create/select workspace and follow the guided path." },
+  { id: "datasets", label: "2. Conversations", purpose: "Import multilingual support examples." },
+  { id: "documents", label: "3. Knowledge", purpose: "Upload policies and FAQs for RAG." },
+  { id: "agent", label: "4. Support agent", purpose: "Run a governed LangGraph workflow." },
+  { id: "trace", label: "5. Trace", purpose: "Inspect every workflow step." },
+  { id: "reviews", label: "6. Review", purpose: "Resolve risky or low-confidence answers." },
+  { id: "evaluations", label: "7. Evaluation", purpose: "Compare baselines by language." },
+  { id: "costs", label: "8. Cost", purpose: "Monitor token and latency impact." },
 ];
 
 const demoDataset = `{"external_id":"en_refund_001","messages":[{"role":"user","content":"Can I get a refund within 30 days?"}],"labels":{"intent":"refund_request","product_area":"billing"}}
@@ -317,6 +317,19 @@ export function App() {
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
     [selectedWorkspaceId, workspaces],
   );
+  const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
+  const setupSteps = [
+    { label: "Workspace", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
+    { label: "Conversations", done: datasets.length > 0, tab: "datasets" as Tab },
+    { label: "Knowledge", done: documents.length > 0, tab: "documents" as Tab },
+    { label: "Support agent", done: agents.length > 0, tab: "agent" as Tab },
+    { label: "Trace", done: Boolean(trace), tab: "trace" as Tab },
+    { label: "Review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
+    { label: "Evaluation", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
+    { label: "Cost", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
+  ];
+  const nextStep = setupSteps.find((step) => !step.done);
 
   useEffect(() => {
     if (!token) return;
@@ -597,11 +610,18 @@ export function App() {
       <main className="auth-page">
         <section className="auth-copy">
           <p className="eyebrow">AI support intelligence</p>
-          <h1>Multilingual Agentic Support Intelligence Platform</h1>
+          <h1>See how a support AI answer is built, checked, reviewed, and measured.</h1>
           <p>
-            Local-first internal tool for multilingual datasets, RAG, LangGraph traces, human review,
-            evaluation, and token-cost observability.
+            This is an internal operations tool for AI support teams. It imports multilingual customer
+            examples, indexes support knowledge, runs a governed LangGraph workflow, and shows the
+            evidence, review route, evaluation score, and token cost behind each answer.
           </p>
+          <div className="auth-highlights">
+            <span>English / Japanese / Chinese</span>
+            <span>RAG with citations</span>
+            <span>Human review</span>
+            <span>Cost ledger</span>
+          </div>
         </section>
         <form className="auth-panel" onSubmit={handleAuth}>
           <div className="segmented">
@@ -651,7 +671,14 @@ export function App() {
         </form>
         <nav className="tab-nav">
           {tabs.map((tab) => (
-            <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>{tab.label}</button>
+            <button
+              key={tab.id}
+              className={activeTab === tab.id ? "active" : ""}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <strong>{tab.label}</strong>
+              <span>{tab.purpose}</span>
+            </button>
           ))}
         </nav>
         <button className="secondary" onClick={() => { localStorage.removeItem("asi_token"); setToken(""); }}>Logout</button>
@@ -661,9 +688,16 @@ export function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">{selectedWorkspace ? selectedWorkspace.name : "No workspace selected"}</p>
-            <h2>{tabs.find((tab) => tab.id === activeTab)?.label}</h2>
+            <h2>{activeTabInfo.label}</h2>
+            <p className="page-purpose">{activeTabInfo.purpose}</p>
           </div>
-          <button className="secondary" disabled={!selectedWorkspaceId || loading} onClick={() => void runAction("Workspace data refreshed", refreshWorkspaceData)}>Refresh</button>
+          <button
+            className="secondary"
+            disabled={!selectedWorkspaceId || loading}
+            onClick={() => void runAction("Workspace data refreshed", refreshWorkspaceData)}
+          >
+            Refresh
+          </button>
         </header>
         <Status notice={notice} error={error} />
         {!selectedWorkspaceId ? <EmptyState title="Create or select a workspace" detail="Workspace isolation is enforced by every backend route." /> : renderActiveTab()}
@@ -694,22 +728,56 @@ export function App() {
 
   function OverviewPanel() {
     return (
-      <div className="grid two">
-        <section className="panel">
-          <h3>Demo path</h3>
-          <ol className="ordered">
-            <li>Import multilingual conversations.</li>
-            <li>Upload knowledge documents.</li>
-            <li>Create an agent and run a support request.</li>
-            <li>Inspect LangGraph trace, token fields, citations, and routing.</li>
-            <li>Resolve human reviews and run per-language evaluations.</li>
-          </ol>
+      <div className="stack">
+        <section className="hero-panel">
+          <div>
+            <p className="eyebrow">What this app does</p>
+            <h2>Turn multilingual support messages into traceable, evaluated AI answers.</h2>
+            <p>
+              The core demo is one workflow: import customer conversations, upload support knowledge,
+              run the support agent, inspect why it answered or routed to review, then compare quality
+              and token cost across evaluation modes.
+            </p>
+          </div>
+          <button className="primary" onClick={() => setActiveTab(nextStep?.tab ?? "datasets")}>
+            {nextStep ? `Continue: ${nextStep.label}` : "Review results"}
+          </button>
         </section>
+
+        <section className="panel">
+          <div className="row-head">
+            <div>
+              <h3>Guided setup</h3>
+              <p className="muted">Complete these steps from left to right for the visual demo.</p>
+            </div>
+            {pendingReviews > 0 && <Badge tone="warn">{pendingReviews} pending review</Badge>}
+          </div>
+          <div className="step-grid">
+            {setupSteps.map((step, index) => (
+              <button
+                key={step.label}
+                className={`step-card ${step.done ? "done" : ""}`}
+                onClick={() => setActiveTab(step.tab)}
+              >
+                <span>{index + 1}</span>
+                <strong>{step.label}</strong>
+                <small>{step.done ? "Done" : "Needs action"}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid three">
+          <InfoCard title="For support ops" text="Curate real multilingual conversations and label intent, risk, product area, and escalation." />
+          <InfoCard title="For AI engineers" text="Inspect retrieval evidence, graph steps, guardrails, model-call cost, and routing decisions." />
+          <InfoCard title="For product review" text="Compare direct LLM, vector RAG, and system v1 behavior by language and cost." />
+        </section>
+
         <section className="panel metric-grid">
           <Metric label="Datasets" value={datasets.length} />
           <Metric label="Documents" value={documents.length} />
           <Metric label="Agents" value={agents.length} />
-          <Metric label="Reviews" value={reviews.length} />
+          <Metric label="Pending reviews" value={pendingReviews} />
           <Metric label="AI runs" value={costSummary?.total_runs ?? 0} />
           <Metric label="Estimated cost" value={formatCost(costSummary?.total_estimated_cost)} />
         </section>
@@ -720,6 +788,12 @@ export function App() {
   function DatasetsPanel() {
     return (
       <div className="grid two-wide-left">
+        <ActionGuide
+          title="Conversations are the raw material"
+          detail="Import support examples in English, Japanese, and Chinese. Labels make the data useful for evaluation and routing checks."
+          action="Next after import: upload knowledge documents"
+          onAction={() => setActiveTab("documents")}
+        />
         <form className="panel stack" onSubmit={importDataset}>
           <h3>Import conversations</h3>
           <label>Dataset name<input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} /></label>
@@ -762,6 +836,12 @@ export function App() {
   function DocumentsPanel() {
     return (
       <div className="grid two-wide-left">
+        <ActionGuide
+          title="Knowledge powers RAG"
+          detail="Upload policies or FAQs. The backend chunks content, estimates tokens, stores embeddings, and returns cited evidence later."
+          action="Next after upload: create and run the agent"
+          onAction={() => setActiveTab("agent")}
+        />
         <form className="panel stack" onSubmit={uploadDocument}>
           <h3>Upload knowledge</h3>
           <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
@@ -789,6 +869,12 @@ export function App() {
   function AgentPanel() {
     return (
       <div className="grid two">
+        <ActionGuide
+          title="Run the governed support workflow"
+          detail="The agent detects language, retrieves evidence, drafts an answer, checks guardrails, scores confidence, and decides whether human review is needed."
+          action="Run a message, then inspect Trace"
+          onAction={() => setActiveTab("trace")}
+        />
         <section className="panel stack">
           <h3>Agents</h3>
           <form className="inline-form" onSubmit={createAgent}>
@@ -816,6 +902,12 @@ export function App() {
   function TracePanel() {
     return (
       <div className="stack">
+        <ActionGuide
+          title="Trace explains the answer"
+          detail="Use this page to see each LangGraph node, tool call, retrieved citations, token estimates, latency, and errors."
+          action="Next: review routed cases"
+          onAction={() => setActiveTab("reviews")}
+        />
         <section className="panel inline-form">
           <input placeholder="Graph run id" value={traceRunId} onChange={(event) => setTraceRunId(event.target.value)} />
           <button onClick={() => void runAction("Trace loaded", () => loadTrace())}>Load trace</button>
@@ -828,6 +920,12 @@ export function App() {
   function ReviewsPanel() {
     return (
       <section className="panel stack">
+        <ActionGuide
+          title="Human review is the safety valve"
+          detail="Risky, unsupported, low-confidence, or policy-sensitive outputs wait here for approve, edit, or reject decisions."
+          action="Next: run evaluation"
+          onAction={() => setActiveTab("evaluations")}
+        />
         <div className="row-head"><h3>Human reviews</h3><button onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh reviews</button></div>
         <div className="inline-form">
           <select value={reviewDecision} onChange={(event) => setReviewDecision(event.target.value as "approved" | "edited" | "rejected")}><option value="approved">approved</option><option value="edited">edited</option><option value="rejected">rejected</option></select>
@@ -843,6 +941,12 @@ export function App() {
   function EvaluationsPanel() {
     return (
       <div className="grid two-wide-left">
+        <ActionGuide
+          title="Evaluation makes quality visible"
+          detail="Run the same cases through direct LLM, vector RAG, and system v1 to compare routing, citations, language preservation, latency, tokens, and cost."
+          action="Next: inspect token cost"
+          onAction={() => setActiveTab("costs")}
+        />
         <form className="panel stack" onSubmit={runEvaluation}>
           <h3>Run evaluation</h3>
           <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} /></label>
@@ -866,11 +970,48 @@ export function App() {
   function CostsPanel() {
     return (
       <section className="panel stack">
+        <ActionGuide
+          title="Token economy is part of the product"
+          detail="This page summarizes model-call count, tokens, estimated cost, latency, cache hits, and purpose breakdown for the workspace."
+          action="Back to start"
+          onAction={() => setActiveTab("overview")}
+        />
         <div className="row-head"><h3>Token and cost summary</h3><button onClick={() => void runAction("Costs refreshed", loadCosts)}>Refresh costs</button></div>
         {costSummary ? <><div className="metric-grid"><Metric label="AI runs" value={costSummary.total_runs} /><Metric label="Tokens" value={formatNumber(costSummary.total_tokens)} /><Metric label="Estimated cost" value={formatCost(costSummary.total_estimated_cost)} /><Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} /><Metric label="Cache hit rate" value={`${(costSummary.cache_hit_rate * 100).toFixed(1)}%`} /></div><table><thead><tr><th>Purpose</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr></thead><tbody>{costSummary.by_purpose.map((item) => <tr key={item.purpose}><td>{item.purpose}</td><td>{item.runs}</td><td>{formatNumber(item.tokens)}</td><td>{formatCost(item.estimated_cost)}</td></tr>)}</tbody></table></> : <EmptyState title="No cost data" detail="Model calls create AI run ledger entries with token and latency estimates." />}
       </section>
     );
   }
+}
+
+function ActionGuide({
+  title,
+  detail,
+  action,
+  onAction,
+}: {
+  title: string;
+  detail: string;
+  action: string;
+  onAction: () => void;
+}) {
+  return (
+    <section className="guide-panel full-width">
+      <div>
+        <h3>{title}</h3>
+        <p>{detail}</p>
+      </div>
+      <button className="secondary" onClick={onAction}>{action}</button>
+    </section>
+  );
+}
+
+function InfoCard({ title, text }: { title: string; text: string }) {
+  return (
+    <section className="panel info-card">
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </section>
+  );
 }
 
 function Status({ notice, error }: { notice: string; error: string }) {
