@@ -10,7 +10,16 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
-from app.models import User, Workspace, WorkspaceMember  # noqa: F401
+from app.models import (  # noqa: F401
+    ConversationExample,
+    Dataset,
+    ImportBatch,
+    Label,
+    Message,
+    User,
+    Workspace,
+    WorkspaceMember,
+)
 
 
 @pytest.fixture(autouse=True)

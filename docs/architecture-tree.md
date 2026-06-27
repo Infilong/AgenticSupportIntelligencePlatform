@@ -137,10 +137,10 @@ Multilingual Agentic Support Intelligence Platform
 |-- Current Implemented Milestones
 |   |-- Milestone 0: governance, architecture, and planning docs
 |   |-- Milestone 1: runnable FastAPI, React/Vite, Docker, PostgreSQL, pgvector, Redis, CI
-|   `-- Milestone 2: users, JWT auth, workspaces, membership checks, permission tests
+|   |-- Milestone 2: users, JWT auth, workspaces, membership checks, permission tests
+|   `-- Milestone 3: dataset import, multilingual examples, language detection, labels
 |
 `-- Future Milestones
-    |-- Milestone 3: dataset import and multilingual examples
     |-- Milestone 4: knowledge document ingestion
     |-- Milestone 5: retrieval and citations
     |-- Milestone 6: AI run ledger and token budget planner

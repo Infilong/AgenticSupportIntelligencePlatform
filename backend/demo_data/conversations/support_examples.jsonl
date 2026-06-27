@@ -1,0 +1,3 @@
+{"external_id":"en_refund_001","messages":[{"role":"user","content":"Can I get a refund for last month?"}],"labels":{"intent":"refund_request","product_area":"billing","safety_risk":"low"}}
+{"external_id":"ja_refund_001","messages":[{"role":"user","content":"先月購入したプランの返金はできますか？"}],"labels":{"intent":"refund_request","product_area":"billing","safety_risk":"low"}}
+{"external_id":"zh_privacy_001","messages":[{"role":"user","content":"我要投诉，你们泄露了我的个人信息。"}],"labels":{"intent":"complaint","safety_risk":"high","escalation_needed":"true"}}
