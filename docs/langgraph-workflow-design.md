@@ -62,3 +62,20 @@ Workflow state should be checkpointable so human-review workflows can pause and 
 
 ## Testing
 Tests should cover normal finalization, no-source refusal, low-confidence review routing, high-risk review routing, prompt-injection blocking, token-budget routing, failed node handling, and checkpoint/resume behavior.
+
+
+## Implemented In Milestone 7
+- Added LangGraph `StateGraph` workflow with typed `SupportAgentState`.
+- Implemented nodes: `detect_language`, `classify_intent`, `retrieve_evidence`, `draft_response`, `score_confidence`, `route_review_or_finalize`, and `finalize_response`.
+- Added `AgentConfig`, `GraphRun`, `GraphStep`, `ToolCall`, and `Checkpoint` tables.
+- Every node persists a `GraphStep`.
+- Retrieval is stored as a `ToolCall` and also creates a `RetrievalTrace` through the retrieval service.
+- Classification and draft nodes call `MockModelProvider`, creating linked `AIRun` records.
+- Trace endpoint returns ordered graph steps and tool calls.
+- No-source cases route to `needs_human_review`; real human review API is Milestone 8.
+
+Known limitations:
+- Execution is synchronous for local v1.
+- Checkpoint table exists, but durable resume is not implemented yet.
+- Mock model responses are deterministic and not real AI quality evidence.
+- Guardrails, prompt injection checks, and human review resolution are Milestone 8.

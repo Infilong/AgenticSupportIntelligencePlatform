@@ -42,3 +42,10 @@ Show token usage, estimated cost, latency, model choice, cache hit rate, purpose
 - Workspace-scoped cost summary API.
 - Token, estimated cost, latency, cache hit, status, and purpose tracking.
 - Failed model calls are also recorded with error messages.
+
+
+## Implemented In Milestone 7
+- `GraphRun`, `GraphStep`, and `ToolCall` persistence.
+- Trace endpoint for graph runs.
+- Graph steps can link to `AIRun` rows.
+- Retrieval node links workflow execution to retrieval trace/tool-call evidence.

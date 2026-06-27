@@ -11,13 +11,17 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
 from app.models import (  # noqa: F401
+    AgentConfig,
     AIRun,
     CacheEntry,
+    Checkpoint,
     ConversationExample,
     Dataset,
     DocumentChunk,
     DocumentVersion,
     Embedding,
+    GraphRun,
+    GraphStep,
     ImportBatch,
     KnowledgeDocument,
     Label,
@@ -26,6 +30,7 @@ from app.models import (  # noqa: F401
     PromptTemplate,
     RetrievalTrace,
     RetrievedChunk,
+    ToolCall,
     User,
     Workspace,
     WorkspaceMember,

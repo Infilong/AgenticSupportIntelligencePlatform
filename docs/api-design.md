@@ -85,11 +85,20 @@ Current v1 behavior:
 
 ## Agent Runs
 ```text
+POST /api/v1/workspaces/{workspace_id}/agents
+GET  /api/v1/workspaces/{workspace_id}/agents
 POST /api/v1/workspaces/{workspace_id}/agents/{agent_id}/runs
 GET  /api/v1/workspaces/{workspace_id}/agent-runs/{run_id}
 GET  /api/v1/workspaces/{workspace_id}/agent-runs/{run_id}/trace
 POST /api/v1/workspaces/{workspace_id}/agent-runs/{run_id}/review
 ```
+
+Current v1 behavior:
+- agents can be created/listed per workspace.
+- agent runs execute the LangGraph support workflow synchronously for local v1.
+- run and trace endpoints are workspace-scoped.
+- trace responses include ordered graph steps, tool calls, linked AI run IDs, token/cost fields where present, and final route decision.
+
 
 ## Evaluations
 ```text
