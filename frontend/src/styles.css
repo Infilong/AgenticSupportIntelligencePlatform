@@ -818,6 +818,21 @@ th {
   overflow-wrap: anywhere;
 }
 
+.checkpoint-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.checkpoint-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
 .tool-list,
 .guardrail-list,
 .policy-list {

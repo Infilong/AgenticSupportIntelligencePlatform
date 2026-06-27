@@ -138,6 +138,14 @@ type GuardrailTrace = {
   created_at: string;
 };
 
+type CheckpointTrace = {
+  id: string;
+  graph_run_id: string;
+  checkpoint_key: string;
+  state_json: string;
+  created_at: string;
+};
+
 type GraphStep = {
   id: string;
   step_name: string;
@@ -160,6 +168,7 @@ type GraphTrace = {
   steps: GraphStep[];
   ai_runs: AIRunTrace[];
   guardrails: GuardrailTrace[];
+  checkpoints: CheckpointTrace[];
 };
 
 type HumanReviewRunContext = {
@@ -2020,6 +2029,9 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
   const modelCallCount = trace.ai_runs.length;
   const toolCallCount = trace.steps.reduce((sum, step) => sum + step.tool_calls.length, 0);
   const failedGuardrails = trace.guardrails.filter((guardrail) => !guardrail.passed);
+  const latestCheckpoint = trace.checkpoints[trace.checkpoints.length - 1];
+  const latestCheckpointState = latestCheckpoint ? asRecord(safeJson(latestCheckpoint.state_json)) : null;
+  const latestCheckpointMeta = asRecord(latestCheckpointState?.checkpoint) ?? {};
 
   return (
     <section className="trace-workbench">
@@ -2052,8 +2064,32 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
           <Metric label="Tokens" value={totalTokens} />
           <Metric label="Cost" value={formatCost(totalCost)} />
           <Metric label="Failed guardrails" value={failedGuardrails.length} />
+          <Metric label="State checkpoints" value={trace.checkpoints.length} />
         </div>
       </div>
+
+      <section className="panel stack full-width">
+        <div className="row-head">
+          <div>
+            <h3>State checkpoints</h3>
+            <p className="muted">Compact snapshots persisted after each LangGraph node. Raw retrieved chunks are excluded to protect token economy and readability.</p>
+          </div>
+          <Badge tone={trace.checkpoints.length === trace.steps.length ? "good" : "warn"}>{trace.checkpoints.length} snapshots</Badge>
+        </div>
+        {latestCheckpointState && (
+          <div className="signal-grid">
+            <div className="signal"><span>Latest step</span><strong>{formatStepName(String(latestCheckpointMeta.completed_step ?? latestCheckpoint?.checkpoint_key ?? "unknown"))}</strong></div>
+            <div className="signal"><span>Retrieved chunks</span><strong>{String(latestCheckpointMeta.retrieved_chunk_count ?? 0)}</strong></div>
+            <div className="signal"><span>Citations</span><strong>{String(latestCheckpointMeta.citation_count ?? 0)}</strong></div>
+            <div className="signal"><span>Draft available</span><strong>{latestCheckpointMeta.has_draft_answer ? "yes" : "no"}</strong></div>
+          </div>
+        )}
+        <div className="checkpoint-strip">
+          {trace.checkpoints.map((checkpoint, index) => (
+            <CheckpointCard checkpoint={checkpoint} index={index} key={checkpoint.id} />
+          ))}
+        </div>
+      </section>
 
       <section className="panel stack full-width">
         <div className="row-head">
@@ -2089,6 +2125,31 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
         </div>
       </section>
     </section>
+  );
+}
+
+function CheckpointCard({ checkpoint, index }: { checkpoint: CheckpointTrace; index: number }) {
+  const parsedState = safeJson(checkpoint.state_json);
+  const state = asRecord(parsedState) ?? {};
+  const meta = asRecord(state.checkpoint) ?? {};
+  return (
+    <article className="checkpoint-card">
+      <div className="row-head">
+        <div>
+          <small>Checkpoint {index + 1}</small>
+          <strong>{formatStepName(String(meta.completed_step ?? checkpoint.checkpoint_key))}</strong>
+        </div>
+        <Badge tone={meta.status === "failed" ? "bad" : "good"}>{String(meta.status ?? "stored")}</Badge>
+      </div>
+      <div className="metric-grid compact">
+        <Metric label="Chunks" value={String(meta.retrieved_chunk_count ?? 0)} />
+        <Metric label="Citations" value={String(meta.citation_count ?? 0)} />
+        <Metric label="Draft" value={meta.has_draft_answer ? "yes" : "no"} />
+        <Metric label="Final" value={meta.has_final_answer ? "yes" : "no"} />
+      </div>
+      {typeof meta.error_message === "string" && meta.error_message && <div className="status error">{meta.error_message}</div>}
+      <details><summary>Checkpoint state</summary><JsonBlock value={parsedState} /></details>
+    </article>
   );
 }
 

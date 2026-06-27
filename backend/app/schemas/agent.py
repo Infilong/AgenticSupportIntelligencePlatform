@@ -123,6 +123,16 @@ class GuardrailTraceResponse(BaseModel):
     created_at: datetime
 
 
+class CheckpointTraceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    graph_run_id: UUID
+    checkpoint_key: str
+    state_json: str
+    created_at: datetime
+
+
 class GraphStepResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -147,3 +157,4 @@ class GraphTraceResponse(BaseModel):
     steps: list[GraphStepResponse]
     ai_runs: list[AIRunTraceResponse]
     guardrails: list[GuardrailTraceResponse]
+    checkpoints: list[CheckpointTraceResponse]

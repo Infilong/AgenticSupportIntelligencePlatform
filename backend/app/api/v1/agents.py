@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.workspace import require_workspace_member
+from app.models.agent import Checkpoint
 from app.models.ai import AIRun
 from app.models.review import GuardrailResult
 from app.models.user import User
@@ -18,6 +19,7 @@ from app.schemas.agent import (
     AgentRunRequest,
     AgentUpdateRequest,
     AIRunTraceResponse,
+    CheckpointTraceResponse,
     GraphRunResponse,
     GraphStepResponse,
     GraphTraceResponse,
@@ -182,6 +184,13 @@ def get_agent_trace(
             .order_by(GuardrailResult.created_at.asc())
         ).all()
     )
+    checkpoints = list(
+        db.scalars(
+            select(Checkpoint)
+            .where(Checkpoint.workspace_id == workspace.id, Checkpoint.graph_run_id == run.id)
+            .order_by(Checkpoint.created_at.asc())
+        ).all()
+    )
     return GraphTraceResponse(
         run=GraphRunResponse.model_validate(run),
         steps=[
@@ -192,6 +201,7 @@ def get_agent_trace(
         ],
         ai_runs=list(ai_runs_by_id.values()),
         guardrails=[GuardrailTraceResponse.model_validate(item) for item in guardrails],
+        checkpoints=[CheckpointTraceResponse.model_validate(item) for item in checkpoints],
     )
 
 

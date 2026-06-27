@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.agent import GraphStep, ToolCall
+from app.models.agent import Checkpoint, GraphStep, ToolCall
 from app.models.ai import AIRun, PromptTemplate
 from app.models.review import HumanReview
 
@@ -126,10 +126,17 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
         "language_preservation",
     }
     assert all("severity" in guardrail for guardrail in trace_body["guardrails"])
+    checkpoint_keys = [checkpoint["checkpoint_key"] for checkpoint in trace_body["checkpoints"]]
+    assert checkpoint_keys == [f"{name}:after" for name in step_names]
+    first_checkpoint = safe_json(trace_body["checkpoints"][0]["state_json"])
+    assert first_checkpoint["checkpoint"]["completed_step"] == "detect_language"
+    assert first_checkpoint["detected_language"] == "en"
+    assert "retrieved_chunks" not in first_checkpoint
 
     tool_calls = db_session.scalars(select(ToolCall)).all()
     ai_runs = db_session.scalars(select(AIRun)).all()
     graph_steps = db_session.scalars(select(GraphStep)).all()
+    checkpoints = db_session.scalars(select(Checkpoint)).all()
     graph_run_id = UUID(run["id"])
     assert len(tool_calls) == 1
     assert {ai_run.purpose for ai_run in ai_runs} >= {"classification", "draft_response"}
@@ -147,6 +154,8 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     assert all(step.token_count and step.token_count > 0 for step in ai_steps)
     assert all(step.estimated_cost is not None for step in ai_steps)
     assert len(graph_steps) == 7
+    assert len(checkpoints) == 7
+    assert all(checkpoint.graph_run_id == graph_run_id for checkpoint in checkpoints)
 
 
 def test_support_agent_preserves_japanese_response_language(client: TestClient) -> None:

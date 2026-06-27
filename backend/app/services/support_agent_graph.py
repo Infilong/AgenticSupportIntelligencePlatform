@@ -9,7 +9,14 @@ from langgraph.graph import END, START, StateGraph
 from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage, detect_language_for_messages
-from app.models.agent import GraphRun, GraphRunStatus, GraphStep, GraphStepStatus, ToolCall
+from app.models.agent import (
+    Checkpoint,
+    GraphRun,
+    GraphRunStatus,
+    GraphStep,
+    GraphStepStatus,
+    ToolCall,
+)
 from app.models.ai import AIRun
 from app.services.langchain_support import (
     CLASSIFICATION_TEMPLATE_TEXT,
@@ -340,7 +347,42 @@ class SupportAgentGraphRunner:
         self.db.refresh(step)
         if ai_run_id is not None:
             self._attach_ai_run_to_step(ai_run_id=ai_run_id, step=step)
+        self._record_checkpoint(
+            step_name=step_name,
+            input_state=input_state,
+            output=output,
+            status=status,
+            error_message=error_message,
+        )
         return step
+
+    def _record_checkpoint(
+        self,
+        *,
+        step_name: str,
+        input_state: SupportAgentState,
+        output: SupportAgentState,
+        status: GraphStepStatus,
+        error_message: str | None,
+    ) -> None:
+        checkpoint = Checkpoint(
+            workspace_id=UUID(input_state["workspace_id"]),
+            graph_run_id=UUID(input_state["graph_run_id"]),
+            checkpoint_key=f"{step_name}:after",
+            state_json=json.dumps(
+                _checkpoint_snapshot(
+                    step_name=step_name,
+                    input_state=input_state,
+                    output=output,
+                    status=status,
+                    error_message=error_message,
+                ),
+                ensure_ascii=False,
+                default=str,
+            ),
+        )
+        self.db.add(checkpoint)
+        self.db.commit()
 
     def _attach_ai_run_to_step(self, *, ai_run_id: UUID, step: GraphStep) -> None:
         ai_run = self.db.get(AIRun, ai_run_id)
@@ -447,6 +489,31 @@ def complete_graph_run(db: Session, graph_run: GraphRun, state: SupportAgentStat
     db.commit()
     db.refresh(graph_run)
     return graph_run
+
+
+def _checkpoint_snapshot(
+    *,
+    step_name: str,
+    input_state: SupportAgentState,
+    output: SupportAgentState,
+    status: GraphStepStatus,
+    error_message: str | None,
+) -> dict:
+    merged_state: SupportAgentState = {**input_state, **output}
+    snapshot = _compact_state(merged_state)
+    retrieved_chunks = merged_state.get("retrieved_chunks") or []
+    citations = merged_state.get("citations") or []
+    snapshot["checkpoint"] = {
+        "completed_step": step_name,
+        "status": status.value,
+        "error_message": error_message,
+        "state_keys": sorted(str(key) for key in merged_state.keys()),
+        "retrieved_chunk_count": len(retrieved_chunks) if isinstance(retrieved_chunks, list) else 0,
+        "citation_count": len(citations) if isinstance(citations, list) else 0,
+        "has_draft_answer": bool(merged_state.get("draft_answer")),
+        "has_final_answer": bool(merged_state.get("final_answer")),
+    }
+    return snapshot
 
 
 def _compact_state(state: SupportAgentState) -> dict:
