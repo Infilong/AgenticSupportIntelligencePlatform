@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableLambda
 
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, PromptTemplate
-from app.services.model_provider import MockModelProvider
+from app.services.model_provider import ModelProvider
 from app.services.retrieval_service import RetrievalResult
 
 CLASSIFICATION_SYSTEM_TEMPLATE = (
@@ -64,7 +64,7 @@ def build_classification_prompt(input_message: str) -> str:
 
 def run_classification_chain(
     *,
-    provider: MockModelProvider,
+    provider: ModelProvider,
     workspace_id: UUID,
     language: SupportedLanguage,
     input_message: str,
@@ -164,7 +164,7 @@ def build_draft_response_prompt(
 
 def run_draft_response_chain(
     *,
-    provider: MockModelProvider,
+    provider: ModelProvider,
     workspace_id: UUID,
     language: SupportedLanguage,
     input_message: str,

@@ -6,8 +6,43 @@ from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, ModelConfig
-from app.services.model_provider import MockModelProvider, MockModelProviderError
+from app.services.model_provider import (
+    ConfiguredModelProvider,
+    MockModelProvider,
+    MockModelProviderError,
+    ModelProviderError,
+    OpenAICompatibleModelProvider,
+)
 from app.services.token_accounting import estimate_cost, estimate_tokens
+
+
+class FakeOpenAITransport:
+    def __init__(self, content: str = "Grounded OpenAI answer"):
+        self.content = content
+        self.calls: list[dict] = []
+
+    def create_chat_completion(
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        model: str,
+        prompt: str,
+        timeout_seconds: int,
+    ) -> dict:
+        self.calls.append(
+            {
+                "api_key": api_key,
+                "base_url": base_url,
+                "model": model,
+                "prompt": prompt,
+                "timeout_seconds": timeout_seconds,
+            }
+        )
+        return {
+            "choices": [{"message": {"content": self.content}}],
+            "usage": {"prompt_tokens": 42, "completion_tokens": 11, "total_tokens": 53},
+        }
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -217,3 +252,156 @@ def test_active_model_config_context_limit_records_failed_ai_run(
     assert stored.error_message is not None
     assert "model_context_exceeded" in stored.error_message
     assert stored.estimated_cost == 0
+
+
+def test_openai_compatible_provider_records_successful_ai_run(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "openai-success@example.com")
+    token = login(client, "openai-success@example.com")
+    workspace = create_workspace(client, token)
+    workspace_id = UUID(workspace["id"])
+    created = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/model-configs",
+        headers=auth_headers(token),
+        json={
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "purpose": "draft_response",
+            "prompt_token_cost_per_1k": 0.00015,
+            "completion_token_cost_per_1k": 0.0006,
+            "max_context_tokens": 8192,
+            "active": True,
+        },
+    )
+    assert created.status_code == 201
+    transport = FakeOpenAITransport("Please request a refund within 30 days.")
+
+    response = OpenAICompatibleModelProvider(
+        db_session,
+        api_key="sk-test",
+        base_url="https://api.test/v1",
+        timeout_seconds=7,
+        transport=transport,
+    ).complete(
+        workspace_id=workspace_id,
+        purpose="draft_response",
+        language=SupportedLanguage.en,
+        prompt="Draft a cited answer",
+        model="mock-standard",
+    )
+
+    assert response.content == "Please request a refund within 30 days."
+    assert transport.calls == [
+        {
+            "api_key": "sk-test",
+            "base_url": "https://api.test/v1",
+            "model": "gpt-4o-mini",
+            "prompt": "Draft a cited answer",
+            "timeout_seconds": 7,
+        }
+    ]
+    stored = db_session.scalar(select(AIRun).where(AIRun.id == response.ai_run.id))
+    assert stored is not None
+    assert stored.provider == "openai"
+    assert stored.model == "gpt-4o-mini"
+    assert stored.status == "succeeded"
+    assert stored.prompt_tokens == 42
+    assert stored.completion_tokens == 11
+    assert stored.total_tokens == 53
+    assert stored.estimated_cost == estimate_cost(
+        prompt_tokens=42,
+        completion_tokens=11,
+        prompt_token_cost_per_1k=0.00015,
+        completion_token_cost_per_1k=0.0006,
+    )
+
+
+def test_openai_compatible_provider_records_missing_key_failure(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "openai-missing-key@example.com")
+    token = login(client, "openai-missing-key@example.com")
+    workspace = create_workspace(client, token)
+    workspace_id = UUID(workspace["id"])
+    created = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/model-configs",
+        headers=auth_headers(token),
+        json={
+            "provider": "openai-compatible",
+            "model": "company-chat-model",
+            "purpose": "classification",
+            "prompt_token_cost_per_1k": 0.001,
+            "completion_token_cost_per_1k": 0.002,
+            "max_context_tokens": 4096,
+            "active": True,
+        },
+    )
+    assert created.status_code == 201
+    transport = FakeOpenAITransport()
+
+    try:
+        OpenAICompatibleModelProvider(
+            db_session, api_key="", base_url="https://api.test/v1", transport=transport
+        ).complete(
+            workspace_id=workspace_id,
+            purpose="classification",
+            language=SupportedLanguage.en,
+            prompt="Classify this request",
+            model="mock-cheap",
+        )
+    except ModelProviderError as exc:
+        assert "openai_api_key_missing" in str(exc)
+    else:
+        raise AssertionError("expected missing API key failure")
+
+    assert transport.calls == []
+    stored = db_session.scalar(select(AIRun).where(AIRun.workspace_id == workspace_id))
+    assert stored is not None
+    assert stored.provider == "openai-compatible"
+    assert stored.model == "company-chat-model"
+    assert stored.status == "failed"
+    assert stored.error_message is not None
+    assert "openai_api_key_missing" in stored.error_message
+
+
+def test_configured_provider_dispatches_openai_compatible_configs(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "configured-openai@example.com")
+    token = login(client, "configured-openai@example.com")
+    workspace = create_workspace(client, token)
+    workspace_id = UUID(workspace["id"])
+    created = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/model-configs",
+        headers=auth_headers(token),
+        json={
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "purpose": "classification",
+            "prompt_token_cost_per_1k": 0.00015,
+            "completion_token_cost_per_1k": 0.0006,
+            "max_context_tokens": 8192,
+            "active": True,
+        },
+    )
+    assert created.status_code == 201
+    transport = FakeOpenAITransport("refund_request")
+    openai_provider = OpenAICompatibleModelProvider(
+        db_session, api_key="sk-test", base_url="https://api.test/v1", transport=transport
+    )
+
+    response = ConfiguredModelProvider(db_session, openai_provider=openai_provider).complete(
+        workspace_id=workspace_id,
+        purpose="classification",
+        language=SupportedLanguage.en,
+        prompt="Classify this refund request",
+        model="mock-cheap",
+    )
+
+    assert response.content == "refund_request"
+    assert transport.calls[0]["model"] == "gpt-4o-mini"
+    stored = db_session.scalar(select(AIRun).where(AIRun.id == response.ai_run.id))
+    assert stored is not None
+    assert stored.provider == "openai"
+    assert stored.model == "gpt-4o-mini"

@@ -6,6 +6,9 @@ services:
       ENVIRONMENT: local
       DATABASE_URL: postgresql+psycopg://agentic:agentic@postgres:5432/agentic_support
       REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-30}
     ports:
       - "8000:8000"
     depends_on:

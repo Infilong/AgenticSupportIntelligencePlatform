@@ -22,7 +22,7 @@ from app.services.langchain_support import (
     run_draft_response_chain,
 )
 from app.services.model_config_service import ModelConfigService
-from app.services.model_provider import MockModelProvider, MockModelProviderError
+from app.services.model_provider import ConfiguredModelProvider, ModelProviderError
 from app.services.prompt_template_service import PromptTemplateService
 from app.services.retrieval_service import RetrievalService
 from app.services.support_agent_state import SupportAgentState
@@ -109,7 +109,7 @@ class SupportAgentGraphRunner:
             return output
         try:
             ai_response = run_classification_chain(
-                provider=MockModelProvider(self.db),
+                provider=ConfiguredModelProvider(self.db),
                 workspace_id=UUID(state["workspace_id"]),
                 language=language,
                 input_message=state["input_message"],
@@ -117,7 +117,7 @@ class SupportAgentGraphRunner:
                 prompt_template=prompt_template,
                 completion_text=intent,
             )
-        except MockModelProviderError as exc:
+        except ModelProviderError as exc:
             output = _provider_failure_output(state, exc)
             self._record_step(
                 "classify_intent",
@@ -239,7 +239,7 @@ class SupportAgentGraphRunner:
             documents = budget_documents
         try:
             ai_response = run_draft_response_chain(
-                provider=MockModelProvider(self.db),
+                provider=ConfiguredModelProvider(self.db),
                 workspace_id=UUID(state["workspace_id"]),
                 language=language,
                 input_message=state["input_message"],
@@ -248,7 +248,7 @@ class SupportAgentGraphRunner:
                 prompt_template=prompt_template,
                 completion_text=completion,
             )
-        except MockModelProviderError as exc:
+        except ModelProviderError as exc:
             output = _provider_failure_output(state, exc)
             output["draft_answer"] = None
             self._record_step(
@@ -419,7 +419,7 @@ def _budget_failure_output(
 
 
 def _provider_failure_output(
-    state: SupportAgentState, exc: MockModelProviderError
+    state: SupportAgentState, exc: ModelProviderError
 ) -> SupportAgentState:
     message = str(exc)
     errors = [*state.get("errors", []), message]

@@ -309,6 +309,35 @@ Cited evidence:
 {evidence}`;
 
 const modelPurposes = ["classification", "draft_response", "evaluation", "context_compression"];
+const modelProviderOptions = [
+  {
+    id: "mock",
+    label: "Mock provider",
+    defaultModel: "mock-cheap",
+    promptCost: 0.0001,
+    completionCost: 0.0002,
+    maxContext: 4096,
+    note: "Deterministic local mode for demos and tests. No API key required.",
+  },
+  {
+    id: "openai",
+    label: "OpenAI",
+    defaultModel: "gpt-4o-mini",
+    promptCost: 0.00015,
+    completionCost: 0.0006,
+    maxContext: 128000,
+    note: "Live model calls require OPENAI_API_KEY on the backend; failures are recorded in the AI run ledger.",
+  },
+  {
+    id: "openai-compatible",
+    label: "OpenAI-compatible",
+    defaultModel: "company-chat-model",
+    promptCost: 0.001,
+    completionCost: 0.002,
+    maxContext: 8192,
+    note: "Use for OpenAI-compatible gateways by setting OPENAI_BASE_URL and OPENAI_API_KEY.",
+  },
+];
 
 async function apiRequest<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -424,6 +453,17 @@ export function App() {
   const [modelCompletionCost, setModelCompletionCost] = useState(0.0002);
   const [modelMaxContext, setModelMaxContext] = useState(4096);
   const [modelActive, setModelActive] = useState(true);
+  const selectedModelProvider = modelProviderOptions.find((option) => option.id === modelProvider);
+
+  function applyModelProvider(provider: string) {
+    setModelProvider(provider);
+    const preset = modelProviderOptions.find((option) => option.id === provider);
+    if (!preset) return;
+    setModelName(preset.defaultModel);
+    setModelPromptCost(preset.promptCost);
+    setModelCompletionCost(preset.completionCost);
+    setModelMaxContext(preset.maxContext);
+  }
 
   const selectedWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
@@ -1554,7 +1594,7 @@ export function App() {
           <div className="row-head">
             <div>
               <h3>Create model config</h3>
-              <p className="muted">Use cheaper models for classification and stronger models for drafted answers.</p>
+              <p className="muted">Use mock for deterministic local testing, or activate OpenAI/OpenAI-compatible configs for real model calls with ledger tracking.</p>
             </div>
             <Badge tone={modelActive ? "good" : "neutral"}>{modelActive ? "active" : "draft"}</Badge>
           </div>
@@ -1566,8 +1606,11 @@ export function App() {
           </label>
           <label>
             Provider
-            <input value={modelProvider} onChange={(event) => setModelProvider(event.target.value)} />
+            <select value={modelProvider} onChange={(event) => applyModelProvider(event.target.value)}>
+              {modelProviderOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
           </label>
+          {selectedModelProvider && <p className="muted">{selectedModelProvider.note}</p>}
           <label>
             Model
             <input value={modelName} onChange={(event) => setModelName(event.target.value)} />
@@ -1635,8 +1678,8 @@ export function App() {
               </article>
             ))}
           </div>
-          {modelConfigs.length === 0 && <EmptyState title="No model configs" detail="The backend falls back to default mock pricing until a workspace override is created." />}
-          {activeConfigs.length > 0 && <p className="muted">Active configs are used by the provider before token and cost are recorded.</p>}
+          {modelConfigs.length === 0 && <EmptyState title="No model configs" detail="The backend falls back to deterministic mock mode until you activate a workspace model config." />}
+          {activeConfigs.length > 0 && <p className="muted">Active OpenAI/OpenAI-compatible configs perform live calls when the backend has an API key; otherwise the failed attempt is visible in trace, review, and cost records.</p>}
         </section>
       </div>
     );
