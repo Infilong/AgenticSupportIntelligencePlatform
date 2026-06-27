@@ -140,6 +140,12 @@ type HumanReview = {
   resolved_at: string | null;
 };
 
+type ReviewDraft = {
+  decision: "approved" | "edited" | "rejected";
+  edited_answer: string;
+  comments: string;
+};
+
 type EvaluationRun = {
   id: string;
   name: string;
@@ -324,9 +330,7 @@ export function App() {
   const [traceRunId, setTraceRunId] = useState("");
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
-  const [reviewDecision, setReviewDecision] = useState<"approved" | "edited" | "rejected">("approved");
-  const [reviewEditedAnswer, setReviewEditedAnswer] = useState("");
-  const [reviewComments, setReviewComments] = useState("");
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
 
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
@@ -614,19 +618,41 @@ export function App() {
     setReviews(data);
   }
 
-  async function resolveReview(reviewId: string) {
+  function reviewDraft(review: HumanReview): ReviewDraft {
+    return reviewDrafts[review.id] ?? {
+      decision: "approved",
+      edited_answer: review.proposed_answer ?? "",
+      comments: "",
+    };
+  }
+
+  function updateReviewDraft(reviewId: string, patch: Partial<ReviewDraft>) {
+    setReviewDrafts((current) => {
+      const existing = current[reviewId] ?? { decision: "approved", edited_answer: "", comments: "" };
+      return {
+        ...current,
+        [reviewId]: { ...existing, ...patch },
+      };
+    });
+  }
+
+  async function resolveReview(review: HumanReview) {
+    const draft = reviewDraft(review);
     await runAction("Review resolved", async () => {
-      await apiRequest(workspacePath(`/human-reviews/${reviewId}/resolve`), {
+      await apiRequest(workspacePath(`/human-reviews/${review.id}/resolve`), {
         method: "POST",
         token,
         body: {
-          decision: reviewDecision,
-          edited_answer: reviewDecision === "edited" ? reviewEditedAnswer : null,
-          comments: reviewComments || null,
+          decision: draft.decision,
+          edited_answer: draft.decision === "edited" ? draft.edited_answer : null,
+          comments: draft.comments || null,
         },
       });
-      setReviewEditedAnswer("");
-      setReviewComments("");
+      setReviewDrafts((current) => {
+        const next = { ...current };
+        delete next[review.id];
+        return next;
+      });
       await loadReviews();
     });
   }
@@ -1101,89 +1127,121 @@ export function App() {
       <div className="stack">
         <ActionGuide
           title="Human review is the safety valve"
-          detail="Only cases still waiting for action appear in the pending queue. Resolved reviews are kept below as history."
+          detail="Resolve each blocked run independently. Reviewers can inspect the trace, approve the draft, edit a final answer, or reject unsupported output."
           action="Next: run evaluation"
           onAction={() => setActiveTab("evaluations")}
         />
-        <section className="panel stack">
-          <div className="row-head">
-            <div>
-              <h3>Pending human review queue</h3>
-              <p className="muted">These are agent runs blocked by guardrails or low confidence.</p>
-            </div>
-            <button onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh reviews</button>
-          </div>
-          <div className="review-controls">
-            <label>
-              Decision to apply
-              <select
-                value={reviewDecision}
-                onChange={(event) =>
-                  setReviewDecision(event.target.value as "approved" | "edited" | "rejected")
-                }
-              >
-                <option value="approved">Approve proposed answer</option>
-                <option value="edited">Approve with edited answer</option>
-                <option value="rejected">Reject answer</option>
-              </select>
-            </label>
-            <label>
-              Edited answer, only used when decision is edited
-              <textarea
-                rows={4}
-                placeholder="Write the human-approved answer here."
-                value={reviewEditedAnswer}
-                onChange={(event) => setReviewEditedAnswer(event.target.value)}
-              />
-            </label>
-            <label>
-              Reviewer comments
-              <textarea
-                rows={3}
-                placeholder="Why did you approve, edit, or reject?"
-                value={reviewComments}
-                onChange={(event) => setReviewComments(event.target.value)}
-              />
-            </label>
-          </div>
-          {pendingReviewItems.map((review) => (
-            <article className="review-row pending-review" key={review.id}>
-              <div className="row-head">
-                <div>
-                  <strong>{friendlyReviewReason(review.reason)}</strong>
-                  <p className="muted">Raw guardrails: {review.reason}</p>
-                </div>
-                <Badge tone="warn">waiting for human</Badge>
+        <section className="review-workbench">
+          <div className="panel stack">
+            <div className="row-head">
+              <div>
+                <h3>Pending queue</h3>
+                <p className="muted">Cases blocked by guardrails, weak evidence, or low confidence.</p>
               </div>
-              <p className="answer">
-                {review.proposed_answer ??
-                  "No proposed answer was shown because guardrails blocked finalization."}
-              </p>
               <div className="review-actions">
-                <button onClick={() => { setTraceRunId(review.graph_run_id); setActiveTab("trace"); }}>
-                  Inspect trace
-                </button>
-                <button className="primary" onClick={() => void resolveReview(review.id)}>
-                  Apply selected decision
-                </button>
+                <Badge tone={pendingReviewItems.length ? "warn" : "good"}>{pendingReviewItems.length} pending</Badge>
+                <button onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh</button>
               </div>
-              <small>Graph run {review.graph_run_id}</small>
-            </article>
-          ))}
-          {pendingReviewItems.length === 0 && (
-            <EmptyState
-              title="No pending reviews"
-              detail="Run a privacy complaint, prompt injection, or unsupported request to create a review item."
-            />
-          )}
+            </div>
+            {pendingReviewItems.map((review) => {
+              const draft = reviewDraft(review);
+              const guardrailParts = review.reason.split(",").map((part) => part.trim()).filter(Boolean);
+              return (
+                <article className="review-row pending-review" key={review.id}>
+                  <div className="row-head">
+                    <div>
+                      <strong>{friendlyReviewReason(review.reason)}</strong>
+                      <p className="muted">Created {formatDate(review.created_at)}</p>
+                    </div>
+                    <Badge tone="warn">waiting for reviewer</Badge>
+                  </div>
+                  <div className="guardrail-list">
+                    {guardrailParts.map((part) => <Badge key={part} tone="warn">{part}</Badge>)}
+                  </div>
+                  <div className="answer-box">
+                    <span>Proposed answer</span>
+                    <p>
+                      {review.proposed_answer ??
+                        "No proposed answer was shown because guardrails blocked finalization."}
+                    </p>
+                  </div>
+                  <div className="review-editor">
+                    <label>
+                      Decision
+                      <select
+                        value={draft.decision}
+                        onChange={(event) =>
+                          updateReviewDraft(review.id, {
+                            decision: event.target.value as "approved" | "edited" | "rejected",
+                          })
+                        }
+                      >
+                        <option value="approved">Approve proposed answer</option>
+                        <option value="edited">Approve with edited answer</option>
+                        <option value="rejected">Reject answer</option>
+                      </select>
+                    </label>
+                    <label>
+                      Human-approved answer
+                      <textarea
+                        rows={5}
+                        disabled={draft.decision !== "edited"}
+                        placeholder="Used only when decision is edited."
+                        value={draft.edited_answer}
+                        onChange={(event) => updateReviewDraft(review.id, { edited_answer: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Reviewer note
+                      <textarea
+                        rows={5}
+                        placeholder="Record why this answer is safe, edited, or rejected."
+                        value={draft.comments}
+                        onChange={(event) => updateReviewDraft(review.id, { comments: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                  <div className="review-actions">
+                    <button onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
+                      Inspect trace
+                    </button>
+                    <button className="primary" onClick={() => void resolveReview(review)}>
+                      Resolve this review
+                    </button>
+                  </div>
+                  <small>Graph run {review.graph_run_id}</small>
+                </article>
+              );
+            })}
+            {pendingReviewItems.length === 0 && (
+              <EmptyState
+                title="No pending reviews"
+                detail="Run a privacy complaint, prompt injection, or unsupported request to create a review item."
+              />
+            )}
+          </div>
+
+          <aside className="panel stack">
+            <h3>Review policy</h3>
+            <Metric label="Pending" value={pendingReviewItems.length} />
+            <Metric label="Resolved" value={resolvedReviewItems.length} />
+            <div className="policy-list">
+              <span>Citations missing or weak</span>
+              <span>Prompt injection attempt</span>
+              <span>Privacy or safety escalation</span>
+              <span>Low confidence score</span>
+              <span>Language preservation issue</span>
+            </div>
+          </aside>
         </section>
+
         <section className="panel stack">
           <h3>Resolved review history</h3>
           {resolvedReviewItems.map((review) => (
             <article className="review-row resolved-review" key={review.id}>
               <div className="row-head">
                 <strong>{friendlyReviewReason(review.reason)}</strong>
-                <Badge tone="good">{review.reviewer_decision}</Badge>
+                <Badge tone={toneForStatus(review.reviewer_decision)}>{review.reviewer_decision}</Badge>
               </div>
               <p>{review.edited_answer ?? review.proposed_answer ?? "No answer was stored."}</p>
               {review.comments && <p className="muted">Comment: {review.comments}</p>}
@@ -1314,10 +1372,143 @@ function RunSummary({ run }: { run: GraphRun }) {
   return <div className="run-summary"><div className="metric-grid"><Metric label="Status" value={run.status} /><Metric label="Language" value={run.language ?? "-"} /><Metric label="Route" value={run.route_decision ?? "-"} /><Metric label="Completed" value={formatDate(run.completed_at)} /></div><p className="answer">{run.final_answer ?? "No final answer. The run may require human review."}</p><small>{run.id}</small></div>;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+function formatStepName(value: string) {
+  return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+
+function traceStepSignals(value: unknown): Array<{ label: string; value: string }> {
+  const record = asRecord(value);
+  if (!record) return [];
+  const signals: Array<{ label: string; value: string }> = [];
+  for (const key of ["detected_language", "intent", "route_decision", "confidence_score", "no_source"]) {
+    if (record[key] !== undefined && record[key] !== null) {
+      signals.push({ label: formatStepName(key), value: String(record[key]) });
+    }
+  }
+  const citations = record.citations;
+  if (Array.isArray(citations)) {
+    signals.push({ label: "Citations", value: String(citations.length) });
+  }
+  const chunks = record.retrieved_chunks;
+  if (Array.isArray(chunks)) {
+    signals.push({ label: "Retrieved chunks", value: String(chunks.length) });
+  }
+  return signals;
+}
+
 function TraceViewer({ trace }: { trace: GraphTrace }) {
   const totalTokens = trace.steps.reduce((sum, step) => sum + (step.token_count ?? 0), 0);
   const totalCost = trace.steps.reduce((sum, step) => sum + (step.estimated_cost ?? 0), 0);
-  return <section className="panel stack"><RunSummary run={trace.run} /><div className="metric-grid"><Metric label="Steps" value={trace.steps.length} /><Metric label="Trace tokens" value={totalTokens} /><Metric label="Trace cost" value={formatCost(totalCost)} /></div><div className="timeline">{trace.steps.map((step, index) => <article className="trace-step" key={step.id}><div className="row-head"><div><small>Step {index + 1}</small><h3>{step.step_name}</h3></div><Badge tone={toneForStatus(step.status)}>{step.status}</Badge></div><div className="metric-grid compact"><Metric label="Latency" value={`${step.latency_ms} ms`} /><Metric label="Tokens" value={step.token_count ?? 0} /><Metric label="Cost" value={formatCost(step.estimated_cost)} /><Metric label="Retries" value={step.retry_count} /></div>{step.error_message && <div className="status error">{step.error_message}</div>}<details><summary>Input</summary><JsonBlock value={safeJson(step.input_json)} /></details><details open><summary>Output</summary><JsonBlock value={safeJson(step.output_json)} /></details>{step.tool_calls.length > 0 && <details><summary>Tool calls</summary>{step.tool_calls.map((tool) => <div className="tool-call" key={tool.id}><strong>{tool.tool_name}</strong><span>{tool.status} · {tool.latency_ms} ms</span><JsonBlock value={safeJson(tool.output_json)} /></div>)}</details>}</article>)}</div></section>;
+  const totalLatency = trace.steps.reduce((sum, step) => sum + step.latency_ms, 0);
+  const modelCallCount = trace.steps.filter((step) => step.ai_run_id).length;
+  const toolCallCount = trace.steps.reduce((sum, step) => sum + step.tool_calls.length, 0);
+
+  return (
+    <section className="trace-workbench">
+      <div className="panel stack trace-run-panel">
+        <div className="row-head">
+          <div>
+            <p className="eyebrow">Run context</p>
+            <h3>{trace.run.route_decision ?? trace.run.status}</h3>
+          </div>
+          <Badge tone={toneForStatus(trace.run.status)}>{trace.run.status}</Badge>
+        </div>
+        <p className="message"><b>User</b>: {trace.run.input_message}</p>
+        <p className="answer">{trace.run.final_answer ?? "No final answer. The run is blocked for review or has no supported source."}</p>
+        <div className="metric-grid compact">
+          <Metric label="Language" value={trace.run.language ?? "-"} />
+          <Metric label="Route" value={trace.run.route_decision ?? "-"} />
+          <Metric label="Completed" value={formatDate(trace.run.completed_at)} />
+        </div>
+      </div>
+
+      <div className="panel stack trace-run-panel">
+        <div className="row-head">
+          <h3>Graph health</h3>
+          <Badge>{trace.steps.length} nodes</Badge>
+        </div>
+        <div className="metric-grid compact">
+          <Metric label="Model calls" value={modelCallCount} />
+          <Metric label="Tool calls" value={toolCallCount} />
+          <Metric label="Latency" value={`${totalLatency} ms`} />
+          <Metric label="Tokens" value={totalTokens} />
+          <Metric label="Cost" value={formatCost(totalCost)} />
+        </div>
+      </div>
+
+      <section className="panel stack full-width">
+        <div className="row-head">
+          <div>
+            <h3>LangGraph execution timeline</h3>
+            <p className="muted">Readable state is shown first; raw JSON remains available for debugging.</p>
+          </div>
+          <Badge tone={trace.run.route_decision === "human_review" ? "warn" : "good"}>{trace.run.route_decision ?? "running"}</Badge>
+        </div>
+        <div className="timeline">
+          {trace.steps.map((step, index) => <TraceStepCard key={step.id} step={step} index={index} />)}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
+  const output = safeJson(step.output_json);
+  const signals = traceStepSignals(output);
+  return (
+    <article className="trace-step">
+      <div className="row-head">
+        <div>
+          <small>Step {index + 1}</small>
+          <h3>{formatStepName(step.step_name)}</h3>
+        </div>
+        <div className="review-actions">
+          {step.ai_run_id && <Badge>model call</Badge>}
+          {step.tool_calls.length > 0 && <Badge>{step.tool_calls.length} tools</Badge>}
+          <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
+        </div>
+      </div>
+      {signals.length > 0 && (
+        <div className="signal-grid">
+          {signals.map((signal) => (
+            <div className="signal" key={signal.label}>
+              <span>{signal.label}</span>
+              <strong>{signal.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="metric-grid compact">
+        <Metric label="Latency" value={`${step.latency_ms} ms`} />
+        <Metric label="Tokens" value={step.token_count ?? 0} />
+        <Metric label="Cost" value={formatCost(step.estimated_cost)} />
+        <Metric label="Retries" value={step.retry_count} />
+      </div>
+      {step.error_message && <div className="status error">{step.error_message}</div>}
+      {step.tool_calls.length > 0 && (
+        <div className="tool-list">
+          {step.tool_calls.map((tool) => (
+            <div className="tool-call" key={tool.id}>
+              <div className="row-head">
+                <strong>{tool.tool_name}</strong>
+                <Badge tone={toneForStatus(tool.status)}>{tool.status} · {tool.latency_ms} ms</Badge>
+              </div>
+              <details><summary>Tool output</summary><JsonBlock value={safeJson(tool.output_json)} /></details>
+            </div>
+          ))}
+        </div>
+      )}
+      <details><summary>Input state</summary><JsonBlock value={safeJson(step.input_json)} /></details>
+      <details><summary>Output state</summary><JsonBlock value={output} /></details>
+    </article>
+  );
 }
 
 function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
