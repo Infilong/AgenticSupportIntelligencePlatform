@@ -708,21 +708,21 @@ export function App() {
   function renderActiveTab() {
     switch (activeTab) {
       case "datasets":
-        return <DatasetsPanel />;
+        return DatasetsPanel();
       case "documents":
-        return <DocumentsPanel />;
+        return DocumentsPanel();
       case "agent":
-        return <AgentPanel />;
+        return AgentPanel();
       case "trace":
-        return <TracePanel />;
+        return TracePanel();
       case "reviews":
-        return <ReviewsPanel />;
+        return ReviewsPanel();
       case "evaluations":
-        return <EvaluationsPanel />;
+        return EvaluationsPanel();
       case "costs":
-        return <CostsPanel />;
+        return CostsPanel();
       default:
-        return <OverviewPanel />;
+        return OverviewPanel();
     }
   }
 
@@ -918,23 +918,107 @@ export function App() {
   }
 
   function ReviewsPanel() {
+    const pendingReviewItems = reviews.filter((review) => review.reviewer_decision === "pending");
+    const resolvedReviewItems = reviews.filter((review) => review.reviewer_decision !== "pending");
+
     return (
-      <section className="panel stack">
+      <div className="stack">
         <ActionGuide
           title="Human review is the safety valve"
-          detail="Risky, unsupported, low-confidence, or policy-sensitive outputs wait here for approve, edit, or reject decisions."
+          detail="Only cases still waiting for action appear in the pending queue. Resolved reviews are kept below as history."
           action="Next: run evaluation"
           onAction={() => setActiveTab("evaluations")}
         />
-        <div className="row-head"><h3>Human reviews</h3><button onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh reviews</button></div>
-        <div className="inline-form">
-          <select value={reviewDecision} onChange={(event) => setReviewDecision(event.target.value as "approved" | "edited" | "rejected")}><option value="approved">approved</option><option value="edited">edited</option><option value="rejected">rejected</option></select>
-          <input placeholder="edited answer" value={reviewEditedAnswer} onChange={(event) => setReviewEditedAnswer(event.target.value)} />
-          <input placeholder="comments" value={reviewComments} onChange={(event) => setReviewComments(event.target.value)} />
-        </div>
-        {reviews.map((review) => <article className="review-row" key={review.id}><div className="row-head"><strong>{review.reason}</strong><Badge tone={review.reviewer_decision === "pending" ? "warn" : "good"}>{review.reviewer_decision}</Badge></div><p>{review.proposed_answer ?? "No proposed answer"}</p><small>Graph run {review.graph_run_id}</small>{review.reviewer_decision === "pending" && <button onClick={() => void resolveReview(review.id)}>Resolve selected way</button>}</article>)}
-        {reviews.length === 0 && <EmptyState title="No reviews" detail="Low-confidence or risky agent runs will appear here." />}
-      </section>
+        <section className="panel stack">
+          <div className="row-head">
+            <div>
+              <h3>Pending human review queue</h3>
+              <p className="muted">These are agent runs blocked by guardrails or low confidence.</p>
+            </div>
+            <button onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh reviews</button>
+          </div>
+          <div className="review-controls">
+            <label>
+              Decision to apply
+              <select
+                value={reviewDecision}
+                onChange={(event) =>
+                  setReviewDecision(event.target.value as "approved" | "edited" | "rejected")
+                }
+              >
+                <option value="approved">Approve proposed answer</option>
+                <option value="edited">Approve with edited answer</option>
+                <option value="rejected">Reject answer</option>
+              </select>
+            </label>
+            <label>
+              Edited answer, only used when decision is edited
+              <textarea
+                rows={4}
+                placeholder="Write the human-approved answer here."
+                value={reviewEditedAnswer}
+                onChange={(event) => setReviewEditedAnswer(event.target.value)}
+              />
+            </label>
+            <label>
+              Reviewer comments
+              <textarea
+                rows={3}
+                placeholder="Why did you approve, edit, or reject?"
+                value={reviewComments}
+                onChange={(event) => setReviewComments(event.target.value)}
+              />
+            </label>
+          </div>
+          {pendingReviewItems.map((review) => (
+            <article className="review-row pending-review" key={review.id}>
+              <div className="row-head">
+                <div>
+                  <strong>{friendlyReviewReason(review.reason)}</strong>
+                  <p className="muted">Raw guardrails: {review.reason}</p>
+                </div>
+                <Badge tone="warn">waiting for human</Badge>
+              </div>
+              <p className="answer">
+                {review.proposed_answer ??
+                  "No proposed answer was shown because guardrails blocked finalization."}
+              </p>
+              <div className="review-actions">
+                <button onClick={() => { setTraceRunId(review.graph_run_id); setActiveTab("trace"); }}>
+                  Inspect trace
+                </button>
+                <button className="primary" onClick={() => void resolveReview(review.id)}>
+                  Apply selected decision
+                </button>
+              </div>
+              <small>Graph run {review.graph_run_id}</small>
+            </article>
+          ))}
+          {pendingReviewItems.length === 0 && (
+            <EmptyState
+              title="No pending reviews"
+              detail="Run a privacy complaint, prompt injection, or unsupported request to create a review item."
+            />
+          )}
+        </section>
+        <section className="panel stack">
+          <h3>Resolved review history</h3>
+          {resolvedReviewItems.map((review) => (
+            <article className="review-row resolved-review" key={review.id}>
+              <div className="row-head">
+                <strong>{friendlyReviewReason(review.reason)}</strong>
+                <Badge tone="good">{review.reviewer_decision}</Badge>
+              </div>
+              <p>{review.edited_answer ?? review.proposed_answer ?? "No answer was stored."}</p>
+              {review.comments && <p className="muted">Comment: {review.comments}</p>}
+              <small>Resolved {formatDate(review.resolved_at)}</small>
+            </article>
+          ))}
+          {resolvedReviewItems.length === 0 && (
+            <EmptyState title="No resolved reviews" detail="Completed decisions will appear here." />
+          )}
+        </section>
+      </div>
     );
   }
 
@@ -981,6 +1065,23 @@ export function App() {
       </section>
     );
   }
+}
+
+function friendlyReviewReason(reason: string) {
+  const parts = reason.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.includes("prompt_injection")) {
+    return "Prompt injection attempt needs review";
+  }
+  if (parts.includes("unsupported_answer") || parts.includes("citation_required")) {
+    return "Answer has weak or missing evidence";
+  }
+  if (parts.includes("confidence_threshold")) {
+    return "Low-confidence answer needs review";
+  }
+  if (parts.includes("language_preservation")) {
+    return "Language mismatch needs review";
+  }
+  return "Agent run needs human review";
 }
 
 function ActionGuide({

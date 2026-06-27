@@ -606,3 +606,36 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+.review-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(260px, 1.3fr) minmax(220px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.review-controls textarea {
+  min-height: 92px;
+}
+
+.pending-review {
+  border-color: #e5b949;
+  background: #fffdf5;
+}
+
+.resolved-review {
+  background: #f8fafc;
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+@media (max-width: 900px) {
+  .review-controls {
+    grid-template-columns: 1fr;
+  }
+}
