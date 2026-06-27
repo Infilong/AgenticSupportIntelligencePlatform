@@ -10,6 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage, detect_language_for_messages
 from app.models.agent import GraphRun, GraphRunStatus, GraphStep, GraphStepStatus, ToolCall
+from app.services.langchain_support import (
+    build_classification_prompt,
+    build_draft_response_prompt,
+    chunk_payloads_to_documents,
+    parse_model_text,
+    retrieval_results_to_documents,
+)
 from app.services.model_provider import MockModelProvider
 from app.services.retrieval_service import RetrievalService
 from app.services.support_agent_state import SupportAgentState
@@ -67,13 +74,14 @@ class SupportAgentGraphRunner:
             intent = "refund_request"
         else:
             intent = "general_support"
+        classification_prompt = build_classification_prompt(state["input_message"])
         ai_response = MockModelProvider(self.db).complete(
             workspace_id=UUID(state["workspace_id"]),
             purpose="classification",
             language=language,
-            prompt=f"Classify support intent: {state['input_message']}",
+            prompt=classification_prompt,
             model="mock-cheap",
-            completion_text=intent,
+            completion_text=parse_model_text(intent),
         )
         output: SupportAgentState = {"intent": intent}
         self._record_step("classify_intent", state, output, started, ai_response.ai_run.id)
@@ -90,7 +98,12 @@ class SupportAgentGraphRunner:
             min_score=_retrieval_threshold(state),
             document_id=None,
         )
-        chunks = [result.__dict__ for result in retrieval.results]
+        documents = retrieval_results_to_documents(retrieval.results)
+        chunks = []
+        for result, document in zip(retrieval.results, documents, strict=True):
+            chunk = result.__dict__.copy()
+            chunk["langchain_document_metadata"] = document.metadata
+            chunks.append(chunk)
         output: SupportAgentState = {
             "retrieved_chunks": chunks,
             "retrieval_trace_id": str(retrieval.trace_id),
@@ -109,7 +122,11 @@ class SupportAgentGraphRunner:
                     {"query": state["input_message"], "language": language.value}
                 ),
                 output_json=json.dumps(
-                    {"trace_id": str(retrieval.trace_id), "result_count": len(retrieval.results)}
+                    {
+                        "trace_id": str(retrieval.trace_id),
+                        "result_count": len(retrieval.results),
+                        "langchain_document_count": len(documents),
+                    }
                 ),
                 status=GraphStepStatus.succeeded,
                 latency_ms=max(1, int((time.perf_counter() - tool_started) * 1000)),
@@ -131,13 +148,19 @@ class SupportAgentGraphRunner:
             input_message=state["input_message"],
             chunks=state.get("retrieved_chunks") or [],
         )
+        documents = chunk_payloads_to_documents(state.get("retrieved_chunks") or [])
+        draft_prompt = build_draft_response_prompt(
+            input_message=state["input_message"],
+            language=language,
+            documents=documents,
+        )
         ai_response = MockModelProvider(self.db).complete(
             workspace_id=UUID(state["workspace_id"]),
             purpose="draft_response",
             language=language,
-            prompt="Draft a grounded response using retrieved citations.",
+            prompt=draft_prompt,
             model="mock-standard",
-            completion_text=completion,
+            completion_text=parse_model_text(completion),
         )
         output: SupportAgentState = {"draft_answer": completion}
         self._record_step("draft_response", state, output, started, ai_response.ai_run.id)

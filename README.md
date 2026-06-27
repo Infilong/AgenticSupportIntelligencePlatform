@@ -62,7 +62,7 @@ Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic
 Database: PostgreSQL, pgvector
 Queue/cache: Redis
 AI workflow: LangGraph
-AI app layer: LangChain-style provider/tool boundaries
+AI app layer: LangChain Core prompt templates, documents, output parsing
 Testing: pytest, ruff, TypeScript checks
 Runtime: Docker Compose, uv, npm
 CI: GitHub Actions
@@ -77,6 +77,7 @@ CI: GitHub Actions
 | Knowledge ingestion | Text/Markdown upload, document versions, chunks, token counts, mock embeddings, pgvector storage |
 | Retrieval | Vector scoring, multilingual lexical scoring, hybrid ranking, citations, retrieval traces, no-source detection |
 | Agent workflow | LangGraph support workflow with graph runs, graph steps, tool calls, routing, and trace API |
+| LangChain integration | LangChain Core prompt templates, `Document` wrappers for retrieved evidence, and output parsing in the support workflow |
 | Guardrails | Prompt-injection checks, citation-required checks, language preservation, confidence scoring, review routing |
 | Human review | Pending review queue, approve/edit/reject resolution, stored reviewer decision |
 | Evaluation | JSONL cases, direct LLM baseline, vector RAG baseline, system v1 mode, per-language metrics |

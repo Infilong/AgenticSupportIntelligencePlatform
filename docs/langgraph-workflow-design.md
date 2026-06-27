@@ -71,6 +71,7 @@ Tests should cover normal finalization, no-source refusal, low-confidence review
 - Every node persists a `GraphStep`.
 - Retrieval is stored as a `ToolCall` and also creates a `RetrievalTrace` through the retrieval service.
 - Classification and draft nodes call `MockModelProvider`, creating linked `AIRun` records.
+- Classification and draft prompts are built with LangChain Core `ChatPromptTemplate`; retrieved chunks are wrapped as LangChain `Document` objects before prompt assembly; output text passes through LangChain `StrOutputParser`.
 - Trace endpoint returns ordered graph steps and tool calls.
 - No-source cases route to `needs_human_review`; real human review API is Milestone 8.
 
