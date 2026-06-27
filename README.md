@@ -73,7 +73,7 @@ Every workspace-owned entity includes `workspace_id`. Every workspace route enfo
 Automated tests must use mock LLM and embedding providers. Required coverage includes language detection, chunking, labels, prompt assembly, token budget enforcement, retrieval filtering, structured outputs, graph routing, guardrails, cost calculation, citations, auth, workspace isolation, pgvector retrieval, Redis worker, LangChain wrappers, LangGraph checkpoint/resume, evaluation runner, no-source refusal, prompt injection blocking, and long-document protection.
 
 ## How To Run Locally
-Milestone 1 provides the runnable local skeleton.
+Milestone 10 provides the runnable local UI for the core browser demo path.
 
 Prerequisites:
 - Python 3.12+
@@ -118,6 +118,8 @@ Frontend:
 ```bash
 http://localhost:5173
 ```
+
+The browser UI supports login/register, workspace selection, dataset import, document upload, agent execution, graph trace inspection, human review, evaluation runs, and token/cost summaries.
 
 ## Demo Data
 Minimum demo data will include 30 to 60 multilingual conversation examples, 9 to 15 knowledge documents, and at least 10 evaluation cases each for English, Japanese, and Chinese. Cases must include low-risk, high-risk, no-source, prompt injection, and human-review routing scenarios.

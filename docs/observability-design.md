@@ -55,3 +55,9 @@ Show token usage, estimated cost, latency, model choice, cache hit rate, purpose
 - Baseline comparison across `direct_llm`, `vector_rag`, and `system_v1`.
 - Metrics are grouped by language and mode.
 - Evaluation detail responses include per-case answers, citations, route decisions, prompt-token estimates, estimated cost, and errors.
+
+## Implemented In Milestone 10
+- Browser graph trace viewer for run, step, tool-call, token, cost, latency, retry, and error fields.
+- Browser evaluation dashboard for per-language, per-mode metrics and case results.
+- Browser cost dashboard for `AIRun` ledger aggregates and purpose breakdown.
+- Browser human-review queue with approve/edit/reject resolution.

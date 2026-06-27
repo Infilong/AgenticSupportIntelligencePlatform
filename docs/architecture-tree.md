@@ -144,10 +144,10 @@ Multilingual Agentic Support Intelligence Platform
 |   |-- Milestone 6: AI run ledger, token/cost accounting, token budget planner
 |   |-- Milestone 7: LangGraph support-agent workflow, graph traces, tool calls
 |   |-- Milestone 8: deterministic guardrails and human review workflow
-|   `-- Milestone 9: evaluation runner, baseline modes, per-language metrics
+|   |-- Milestone 9: evaluation runner, baseline modes, per-language metrics
+|   `-- Milestone 10: frontend trace and evaluation UI
 |
 `-- Future Milestones
-    |-- Milestone 10: frontend trace and evaluation UI
     `-- Milestone 11: portfolio packaging
 ```
 
