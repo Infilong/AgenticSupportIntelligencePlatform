@@ -1,3 +1,4 @@
+import json
 from typing import Annotated
 from uuid import UUID
 
@@ -21,9 +22,12 @@ from app.schemas.agent import (
     AIRunTraceResponse,
     CheckpointTraceResponse,
     GraphRunResponse,
+    GraphRuntimeResponse,
     GraphStepResponse,
     GraphTraceResponse,
     GuardrailTraceResponse,
+    RuntimeComponentResponse,
+    ToolCallResponse,
 )
 from app.services.agent_service import AgentNotFoundError, AgentService, GraphRunNotFoundError
 from app.services.audit_log_service import AuditLogService
@@ -194,13 +198,9 @@ def get_agent_trace(
     )
     checkpoints.sort(key=_checkpoint_sort_key)
     return GraphTraceResponse(
+        runtime=_graph_runtime_response(run.steps),
         run=GraphRunResponse.model_validate(run),
-        steps=[
-            GraphStepResponse.model_validate(step).model_copy(
-                update={"ai_run": ai_runs_by_id.get(step.ai_run_id)}
-            )
-            for step in run.steps
-        ],
+        steps=[_graph_step_response(step, ai_runs_by_id.get(step.ai_run_id)) for step in run.steps],
         ai_runs=list(ai_runs_by_id.values()),
         guardrails=[GuardrailTraceResponse.model_validate(item) for item in guardrails],
         checkpoints=[CheckpointTraceResponse.model_validate(item) for item in checkpoints],
@@ -236,3 +236,103 @@ def _ai_run_trace_response(ai_run: AIRun) -> AIRunTraceResponse:
             "prompt_template_text": prompt_template.template_text if prompt_template else None,
         }
     )
+
+
+def _graph_step_response(step, ai_run: AIRunTraceResponse | None) -> GraphStepResponse:
+    tool_calls = [_tool_call_response(tool_call) for tool_call in step.tool_calls]
+    return GraphStepResponse.model_validate(step).model_copy(
+        update={
+            "ai_run": ai_run,
+            "tool_calls": tool_calls,
+            **_step_runtime_metadata(step, ai_run=ai_run, tool_calls=tool_calls),
+        }
+    )
+
+
+def _tool_call_response(tool_call) -> ToolCallResponse:
+    output = _safe_json_object(tool_call.output_json)
+    return ToolCallResponse.model_validate(tool_call).model_copy(
+        update={"framework": output.get("framework") if output else None}
+    )
+
+
+def _step_runtime_metadata(
+    step, *, ai_run: AIRunTraceResponse | None, tool_calls: list[ToolCallResponse]
+) -> dict:
+    input_state = _safe_json_object(step.input_json)
+    output_state = _safe_json_object(step.output_json)
+    state_keys = sorted(set(input_state.keys()) | set(output_state.keys()))
+    uses_langchain = bool(ai_run) or any(
+        (tool.framework or "").startswith("langchain") for tool in tool_calls
+    )
+    return {
+        "runtime_framework": "LangGraph StateGraph node",
+        "node_role": _node_role(step.step_name),
+        "uses_langchain": uses_langchain,
+        "state_keys": state_keys,
+    }
+
+
+def _graph_runtime_response(steps) -> GraphRuntimeResponse:
+    return GraphRuntimeResponse(
+        orchestrator="LangGraph StateGraph",
+        state_schema="SupportAgentState TypedDict",
+        graph_builder="app.services.support_agent_graph.SupportAgentGraphRunner",
+        execution_mode="deterministic graph with conditional human-review routing",
+        node_count=len(steps),
+        conditional_routes=[
+            "route_review_or_finalize -> finalize_response",
+            "route_review_or_finalize -> human_review",
+        ],
+        persistence=[
+            "GraphStep",
+            "Checkpoint",
+            "ToolCall",
+            "AIRun",
+            "RetrievalTrace",
+            "GuardrailResult",
+        ],
+        langchain_components=[
+            RuntimeComponentResponse(
+                name="ChatPromptTemplate",
+                framework="LangChain Core",
+                role="versioned classification and draft-response prompt assembly",
+            ),
+            RuntimeComponentResponse(
+                name="RunnableLambda + StrOutputParser",
+                framework="LangChain Core",
+                role="LCEL model-provider bridge and normalized text output parsing",
+            ),
+            RuntimeComponentResponse(
+                name="Document",
+                framework="LangChain Core",
+                role="cited retrieval chunks converted into prompt evidence objects",
+            ),
+            RuntimeComponentResponse(
+                name="StructuredTool search_documents",
+                framework="LangChain Core",
+                role="workspace-scoped retrieval tool invoked by the retrieve_evidence node",
+            ),
+        ],
+    )
+
+
+def _node_role(step_name: str) -> str:
+    roles = {
+        "detect_language": "deterministic language detection",
+        "classify_intent": "LangChain classification chain with cheap model config",
+        "retrieve_evidence": "LangChain retrieval tool plus persisted retrieval trace",
+        "draft_response": "LangChain grounded drafting chain with cited documents",
+        "score_confidence": "deterministic confidence scoring",
+        "route_review_or_finalize": "conditional LangGraph routing gate",
+        "finalize_response": "final response commit",
+    }
+    return roles.get(step_name, "workflow step")
+
+
+def _safe_json_object(raw: str) -> dict:
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}

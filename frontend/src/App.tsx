@@ -103,6 +103,23 @@ type GraphRun = {
   completed_at: string | null;
 };
 
+type RuntimeComponent = {
+  name: string;
+  framework: string;
+  role: string;
+};
+
+type GraphRuntime = {
+  orchestrator: string;
+  state_schema: string;
+  graph_builder: string;
+  execution_mode: string;
+  node_count: number;
+  conditional_routes: string[];
+  persistence: string[];
+  langchain_components: RuntimeComponent[];
+};
+
 type ToolCall = {
   id: string;
   tool_name: string;
@@ -111,6 +128,7 @@ type ToolCall = {
   status: string;
   latency_ms: number;
   created_at: string;
+  framework: string | null;
 };
 
 type AIRunTrace = {
@@ -167,9 +185,14 @@ type GraphStep = {
   created_at: string;
   tool_calls: ToolCall[];
   ai_run: AIRunTrace | null;
+  runtime_framework: string | null;
+  node_role: string | null;
+  uses_langchain: boolean;
+  state_keys: string[];
 };
 
 type GraphTrace = {
+  runtime: GraphRuntime;
   run: GraphRun;
   steps: GraphStep[];
   ai_runs: AIRunTrace[];
@@ -2264,6 +2287,34 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
         </div>
       </div>
 
+      <section className="panel stack full-width runtime-panel">
+        <div className="row-head">
+          <div>
+            <p className="eyebrow">AI runtime</p>
+            <h3>{trace.runtime.orchestrator}</h3>
+            <p className="muted">Stateful graph execution, LangChain components, and persisted operations are shown together for auditability.</p>
+          </div>
+          <Badge tone="good">{trace.runtime.node_count} nodes</Badge>
+        </div>
+        <div className="signal-grid">
+          <div className="signal"><span>State schema</span><strong>{trace.runtime.state_schema}</strong></div>
+          <div className="signal"><span>Execution</span><strong>{trace.runtime.execution_mode}</strong></div>
+          <div className="signal"><span>Builder</span><strong>{trace.runtime.graph_builder}</strong></div>
+          <div className="signal"><span>Persistence</span><strong>{trace.runtime.persistence.join(", ")}</strong></div>
+        </div>
+        <div className="runtime-component-grid">
+          {trace.runtime.langchain_components.map((component) => (
+            <article className="runtime-component" key={component.name}>
+              <div className="row-head">
+                <strong>{component.name}</strong>
+                <Badge>{component.framework}</Badge>
+              </div>
+              <p>{component.role}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="panel stack full-width">
         <div className="row-head">
           <div>
@@ -2360,11 +2411,14 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
           <h3>{formatStepName(step.step_name)}</h3>
         </div>
         <div className="review-actions">
+          {step.uses_langchain && <Badge>LangChain</Badge>}
+          {step.runtime_framework && <Badge>LangGraph</Badge>}
           {step.ai_run && <Badge>{step.ai_run.model}</Badge>}
           {step.tool_calls.length > 0 && <Badge>{step.tool_calls.length} tools</Badge>}
           <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
         </div>
       </div>
+      {step.node_role && <p className="muted">{step.node_role}</p>}
       {signals.length > 0 && (
         <div className="signal-grid">
           {signals.map((signal) => (
@@ -2389,7 +2443,10 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
             <div className="tool-call" key={tool.id}>
               <div className="row-head">
                 <strong>{tool.tool_name}</strong>
-                <Badge tone={toneForStatus(tool.status)}>{tool.status} · {tool.latency_ms} ms</Badge>
+                <div className="review-actions">
+                  {tool.framework && <Badge>{tool.framework}</Badge>}
+                  <Badge tone={toneForStatus(tool.status)}>{tool.status} · {tool.latency_ms} ms</Badge>
+                </div>
               </div>
               <details><summary>Tool output</summary><JsonBlock value={safeJson(tool.output_json)} /></details>
             </div>

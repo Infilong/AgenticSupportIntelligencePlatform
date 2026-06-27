@@ -76,6 +76,23 @@ class GraphRunResponse(BaseModel):
     completed_at: datetime | None
 
 
+class RuntimeComponentResponse(BaseModel):
+    name: str
+    framework: str
+    role: str
+
+
+class GraphRuntimeResponse(BaseModel):
+    orchestrator: str
+    state_schema: str
+    graph_builder: str
+    execution_mode: str
+    node_count: int
+    conditional_routes: list[str]
+    persistence: list[str]
+    langchain_components: list[RuntimeComponentResponse]
+
+
 class ToolCallResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -86,6 +103,7 @@ class ToolCallResponse(BaseModel):
     status: str
     latency_ms: int
     created_at: datetime
+    framework: str | None = None
 
 
 class AIRunTraceResponse(BaseModel):
@@ -150,9 +168,14 @@ class GraphStepResponse(BaseModel):
     created_at: datetime
     tool_calls: list[ToolCallResponse]
     ai_run: AIRunTraceResponse | None = None
+    runtime_framework: str | None = None
+    node_role: str | None = None
+    uses_langchain: bool = False
+    state_keys: list[str] = Field(default_factory=list)
 
 
 class GraphTraceResponse(BaseModel):
+    runtime: GraphRuntimeResponse
     run: GraphRunResponse
     steps: list[GraphStepResponse]
     ai_runs: list[AIRunTraceResponse]

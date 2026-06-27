@@ -92,6 +92,15 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     )
     assert trace.status_code == 200
     trace_body = trace.json()
+    assert trace_body["runtime"]["orchestrator"] == "LangGraph StateGraph"
+    assert trace_body["runtime"]["state_schema"] == "SupportAgentState TypedDict"
+    assert trace_body["runtime"]["node_count"] == 7
+    assert {component["name"] for component in trace_body["runtime"]["langchain_components"]} >= {
+        "ChatPromptTemplate",
+        "RunnableLambda + StrOutputParser",
+        "Document",
+        "StructuredTool search_documents",
+    }
     step_names = [step["step_name"] for step in trace_body["steps"]]
     assert step_names == [
         "detect_language",
@@ -103,6 +112,18 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
         "finalize_response",
     ]
     assert any(step["tool_calls"] for step in trace_body["steps"])
+    assert all(
+        step["runtime_framework"] == "LangGraph StateGraph node"
+        for step in trace_body["steps"]
+    )
+    assert any(step["uses_langchain"] for step in trace_body["steps"])
+    retrieval_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "retrieve_evidence"
+    )
+    assert retrieval_step["uses_langchain"] is True
+    assert retrieval_step["node_role"] == "LangChain retrieval tool plus persisted retrieval trace"
+    assert retrieval_step["tool_calls"][0]["framework"] == "langchain_core.tools.StructuredTool"
+    assert "langchain_tool" in retrieval_step["state_keys"]
     assert any(step["ai_run_id"] for step in trace_body["steps"])
     assert {run["purpose"] for run in trace_body["ai_runs"]} >= {
         "classification",

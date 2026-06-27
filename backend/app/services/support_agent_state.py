@@ -13,6 +13,7 @@ class SupportAgentState(TypedDict, total=False):
     intent: str
     retrieved_chunks: list[dict]
     retrieval_trace_id: str | None
+    langchain_tool: str
     draft_answer: str | None
     confidence_score: float
     confidence_threshold: float

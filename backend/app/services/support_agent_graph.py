@@ -24,14 +24,13 @@ from app.services.langchain_support import (
     build_classification_prompt,
     build_draft_response_prompt,
     chunk_payloads_to_documents,
-    retrieval_results_to_documents,
+    create_search_documents_tool,
     run_classification_chain,
     run_draft_response_chain,
 )
 from app.services.model_config_service import ModelConfigService
 from app.services.model_provider import ConfiguredModelProvider, ModelProviderError
 from app.services.prompt_template_service import PromptTemplateService
-from app.services.retrieval_service import RetrievalService
 from app.services.support_agent_state import SupportAgentState
 from app.services.token_budget import ModelCallBudgetPlan, TokenBudgetPlanner
 
@@ -151,25 +150,30 @@ class SupportAgentGraphRunner:
             }
             self._record_step("retrieve_evidence", state, output, started)
             return output
-        retrieval = RetrievalService(self.db).search(
-            workspace_id=UUID(state["workspace_id"]),
-            query=state["input_message"],
-            language=language,
-            top_k=_retrieval_top_k(state),
-            min_score=_retrieval_threshold(state),
-            document_id=None,
+        search_tool = create_search_documents_tool(
+            db=self.db, workspace_id=UUID(state["workspace_id"])
         )
-        documents = retrieval_results_to_documents(retrieval.results)
+        tool_output = search_tool.invoke(
+            {
+                "query": state["input_message"],
+                "language": language.value,
+                "top_k": _retrieval_top_k(state),
+                "min_score": _retrieval_threshold(state),
+            }
+        )
+        raw_chunks = tool_output["results"]
+        documents = chunk_payloads_to_documents(raw_chunks)
         chunks = []
-        for result, document in zip(retrieval.results, documents, strict=True):
-            chunk = result.__dict__.copy()
+        for chunk_payload, document in zip(raw_chunks, documents, strict=True):
+            chunk = dict(chunk_payload)
             chunk["langchain_document_metadata"] = document.metadata
             chunks.append(chunk)
         output: SupportAgentState = {
             "retrieved_chunks": chunks,
-            "retrieval_trace_id": str(retrieval.trace_id),
-            "citations": [result.citation for result in retrieval.results],
-            "no_source": retrieval.no_source,
+            "retrieval_trace_id": tool_output["trace_id"],
+            "citations": [chunk["citation"] for chunk in chunks],
+            "no_source": tool_output["no_source"],
+            "langchain_tool": search_tool.name,
         }
         step = self._record_step("retrieve_evidence", state, output, started)
         tool_started = time.perf_counter()
@@ -189,9 +193,11 @@ class SupportAgentGraphRunner:
                 ),
                 output_json=json.dumps(
                     {
-                        "trace_id": str(retrieval.trace_id),
-                        "result_count": len(retrieval.results),
+                        "framework": tool_output["framework"],
+                        "trace_id": tool_output["trace_id"],
+                        "result_count": tool_output["result_count"],
                         "langchain_document_count": len(documents),
+                        "no_source": tool_output["no_source"],
                     }
                 ),
                 status=GraphStepStatus.succeeded,
@@ -536,6 +542,7 @@ def _compact_state(state: SupportAgentState) -> dict:
         "confidence_threshold",
         "agent_token_budget",
         "agent_settings",
+        "langchain_tool",
         "errors",
     ]
     return {key: state.get(key) for key in allowed if key in state}

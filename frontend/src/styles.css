@@ -844,6 +844,31 @@ th {
   background: #fbfdff;
 }
 
+.runtime-panel {
+  border-color: #cfd8e3;
+}
+
+.runtime-component-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.runtime-component {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.runtime-component p {
+  margin: 0;
+  color: #526071;
+  line-height: 1.45;
+}
+
 .tool-list,
 .guardrail-list,
 .policy-list {

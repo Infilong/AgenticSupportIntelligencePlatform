@@ -8,11 +8,12 @@ from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
+from langchain_core.tools import StructuredTool
 
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, PromptTemplate
 from app.services.model_provider import ModelProvider
-from app.services.retrieval_service import RetrievalResult
+from app.services.retrieval_service import RetrievalResult, RetrievalService
 
 CLASSIFICATION_SYSTEM_TEMPLATE = (
     "Classify the support message into one concise intent label. "
@@ -97,6 +98,44 @@ def run_classification_chain(
         content=content,
         ai_run=captured["ai_run"],
         prompt_text=captured["prompt_text"],
+    )
+
+
+def create_search_documents_tool(*, db, workspace_id: UUID) -> StructuredTool:
+    """Create a workspace-scoped LangChain tool around the app retrieval service."""
+
+    def search_documents(
+        query: str,
+        language: str,
+        top_k: int = 4,
+        min_score: float = 0.2,
+    ) -> dict[str, Any]:
+        """Search workspace knowledge documents and return cited chunks."""
+        normalized_language = SupportedLanguage(language)
+        retrieval = RetrievalService(db).search(
+            workspace_id=workspace_id,
+            query=query,
+            language=normalized_language,
+            top_k=top_k,
+            min_score=min_score,
+            document_id=None,
+        )
+        return {
+            "framework": "langchain_core.tools.StructuredTool",
+            "tool_name": "search_documents",
+            "trace_id": str(retrieval.trace_id),
+            "no_source": retrieval.no_source,
+            "result_count": len(retrieval.results),
+            "results": [_retrieval_result_payload(result) for result in retrieval.results],
+        }
+
+    return StructuredTool.from_function(
+        func=search_documents,
+        name="search_documents",
+        description=(
+            "Search workspace-scoped support knowledge and return cited chunks. "
+            "The backend enforces workspace isolation before the tool is created."
+        ),
     )
 
 
@@ -221,3 +260,20 @@ def _format_evidence(documents: list[Document]) -> str:
         score_text = f" score={score}" if score is not None else ""
         lines.append(f"[{index}] {citation}{score_text}\n{document.page_content}")
     return "\n\n".join(lines)
+
+
+def _retrieval_result_payload(result: RetrievalResult) -> dict[str, Any]:
+    return {
+        "chunk_id": str(result.chunk_id),
+        "document_id": str(result.document_id),
+        "document_title": result.document_title,
+        "version": result.version,
+        "chunk_index": result.chunk_index,
+        "language": result.language.value,
+        "content": result.content,
+        "token_count": result.token_count,
+        "vector_score": result.vector_score,
+        "lexical_score": result.lexical_score,
+        "combined_score": result.combined_score,
+        "citation": result.citation,
+    }
