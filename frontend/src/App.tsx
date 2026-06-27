@@ -1595,12 +1595,27 @@ export function App() {
           {resolvedReviewItems.map((review) => (
             <article className="review-row resolved-review" key={review.id}>
               <div className="row-head">
-                <strong>{friendlyReviewReason(review.reason)}</strong>
-                <Badge tone={toneForStatus(review.reviewer_decision)}>{review.reviewer_decision}</Badge>
+                <div>
+                  <strong>{friendlyReviewReason(review.reason)}</strong>
+                  <p className="muted">Resolved {formatDate(review.resolved_at)}</p>
+                </div>
+                <div className="review-actions">
+                  <Badge tone={toneForStatus(review.reviewer_decision)}>{review.reviewer_decision}</Badge>
+                  {review.run && <Badge tone={toneForStatus(review.run.status)}>{review.run.route_decision ?? review.run.status}</Badge>}
+                </div>
               </div>
-              <p>{review.edited_answer ?? review.proposed_answer ?? "No answer was stored."}</p>
+              {review.run && (
+                <div className="metric-grid compact">
+                  <Metric label="Run status" value={review.run.status} />
+                  <Metric label="Route" value={review.run.route_decision ?? "-"} />
+                  <Metric label="Language" value={review.run.language ?? "-"} />
+                </div>
+              )}
+              <p>{review.run?.final_answer ?? review.edited_answer ?? review.proposed_answer ?? "No answer was stored."}</p>
               {review.comments && <p className="muted">Comment: {review.comments}</p>}
-              <small>Resolved {formatDate(review.resolved_at)}</small>
+              <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
+                Inspect finalization trace
+              </button>
             </article>
           ))}
           {resolvedReviewItems.length === 0 && (

@@ -1,7 +1,10 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.agent import Checkpoint, GraphRun
 from app.models.review import GuardrailResult, HumanReview
 
 
@@ -117,7 +120,9 @@ def test_prompt_injection_routes_to_review_even_with_retrieved_evidence(client: 
     assert "prompt_injection" in reviews[0]["reason"]
 
 
-def test_reviewer_can_edit_and_resolve_review(client: TestClient) -> None:
+def test_reviewer_can_edit_and_resolve_review(
+    client: TestClient, db_session: Session
+) -> None:
     register(client, "owner@example.com")
     token = login(client, "owner@example.com")
     workspace = create_workspace(client, token)
@@ -153,6 +158,28 @@ def test_reviewer_can_edit_and_resolve_review(client: TestClient) -> None:
     assert body["reviewer_decision"] == "edited"
     assert body["resolved_at"] is not None
     assert body["run"]["input_message"] == "How do I permanently delete my account?"
+    assert body["run"]["status"] == "completed"
+    assert body["run"]["route_decision"] == "human_edited"
+    assert body["run"]["final_answer"] == "A human reviewer will follow up about account deletion."
+    run = db_session.scalar(select(GraphRun).where(GraphRun.id == UUID(review["graph_run_id"])))
+    assert run is not None
+    assert run.status == "completed"
+    assert run.route_decision == "human_edited"
+    checkpoints = db_session.scalars(
+        select(Checkpoint).where(Checkpoint.graph_run_id == run.id)
+    ).all()
+    review_checkpoint = next(
+        checkpoint
+        for checkpoint in checkpoints
+        if checkpoint.checkpoint_key == "human_review_edited:after"
+    )
+    assert "human_review" in review_checkpoint.state_json
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{review['graph_run_id']}/trace",
+        headers=auth_headers(token),
+    )
+    assert trace.status_code == 200
+    assert trace.json()["checkpoints"][-1]["checkpoint_key"] == "human_review_edited:after"
     assert second_resolve.status_code == 409
     assert second_resolve.json()["detail"]["code"] == "human_review_already_resolved"
 
@@ -216,8 +243,12 @@ def test_reviewer_can_reject_missing_proposed_answer(client: TestClient) -> None
     )
 
     assert resolved.status_code == 200
-    assert resolved.json()["reviewer_decision"] == "rejected"
-    assert resolved.json()["comments"] == "Unsupported by current policy."
+    body = resolved.json()
+    assert body["reviewer_decision"] == "rejected"
+    assert body["comments"] == "Unsupported by current policy."
+    assert body["run"]["status"] == "failed"
+    assert body["run"]["route_decision"] == "human_rejected"
+    assert body["run"]["final_answer"] is None
 
 
 def test_human_reviews_enforce_workspace_isolation(client: TestClient) -> None:

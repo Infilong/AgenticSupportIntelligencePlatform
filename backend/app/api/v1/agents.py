@@ -186,11 +186,13 @@ def get_agent_trace(
     )
     checkpoints = list(
         db.scalars(
-            select(Checkpoint)
-            .where(Checkpoint.workspace_id == workspace.id, Checkpoint.graph_run_id == run.id)
-            .order_by(Checkpoint.created_at.asc())
+            select(Checkpoint).where(
+                Checkpoint.workspace_id == workspace.id,
+                Checkpoint.graph_run_id == run.id,
+            )
         ).all()
     )
+    checkpoints.sort(key=_checkpoint_sort_key)
     return GraphTraceResponse(
         run=GraphRunResponse.model_validate(run),
         steps=[
@@ -203,6 +205,23 @@ def get_agent_trace(
         guardrails=[GuardrailTraceResponse.model_validate(item) for item in guardrails],
         checkpoints=[CheckpointTraceResponse.model_validate(item) for item in checkpoints],
     )
+
+
+def _checkpoint_sort_key(checkpoint: Checkpoint) -> tuple[int, str]:
+    node_order = {
+        "detect_language": 10,
+        "classify_intent": 20,
+        "retrieve_evidence": 30,
+        "draft_response": 40,
+        "score_confidence": 50,
+        "route_review_or_finalize": 60,
+        "finalize_response": 70,
+        "human_review_approved": 80,
+        "human_review_edited": 80,
+        "human_review_rejected": 80,
+    }
+    node_name = checkpoint.checkpoint_key.removesuffix(":after")
+    return (node_order.get(node_name, 999), checkpoint.checkpoint_key)
 
 
 def _ai_run_ids(steps) -> list[UUID]:
