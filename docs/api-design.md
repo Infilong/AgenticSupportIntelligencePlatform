@@ -38,6 +38,24 @@ GET  /api/v1/workspaces/{workspace_id}/knowledge-documents/{document_id}
 POST /api/v1/workspaces/{workspace_id}/knowledge-documents/{document_id}/reindex
 ```
 
+
+
+Current v1 upload payload:
+```json
+{
+  "title": "Refund Policy JA",
+  "content_type": "text/markdown",
+  "content": "# Refund policy...",
+  "language": "ja"
+}
+```
+
+Current v1 behavior:
+- accepts plain text and markdown content payloads.
+- rejects unsupported file types such as PDF/DOCX until parsers are added.
+- indexes synchronously through `KnowledgeService` for local v1, behind a service boundary that can move to Redis workers later.
+- creates document version, chunks, and mock embeddings during upload/reindex.
+
 ## Retrieval
 ```text
 POST /api/v1/workspaces/{workspace_id}/retrieval/search

@@ -106,9 +106,11 @@ KnowledgeDocument
 - workspace_id
 - title
 - language
-- status
+- status: pending / indexing / indexed / failed
+- error_message nullable
 - created_by_user_id
 - created_at
+- updated_at
 
 DocumentVersion
 - id
@@ -116,7 +118,7 @@ DocumentVersion
 - knowledge_document_id
 - version
 - content_hash
-- storage_path nullable
+- content_type
 - raw_text
 - created_at
 
@@ -128,7 +130,7 @@ DocumentChunk
 - chunk_index
 - content
 - token_count
-- metadata_json
+- chunk_metadata
 - created_at
 
 Embedding
@@ -137,7 +139,7 @@ Embedding
 - document_chunk_id
 - provider
 - model
-- vector
+- vector: pgvector vector(16) for local mock provider in v1
 - created_at
 
 RetrievalTrace

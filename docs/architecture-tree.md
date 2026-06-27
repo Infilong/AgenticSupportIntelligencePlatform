@@ -138,10 +138,10 @@ Multilingual Agentic Support Intelligence Platform
 |   |-- Milestone 0: governance, architecture, and planning docs
 |   |-- Milestone 1: runnable FastAPI, React/Vite, Docker, PostgreSQL, pgvector, Redis, CI
 |   |-- Milestone 2: users, JWT auth, workspaces, membership checks, permission tests
-|   `-- Milestone 3: dataset import, multilingual examples, language detection, labels
+|   |-- Milestone 3: dataset import, multilingual examples, language detection, labels
+|   `-- Milestone 4: knowledge document ingestion, chunking, mock embeddings, pgvector storage
 |
 `-- Future Milestones
-    |-- Milestone 4: knowledge document ingestion
     |-- Milestone 5: retrieval and citations
     |-- Milestone 6: AI run ledger and token budget planner
     |-- Milestone 7: LangGraph support-agent workflow
@@ -158,7 +158,7 @@ Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, PyJWT, pytest, ruff
 Frontend: React, TypeScript, Vite, npm
 Database: PostgreSQL, pgvector
 Queue/cache: Redis, future Celery/RQ/Arq worker
-AI: LangChain, LangGraph, OpenAI-compatible provider abstraction, mock LLM/embedding providers
+AI: LangChain, LangGraph, OpenAI-compatible provider abstraction, deterministic mock embedding provider, future mock LLM provider
 DevOps: Docker Compose, Dockerfiles, uv, Makefile, GitHub Actions CI
 Docs/process: AGENTS.md, docs/PROJECT_CONTEXT.md, docs/PLANS.md, docs/tickets/*, docs/learning/*
 ```

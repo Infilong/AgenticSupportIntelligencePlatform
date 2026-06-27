@@ -13,7 +13,11 @@ from app.main import create_app
 from app.models import (  # noqa: F401
     ConversationExample,
     Dataset,
+    DocumentChunk,
+    DocumentVersion,
+    Embedding,
     ImportBatch,
+    KnowledgeDocument,
     Label,
     Message,
     User,
