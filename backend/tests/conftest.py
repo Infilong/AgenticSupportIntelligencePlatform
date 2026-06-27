@@ -22,6 +22,8 @@ from app.models import (  # noqa: F401
     Embedding,
     GraphRun,
     GraphStep,
+    GuardrailResult,
+    HumanReview,
     ImportBatch,
     KnowledgeDocument,
     Label,

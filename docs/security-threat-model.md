@@ -32,3 +32,17 @@ Do not log PII, raw secrets, raw long documents, full prompts by default, or pro
 
 ## Review Checklist
 Every security-sensitive ticket must verify auth, workspace isolation, prompt injection handling, unsafe tool blocking, PII logging risk, and failure tests.
+
+
+## Implemented In Milestone 8
+- Deterministic prompt injection pattern checks.
+- Citation-required, unsupported-answer, confidence-threshold, and language-preservation guardrail results.
+- Guardrail results are persisted per graph run.
+- Blocking guardrail failures route graph runs to human review.
+- Pending human review records are created for low-confidence, no-source, or unsafe graph runs.
+- Review APIs enforce workspace isolation and allow approve/edit/reject resolution.
+
+Known limitations:
+- Guardrails are practical deterministic checks, not comprehensive safety classifiers.
+- No external policy engine or model-based judge is used yet.
+- Frontend review UI is future work.

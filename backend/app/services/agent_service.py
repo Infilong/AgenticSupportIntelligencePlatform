@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
 from app.models.user import User
+from app.services.guardrails import GuardrailService, has_blocking_guardrail
+from app.services.human_review_service import HumanReviewService
 from app.services.support_agent_graph import SupportAgentGraphRunner, complete_graph_run
 from app.services.support_agent_state import SupportAgentState
 
@@ -69,7 +71,28 @@ class AgentService:
             "errors": [],
         }
         final_state = SupportAgentGraphRunner(self.db).run(state)
-        return complete_graph_run(self.db, graph_run, final_state)
+        graph_run = complete_graph_run(self.db, graph_run, final_state)
+        decisions = GuardrailService(self.db).evaluate_and_store(
+            workspace_id=workspace_id,
+            graph_run_id=graph_run.id,
+            state=final_state,
+        )
+        if graph_run.status != GraphRunStatus.completed or has_blocking_guardrail(decisions):
+            failed_types = [
+                decision.guardrail_type for decision in decisions if not decision.passed
+            ]
+            graph_run.status = GraphRunStatus.needs_human_review
+            graph_run.route_decision = "human_review"
+            graph_run.final_answer = None
+            self.db.commit()
+            self.db.refresh(graph_run)
+            HumanReviewService(self.db).create_pending(
+                workspace_id=workspace_id,
+                graph_run_id=graph_run.id,
+                reason=", ".join(failed_types) or "human_review_route",
+                proposed_answer=final_state.get("draft_answer"),
+            )
+        return graph_run
 
     def get_agent(self, *, workspace_id: UUID, agent_id: UUID) -> AgentConfig | None:
         return self.db.scalar(

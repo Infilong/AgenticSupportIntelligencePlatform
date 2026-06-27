@@ -91,6 +91,10 @@ POST /api/v1/workspaces/{workspace_id}/agents/{agent_id}/runs
 GET  /api/v1/workspaces/{workspace_id}/agent-runs/{run_id}
 GET  /api/v1/workspaces/{workspace_id}/agent-runs/{run_id}/trace
 POST /api/v1/workspaces/{workspace_id}/agent-runs/{run_id}/review
+
+GET  /api/v1/workspaces/{workspace_id}/human-reviews
+GET  /api/v1/workspaces/{workspace_id}/human-reviews/{review_id}
+POST /api/v1/workspaces/{workspace_id}/human-reviews/{review_id}/resolve
 ```
 
 Current v1 behavior:
@@ -139,3 +143,6 @@ Serving responses must include answer or review/refusal status, language, citati
 
 ## API Review Checklist
 Verify authentication, workspace membership, `workspace_id` filtering, pagination, explicit errors, traceability, and token/cost exposure.
+
+
+Human review v1 supports pending review listing/detail and approve/edit/reject resolution. Guardrail and review data are workspace-scoped.

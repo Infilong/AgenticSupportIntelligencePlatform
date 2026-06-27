@@ -79,3 +79,9 @@ Known limitations:
 - Checkpoint table exists, but durable resume is not implemented yet.
 - Mock model responses are deterministic and not real AI quality evidence.
 - Guardrails, prompt injection checks, and human review resolution are Milestone 8.
+
+
+## Implemented In Milestone 8
+- Completed graph runs are evaluated by deterministic guardrails.
+- Blocking guardrail failures override finalize decisions and route to `needs_human_review`.
+- No-source and prompt-injection cases create pending `HumanReview` records.
