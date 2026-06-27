@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda
 
 from app.core.language import SupportedLanguage
+from app.models.ai import AIRun, PromptTemplate
+from app.services.model_provider import MockModelProvider
 from app.services.retrieval_service import RetrievalResult
 
 CLASSIFICATION_SYSTEM_TEMPLATE = (
@@ -45,9 +50,54 @@ DRAFT_RESPONSE_PROMPT = ChatPromptTemplate.from_messages(
 )
 
 
+@dataclass(frozen=True)
+class LangChainModelCall:
+    content: str
+    ai_run: AIRun
+    prompt_text: str
+
+
 def build_classification_prompt(input_message: str) -> str:
     prompt_value = CLASSIFICATION_PROMPT.invoke({"input_message": input_message})
     return prompt_value.to_string()
+
+
+def run_classification_chain(
+    *,
+    provider: MockModelProvider,
+    workspace_id: UUID,
+    language: SupportedLanguage,
+    input_message: str,
+    graph_run_id: UUID,
+    prompt_template: PromptTemplate | None,
+    completion_text: str,
+    model: str = "mock-cheap",
+) -> LangChainModelCall:
+    captured: dict[str, Any] = {}
+
+    def call_model(prompt_value: Any) -> str:
+        prompt_text = prompt_value.to_string()
+        response = provider.complete(
+            workspace_id=workspace_id,
+            purpose="classification",
+            language=language,
+            prompt=prompt_text,
+            model=model,
+            graph_run_id=graph_run_id,
+            prompt_template=prompt_template,
+            completion_text=completion_text,
+        )
+        captured["prompt_text"] = prompt_text
+        captured["ai_run"] = response.ai_run
+        return response.content
+
+    chain = CLASSIFICATION_PROMPT | RunnableLambda(call_model) | StrOutputParser()
+    content = chain.invoke({"input_message": input_message}).strip()
+    return LangChainModelCall(
+        content=content,
+        ai_run=captured["ai_run"],
+        prompt_text=captured["prompt_text"],
+    )
 
 
 def retrieval_results_to_documents(results: list[RetrievalResult]) -> list[Document]:
@@ -110,6 +160,51 @@ def build_draft_response_prompt(
         }
     )
     return prompt_value.to_string()
+
+
+def run_draft_response_chain(
+    *,
+    provider: MockModelProvider,
+    workspace_id: UUID,
+    language: SupportedLanguage,
+    input_message: str,
+    documents: list[Document],
+    graph_run_id: UUID,
+    prompt_template: PromptTemplate | None,
+    completion_text: str,
+    model: str = "mock-standard",
+) -> LangChainModelCall:
+    captured: dict[str, Any] = {}
+
+    def call_model(prompt_value: Any) -> str:
+        prompt_text = prompt_value.to_string()
+        response = provider.complete(
+            workspace_id=workspace_id,
+            purpose="draft_response",
+            language=language,
+            prompt=prompt_text,
+            model=model,
+            graph_run_id=graph_run_id,
+            prompt_template=prompt_template,
+            completion_text=completion_text,
+        )
+        captured["prompt_text"] = prompt_text
+        captured["ai_run"] = response.ai_run
+        return response.content
+
+    chain = DRAFT_RESPONSE_PROMPT | RunnableLambda(call_model) | StrOutputParser()
+    content = chain.invoke(
+        {
+            "language": language.value,
+            "input_message": input_message,
+            "evidence": _format_evidence(documents),
+        }
+    ).strip()
+    return LangChainModelCall(
+        content=content,
+        ai_run=captured["ai_run"],
+        prompt_text=captured["prompt_text"],
+    )
 
 
 def parse_model_text(text: str) -> str:

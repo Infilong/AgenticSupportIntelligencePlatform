@@ -14,11 +14,10 @@ from app.models.ai import AIRun
 from app.services.langchain_support import (
     CLASSIFICATION_TEMPLATE_TEXT,
     DRAFT_RESPONSE_TEMPLATE_TEXT,
-    build_classification_prompt,
-    build_draft_response_prompt,
     chunk_payloads_to_documents,
-    parse_model_text,
     retrieval_results_to_documents,
+    run_classification_chain,
+    run_draft_response_chain,
 )
 from app.services.model_provider import MockModelProvider
 from app.services.prompt_template_service import PromptTemplateService
@@ -78,24 +77,22 @@ class SupportAgentGraphRunner:
             intent = "refund_request"
         else:
             intent = "general_support"
-        classification_prompt = build_classification_prompt(state["input_message"])
         prompt_template = PromptTemplateService(self.db).get_active_or_create_default(
             workspace_id=UUID(state["workspace_id"]),
             name="support_intent_classifier",
             language=language,
             template_text=CLASSIFICATION_TEMPLATE_TEXT,
         )
-        ai_response = MockModelProvider(self.db).complete(
+        ai_response = run_classification_chain(
+            provider=MockModelProvider(self.db),
             workspace_id=UUID(state["workspace_id"]),
-            purpose="classification",
             language=language,
-            prompt=classification_prompt,
-            model="mock-cheap",
+            input_message=state["input_message"],
             graph_run_id=UUID(state["graph_run_id"]),
             prompt_template=prompt_template,
-            completion_text=parse_model_text(intent),
+            completion_text=intent,
         )
-        output: SupportAgentState = {"intent": intent}
+        output: SupportAgentState = {"intent": ai_response.content}
         self._record_step("classify_intent", state, output, started, ai_response.ai_run.id)
         return output
 
@@ -161,28 +158,23 @@ class SupportAgentGraphRunner:
             chunks=state.get("retrieved_chunks") or [],
         )
         documents = chunk_payloads_to_documents(state.get("retrieved_chunks") or [])
-        draft_prompt = build_draft_response_prompt(
-            input_message=state["input_message"],
-            language=language,
-            documents=documents,
-        )
         prompt_template = PromptTemplateService(self.db).get_active_or_create_default(
             workspace_id=UUID(state["workspace_id"]),
             name="support_response_drafter",
             language=language,
             template_text=DRAFT_RESPONSE_TEMPLATE_TEXT,
         )
-        ai_response = MockModelProvider(self.db).complete(
+        ai_response = run_draft_response_chain(
+            provider=MockModelProvider(self.db),
             workspace_id=UUID(state["workspace_id"]),
-            purpose="draft_response",
             language=language,
-            prompt=draft_prompt,
-            model="mock-standard",
+            input_message=state["input_message"],
+            documents=documents,
             graph_run_id=UUID(state["graph_run_id"]),
             prompt_template=prompt_template,
-            completion_text=parse_model_text(completion),
+            completion_text=completion,
         )
-        output: SupportAgentState = {"draft_answer": completion}
+        output: SupportAgentState = {"draft_answer": ai_response.content}
         self._record_step("draft_response", state, output, started, ai_response.ai_run.id)
         return output
 
