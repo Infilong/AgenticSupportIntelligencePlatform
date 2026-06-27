@@ -9,6 +9,7 @@ V1 supports English, Japanese, and Chinese. It starts local-first for a small te
 Codex loads this file automatically. Keep other context selective:
 - Read `docs/README.md` first when choosing which docs apply.
 - Read `docs/PROJECT_CONTEXT.md` for almost every real implementation task.
+- Read `docs/architecture-tree.md` for quick architecture/tool orientation.
 - Read `docs/PLANS.md` only when creating a ticket plan.
 - Read `docs/milestone-plan.md` only for milestone sequencing or scope checks.
 - Read focused design docs only when the task touches that subsystem.

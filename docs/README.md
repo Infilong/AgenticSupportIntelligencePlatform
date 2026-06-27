@@ -8,6 +8,9 @@ Use this file to choose the smallest useful context set for each task. Do not re
 ## Usually Read For Implementation
 Read `docs/PROJECT_CONTEXT.md` for real implementation tasks. It contains standing rules for token economy, multilingual support, workspace isolation, evaluation, observability, and the human/Codex operating model.
 
+## Quick Orientation
+- Start here for a compact architecture and tools tree: `docs/architecture-tree.md`
+
 ## Planning And Governance
 - Create or review a ticket plan: `docs/PLANS.md`
 - Check milestone order or scope: `docs/milestone-plan.md`

@@ -86,6 +86,11 @@ Setup local dependencies with `uv` for Python and `npm` for the frontend:
 make setup
 ```
 
+Run database migrations after starting PostgreSQL:
+```bash
+make backend-migrate
+```
+
 Run checks without Docker:
 ```bash
 make backend-test
@@ -126,6 +131,7 @@ The documented path moves from 100 local records to 1,000 with background jobs a
 ## Planning Documents
 - `docs/README.md`: documentation map for efficient agent context loading.
 - `docs/PROJECT_CONTEXT.md`: concise standing rules and non-negotiable priorities.
+- `docs/architecture-tree.md`: quick architecture and tool map for orientation.
 - `docs/product-spec.md`: product plan, phase scope, and portfolio story.
 - `docs/milestone-plan.md`: milestone-by-milestone execution plan.
 - `docs/PLANS.md`: ticket planning protocol.
