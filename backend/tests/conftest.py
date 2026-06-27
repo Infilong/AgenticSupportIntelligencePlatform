@@ -20,6 +20,8 @@ from app.models import (  # noqa: F401
     KnowledgeDocument,
     Label,
     Message,
+    RetrievalTrace,
+    RetrievedChunk,
     User,
     Workspace,
     WorkspaceMember,

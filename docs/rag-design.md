@@ -63,3 +63,20 @@ Known limitations:
 - Mock embeddings are not semantically meaningful; real multilingual embeddings are future provider work.
 - Chunking is intentionally simple and must be evaluated before production use.
 - Retrieval, lexical search, hybrid scoring, citations, and retrieval traces begin in Milestone 5.
+
+
+## Implemented In Milestone 5
+- Workspace-scoped retrieval API at `POST /api/v1/workspaces/{workspace_id}/retrieval/search`.
+- `RetrievalTrace` and `RetrievedChunk` persistence for every search.
+- Hybrid scoring with deterministic mock vector similarity plus lexical overlap.
+- English lexical matching uses normalized word tokens.
+- Japanese and Chinese lexical matching uses character bigrams/trigrams instead of whitespace-only tokenization.
+- Citation strings include document title, version, chunk index, and chunk ID.
+- No-source detection returns `no_source=true` while preserving a trace.
+- If no candidates exist after workspace/language/document filters, the service skips query embedding to avoid unnecessary model work.
+
+Known limitations:
+- Vector scoring currently runs in Python for local v1. Production scale should use pgvector SQL operators and indexes.
+- Mock embeddings are deterministic but not semantic quality evidence.
+- Character n-grams can overmatch; evaluation must measure precision by language.
+- Context packing/compression starts in later milestones.

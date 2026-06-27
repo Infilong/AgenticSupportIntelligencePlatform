@@ -151,6 +151,7 @@ RetrievalTrace
 - strategy
 - filters_json
 - latency_ms
+- no_source
 - created_at
 
 RetrievedChunk

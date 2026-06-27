@@ -63,6 +63,26 @@ POST /api/v1/workspaces/{workspace_id}/retrieval/search
 
 Retrieval must filter by workspace and return citation metadata. Retrieval calls should create `RetrievalTrace` rows.
 
+
+Current v1 retrieval payload:
+```json
+{
+  "query": "返金は何日以内ですか？",
+  "language": "ja",
+  "top_k": 5,
+  "min_score": 0.2,
+  "document_id": null
+}
+```
+
+Current v1 behavior:
+- filters candidates by workspace before scoring.
+- supports optional language and document filters.
+- combines mock vector similarity with multilingual lexical scoring.
+- uses character n-gram lexical matching for Japanese and Chinese.
+- stores `RetrievalTrace` and `RetrievedChunk` rows for every search.
+- returns `no_source=true` with an empty result list when evidence is too weak.
+
 ## Agent Runs
 ```text
 POST /api/v1/workspaces/{workspace_id}/agents/{agent_id}/runs
