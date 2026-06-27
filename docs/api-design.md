@@ -104,6 +104,12 @@ GET /api/v1/workspaces/{workspace_id}/costs/summary
 GET /api/v1/workspaces/{workspace_id}/audit-logs
 ```
 
+Current v1 behavior:
+- returns aggregate `AIRun` counts, token totals, estimated cost, average latency, cache hit rate, and purpose breakdown.
+- filters strictly by workspace membership and `workspace_id`.
+- returns estimates only; pricing is demo/provider-config based and not billing-grade.
+
+
 ## Serving
 ```text
 POST /api/v1/workspaces/{workspace_id}/serving/chat

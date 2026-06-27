@@ -140,10 +140,10 @@ Multilingual Agentic Support Intelligence Platform
 |   |-- Milestone 2: users, JWT auth, workspaces, membership checks, permission tests
 |   |-- Milestone 3: dataset import, multilingual examples, language detection, labels
 |   |-- Milestone 4: knowledge document ingestion, chunking, mock embeddings, pgvector storage
-|   `-- Milestone 5: hybrid retrieval, citations, no-source detection, retrieval traces
+|   |-- Milestone 5: hybrid retrieval, citations, no-source detection, retrieval traces
+|   `-- Milestone 6: AI run ledger, token/cost accounting, token budget planner
 |
 `-- Future Milestones
-    |-- Milestone 6: AI run ledger and token budget planner
     |-- Milestone 7: LangGraph support-agent workflow
     |-- Milestone 8: guardrails and human review
     |-- Milestone 9: evaluation runner

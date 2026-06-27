@@ -35,3 +35,10 @@ Show metrics by English, Japanese, and Chinese: groundedness pass rate, citation
 
 ## Cost Dashboard
 Show token usage, estimated cost, latency, model choice, cache hit rate, purpose, language, and trend summaries by workspace.
+
+
+## Implemented In Milestone 6
+- `AIRun` persistence for mock model calls.
+- Workspace-scoped cost summary API.
+- Token, estimated cost, latency, cache hit, status, and purpose tracking.
+- Failed model calls are also recorded with error messages.

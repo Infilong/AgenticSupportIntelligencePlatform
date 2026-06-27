@@ -11,6 +11,8 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import create_app
 from app.models import (  # noqa: F401
+    AIRun,
+    CacheEntry,
     ConversationExample,
     Dataset,
     DocumentChunk,
@@ -20,6 +22,8 @@ from app.models import (  # noqa: F401
     KnowledgeDocument,
     Label,
     Message,
+    ModelConfig,
+    PromptTemplate,
     RetrievalTrace,
     RetrievedChunk,
     User,
