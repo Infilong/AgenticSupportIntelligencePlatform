@@ -63,6 +63,11 @@ Read:
 - `docs/product-spec.md`
 - `docs/tradeoffs.md`
 - `docs/scale-path.md`
+- `docs/demo-script.md`
+- `docs/interview-explanation.md`
+- `docs/resume-bullets.md`
+- `docs/known-limitations.md`
+- `docs/screenshots/README.md`
 
 ## Learning Notes
 Read `docs/learning/README.md` only when creating or updating learning notes.

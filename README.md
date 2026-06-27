@@ -1,48 +1,90 @@
 # Multilingual Agentic Support Intelligence Platform
 
-A serious AI/backend portfolio project: a multilingual AI support platform for dataset curation, RAG, LangGraph workflows, human review, evaluation, and token/cost observability.
+A production-style AI/backend portfolio project for multilingual support intelligence: dataset curation, knowledge ingestion, RAG, LangGraph workflows, human review, evaluation, and token/cost observability.
+
+This is not a tutorial chatbot. It is a local-first internal AI platform designed to demonstrate backend architecture, LLM application engineering, multilingual product thinking, cost discipline, observability, and interview-defensible tradeoffs.
 
 ## Problem
-SaaS, gaming, entertainment, education, and other digital product teams receive support and community feedback in English, Japanese, and Chinese. They want AI support systems, but production use requires more than a chatbot: reliable retrieval, citations, permission isolation, human review, evaluation, auditability, observability, and token-cost discipline.
+
+SaaS, gaming, entertainment, healthcare, and education teams receive support and community messages in English, Japanese, and Chinese. They want generative AI support, but production systems need more than a prompt box:
+
+- reliable knowledge retrieval with citations
+- workspace permission isolation
+- language preservation
+- human review for risky cases
+- evaluation by language and baseline
+- token/cost/latency tracking
+- traceable workflow execution
+- honest scale and deployment boundaries
 
 ## Solution
-This project builds a local-first internal AI platform that lets a small team import multilingual conversations, label examples, upload product knowledge, run a governed LangGraph support-agent workflow, retrieve cited evidence, generate same-language responses, route risky cases to human review, evaluate quality per language, and inspect every model call for cost, latency, cache use, and quality.
 
-## Why Multilingual Support Matters
-Japan-facing AI products often need English, Japanese, and Chinese support. The system must preserve user language, handle Japanese and Chinese without whitespace-only assumptions, and evaluate correctness, tone, safety, and language preservation separately by language.
+The platform lets a small internal team import multilingual conversations, label examples, upload policy/FAQ documents, run a governed LangGraph support workflow, inspect every graph step, resolve human reviews, evaluate results across baseline modes, and monitor token usage and estimated cost.
 
-## Why Token Economy Matters
-Token cost affects product margin, latency, reliability, and adoption. This project avoids raw long-document prompts, uses retrieval and context packing, applies cheaper models to routing/classification, reserves stronger models for generation or judgment, and tracks token/cost/latency for every model call.
+## Architecture
 
-## Architecture Diagram
-Milestone 0 documents the architecture. A visual diagram will be added during portfolio packaging.
+```mermaid
+flowchart LR
+    UI["React Internal UI"] --> API["FastAPI API"]
+    API --> Auth["JWT Auth + Workspace Checks"]
+    API --> Data["Dataset Curation"]
+    API --> Docs["Knowledge Documents"]
+    API --> Agent["LangGraph Support Workflow"]
+    API --> Eval["Evaluation Runner"]
+    API --> Cost["AI Run Ledger + Cost Summary"]
 
-Core pillars:
-1. Multilingual Data Platform
-2. Knowledge and Retrieval
-3. Agent Workflow
-4. Quality and Safety
-5. Observability and Cost
+    Docs --> Chunk["Language-Aware Chunking"]
+    Chunk --> Embed["Mock Embeddings"]
+    Embed --> PG[("PostgreSQL + pgvector")]
 
-## Demo Workflow
-```text
-import multilingual data
-→ label examples
-→ upload knowledge docs
-→ run support agent
-→ inspect graph trace
-→ inspect token cost
-→ route to human review
-→ approve/edit response
-→ run evaluation
-→ inspect evaluation dashboard
-→ serve answer through API
+    Agent --> Retrieve["Hybrid Retrieval + Citations"]
+    Agent --> Guard["Guardrails"]
+    Agent --> Review["Human Review"]
+    Agent --> Trace["GraphRun / GraphStep / ToolCall"]
+
+    API --> PG
+    API --> Redis[("Redis")]
 ```
 
-## Core Features
-Phase 1 includes FastAPI, PostgreSQL + pgvector, Redis worker, Docker Compose, auth, workspace isolation, multilingual import, language detection, label editing, document ingestion, chunking, embeddings, LangGraph workflow, RAG with citations, no-source refusal, token budgets, human review, graph traces, AI run ledger, evaluation runner, cost dashboard, pytest, CI, and docs.
+Core pillars:
+
+1. Multilingual data platform
+2. Knowledge and retrieval
+3. Agent workflow
+4. Quality and safety
+5. Observability and cost
+
+## Tech Stack
+
+```text
+Frontend: React, TypeScript, Vite
+Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic
+Database: PostgreSQL, pgvector
+Queue/cache: Redis
+AI workflow: LangGraph
+AI app layer: LangChain-style provider/tool boundaries
+Testing: pytest, ruff, TypeScript checks
+Runtime: Docker Compose, uv, npm
+CI: GitHub Actions
+```
+
+## Implemented V1 Features
+
+| Area | Implemented |
+| --- | --- |
+| Auth and tenancy | JWT auth, workspace creation, workspace membership checks |
+| Dataset curation | JSONL import, multilingual language detection, message storage, manual labels |
+| Knowledge ingestion | Text/Markdown upload, document versions, chunks, token counts, mock embeddings, pgvector storage |
+| Retrieval | Vector scoring, multilingual lexical scoring, hybrid ranking, citations, retrieval traces, no-source detection |
+| Agent workflow | LangGraph support workflow with graph runs, graph steps, tool calls, routing, and trace API |
+| Guardrails | Prompt-injection checks, citation-required checks, language preservation, confidence scoring, review routing |
+| Human review | Pending review queue, approve/edit/reject resolution, stored reviewer decision |
+| Evaluation | JSONL cases, direct LLM baseline, vector RAG baseline, system v1 mode, per-language metrics |
+| Observability | AI run ledger, token/cost/latency estimates, cost summary, graph trace viewer |
+| Frontend | Browser UI for the full local demo path |
 
 ## LangGraph Workflow
+
 ```text
 detect_language
 classify_intent
@@ -55,87 +97,113 @@ route_review_or_finalize
 finalize_response
 ```
 
-The workflow routes to human review for low confidence, missing citations, unsupported answers, unsafe output, high token cost, high safety risk, escalation need, or language-specific quality failure.
+The workflow routes to human review for low confidence, missing citations, unsupported answers, unsafe or injected input, high token cost, high safety risk, escalation need, or language-specific quality failure.
 
-## RAG Design
-RAG includes document upload, parsing, language-aware chunking, embedding generation, pgvector storage, vector search, lexical search, hybrid retrieval, metadata filtering, citation generation, retrieval trace, no-source refusal, and token-budget-aware context packing.
+## Token Economy
 
-## Evaluation Design
-Evaluation uses JSONL cases and compares direct LLM, vector-only RAG, and system v1 with hybrid RAG, compression, guardrails, and human review routing. Metrics include retrieval precision, citation accuracy, groundedness, prompt-injection blocking, permission leakage tests, language preservation, review routing accuracy, latency, prompt tokens, and estimated cost.
+Token cost is a first-class requirement. The system:
 
-## Observability And Cost Tracking
-The app records graph runs, graph steps, tool calls, AI runs, retrieval traces, guardrail results, audit logs, evaluation metrics, token usage, estimated cost, latency, model choice, and cache hit rate.
+- avoids sending raw long documents to model calls
+- chunks and retrieves evidence before generation
+- estimates prompt, completion, and total tokens
+- records model, purpose, language, latency, estimated cost, and cache-hit fields
+- exposes cost summaries by workspace and purpose
+- keeps deterministic code in front of LLM-like calls where possible
 
-## Security And Workspace Isolation
-Every workspace-owned entity includes `workspace_id`. Every workspace route enforces membership. Retrieval, evaluations, graph runs, cost summaries, and audit logs must not leak across workspaces.
+## Evaluation
 
-## Tests
-Automated tests must use mock LLM and embedding providers. Required coverage includes language detection, chunking, labels, prompt assembly, token budget enforcement, retrieval filtering, structured outputs, graph routing, guardrails, cost calculation, citations, auth, workspace isolation, pgvector retrieval, Redis worker, LangChain wrappers, LangGraph checkpoint/resume, evaluation runner, no-source refusal, prompt injection blocking, and long-document protection.
+Evaluation compares:
 
-## How To Run Locally
-Milestone 10 provides the runnable local UI for the core browser demo path.
-
-Prerequisites:
-- Python 3.12+
-- `uv` installed in WSL and available on PATH
-- WSL-native Node.js 22+ on PATH; Windows nvm/npm shims do not work reliably from WSL project paths
-- Docker with Docker Compose and WSL integration enabled
-
-Setup local dependencies with `uv` for Python and `npm` for the frontend:
-```bash
-make setup
+```text
+direct_llm: no retrieval baseline
+vector_rag: retrieval baseline
+system_v1: LangGraph workflow with retrieval, guardrails, and review routing
 ```
 
-Run database migrations after starting PostgreSQL:
+Stored metrics include case pass rate, human-review routing accuracy, language preservation, citation accuracy, groundedness, latency, prompt tokens, and estimated cost per run. Metrics are grouped by language and mode so English, Japanese, and Chinese regressions are visible.
+
+## Local Demo
+
+Start the stack:
+
 ```bash
+docker compose up -d --build
 make backend-migrate
 ```
 
-Run checks without Docker:
+Open:
+
+```text
+Frontend: http://localhost:5173
+API:      http://localhost:8000
+Health:   http://localhost:8000/health
+```
+
+Browser demo path:
+
+```text
+register/login
+-> create workspace
+-> import multilingual dataset
+-> upload knowledge document
+-> create agent
+-> run support workflow
+-> inspect graph trace
+-> resolve human review
+-> run evaluation
+-> inspect cost dashboard
+```
+
+Detailed walkthrough: `docs/demo-script.md`.
+
+## Validation
+
+Current validation commands:
+
 ```bash
-make backend-test
 make backend-lint
-make frontend-build
+make backend-test
 make frontend-test
+make frontend-build
+git diff --check
 ```
 
-Run the full local stack:
-```bash
-docker compose up --build
-```
+Latest milestone validation passed with 54 backend tests, frontend TypeScript checks, production build, backend lint, and Docker health/CORS checks.
 
-Health check:
-```bash
-curl http://localhost:8000/health
-```
+## Documentation
 
-Expected response:
-```json
-{"status":"ok","service":"api"}
-```
+- `docs/architecture-tree.md`: quick architecture and tool map
+- `docs/demo-script.md`: browser walkthrough
+- `docs/interview-explanation.md`: interview-ready explanation
+- `docs/resume-bullets.md`: resume bullet drafts
+- `docs/known-limitations.md`: honest limitations
+- `docs/scale-path.md`: migration path from local v1 to larger deployments
+- `docs/tickets/`: milestone implementation records
+- `docs/learning/`: learning notes by milestone
 
-Frontend:
-```bash
-http://localhost:5173
-```
+## Scale Path
 
-The browser UI supports login/register, workspace selection, dataset import, document upload, agent execution, graph trace inspection, human review, evaluation runs, and token/cost summaries.
+V1 is local-first and honest about scope. The documented migration path is:
 
-## Demo Data
-Minimum demo data will include 30 to 60 multilingual conversation examples, 9 to 15 knowledge documents, and at least 10 evaluation cases each for English, Japanese, and Chinese. Cases must include low-risk, high-risk, no-source, prompt injection, and human-review routing scenarios.
+| Scale | Direction |
+| --- | --- |
+| 100 records | Docker Compose, one API, PostgreSQL/pgvector, Redis |
+| 1,000 records | background jobs, indexes, cached retrieval, pagination |
+| 10,000 records | batch embeddings, async evaluation, worker queues, stricter observability |
+| 1M+ records | managed PostgreSQL/Cloud SQL, object storage, analytics warehouse, dedicated vector index, horizontal workers, Cloud Run, Terraform, monitoring |
 
-## Tradeoffs And Limitations
-V1 is local-first and intentionally avoids Kubernetes, Terraform, BigQuery, external vector databases, full enterprise SSO, fine-tuning, multimodal docs, real external integrations, multi-region scale, and complex frontend design.
+The 1M+ path is documented, not implemented in v1.
 
-## Scale Migration Path
-The documented path moves from 100 local records to 1,000 with background jobs and indexes, 10,000 with batch embeddings and async evaluation, and 1M+ with split services, managed databases, object storage, analytics warehouse, dedicated vector index, horizontal workers, Cloud Run, Terraform, and monitoring. V1 documents the path but does not claim to implement it.
+## Known Limitations
 
-## Planning Documents
-- `docs/README.md`: documentation map for efficient agent context loading.
-- `docs/PROJECT_CONTEXT.md`: concise standing rules and non-negotiable priorities.
-- `docs/architecture-tree.md`: quick architecture and tool map for orientation.
-- `docs/product-spec.md`: product plan, phase scope, and portfolio story.
-- `docs/milestone-plan.md`: milestone-by-milestone execution plan.
-- `docs/PLANS.md`: ticket planning protocol.
-- `docs/codex-workflow.md`: detailed Codex operating workflow.
-- focused design docs under `docs/` for architecture, database, API, RAG, LangGraph, tools, token economy, evaluation, security, observability, scale, and tradeoffs.
+- Model and embedding providers are deterministic mocks for local safety and test stability.
+- Evaluation is deterministic and regression-oriented, not a replacement for human rubric review.
+- Japanese and Chinese lexical search is intentionally simple in v1.
+- PII redaction, full audit logging, enterprise SSO, Terraform, and cloud deployment are postponed.
+- Cost values are estimates, not billing-grade accounting.
+
+See `docs/known-limitations.md` for the full list.
+
+## Portfolio Positioning
+
+This project is aimed at backend/AI application roles where employers care about more than prompt demos: LLM system design, LangGraph workflows, RAG quality, multilingual behavior, token economy, human review, evaluation, observability, testing, and clean implementation boundaries.

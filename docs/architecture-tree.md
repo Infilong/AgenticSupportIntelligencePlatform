@@ -145,10 +145,11 @@ Multilingual Agentic Support Intelligence Platform
 |   |-- Milestone 7: LangGraph support-agent workflow, graph traces, tool calls
 |   |-- Milestone 8: deterministic guardrails and human review workflow
 |   |-- Milestone 9: evaluation runner, baseline modes, per-language metrics
-|   `-- Milestone 10: frontend trace and evaluation UI
+|   |-- Milestone 10: frontend trace and evaluation UI
+|   `-- Milestone 11: portfolio packaging and interview docs
 |
 `-- Future Milestones
-    `-- Milestone 11: portfolio packaging
+    `-- Phase 2: reranking, compression, caching, PII redaction, cloud deployment path
 ```
 
 ## Quick Tool List
