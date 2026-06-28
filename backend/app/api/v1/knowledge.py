@@ -41,6 +41,8 @@ ResourceDeleteAccess = Annotated[
     Workspace, Depends(require_workspace_permission("resources:delete"))
 ]
 FolderFilter = Annotated[UUID | None, Query()]
+SearchFilter = Annotated[str | None, Query(max_length=120)]
+ListLimit = Annotated[int | None, Query(ge=1, le=500)]
 DocumentId = Annotated[UUID, Path()]
 
 
@@ -92,10 +94,12 @@ def list_knowledge_documents(
     workspace: KnowledgeReadAccess,
     db: DbSession,
     folder_id: FolderFilter = None,
+    search: SearchFilter = None,
+    limit: ListLimit = None,
 ) -> list[KnowledgeDocumentResponse]:
     try:
         documents = KnowledgeService(db).list_documents(
-            workspace_id=workspace.id, folder_id=folder_id
+            workspace_id=workspace.id, folder_id=folder_id, search=search, limit=limit
         )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc

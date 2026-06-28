@@ -43,6 +43,8 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 EvaluationId = Annotated[UUID, Path()]
 IncludeArchived = Annotated[bool, Query()]
 FolderFilter = Annotated[UUID | None, Query()]
+SearchFilter = Annotated[str | None, Query(max_length=120)]
+ListLimit = Annotated[int | None, Query(ge=1, le=500)]
 
 
 @router.post("", response_model=EvaluationDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -84,10 +86,16 @@ def list_evaluations(
     db: DbSession,
     include_archived: IncludeArchived = False,
     folder_id: FolderFilter = None,
+    search: SearchFilter = None,
+    limit: ListLimit = None,
 ) -> list[EvaluationRunResponse]:
     try:
         runs = EvaluationRunner(db).list_runs(
-            workspace_id=workspace.id, include_archived=include_archived, folder_id=folder_id
+            workspace_id=workspace.id,
+            include_archived=include_archived,
+            folder_id=folder_id,
+            search=search,
+            limit=limit,
         )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc

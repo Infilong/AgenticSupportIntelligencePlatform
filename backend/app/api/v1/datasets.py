@@ -40,6 +40,8 @@ ResourceDeleteAccess = Annotated[
     Workspace, Depends(require_workspace_permission("resources:delete"))
 ]
 FolderFilter = Annotated[UUID | None, Query()]
+SearchFilter = Annotated[str | None, Query(max_length=120)]
+ListLimit = Annotated[int | None, Query(ge=1, le=500)]
 DatasetId = Annotated[UUID, Path()]
 ExampleId = Annotated[UUID, Path()]
 
@@ -84,9 +86,13 @@ def list_datasets(
     workspace: DatasetReadAccess,
     db: DbSession,
     folder_id: FolderFilter = None,
+    search: SearchFilter = None,
+    limit: ListLimit = None,
 ) -> list[DatasetResponse]:
     try:
-        datasets = DatasetService(db).list_datasets(workspace_id=workspace.id, folder_id=folder_id)
+        datasets = DatasetService(db).list_datasets(
+            workspace_id=workspace.id, folder_id=folder_id, search=search, limit=limit
+        )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
     return [DatasetResponse.model_validate(dataset) for dataset in datasets]

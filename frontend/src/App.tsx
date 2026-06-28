@@ -19,6 +19,7 @@ const MAX_VISIBLE_CHUNKS = 80;
 const MAX_VISIBLE_FOLDERS = 24;
 const MAX_VISIBLE_RESOURCES = 40;
 const MAX_VISIBLE_EVALUATION_RUNS = 20;
+const RESOURCE_LIST_FETCH_LIMIT = 500;
 const MAX_VISIBLE_ADMIN_ASSETS = 30;
 const MAX_VISIBLE_AUDIT_EVENTS = 30;
 const MAX_VISIBLE_COST_ITEMS = 12;
@@ -1440,6 +1441,16 @@ export function App() {
     return `/api/v1/workspaces/${selectedWorkspaceId}${path}`;
   }
 
+  function workspaceListPath(path: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value === null || value === undefined || value === "") continue;
+      query.set(key, String(value));
+    }
+    const suffix = query.toString();
+    return workspacePath(`${path}${suffix ? `?${suffix}` : ""}`);
+  }
+
   function foldersFor(resourceType: ResourceType) {
     return resourceFolders.filter((folder) => folder.resource_type === resourceType);
   }
@@ -1680,7 +1691,7 @@ export function App() {
 
   async function loadDatasets() {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<Dataset[]>(workspacePath("/datasets"), { token });
+    const data = await apiRequest<Dataset[]>(workspaceListPath("/datasets", { limit: RESOURCE_LIST_FETCH_LIMIT }), { token });
     setDatasets(data);
     setSelectedDatasetId((current) => current || data[0]?.id || "");
   }
@@ -1752,7 +1763,7 @@ export function App() {
 
   async function loadDocuments() {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<KnowledgeDocument[]>(workspacePath("/knowledge-documents"), { token });
+    const data = await apiRequest<KnowledgeDocument[]>(workspaceListPath("/knowledge-documents", { limit: RESOURCE_LIST_FETCH_LIMIT }), { token });
     setDocuments(data);
   }
 
@@ -2022,7 +2033,7 @@ export function App() {
 
   async function loadAgents() {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<Agent[]>(workspacePath("/agents"), { token });
+    const data = await apiRequest<Agent[]>(workspaceListPath("/agents", { limit: RESOURCE_LIST_FETCH_LIMIT }), { token });
     setAgents(data);
     const nextAgent = data.find((agent) => agent.id === selectedAgentId) ?? data[0];
     setSelectedAgentId(nextAgent?.id ?? "");
@@ -2366,8 +2377,13 @@ export function App() {
 
   async function loadEvaluations(includeArchived = showArchivedEvaluations) {
     if (!selectedWorkspaceId) return;
-    const query = includeArchived ? "?include_archived=true" : "";
-    const data = await apiRequest<EvaluationRun[]>(workspacePath(`/evaluations${query}`), { token });
+    const data = await apiRequest<EvaluationRun[]>(
+      workspaceListPath("/evaluations", {
+        include_archived: includeArchived || null,
+        limit: RESOURCE_LIST_FETCH_LIMIT,
+      }),
+      { token },
+    );
     setEvaluationRuns(data);
   }
 

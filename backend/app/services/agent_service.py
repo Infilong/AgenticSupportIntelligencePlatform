@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
@@ -72,7 +72,13 @@ class AgentService:
         return agent
 
     def list_agents(
-        self, *, workspace_id: UUID, include_archived: bool = False, folder_id: UUID | None = None
+        self,
+        *,
+        workspace_id: UUID,
+        include_archived: bool = False,
+        folder_id: UUID | None = None,
+        search: str | None = None,
+        limit: int | None = None,
     ) -> list[AgentConfig]:
         filters = [AgentConfig.workspace_id == workspace_id]
         if folder_id is not None:
@@ -82,11 +88,16 @@ class AgentService:
             filters.append(AgentConfig.folder_id == folder_id)
         if not include_archived:
             filters.append(AgentConfig.archived_at.is_(None))
-        return list(
-            self.db.scalars(
-                select(AgentConfig).where(*filters).order_by(AgentConfig.created_at.desc())
-            ).all()
-        )
+        normalized_search = (search or "").strip()
+        if normalized_search:
+            pattern = f"%{normalized_search}%"
+            filters.append(
+                or_(AgentConfig.name.ilike(pattern), AgentConfig.settings_json.ilike(pattern))
+            )
+        statement = select(AgentConfig).where(*filters).order_by(AgentConfig.created_at.desc())
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
 
     def update_agent(
         self,

@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.language import (
@@ -96,7 +96,12 @@ class KnowledgeService:
         )
 
     def list_documents(
-        self, *, workspace_id: UUID, folder_id: UUID | None = None
+        self,
+        *,
+        workspace_id: UUID,
+        folder_id: UUID | None = None,
+        search: str | None = None,
+        limit: int | None = None,
     ) -> list[KnowledgeDocument]:
         conditions = [KnowledgeDocument.workspace_id == workspace_id]
         if folder_id is not None:
@@ -104,11 +109,23 @@ class KnowledgeService:
                 workspace_id=workspace_id, folder_id=folder_id, resource_type="knowledge_document"
             )
             conditions.append(KnowledgeDocument.folder_id == folder_id)
+        normalized_search = (search or "").strip()
+        if normalized_search:
+            pattern = f"%{normalized_search}%"
+            conditions.append(
+                or_(
+                    KnowledgeDocument.title.ilike(pattern),
+                    cast(KnowledgeDocument.language, String).ilike(pattern),
+                    cast(KnowledgeDocument.status, String).ilike(pattern),
+                )
+            )
         statement = (
             select(KnowledgeDocument)
             .where(*conditions)
             .order_by(KnowledgeDocument.created_at.desc())
         )
+        if limit is not None:
+            statement = statement.limit(limit)
         return list(self.db.scalars(statement).all())
 
     def get_document_detail(

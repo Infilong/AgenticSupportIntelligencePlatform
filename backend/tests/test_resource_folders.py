@@ -448,3 +448,138 @@ def test_cross_workspace_folder_ids_are_rejected(client: TestClient) -> None:
     assert dataset_response.json()["detail"]["code"] == "resource_folder_not_found"
     assert agent_response.status_code == 404
     assert agent_response.json()["detail"]["code"] == "resource_folder_not_found"
+
+
+
+def test_resource_list_filters_are_backend_bounded_and_searchable(client: TestClient) -> None:
+    register(client, "bounded-list-owner@example.com")
+    token = login(client, "bounded-list-owner@example.com")
+    workspace = create_workspace(client, token)
+    knowledge_folder = create_folder(
+        client, token, workspace["id"], "knowledge_document", "Policy folder"
+    )
+    dataset_folder = create_folder(client, token, workspace["id"], "dataset", "Training folder")
+    agent_folder = create_folder(client, token, workspace["id"], "agent_config", "Agent folder")
+    evaluation_folder = create_folder(
+        client, token, workspace["id"], "evaluation_run", "Regression folder"
+    )
+
+    refund_document = upload_document(client, token, workspace["id"], knowledge_folder["id"])
+    security_document = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        json={
+            "title": "Security Playbook",
+            "content_type": "text/plain",
+            "language": "en",
+            "folder_id": knowledge_folder["id"],
+            "content": "Security incidents require human escalation. " * 40,
+        },
+    )
+    assert security_document.status_code == 201
+
+    billing_dataset = import_dataset(client, token, workspace["id"], dataset_folder["id"])
+    refunds_dataset = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/datasets/import",
+        headers=auth_headers(token),
+        json={
+            "dataset_name": "Refund Examples",
+            "description": "Refund support training records",
+            "source_type": "jsonl",
+            "folder_id": dataset_folder["id"],
+            "content": jsonl_content(
+                {"messages": [{"role": "user", "content": "Can I get a refund?"}]}
+            ),
+        },
+    )
+    assert refunds_dataset.status_code == 201
+
+    triage_agent = create_agent(client, token, workspace["id"], agent_folder["id"])
+    escalations_agent = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        json={
+            "name": "Escalation Agent",
+            "token_budget": 4000,
+            "folder_id": agent_folder["id"],
+            "settings": {"purpose": "enterprise escalation routing"},
+        },
+    )
+    assert escalations_agent.status_code == 201
+
+    eval_case = jsonl_content(
+        {
+            "id": "en_refund_filter_001",
+            "language": "en",
+            "input_message": "Can I get a refund?",
+            "expected_route": "finalize",
+            "must_include": ["refund"],
+        }
+    )
+    refund_eval = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        json={
+            "name": "Refund Regression",
+            "folder_id": evaluation_folder["id"],
+            "modes": ["direct_llm"],
+            "jsonl_cases": eval_case,
+        },
+    )
+    security_eval = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        json={
+            "name": "Security Regression",
+            "folder_id": evaluation_folder["id"],
+            "modes": ["direct_llm"],
+            "jsonl_cases": eval_case.replace("en_refund_filter_001", "en_security_filter_001"),
+        },
+    )
+    assert refund_eval.status_code == 201
+    assert security_eval.status_code == 201
+
+    document_search = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"folder_id": knowledge_folder["id"], "search": "refund", "limit": 10},
+    )
+    document_limit = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"folder_id": knowledge_folder["id"], "limit": 1},
+    )
+    dataset_search = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(token),
+        params={"folder_id": dataset_folder["id"], "search": "Support Examples", "limit": 10},
+    )
+    agent_search = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"folder_id": agent_folder["id"], "search": "escalation", "limit": 10},
+    )
+    evaluation_search = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": evaluation_folder["id"], "search": "security", "limit": 10},
+    )
+    evaluation_limit = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": evaluation_folder["id"], "limit": 1},
+    )
+
+    assert document_search.status_code == 200
+    assert [item["id"] for item in document_search.json()] == [refund_document["id"]]
+    assert document_limit.status_code == 200
+    assert len(document_limit.json()) == 1
+    assert dataset_search.status_code == 200
+    assert [item["id"] for item in dataset_search.json()] == [billing_dataset["id"]]
+    assert agent_search.status_code == 200
+    assert [item["id"] for item in agent_search.json()] == [escalations_agent.json()["id"]]
+    assert evaluation_search.status_code == 200
+    assert [item["id"] for item in evaluation_search.json()] == [security_eval.json()["run"]["id"]]
+    assert evaluation_limit.status_code == 200
+    assert len(evaluation_limit.json()) == 1
+    assert triage_agent["folder_id"] == agent_folder["id"]

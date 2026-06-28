@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.language import LanguageDetectionError, detect_language_for_messages
@@ -132,14 +132,27 @@ class DatasetService:
             imported_examples=len(parsed_examples),
         )
 
-    def list_datasets(self, *, workspace_id: UUID, folder_id: UUID | None = None) -> list[Dataset]:
+    def list_datasets(
+        self,
+        *,
+        workspace_id: UUID,
+        folder_id: UUID | None = None,
+        search: str | None = None,
+        limit: int | None = None,
+    ) -> list[Dataset]:
         conditions = [Dataset.workspace_id == workspace_id]
         if folder_id is not None:
             ResourceFolderService(self.db).validate_folder(
                 workspace_id=workspace_id, folder_id=folder_id, resource_type="dataset"
             )
             conditions.append(Dataset.folder_id == folder_id)
+        normalized_search = (search or "").strip()
+        if normalized_search:
+            pattern = f"%{normalized_search}%"
+            conditions.append(or_(Dataset.name.ilike(pattern), Dataset.description.ilike(pattern)))
         statement = select(Dataset).where(*conditions).order_by(Dataset.created_at.desc())
+        if limit is not None:
+            statement = statement.limit(limit)
         return list(self.db.scalars(statement).all())
 
     def list_examples(self, *, workspace_id: UUID, dataset_id: UUID) -> list[ConversationExample]:

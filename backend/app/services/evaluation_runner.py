@@ -5,7 +5,7 @@ import time
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.language import detect_language
@@ -115,7 +115,13 @@ class EvaluationRunner:
         return run
 
     def list_runs(
-        self, *, workspace_id: UUID, include_archived: bool = False, folder_id: UUID | None = None
+        self,
+        *,
+        workspace_id: UUID,
+        include_archived: bool = False,
+        folder_id: UUID | None = None,
+        search: str | None = None,
+        limit: int | None = None,
     ) -> list[EvaluationRun]:
         ResourceFolderService(self.db).validate_folder(
             workspace_id=workspace_id, folder_id=folder_id, resource_type="evaluation_run"
@@ -125,11 +131,20 @@ class EvaluationRunner:
             filters.append(EvaluationRun.folder_id == folder_id)
         if not include_archived:
             filters.append(EvaluationRun.archived_at.is_(None))
-        return list(
-            self.db.scalars(
-                select(EvaluationRun).where(*filters).order_by(EvaluationRun.created_at.desc())
-            ).all()
-        )
+        normalized_search = (search or "").strip()
+        if normalized_search:
+            pattern = f"%{normalized_search}%"
+            filters.append(
+                or_(
+                    EvaluationRun.name.ilike(pattern),
+                    EvaluationRun.modes_json.ilike(pattern),
+                    EvaluationRun.status.ilike(pattern),
+                )
+            )
+        statement = select(EvaluationRun).where(*filters).order_by(EvaluationRun.created_at.desc())
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
 
     def move_run(
         self, *, workspace_id: UUID, run_id: UUID, folder_id: UUID | None
