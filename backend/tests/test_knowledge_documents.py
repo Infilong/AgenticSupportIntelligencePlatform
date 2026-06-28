@@ -419,3 +419,93 @@ def test_long_document_is_chunked_before_embedding(
     assert len(provider.received_texts) == result.chunk_count
     assert long_text not in provider.received_texts
     assert all(len(text.split()) <= 180 for text in provider.received_texts)
+
+
+
+def test_knowledge_document_list_supports_folder_unfiled_search_and_offset(
+    client: TestClient,
+) -> None:
+    register(client, "knowledge-page-owner@example.com")
+    token = login(client, "knowledge-page-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(token),
+        json={"resource_type": "knowledge_document", "name": "Policies"},
+    )
+    assert folder_response.status_code == 201
+    folder_id = folder_response.json()["id"]
+
+    created_titles: list[str] = []
+    for index in range(4):
+        title = f"Paged Policy {index}"
+        response = client.post(
+            f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+            headers=auth_headers(token),
+            json={
+                "title": title,
+                "content_type": "text/plain",
+                "language": "en",
+                "folder_id": folder_id if index < 3 else None,
+                "content": f"{title} governs support behavior. " * 40,
+            },
+        )
+        assert response.status_code == 201
+        created_titles.append(title)
+
+    first_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"folder_id": folder_id, "limit": 2, "offset": 0},
+    )
+    second_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"folder_id": folder_id, "limit": 2, "offset": 2},
+    )
+    unfiled_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"unfiled": True, "limit": 10},
+    )
+    search_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"folder_id": folder_id, "search": "Paged Policy 1", "limit": 10},
+    )
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert unfiled_page.status_code == 200
+    assert search_page.status_code == 200
+    assert [item["title"] for item in first_page.json()] == ["Paged Policy 2", "Paged Policy 1"]
+    assert [item["title"] for item in second_page.json()] == ["Paged Policy 0"]
+    assert [item["title"] for item in unfiled_page.json()] == ["Paged Policy 3"]
+    assert [item["title"] for item in search_page.json()] == ["Paged Policy 1"]
+    assert created_titles == [
+        "Paged Policy 0",
+        "Paged Policy 1",
+        "Paged Policy 2",
+        "Paged Policy 3",
+    ]
+
+
+def test_knowledge_document_list_rejects_folder_and_unfiled_conflict(client: TestClient) -> None:
+    register(client, "knowledge-conflict-owner@example.com")
+    token = login(client, "knowledge-conflict-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(token),
+        json={"resource_type": "knowledge_document", "name": "Policies"},
+    )
+    assert folder_response.status_code == 201
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"folder_id": folder_response.json()["id"], "unfiled": True},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "knowledge_document_filter_conflict"

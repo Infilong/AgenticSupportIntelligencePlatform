@@ -1072,6 +1072,7 @@ export function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [selectedKnowledgeFolderId, setSelectedKnowledgeFolderId] = useState("all");
   const [documentSearch, setDocumentSearch] = useState("");
+  const [documentPage, setDocumentPage] = useState(0);
   const [chunkSearch, setChunkSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
@@ -1331,6 +1332,12 @@ export function App() {
     void refreshWorkspaceData();
   }, [token, selectedWorkspaceId]);
 
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "documents") return;
+    if (!permissionList.includes("knowledge:read")) return;
+    void loadDocuments();
+  }, [token, selectedWorkspaceId, activeTab, selectedKnowledgeFolderId, documentSearch, documentPage, permissionKey]);
+
   function setSessionToken(value: string) {
     setToken(value);
     localStorage.setItem("asi_token", value);
@@ -1501,6 +1508,7 @@ export function App() {
 
   function selectKnowledgeFolder(folderId: string) {
     setSelectedKnowledgeFolderId(folderId);
+    setDocumentPage(0);
     setDocumentFolderId(folderSelectionToFormValue(folderId));
     const scopedDocuments = filterByFolder(documents, folderId);
     if (!scopedDocuments.some((document) => document.id === selectedDocumentId)) {
@@ -1789,9 +1797,28 @@ export function App() {
     });
   }
 
-  async function loadDocuments() {
+  function knowledgeDocumentListParams(page = documentPage) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_RESOURCES,
+      offset: page * MAX_VISIBLE_RESOURCES,
+    };
+    if (selectedKnowledgeFolderId === "unfiled") {
+      params.unfiled = true;
+    } else if (selectedKnowledgeFolderId !== "all") {
+      params.folder_id = selectedKnowledgeFolderId;
+    }
+    if (documentSearch.trim()) {
+      params.search = documentSearch.trim();
+    }
+    return params;
+  }
+
+  async function loadDocuments(page = documentPage) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<KnowledgeDocument[]>(workspaceListPath("/knowledge-documents", { limit: RESOURCE_LIST_FETCH_LIMIT }), { token });
+    const data = await apiRequest<KnowledgeDocument[]>(
+      workspaceListPath("/knowledge-documents", knowledgeDocumentListParams(page)),
+      { token },
+    );
     setDocuments(data);
   }
 
@@ -1809,7 +1836,8 @@ export function App() {
           content: documentContent,
         },
       });
-      await loadDocuments();
+      setDocumentPage(0);
+      await loadDocuments(0);
       await loadResourceFolders();
       await loadDocumentDetail(response.document.id);
     });
@@ -1848,7 +1876,8 @@ export function App() {
           },
         },
       );
-      await loadDocuments();
+      setDocumentPage(0);
+      await loadDocuments(0);
       await loadResourceFolders();
       await loadDocumentDetail(response.document.id);
     });
@@ -1887,7 +1916,8 @@ export function App() {
       if (selectedDocumentId === documentId) {
         resetDocumentForm();
       }
-      await loadDocuments();
+      setDocumentPage(0);
+      await loadDocuments(0);
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -1905,7 +1935,8 @@ export function App() {
         token,
         body: { folder_id: folderId || null },
       });
-      await loadDocuments();
+      setDocumentPage(0);
+      await loadDocuments(0);
       await loadResourceFolders();
       if (selectedDocumentId === documentId) {
         await loadDocumentDetail(documentId);
@@ -3425,20 +3456,16 @@ export function App() {
     const totalChunkTokens = documentDetail?.chunks.reduce((sum, chunk) => sum + chunk.token_count, 0) ?? 0;
     const selectedDocument = documentDetail?.document ?? documents.find((document) => document.id === selectedDocumentId) ?? null;
     const knowledgeFolders = foldersFor("knowledge_document");
-    const folderDocuments = filterByFolder(documents, selectedKnowledgeFolderId);
-    const visibleDocuments = folderDocuments.filter((document) =>
-      matchesSearch(
-        documentSearch,
-        document.title,
-        document.id,
-        document.language,
-        document.status,
-        folderLabel("knowledge_document", document.folder_id),
-      ),
-    );
-    const displayedDocuments = visibleDocuments.slice(0, MAX_VISIBLE_RESOURCES);
-    const hiddenDocumentCount = Math.max(visibleDocuments.length - displayedDocuments.length, 0);
+    const displayedDocuments = documents;
     const selectedFolderLabel = selectedKnowledgeFolderId === "all" ? "All knowledge folders" : selectedKnowledgeFolderId === "unfiled" ? "Unfiled knowledge" : folderLabel("knowledge_document", selectedKnowledgeFolderId);
+    const selectedFolderDocumentCount = resourceItemCount("knowledge_document", selectedKnowledgeFolderId);
+    const totalKnowledgeDocumentCount = resourceItemCount("knowledge_document", "all");
+    const documentPageStart = documentPage * MAX_VISIBLE_RESOURCES + (documents.length ? 1 : 0);
+    const documentPageEnd = documentPage * MAX_VISIBLE_RESOURCES + documents.length;
+    const canGoToPreviousDocumentPage = documentPage > 0;
+    const canGoToNextDocumentPage = documentSearch.trim()
+      ? documents.length === MAX_VISIBLE_RESOURCES
+      : documentPageEnd < selectedFolderDocumentCount;
     const visibleChunks = documentDetail
       ? documentDetail.chunks.filter((chunk) =>
           matchesSearch(
@@ -3463,8 +3490,8 @@ export function App() {
             <p className="muted">Upload, edit, reindex, and inspect the exact chunks the LangChain retrieval tool can cite during a LangGraph run.</p>
           </div>
           <div className="knowledge-health-grid">
-            <Metric label="Documents" value={documents.length} />
-            <Metric label="Indexed" value={indexedDocumentCount} />
+            <Metric label="Documents" value={totalKnowledgeDocumentCount} />
+            <Metric label="Page indexed" value={indexedDocumentCount} />
             <Metric label="Selected chunks" value={documentDetail?.chunks.length ?? 0} />
             <Metric label="Embeddings" value={documentDetail?.embedding_count ?? 0} />
           </div>
@@ -3492,7 +3519,7 @@ export function App() {
               <div className="folder-scope-banner">
                 <span>Current folder</span>
                 <strong>{selectedFolderLabel}</strong>
-                <small>{visibleDocuments.length} documents shown from {folderDocuments.length} in this folder scope.</small>
+                <small>{documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} shown from {selectedFolderDocumentCount} in this folder scope.</small>
               </div>
               <div className="folder-scope-banner">
                 <span>Upload target</span>
@@ -3503,7 +3530,7 @@ export function App() {
                 Search current folder
                 <input
                   value={documentSearch}
-                  onChange={(event) => setDocumentSearch(event.target.value)}
+                  onChange={(event) => { setDocumentPage(0); setDocumentSearch(event.target.value); }}
                   placeholder="Document title, language, status, or id"
                 />
               </label>
@@ -3537,14 +3564,19 @@ export function App() {
                   </div>
                 </article>
               ))}
-              {visibleDocuments.length === 0 && (
+              {documents.length === 0 && (
                 <EmptyState
                   title="No documents match this view"
-                  detail={folderDocuments.length === 0 ? "Upload a policy or FAQ here, or switch folders." : "Clear search or try another folder."}
+                  detail={selectedFolderDocumentCount === 0 ? "Upload a policy or FAQ here, or switch folders." : "Clear search, move to the previous page, or try another folder."}
                 />
               )}
             </div>
-            {hiddenDocumentCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_RESOURCES} of {visibleDocuments.length} matching documents in this folder. Search by title, language, status, folder, or id before editing, moving, or deleting files.</p>}
+            <div className="pagination-bar">
+              <button type="button" onClick={() => setDocumentPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousDocumentPage || loading}>Previous</button>
+              <span>Page {documentPage + 1} · {documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} shown</span>
+              <button type="button" onClick={() => setDocumentPage((page) => page + 1)} disabled={!canGoToNextDocumentPage || loading}>Next</button>
+            </div>
+            <p className="permission-note">This library is loaded from the backend by folder, search, offset, and limit so large knowledge bases stay navigable without loading every file into the browser.</p>
           </aside>
 
           <form className="panel stack knowledge-editor-panel" onSubmit={selectedDocumentId ? saveDocumentEdit : uploadDocument}>

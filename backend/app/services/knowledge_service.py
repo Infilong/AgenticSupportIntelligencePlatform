@@ -100,8 +100,10 @@ class KnowledgeService:
         *,
         workspace_id: UUID,
         folder_id: UUID | None = None,
+        unfiled: bool = False,
         search: str | None = None,
         limit: int | None = None,
+        offset: int = 0,
     ) -> list[KnowledgeDocument]:
         conditions = [KnowledgeDocument.workspace_id == workspace_id]
         if folder_id is not None:
@@ -109,6 +111,8 @@ class KnowledgeService:
                 workspace_id=workspace_id, folder_id=folder_id, resource_type="knowledge_document"
             )
             conditions.append(KnowledgeDocument.folder_id == folder_id)
+        elif unfiled:
+            conditions.append(KnowledgeDocument.folder_id.is_(None))
         normalized_search = (search or "").strip()
         if normalized_search:
             pattern = f"%{normalized_search}%"
@@ -123,6 +127,7 @@ class KnowledgeService:
             select(KnowledgeDocument)
             .where(*conditions)
             .order_by(KnowledgeDocument.created_at.desc())
+            .offset(offset)
         )
         if limit is not None:
             statement = statement.limit(limit)
