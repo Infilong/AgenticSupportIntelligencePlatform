@@ -3403,3 +3403,21 @@ th {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.answer-required-callout {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #9a9a9a;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.answer-required-callout strong {
+  color: var(--text);
+}
+
+.answer-required-callout p {
+  margin: 0;
+  color: var(--text-muted);
+}

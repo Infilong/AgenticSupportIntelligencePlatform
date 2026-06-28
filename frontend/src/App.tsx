@@ -2099,8 +2099,8 @@ export function App() {
   }
 
   function reviewDraft(review: HumanReview): ReviewDraft {
-    const proposedAnswer = review.proposed_answer ?? review.run?.final_answer ?? "";
-    const hasProposedAnswer = Boolean(proposedAnswer);
+    const proposedAnswer = review.proposed_answer ?? "";
+    const hasProposedAnswer = Boolean(review.review_context?.can_approve && proposedAnswer);
     return reviewDrafts[review.id] ?? {
       decision: hasProposedAnswer ? "approved" : "edited",
       edited_answer: proposedAnswer,
@@ -2110,9 +2110,10 @@ export function App() {
 
   function updateReviewDraft(review: HumanReview, patch: Partial<ReviewDraft>) {
     setReviewDrafts((current) => {
-      const proposedAnswer = review.proposed_answer ?? review.run?.final_answer ?? "";
+      const proposedAnswer = review.proposed_answer ?? "";
+      const hasProposedAnswer = Boolean(review.review_context?.can_approve && proposedAnswer);
       const existing = current[review.id] ?? {
-        decision: proposedAnswer ? "approved" : "edited",
+        decision: hasProposedAnswer ? "approved" : "edited",
         edited_answer: proposedAnswer,
         comments: "",
       };
@@ -4435,8 +4436,8 @@ export function App() {
                 const ownerLabel = reviewOwnerLabel(review, currentUser);
                 const run = review.run;
                 const context = review.review_context;
-                const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? "";
-                const canApprove = Boolean(proposedAnswer);
+                const proposedAnswer = review.proposed_answer ?? "";
+                const canApprove = Boolean(context?.can_approve && proposedAnswer);
                 const classification = context?.classification;
                 const evidence = context?.evidence;
                 const blockers = context?.blockers.length
@@ -4448,6 +4449,9 @@ export function App() {
                     action: "Inspect the trace before resolving.",
                   }));
                 const answerRequired = !canApprove || draft.decision === "edited";
+                const resolutionBlocked = assignedToOther
+                  || (!canApprove && draft.decision === "approved")
+                  || (draft.decision === "edited" && !draft.edited_answer.trim());
 
                 return (
                   <article className="review-case-card pending-review" key={review.id}>
@@ -4516,7 +4520,14 @@ export function App() {
 
                     <section className="case-section proposed-answer-card">
                       <span>5. Proposed answer</span>
-                      {canApprove ? <p>{proposedAnswer}</p> : <p>No safe model draft was generated. A reviewer must write a human-approved response or reject the run.</p>}
+                      {canApprove ? (
+                        <p>{proposedAnswer}</p>
+                      ) : (
+                        <div className="answer-required-callout">
+                          <strong>No proposed answer is available</strong>
+                          <p>The workflow blocked finalization before a safe draft could be approved. Write a sourced human response, inspect the trace, or reject the run.</p>
+                        </div>
+                      )}
                     </section>
 
                     <section className="review-resolution-panel">
@@ -4537,7 +4548,7 @@ export function App() {
                             }
                           >
                             <option value="approved" disabled={!canApprove}>Approve proposed answer</option>
-                            <option value="edited">Send human-edited answer</option>
+                            <option value="edited">Write human-approved answer</option>
                             <option value="rejected">Reject unsupported run</option>
                           </select>
                         </label>
@@ -4546,7 +4557,7 @@ export function App() {
                           <textarea
                             rows={6}
                             disabled={draft.decision === "approved"}
-                            placeholder={canApprove ? "Optional when approving with edits." : "Write the response the support team can send."}
+                            placeholder={canApprove ? "Required when choosing a human-edited answer." : "Required: write the response the support team can send, or reject the run."}
                             value={draft.edited_answer}
                             onChange={(event) => updateReviewDraft(review, { edited_answer: event.target.value })}
                           />
@@ -4569,8 +4580,8 @@ export function App() {
                       </button>
                       {unassigned && <button type="button" onClick={() => void claimReview(review)}>Claim</button>}
                       {assignedToMe && <button type="button" onClick={() => void releaseReview(review)}>Release</button>}
-                      <button type="button" className="primary" disabled={assignedToOther} onClick={() => void resolveReview(review)}>
-                        {assignedToOther ? "Assigned to another reviewer" : "Resolve review"}
+                      <button type="button" className="primary" disabled={resolutionBlocked} onClick={() => void resolveReview(review)}>
+                        {assignedToOther ? "Assigned to another reviewer" : !canApprove && draft.decision === "approved" ? "No draft to approve" : draft.decision === "edited" && !draft.edited_answer.trim() ? "Write answer before resolving" : "Resolve review"}
                       </button>
                     </footer>
                   </article>
