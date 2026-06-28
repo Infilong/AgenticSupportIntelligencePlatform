@@ -40,6 +40,7 @@ class GuardrailService:
         workspace_id: UUID,
         graph_run_id: UUID,
         state: SupportAgentState,
+        graph_step_id: UUID | None = None,
     ) -> list[GuardrailDecision]:
         policies = GuardrailCatalogService(self.db).effective_policies(workspace_id=workspace_id)
         decisions = evaluate_guardrails(state, policies=policies)
@@ -48,7 +49,7 @@ class GuardrailService:
                 GuardrailResult(
                     workspace_id=workspace_id,
                     graph_run_id=graph_run_id,
-                    graph_step_id=None,
+                    graph_step_id=graph_step_id,
                     guardrail_type=decision.guardrail_type,
                     passed=decision.passed,
                     severity=decision.severity,

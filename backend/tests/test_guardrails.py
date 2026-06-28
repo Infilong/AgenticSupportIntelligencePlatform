@@ -93,6 +93,7 @@ def test_guardrail_catalog_exposes_runtime_policies_and_failures(client: TestCli
     assert citation["action_on_fail"] == "route_to_human_review"
     assert citation["usage"]["failed_evaluations"] == 1
     assert citation["recent_failures"][0]["graph_run_id"] == run.json()["id"]
+    assert citation["recent_failures"][0]["graph_step_id"] is not None
     assert unsupported["usage"]["failed_evaluations"] == 1
     assert unsupported["recent_failures"][0]["severity"] == "high"
 
@@ -237,6 +238,8 @@ def test_disabled_citation_guardrail_is_removed_from_route_trace(
     )
     route_output = json.loads(route_step["output_json"])
     assert "citation_required" not in route_output["route_reasons"]
-    guardrail_types = {item["guardrail_type"] for item in trace.json()["guardrails"]}
+    guardrails = trace.json()["guardrails"]
+    guardrail_types = {item["guardrail_type"] for item in guardrails}
     assert "citation_required" not in guardrail_types
     assert "unsupported_answer" in guardrail_types
+    assert all(item["graph_step_id"] == route_step["id"] for item in guardrails)

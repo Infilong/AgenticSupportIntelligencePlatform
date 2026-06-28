@@ -202,7 +202,14 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
         "confidence_threshold",
         "language_preservation",
     }
+    route_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "route_review_or_finalize"
+    )
     assert all("severity" in guardrail for guardrail in trace_body["guardrails"])
+    assert all(
+        guardrail["graph_step_id"] == route_step["id"]
+        for guardrail in trace_body["guardrails"]
+    )
     checkpoint_keys = [checkpoint["checkpoint_key"] for checkpoint in trace_body["checkpoints"]]
     assert checkpoint_keys == [f"{name}:after" for name in step_names]
     first_checkpoint = safe_json(trace_body["checkpoints"][0]["state_json"])

@@ -155,9 +155,15 @@ class AgentService:
         }
         final_state = SupportAgentGraphRunner(self.db).run(state)
         graph_run = complete_graph_run(self.db, graph_run, final_state)
+        route_step = self._latest_step(
+            workspace_id=workspace_id,
+            graph_run_id=graph_run.id,
+            step_name="route_review_or_finalize",
+        )
         decisions = GuardrailService(self.db).evaluate_and_store(
             workspace_id=workspace_id,
             graph_run_id=graph_run.id,
+            graph_step_id=route_step.id if route_step else None,
             state=final_state,
         )
         if graph_run.status != GraphRunStatus.completed or has_blocking_guardrail(decisions):
@@ -197,6 +203,20 @@ class AgentService:
         self.db.commit()
         self.db.refresh(agent)
         return agent
+
+    def _latest_step(
+        self, *, workspace_id: UUID, graph_run_id: UUID, step_name: str
+    ) -> GraphStep | None:
+        return self.db.scalar(
+            select(GraphStep)
+            .where(
+                GraphStep.workspace_id == workspace_id,
+                GraphStep.graph_run_id == graph_run_id,
+                GraphStep.step_name == step_name,
+            )
+            .order_by(GraphStep.created_at.desc())
+            .limit(1)
+        )
 
     def get_run(self, *, workspace_id: UUID, run_id: UUID) -> GraphRun:
         run = self.db.scalar(
