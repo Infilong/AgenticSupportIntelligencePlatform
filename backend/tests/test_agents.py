@@ -951,6 +951,16 @@ def test_agent_model_config_assignment_drives_ai_run_provider_and_summary(
     ai_runs = db_session.scalars(select(AIRun).where(AIRun.graph_run_id == graph_run_id)).all()
     assert {ai_run.provider for ai_run in ai_runs} == {"mock-agent"}
     assert {ai_run.model for ai_run in ai_runs} == {"mock-agent-large"}
+    assert {ai_run.model_config_id for ai_run in ai_runs} == {UUID(model_config["id"])}
+
+    trace_response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{graph_run_id}/trace",
+        headers=auth_headers(token),
+    )
+    assert trace_response.status_code == 200
+    assert {run["model_config_id"] for run in trace_response.json()["ai_runs"]} == {
+        model_config["id"]
+    }
 
 
 def test_agent_rejects_model_config_from_another_workspace(client: TestClient) -> None:

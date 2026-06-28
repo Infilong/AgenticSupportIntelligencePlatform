@@ -287,6 +287,7 @@ AIRun
 - workspace_id
 - graph_run_id nullable
 - graph_step_id nullable
+- model_config_id nullable
 - provider
 - model
 - purpose
@@ -325,7 +326,7 @@ WorkspaceBudgetPolicy
 - updated_at
 ```
 
-Every model call should create an `AIRun`. Every AI run should record prompt template and version when a prompt template is used. Workspace budget policy is owner-managed and read by cost summaries, system health, and agent runtime rate/token-budget enforcement.
+Every model call should create an `AIRun`. Every AI run should record the resolved `model_config_id` when a workspace or agent model config is used, and should record prompt template and version when a prompt template is used. Workspace budget policy is owner-managed and read by cost summaries, system health, and agent runtime rate/token-budget enforcement.
 
 ## Evaluation
 ```text

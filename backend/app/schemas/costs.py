@@ -60,6 +60,7 @@ class RecentAIRunSummaryResponse(BaseModel):
     graph_run_id: UUID | None
     provider: str
     model: str
+    model_config_id: UUID | None
     purpose: str
     language: str
     prompt_tokens: int

@@ -217,7 +217,15 @@ def test_active_model_config_controls_provider_pricing_and_ai_run(
     assert stored is not None
     assert stored.provider == "mock-admin"
     assert stored.model == "mock-admin-classifier"
+    assert stored.model_config_id == UUID(created.json()["id"])
     assert stored.estimated_cost == expected_cost
+
+    summary = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/costs/summary",
+        headers=auth_headers(token),
+    )
+    assert summary.status_code == 200
+    assert summary.json()["recent_ai_runs"][0]["model_config_id"] == created.json()["id"]
 
 
 def test_active_model_config_context_limit_records_failed_ai_run(

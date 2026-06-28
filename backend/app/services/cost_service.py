@@ -59,6 +59,7 @@ class RecentAIRunSummary:
     graph_run_id: UUID | None
     provider: str
     model: str
+    model_config_id: UUID | None
     purpose: str
     language: str
     prompt_tokens: int
@@ -282,6 +283,7 @@ class CostService:
                     graph_run_id=run.graph_run_id,
                     provider=run.provider,
                     model=run.model,
+                    model_config_id=run.model_config_id,
                     purpose=run.purpose,
                     language=str(run.language),
                     prompt_tokens=run.prompt_tokens,

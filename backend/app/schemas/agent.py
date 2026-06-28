@@ -172,6 +172,7 @@ class AIRunTraceResponse(BaseModel):
     id: UUID
     provider: str
     model: str
+    model_config_id: UUID | None
     purpose: str
     language: str
     prompt_template_id: UUID | None

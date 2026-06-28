@@ -100,6 +100,7 @@ def get_cost_summary(workspace: WorkspaceMemberAccess, db: DbSession) -> CostSum
                 graph_run_id=item.graph_run_id,
                 provider=item.provider,
                 model=item.model,
+                model_config_id=item.model_config_id,
                 purpose=item.purpose,
                 language=item.language,
                 prompt_tokens=item.prompt_tokens,

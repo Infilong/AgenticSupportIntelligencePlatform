@@ -46,6 +46,8 @@ class ModelConfig(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
+    routed_ai_runs = relationship("AIRun", back_populates="model_config")
+
 
 class PromptTemplate(Base):
     __tablename__ = "prompt_templates"
@@ -81,6 +83,9 @@ class AIRun(Base):
     )
     graph_run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
     graph_step_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
+    model_config_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("model_configs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     provider: Mapped[str] = mapped_column(String(80), nullable=False)
     model: Mapped[str] = mapped_column(String(120), nullable=False)
     purpose: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
@@ -102,6 +107,7 @@ class AIRun(Base):
     )
 
     prompt_template = relationship("PromptTemplate", back_populates="ai_runs")
+    model_config = relationship("ModelConfig", back_populates="routed_ai_runs")
 
 
 class CacheEntry(Base):

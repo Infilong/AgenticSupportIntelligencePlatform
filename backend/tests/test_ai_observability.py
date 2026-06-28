@@ -85,7 +85,7 @@ def test_token_budget_planner_selects_cheaper_model_and_denies_over_budget() -> 
 
 
 def test_model_call_budget_planner_uses_active_context_window() -> None:
-    pricing = ModelPricing("mock", "mock-small", 0.001, 0.002, 20)
+    pricing = ModelPricing("mock", "mock-small", None, 0.001, 0.002, 20)
     allowed = TokenBudgetPlanner().plan_model_call(
         prompt_text="classify refund",
         completion_text="refund_request",
@@ -326,4 +326,5 @@ def test_cost_summary_counts_failed_ai_runs(client: TestClient, db_session: Sess
     body = summary.json()
     assert body["failed_ai_runs"] == 1
     assert body["recent_ai_runs"][0]["status"] == "failed"
+    assert body["recent_ai_runs"][0]["model_config_id"] is None
     assert body["recent_ai_runs"][0]["error_message"] == "mock provider failure"

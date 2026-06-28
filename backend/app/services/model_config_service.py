@@ -144,6 +144,7 @@ class ModelConfigService:
         return ModelPricing(
             provider=config.provider,
             model=config.model,
+            model_config_id=config.id,
             prompt_token_cost_per_1k=config.prompt_token_cost_per_1k,
             completion_token_cost_per_1k=config.completion_token_cost_per_1k,
             max_context_tokens=config.max_context_tokens,

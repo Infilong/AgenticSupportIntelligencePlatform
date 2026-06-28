@@ -262,6 +262,7 @@ type AIRunTrace = {
   id: string;
   provider: string;
   model: string;
+  model_config_id: string | null;
   purpose: string;
   language: Language;
   prompt_template_id: string | null;
@@ -575,6 +576,7 @@ type CostSummary = {
     graph_run_id: string | null;
     provider: string;
     model: string;
+    model_config_id: string | null;
     purpose: string;
     language: string;
     prompt_tokens: number;
@@ -5729,6 +5731,7 @@ export function App() {
                       <div>
                         <strong>{run.purpose}</strong>
                         <p className="muted">{run.provider}/{run.model} · {run.language.toUpperCase()} · {formatDate(run.created_at)}</p>
+                        <p className="muted">Route source: {run.model_config_id ? `model config ${shortId(run.model_config_id)}` : "default pricing fallback"}</p>
                       </div>
                       <div className="review-actions">
                         <Badge tone={toneForStatus(run.status)}>{run.status}</Badge>
@@ -6338,7 +6341,7 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
           <div className="trace-runtime-summary-card">
             <span>Top cost call</span>
             <strong>{topCostRun ? `${topCostRun.provider}/${topCostRun.model}` : "No model calls"}</strong>
-            <small>{topCostRun ? `${formatStepName(topCostRun.purpose)} · ${formatCost(topCostRun.estimated_cost)} · ${topCostRun.total_tokens} tokens` : "Run an agent to record AI ledger rows."}</small>
+            <small>{topCostRun ? `${formatStepName(topCostRun.purpose)} · ${topCostRun.model_config_id ? `config ${shortId(topCostRun.model_config_id)}` : "fallback"} · ${formatCost(topCostRun.estimated_cost)} · ${topCostRun.total_tokens} tokens` : "Run an agent to record AI ledger rows."}</small>
           </div>
           <div className="trace-runtime-summary-card">
             <span>Cache behavior</span>
@@ -6712,6 +6715,9 @@ function AIRunPanel({ aiRun }: { aiRun: AIRunTrace }) {
         <Metric label="Cost" value={formatCost(aiRun.estimated_cost)} />
         <Metric label="Cache" value={aiRun.cache_hit ? "hit" : "miss"} />
       </div>
+      <small>
+        Route source {aiRun.model_config_id ? `model config ${shortId(aiRun.model_config_id)}` : "default pricing fallback"}
+      </small>
       <small>
         Prompt template {aiRun.prompt_template_name ?? "not named"}
         {aiRun.prompt_version ? ` v${aiRun.prompt_version}` : ""}

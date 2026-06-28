@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from uuid import UUID
 
 from app.core.language import SupportedLanguage
 
@@ -10,14 +11,15 @@ from app.core.language import SupportedLanguage
 class ModelPricing:
     provider: str
     model: str
+    model_config_id: UUID | None
     prompt_token_cost_per_1k: float
     completion_token_cost_per_1k: float
     max_context_tokens: int
 
 
 DEFAULT_MODEL_PRICING = {
-    "mock-cheap": ModelPricing("mock", "mock-cheap", 0.0001, 0.0002, 4096),
-    "mock-standard": ModelPricing("mock", "mock-standard", 0.0005, 0.001, 8192),
+    "mock-cheap": ModelPricing("mock", "mock-cheap", None, 0.0001, 0.0002, 4096),
+    "mock-standard": ModelPricing("mock", "mock-standard", None, 0.0005, 0.001, 8192),
 }
 
 
