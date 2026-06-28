@@ -7,6 +7,7 @@ from app.models.folder import ResourceFolder
 from app.models.knowledge import DocumentChunk, DocumentVersion, Embedding, KnowledgeDocument
 from app.models.retrieval import RetrievalTrace, RetrievedChunk
 from app.models.review import GuardrailResult, HumanReview
+from app.models.tool import ToolConfig
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 
@@ -18,6 +19,7 @@ __all__ = [
     "HumanReview",
     "GraphStep",
     "ToolCall",
+    "ToolConfig",
     "AIRun",
     "AuditLog",
     "CacheEntry",

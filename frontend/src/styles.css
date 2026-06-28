@@ -2891,3 +2891,27 @@ th {
 .settings-boundary-list span {
   overflow-wrap: anywhere;
 }
+
+.tool-config-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.tool-config-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(120px, 1fr) minmax(100px, 0.8fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.tool-config-grid label {
+  min-width: 0;
+}
+
+.tool-config-grid input {
+  min-width: 0;
+}

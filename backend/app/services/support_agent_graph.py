@@ -33,6 +33,7 @@ from app.services.model_provider import ConfiguredModelProvider, ModelProviderEr
 from app.services.prompt_template_service import PromptTemplateService
 from app.services.support_agent_state import SupportAgentState
 from app.services.token_budget import ModelCallBudgetPlan, TokenBudgetPlanner
+from app.services.tool_service import ToolService
 
 
 class SupportAgentGraphRunner:
@@ -149,17 +150,61 @@ class SupportAgentGraphRunner:
             }
             self._record_step("retrieve_evidence", state, output, started)
             return output
-        search_tool = create_search_documents_tool(
-            db=self.db, workspace_id=UUID(state["workspace_id"])
+        workspace_id = UUID(state["workspace_id"])
+        tool_definition = ToolService(self.db).get_tool_definition(
+            workspace_id=workspace_id, tool_name="search_documents"
         )
-        tool_output = search_tool.invoke(
-            {
-                "query": state["input_message"],
-                "language": language.value,
-                "top_k": _retrieval_top_k(state),
-                "min_score": _retrieval_threshold(state),
+        tool_input = {
+            "query": state["input_message"],
+            "language": language.value,
+            "top_k": _retrieval_top_k(state),
+            "min_score": _retrieval_threshold(state),
+        }
+        if not tool_definition.enabled:
+            output = {
+                "retrieved_chunks": [],
+                "citations": [],
+                "no_source": True,
+                "langchain_tool": "search_documents",
+                "tool_disabled": "search_documents",
+                "errors": [
+                    *state.get("errors", []),
+                    "search_documents disabled by workspace tool configuration",
+                ],
             }
-        )
+            step = self._record_step(
+                "retrieve_evidence",
+                state,
+                output,
+                started,
+                status=GraphStepStatus.failed,
+                error_message="search_documents disabled by workspace tool configuration",
+            )
+            self.db.add(
+                ToolCall(
+                    workspace_id=workspace_id,
+                    graph_run_id=UUID(state["graph_run_id"]),
+                    graph_step_id=step.id,
+                    tool_name="search_documents",
+                    input_json=json.dumps(tool_input),
+                    output_json=json.dumps(
+                        {
+                            "framework": tool_definition.framework,
+                            "tool_disabled": True,
+                            "no_source": True,
+                            "result_count": 0,
+                            "timeout_ms": tool_definition.timeout_ms,
+                            "max_retries": tool_definition.max_retries,
+                        }
+                    ),
+                    status=GraphStepStatus.failed,
+                    latency_ms=max(1, int((time.perf_counter() - started) * 1000)),
+                )
+            )
+            self.db.commit()
+            return output
+        search_tool = create_search_documents_tool(db=self.db, workspace_id=workspace_id)
+        tool_output = search_tool.invoke(tool_input)
         raw_chunks = tool_output["results"]
         documents = chunk_payloads_to_documents(raw_chunks)
         chunks = []
@@ -178,18 +223,11 @@ class SupportAgentGraphRunner:
         tool_started = time.perf_counter()
         self.db.add(
             ToolCall(
-                workspace_id=UUID(state["workspace_id"]),
+                workspace_id=workspace_id,
                 graph_run_id=UUID(state["graph_run_id"]),
                 graph_step_id=step.id,
                 tool_name="search_documents",
-                input_json=json.dumps(
-                    {
-                        "query": state["input_message"],
-                        "language": language.value,
-                        "top_k": _retrieval_top_k(state),
-                        "min_score": _retrieval_threshold(state),
-                    }
-                ),
+                input_json=json.dumps(tool_input),
                 output_json=json.dumps(
                     {
                         "framework": tool_output["framework"],
@@ -197,6 +235,8 @@ class SupportAgentGraphRunner:
                         "result_count": tool_output["result_count"],
                         "langchain_document_count": len(documents),
                         "no_source": tool_output["no_source"],
+                        "timeout_ms": tool_definition.timeout_ms,
+                        "max_retries": tool_definition.max_retries,
                     }
                 ),
                 status=GraphStepStatus.succeeded,
@@ -612,6 +652,7 @@ def _compact_state(state: SupportAgentState) -> dict:
         "agent_model_config_id",
         "agent_settings",
         "langchain_tool",
+        "tool_disabled",
         "errors",
     ]
     return {key: state.get(key) for key in allowed if key in state}

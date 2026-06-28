@@ -27,6 +27,7 @@ OWNER_PERMISSIONS = [
     "resource_folders:manage",
     "resources:delete",
     "agents:delete",
+    "tools:configure",
 ]
 
 

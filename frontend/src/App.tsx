@@ -239,6 +239,7 @@ type ToolCatalogItem = {
   enabled: boolean;
   permissions: string[];
   timeout_ms: number | null;
+  max_retries: number;
   retry_policy: string;
   input_schema: Record<string, unknown>;
   output_schema: Record<string, unknown>;
@@ -864,6 +865,7 @@ export function App() {
   const [trace, setTrace] = useState<GraphTrace | null>(null);
   const [traceRunId, setTraceRunId] = useState("");
   const [tools, setTools] = useState<ToolCatalogItem[]>([]);
+  const [toolConfigDrafts, setToolConfigDrafts] = useState<Record<string, { enabled: boolean; timeout_ms: string; max_retries: string }>>({});
   const [guardrails, setGuardrails] = useState<GuardrailCatalogItem[]>([]);
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
@@ -922,6 +924,7 @@ export function App() {
   );
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const canManageResources = Boolean(workspaceMembership?.can_manage_resources);
+  const canConfigureTools = Boolean(workspaceMembership?.permissions.includes("tools:configure"));
   const workspaceRole = !selectedWorkspaceId
     ? "No workspace"
     : workspaceMembership
@@ -1677,6 +1680,46 @@ export function App() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<ToolCatalogItem[]>(workspacePath("/tools"), { token });
     setTools(data);
+    setToolConfigDrafts((current) => {
+      const next = { ...current };
+      for (const tool of data) {
+        if (!next[tool.name]) {
+          next[tool.name] = {
+            enabled: tool.enabled,
+            timeout_ms: tool.timeout_ms ? String(tool.timeout_ms) : "",
+            max_retries: String(tool.max_retries),
+          };
+        }
+      }
+      return next;
+    });
+  }
+
+  async function saveToolConfig(tool: ToolCatalogItem) {
+    const draft = toolConfigDrafts[tool.name] ?? {
+      enabled: tool.enabled,
+      timeout_ms: tool.timeout_ms ? String(tool.timeout_ms) : "",
+      max_retries: String(tool.max_retries),
+    };
+    await runAction("Tool configuration saved", async () => {
+      await apiRequest<ToolCatalogItem>(workspacePath(`/tools/${tool.name}/config`), {
+        method: "PATCH",
+        token,
+        body: {
+          enabled: draft.enabled,
+          timeout_ms: draft.timeout_ms.trim() ? Number(draft.timeout_ms) : null,
+          max_retries: draft.max_retries.trim() ? Number(draft.max_retries) : 0,
+        },
+      });
+      setToolConfigDrafts((current) => {
+        const next = { ...current };
+        delete next[tool.name];
+        return next;
+      });
+      await loadTools();
+      await loadAuditLogs();
+      await loadSystemHealth();
+    });
   }
 
   async function loadGuardrails() {
@@ -3123,13 +3166,13 @@ export function App() {
         <section className="panel tool-hero">
           <div>
             <p className="eyebrow">Tool operations</p>
-            <h2>Inspect agent tools outside individual traces</h2>
-            <p className="muted">This catalog is generated from the backend runtime and persisted tool calls. It shows what tools exist, what schemas they accept, which permissions they require, and how they behave during LangGraph runs.</p>
+            <h2>Configure and inspect agent tools outside individual traces</h2>
+            <p className="muted">This catalog is generated from backend runtime definitions, workspace tool configuration, and persisted tool calls. Tool defaults affect LangGraph execution and are recorded in trace/tool history.</p>
           </div>
           <div className="next-action-card">
             <span>Tool posture</span>
             <strong>{totalCalls ? `${totalCalls} calls recorded` : "Ready for first run"}</strong>
-            <p>{failedCalls ? `${failedCalls} tool failures need trace review.` : "No tool failures recorded in this workspace."}</p>
+            <p>{failedCalls ? `${failedCalls} tool failures need trace review.` : canConfigureTools ? "Tool defaults are configurable by workspace owners." : "Tool defaults are visible but owner-managed."}</p>
             <button type="button" onClick={() => void runAction("Tools refreshed", loadTools)}>Refresh tools</button>
           </div>
         </section>
@@ -3143,63 +3186,122 @@ export function App() {
         </section>
 
         <section className="tool-grid">
-          {tools.map((tool) => (
-            <article className="panel stack tool-card" key={tool.name}>
-              <div className="row-head">
-                <div>
-                  <p className="eyebrow">{tool.framework}</p>
-                  <h3>{tool.name}</h3>
-                </div>
-                <Badge tone={tool.enabled ? "good" : "warn"}>{tool.enabled ? "enabled" : "disabled"}</Badge>
-              </div>
-              <p className="muted">{tool.description}</p>
-              <div className="metric-grid compact">
-                <Metric label="Calls" value={tool.usage.total_calls} />
-                <Metric label="Failures" value={tool.usage.failed_calls} />
-                <Metric label="Avg latency" value={formatLatency(tool.usage.average_latency_ms)} />
-                <Metric label="Last used" value={formatDate(tool.usage.last_used_at)} />
-              </div>
-              <div className="tool-chip-row">
-                {tool.permissions.map((permission) => <Badge key={permission}>{permission}</Badge>)}
-                {tool.related_workflow_nodes.map((node) => <Badge key={node}>{formatStepName(node)}</Badge>)}
-              </div>
-              <div className="tool-policy-list">
-                <span>Retry: {tool.retry_policy}</span>
-                <span>Timeout: {tool.timeout_ms ? `${tool.timeout_ms} ms` : "runtime default"}</span>
-              </div>
-              <details>
-                <summary>Input and output schemas</summary>
-                <div className="two">
-                  <JsonBlock value={tool.input_schema} />
-                  <JsonBlock value={tool.output_schema} />
-                </div>
-              </details>
-              <div className="tool-call-list">
+          {tools.map((tool) => {
+            const draft = toolConfigDrafts[tool.name] ?? {
+              enabled: tool.enabled,
+              timeout_ms: tool.timeout_ms ? String(tool.timeout_ms) : "",
+              max_retries: String(tool.max_retries),
+            };
+            return (
+              <article className="panel stack tool-card" key={tool.name}>
                 <div className="row-head">
-                  <strong>Recent executions</strong>
-                  <Badge>{tool.recent_calls.length}</Badge>
+                  <div>
+                    <p className="eyebrow">{tool.framework}</p>
+                    <h3>{tool.name}</h3>
+                  </div>
+                  <Badge tone={tool.enabled ? "good" : "warn"}>{tool.enabled ? "enabled" : "disabled"}</Badge>
                 </div>
-                {tool.recent_calls.map((call) => (
-                  <button
-                    type="button"
-                    className="recent-run-row"
-                    key={call.id}
-                    onClick={() => { setTraceRunId(call.graph_run_id); void loadTrace(call.graph_run_id); setActiveTab("trace"); }}
-                  >
-                    <span>
-                      <strong>{call.result_summary}</strong>
-                      <small>{call.graph_run_id}</small>
-                    </span>
-                    <span className="recent-run-meta">
-                      <Badge tone={toneForStatus(call.status)}>{call.status}</Badge>
-                      <small>{call.latency_ms} ms</small>
-                    </span>
-                  </button>
-                ))}
-                {tool.recent_calls.length === 0 && <EmptyState title="No executions" detail="Run an agent to create tool usage history." />}
-              </div>
-            </article>
-          ))}
+                <p className="muted">{tool.description}</p>
+                <div className="metric-grid compact">
+                  <Metric label="Calls" value={tool.usage.total_calls} />
+                  <Metric label="Failures" value={tool.usage.failed_calls} />
+                  <Metric label="Avg latency" value={formatLatency(tool.usage.average_latency_ms)} />
+                  <Metric label="Last used" value={formatDate(tool.usage.last_used_at)} />
+                </div>
+                <div className="tool-chip-row">
+                  {tool.permissions.map((permission) => <Badge key={permission}>{permission}</Badge>)}
+                  {tool.related_workflow_nodes.map((node) => <Badge key={node}>{formatStepName(node)}</Badge>)}
+                </div>
+                <div className="tool-policy-list">
+                  <span>Retry: {tool.retry_policy}</span>
+                  <span>Timeout: {tool.timeout_ms ? `${tool.timeout_ms} ms` : "runtime default"}</span>
+                </div>
+                <div className="tool-config-panel">
+                  <div className="row-head">
+                    <div>
+                      <strong>Workspace defaults</strong>
+                      <p className="muted">Used by the LangGraph retrieve_evidence node before tool execution.</p>
+                    </div>
+                    <Badge tone={canConfigureTools ? "good" : "warn"}>{canConfigureTools ? "owner editable" : "read only"}</Badge>
+                  </div>
+                  <div className="tool-config-grid">
+                    <label className="check-row single-check settings-toggle">
+                      <input
+                        type="checkbox"
+                        checked={draft.enabled}
+                        disabled={!canConfigureTools || loading}
+                        onChange={(event) => setToolConfigDrafts((current) => ({
+                          ...current,
+                          [tool.name]: { ...draft, enabled: event.target.checked },
+                        }))}
+                      />
+                      Enabled
+                    </label>
+                    <label>
+                      Timeout ms
+                      <input
+                        inputMode="numeric"
+                        placeholder="runtime default"
+                        value={draft.timeout_ms}
+                        disabled={!canConfigureTools || loading}
+                        onChange={(event) => setToolConfigDrafts((current) => ({
+                          ...current,
+                          [tool.name]: { ...draft, timeout_ms: event.target.value },
+                        }))}
+                      />
+                    </label>
+                    <label>
+                      Max retries
+                      <input
+                        inputMode="numeric"
+                        value={draft.max_retries}
+                        disabled={!canConfigureTools || loading}
+                        onChange={(event) => setToolConfigDrafts((current) => ({
+                          ...current,
+                          [tool.name]: { ...draft, max_retries: event.target.value },
+                        }))}
+                      />
+                    </label>
+                  </div>
+                  <div className="run-action-bar">
+                    <button type="button" onClick={() => void saveToolConfig(tool)} disabled={!canConfigureTools || loading}>Save tool defaults</button>
+                    <button type="button" onClick={() => setActiveTab("trace")} disabled={tool.recent_calls.length === 0}>Open traces</button>
+                  </div>
+                </div>
+                <details>
+                  <summary>Input and output schemas</summary>
+                  <div className="two">
+                    <JsonBlock value={tool.input_schema} />
+                    <JsonBlock value={tool.output_schema} />
+                  </div>
+                </details>
+                <div className="tool-call-list">
+                  <div className="row-head">
+                    <strong>Recent executions</strong>
+                    <Badge>{tool.recent_calls.length}</Badge>
+                  </div>
+                  {tool.recent_calls.map((call) => (
+                    <button
+                      type="button"
+                      className="recent-run-row"
+                      key={call.id}
+                      onClick={() => { setTraceRunId(call.graph_run_id); void loadTrace(call.graph_run_id); setActiveTab("trace"); }}
+                    >
+                      <span>
+                        <strong>{call.result_summary}</strong>
+                        <small>{call.graph_run_id}</small>
+                      </span>
+                      <span className="recent-run-meta">
+                        <Badge tone={toneForStatus(call.status)}>{call.status}</Badge>
+                        <small>{call.latency_ms} ms</small>
+                      </span>
+                    </button>
+                  ))}
+                  {tool.recent_calls.length === 0 && <EmptyState title="No executions" detail="Run an agent to create tool usage history." />}
+                </div>
+              </article>
+            );
+          })}
           {tools.length === 0 && <EmptyState title="No tools loaded" detail="Refresh the workspace or run an agent to load runtime tool definitions." />}
         </section>
       </div>
@@ -4175,6 +4277,10 @@ export function App() {
               <button type="button" onClick={() => setActiveTab("system")}>
                 <strong>Budgets, rate limits, and health</strong>
                 <span>{systemHealth ? `${systemHealth.overall_status} · ${pendingHealthSignals} signals` : "load system health"}</span>
+              </button>
+              <button type="button" onClick={() => setActiveTab("tools")}>
+                <strong>Tool defaults</strong>
+                <span>{tools.length} tools · {canConfigureTools ? "owner editable" : "read only"}</span>
               </button>
               <button type="button" onClick={() => setActiveTab("prompts")}>
                 <strong>Prompt versions</strong>

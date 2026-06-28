@@ -21,6 +21,12 @@ class ToolCallSummaryResponse(BaseModel):
     created_at: datetime
 
 
+class ToolConfigUpdateRequest(BaseModel):
+    enabled: bool | None = None
+    timeout_ms: int | None = Field(default=None, ge=100, le=120_000)
+    max_retries: int | None = Field(default=None, ge=0, le=5)
+
+
 class ToolCatalogItemResponse(BaseModel):
     name: str
     description: str
@@ -28,6 +34,7 @@ class ToolCatalogItemResponse(BaseModel):
     enabled: bool
     permissions: list[str]
     timeout_ms: int | None
+    max_retries: int
     retry_policy: str
     input_schema: dict[str, object] = Field(default_factory=dict)
     output_schema: dict[str, object] = Field(default_factory=dict)

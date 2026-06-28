@@ -1,27 +1,76 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.auth import get_current_user
+from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.tool import (
     ToolCallSummaryResponse,
     ToolCatalogItemResponse,
+    ToolConfigUpdateRequest,
     ToolUsageSummaryResponse,
 )
-from app.services.tool_service import ToolCatalogItem, ToolService
+from app.services.audit_log_service import AuditLogService
+from app.services.tool_service import ToolCatalogItem, ToolConfigNotFoundError, ToolService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["tools"])
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
+ToolName = Annotated[str, Path(min_length=1, max_length=120)]
 
 
 @router.get("/tools", response_model=list[ToolCatalogItemResponse])
 def list_tools(workspace: WorkspaceMemberAccess, db: DbSession) -> list[ToolCatalogItemResponse]:
     tools = ToolService(db).list_tools(workspace_id=workspace.id)
     return [_tool_response(tool) for tool in tools]
+
+
+@router.patch("/tools/{tool_name}/config", response_model=ToolCatalogItemResponse)
+def update_tool_config(
+    tool_name: ToolName,
+    payload: ToolConfigUpdateRequest,
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> ToolCatalogItemResponse:
+    try:
+        definition = ToolService(db).update_tool_config(
+            workspace_id=workspace.id,
+            tool_name=tool_name,
+            enabled=payload.enabled,
+            timeout_ms=payload.timeout_ms,
+            max_retries=payload.max_retries,
+            update_timeout="timeout_ms" in payload.model_fields_set,
+        )
+    except ToolConfigNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "tool_not_found", "message": "Tool was not found."},
+        ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="tool_config.updated",
+        resource_type="tool",
+        resource_id=tool_name,
+        metadata={
+            "enabled": definition.enabled,
+            "timeout_ms": definition.timeout_ms,
+            "max_retries": definition.max_retries,
+        },
+    )
+    tool = next(
+        item
+        for item in ToolService(db).list_tools(workspace_id=workspace.id)
+        if item.definition.name == tool_name
+    )
+    return _tool_response(tool)
 
 
 def _tool_response(tool: ToolCatalogItem) -> ToolCatalogItemResponse:
@@ -33,6 +82,7 @@ def _tool_response(tool: ToolCatalogItem) -> ToolCatalogItemResponse:
         enabled=definition.enabled,
         permissions=definition.permissions,
         timeout_ms=definition.timeout_ms,
+        max_retries=definition.max_retries,
         retry_policy=definition.retry_policy,
         input_schema=definition.input_schema,
         output_schema=definition.output_schema,

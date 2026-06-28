@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import GraphStepStatus, ToolCall
+from app.models.tool import ToolConfig
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,7 @@ class ToolDefinition:
     enabled: bool
     permissions: list[str]
     timeout_ms: int | None
+    max_retries: int
     retry_policy: str
     input_schema: dict[str, object]
     output_schema: dict[str, object]
@@ -51,6 +53,10 @@ class ToolCatalogItem:
     recent_calls: list[ToolCallSummary]
 
 
+class ToolConfigNotFoundError(ValueError):
+    pass
+
+
 RUNTIME_TOOL_DEFINITIONS = [
     ToolDefinition(
         name="search_documents",
@@ -62,6 +68,7 @@ RUNTIME_TOOL_DEFINITIONS = [
         enabled=True,
         permissions=["workspace:read", "knowledge:write", "agents:run"],
         timeout_ms=None,
+        max_retries=0,
         retry_policy="No automatic retry in v1; failures are persisted in graph step/tool state.",
         input_schema={
             "type": "object",
@@ -92,18 +99,7 @@ class ToolService:
         self.db = db
 
     def list_tools(self, *, workspace_id: UUID) -> list[ToolCatalogItem]:
-        definitions_by_name = {
-            definition.name: definition for definition in RUNTIME_TOOL_DEFINITIONS
-        }
-        discovered_names = {
-            name
-            for name in self.db.scalars(
-                select(ToolCall.tool_name).where(ToolCall.workspace_id == workspace_id).distinct()
-            ).all()
-        }
-        for name in sorted(discovered_names - definitions_by_name.keys()):
-            definitions_by_name[name] = _discovered_tool_definition(name)
-
+        definitions_by_name = self._definitions_for_workspace(workspace_id=workspace_id)
         return [
             ToolCatalogItem(
                 definition=definition,
@@ -115,24 +111,103 @@ class ToolService:
             for definition in sorted(definitions_by_name.values(), key=lambda item: item.name)
         ]
 
+    def get_tool_definition(self, *, workspace_id: UUID, tool_name: str) -> ToolDefinition:
+        definition = self._definitions_for_workspace(workspace_id=workspace_id).get(tool_name)
+        if definition is None:
+            raise ToolConfigNotFoundError("Tool was not found.")
+        return definition
+
+    def update_tool_config(
+        self,
+        *,
+        workspace_id: UUID,
+        tool_name: str,
+        enabled: bool | None = None,
+        timeout_ms: int | None = None,
+        max_retries: int | None = None,
+        update_timeout: bool = False,
+    ) -> ToolDefinition:
+        base_definition = self._base_definitions(workspace_id=workspace_id).get(tool_name)
+        if base_definition is None:
+            raise ToolConfigNotFoundError("Tool was not found.")
+        config = self.db.scalar(
+            select(ToolConfig).where(
+                ToolConfig.workspace_id == workspace_id, ToolConfig.tool_name == tool_name
+            )
+        )
+        if config is None:
+            config = ToolConfig(
+                workspace_id=workspace_id,
+                tool_name=tool_name,
+                enabled=base_definition.enabled,
+                timeout_ms=base_definition.timeout_ms,
+                max_retries=base_definition.max_retries,
+            )
+            self.db.add(config)
+            self.db.flush()
+        if enabled is not None:
+            config.enabled = enabled
+        if update_timeout:
+            config.timeout_ms = timeout_ms
+        if max_retries is not None:
+            config.max_retries = max_retries
+        self.db.commit()
+        return self.get_tool_definition(workspace_id=workspace_id, tool_name=tool_name)
+
+    def _definitions_for_workspace(self, *, workspace_id: UUID) -> dict[str, ToolDefinition]:
+        definitions_by_name = self._base_definitions(workspace_id=workspace_id)
+        configs = {
+            config.tool_name: config
+            for config in self.db.scalars(
+                select(ToolConfig).where(ToolConfig.workspace_id == workspace_id)
+            ).all()
+        }
+        return {
+            name: _apply_config(definition, configs.get(name))
+            for name, definition in definitions_by_name.items()
+        }
+
+    def _base_definitions(self, *, workspace_id: UUID) -> dict[str, ToolDefinition]:
+        definitions_by_name = {
+            definition.name: definition for definition in RUNTIME_TOOL_DEFINITIONS
+        }
+        discovered_names = {
+            name
+            for name in self.db.scalars(
+                select(ToolCall.tool_name).where(ToolCall.workspace_id == workspace_id).distinct()
+            ).all()
+        }
+        for name in sorted(discovered_names - definitions_by_name.keys()):
+            definitions_by_name[name] = _discovered_tool_definition(name)
+        return definitions_by_name
+
     def _usage(self, *, workspace_id: UUID, tool_name: str) -> ToolUsageSummary:
-        total_calls = self.db.scalar(
-            select(func.count(ToolCall.id)).where(
-                ToolCall.workspace_id == workspace_id, ToolCall.tool_name == tool_name
+        total_calls = (
+            self.db.scalar(
+                select(func.count(ToolCall.id)).where(
+                    ToolCall.workspace_id == workspace_id, ToolCall.tool_name == tool_name
+                )
             )
-        ) or 0
-        failed_calls = self.db.scalar(
-            select(func.count(ToolCall.id)).where(
-                ToolCall.workspace_id == workspace_id,
-                ToolCall.tool_name == tool_name,
-                ToolCall.status == GraphStepStatus.failed,
+            or 0
+        )
+        failed_calls = (
+            self.db.scalar(
+                select(func.count(ToolCall.id)).where(
+                    ToolCall.workspace_id == workspace_id,
+                    ToolCall.tool_name == tool_name,
+                    ToolCall.status == GraphStepStatus.failed,
+                )
             )
-        ) or 0
-        average_latency = self.db.scalar(
-            select(func.coalesce(func.avg(ToolCall.latency_ms), 0.0)).where(
-                ToolCall.workspace_id == workspace_id, ToolCall.tool_name == tool_name
+            or 0
+        )
+        average_latency = (
+            self.db.scalar(
+                select(func.coalesce(func.avg(ToolCall.latency_ms), 0.0)).where(
+                    ToolCall.workspace_id == workspace_id, ToolCall.tool_name == tool_name
+                )
             )
-        ) or 0.0
+            or 0.0
+        )
         last_used_at = self.db.scalar(
             select(func.max(ToolCall.created_at)).where(
                 ToolCall.workspace_id == workspace_id, ToolCall.tool_name == tool_name
@@ -168,6 +243,32 @@ class ToolService:
         ]
 
 
+def _apply_config(definition: ToolDefinition, config: ToolConfig | None) -> ToolDefinition:
+    if config is None:
+        return definition
+    return ToolDefinition(
+        name=definition.name,
+        description=definition.description,
+        framework=definition.framework,
+        enabled=config.enabled,
+        permissions=definition.permissions,
+        timeout_ms=config.timeout_ms,
+        max_retries=config.max_retries,
+        retry_policy=_retry_policy(config.max_retries),
+        input_schema=definition.input_schema,
+        output_schema=definition.output_schema,
+        related_workflow_nodes=definition.related_workflow_nodes,
+    )
+
+
+def _retry_policy(max_retries: int) -> str:
+    if max_retries <= 0:
+        return "No automatic retry; failures are persisted in graph step/tool state."
+    if max_retries == 1:
+        return "1 automatic retry before routing failure state to human review."
+    return f"{max_retries} automatic retries before routing failure state to human review."
+
+
 def _tool_result_summary(output_json: str) -> str:
     try:
         output = json.loads(output_json)
@@ -175,6 +276,8 @@ def _tool_result_summary(output_json: str) -> str:
         return "Unparseable tool output"
     if not isinstance(output, dict):
         return "Tool output recorded"
+    if output.get("tool_disabled") is True:
+        return "Tool disabled by workspace config"
     if output.get("no_source") is True:
         return "No source returned"
     result_count = output.get("result_count")
@@ -191,6 +294,7 @@ def _discovered_tool_definition(name: str) -> ToolDefinition:
         enabled=True,
         permissions=["workspace:read", "agents:run"],
         timeout_ms=None,
+        max_retries=0,
         retry_policy="Unknown; discovered from historical tool calls.",
         input_schema={},
         output_schema={},

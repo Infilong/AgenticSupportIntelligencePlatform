@@ -1,4 +1,10 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.models.user import User
+from app.models.workspace import WorkspaceMember, WorkspaceRole
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -51,6 +57,14 @@ def create_agent(client: TestClient, token: str, workspace_id: str) -> dict:
     return response.json()
 
 
+def add_member(db_session: Session, *, workspace_id: str, user_email: str) -> None:
+    user = db_session.query(User).filter_by(email=user_email).one()
+    db_session.add(
+        WorkspaceMember(workspace_id=UUID(workspace_id), user_id=user.id, role=WorkspaceRole.member)
+    )
+    db_session.commit()
+
+
 def test_tools_catalog_exposes_runtime_tool_and_usage_from_graph_runs(client: TestClient) -> None:
     register(client, "tools-owner@example.com")
     token = login(client, "tools-owner@example.com")
@@ -76,6 +90,7 @@ def test_tools_catalog_exposes_runtime_tool_and_usage_from_graph_runs(client: Te
     tool = tools[0]
     assert tool["framework"] == "langchain_core.tools.StructuredTool"
     assert tool["enabled"] is True
+    assert tool["max_retries"] == 0
     assert tool["input_schema"]["properties"]["language"]["enum"] == ["en", "ja", "zh"]
     assert tool["usage"]["total_calls"] == 1
     assert tool["usage"]["failed_calls"] == 0
@@ -111,3 +126,114 @@ def test_tools_catalog_is_workspace_scoped(client: TestClient) -> None:
     assert other_tool["name"] == "search_documents"
     assert other_tool["usage"]["total_calls"] == 0
     assert other_tool["recent_calls"] == []
+
+
+def test_owner_can_configure_tool_defaults(client: TestClient) -> None:
+    register(client, "tools-config-owner@example.com")
+    token = login(client, "tools-config-owner@example.com")
+    workspace = create_workspace(client, token)
+
+    updated = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/tools/search_documents/config",
+        headers=auth_headers(token),
+        json={"enabled": False, "timeout_ms": 2500, "max_retries": 2},
+    )
+    listed = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/tools",
+        headers=auth_headers(token),
+    )
+
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["name"] == "search_documents"
+    assert body["enabled"] is False
+    assert body["timeout_ms"] == 2500
+    assert body["max_retries"] == 2
+    assert "2 automatic retries" in body["retry_policy"]
+    assert listed.status_code == 200
+    assert listed.json()[0]["enabled"] is False
+    assert listed.json()[0]["timeout_ms"] == 2500
+
+
+def test_tool_configuration_requires_owner_and_is_workspace_scoped(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "tools-config-rbac-owner@example.com")
+    owner_token = login(client, "tools-config-rbac-owner@example.com")
+    workspace = create_workspace(client, owner_token)
+    register(client, "tools-config-rbac-member@example.com")
+    member_token = login(client, "tools-config-rbac-member@example.com")
+    add_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="tools-config-rbac-member@example.com",
+    )
+    register(client, "tools-config-rbac-other@example.com")
+    other_token = login(client, "tools-config-rbac-other@example.com")
+
+    member_update = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/tools/search_documents/config",
+        headers=auth_headers(member_token),
+        json={"enabled": False},
+    )
+    other_update = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/tools/search_documents/config",
+        headers=auth_headers(other_token),
+        json={"enabled": False},
+    )
+    unknown_tool = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/tools/not_real/config",
+        headers=auth_headers(owner_token),
+        json={"enabled": False},
+    )
+
+    assert member_update.status_code == 403
+    assert member_update.json()["detail"]["code"] == "workspace_owner_required"
+    assert other_update.status_code == 404
+    assert other_update.json()["detail"]["code"] == "workspace_not_found"
+    assert unknown_tool.status_code == 404
+    assert unknown_tool.json()["detail"]["code"] == "tool_not_found"
+
+
+def test_disabled_retrieval_tool_routes_agent_to_review_and_records_failed_tool_call(
+    client: TestClient,
+) -> None:
+    register(client, "tools-disabled-owner@example.com")
+    token = login(client, "tools-disabled-owner@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"])
+    agent = create_agent(client, token, workspace["id"])
+    config = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/tools/search_documents/config",
+        headers=auth_headers(token),
+        json={"enabled": False, "max_retries": 1},
+    )
+    assert config.status_code == 200
+
+    run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+    tools = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/tools",
+        headers=auth_headers(token),
+    )
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{run.json()['id']}/trace",
+        headers=auth_headers(token),
+    )
+
+    assert run.status_code == 201
+    assert run.json()["route_decision"] == "human_review"
+    assert tools.status_code == 200
+    tool = tools.json()[0]
+    assert tool["enabled"] is False
+    assert tool["usage"]["failed_calls"] == 1
+    assert tool["recent_calls"][0]["result_summary"] == "Tool disabled by workspace config"
+    retrieve_step = next(
+        step for step in trace.json()["steps"] if step["step_name"] == "retrieve_evidence"
+    )
+    assert retrieve_step["status"] == "failed"
+    assert retrieve_step["tool_calls"][0]["status"] == "failed"
+    assert "disabled" in retrieve_step["error_message"]
