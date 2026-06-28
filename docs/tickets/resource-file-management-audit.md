@@ -28,3 +28,10 @@ Documentation-only ticket. Existing backend behavior is covered by `backend/test
 - Confirm the Data and Knowledge pages are understandable visually: users should see folders, current folder, upload/import target, search, move, delete, and bounded inspectors.
 - Confirm destructive controls are disabled or hidden clearly when the user lacks permission.
 - Confirm future upload/file-list tickets follow the same pattern before implementation is accepted.
+
+## 2026-06-29 Follow-up Audit
+- File/import-backed resources remain folder-bounded in the UI: datasets, knowledge documents, and evaluation runs.
+- Knowledge documents and datasets have permission-gated delete controls in both backend and frontend.
+- Evaluation runs are archived instead of hard-deleted so result evidence, cost metrics, and audit history remain inspectable.
+- Prompt templates, model configs, tool configs, and guardrail policies are not file uploads, but they still need searchable/archivable operations boards if their lists continue to grow. Add folders only when these become user-managed libraries rather than small admin catalogs.
+- Future tickets must not add an upload/import field without a matching management path: inspect, edit or reindex where relevant, move/organize, and delete or archive with permission checks.

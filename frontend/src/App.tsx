@@ -1100,6 +1100,7 @@ export function App() {
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
   const [evaluationName, setEvaluationName] = useState("Smoke Evaluation");
+  const [evaluationAgentId, setEvaluationAgentId] = useState("");
   const [evaluationFolderId, setEvaluationFolderId] = useState("");
   const [selectedEvaluationFolderId, setSelectedEvaluationFolderId] = useState("all");
   const [evaluationFolderName, setEvaluationFolderName] = useState("Regression packs");
@@ -1164,6 +1165,12 @@ export function App() {
     () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
     [agents, selectedAgentId],
   );
+  const effectiveEvaluationAgentId = evaluationAgentId;
+  const evaluationAgentLabel = (agentId: string | null | undefined) => {
+    if (!agentId) return "Default evaluation agent";
+    const agent = agents.find((item) => item.id === agentId);
+    return agent ? agent.name : `Unknown agent ${shortId(agentId)}`;
+  };
   const permissionList = workspaceMembership?.permissions ?? [];
   const permissionKey = permissionList.join("|");
   const canAccessTab = (tab: TabDefinition) => {
@@ -1901,6 +1908,7 @@ export function App() {
     setAgents(data);
     const nextAgent = data.find((agent) => agent.id === selectedAgentId) ?? data[0];
     setSelectedAgentId(nextAgent?.id ?? "");
+    setEvaluationAgentId((current) => current || nextAgent?.id || "");
     if (nextAgent) {
       applyAgentControls(nextAgent);
       await Promise.all([loadAgentSummary(nextAgent.id), loadAgentWorkflow(nextAgent.id)]);
@@ -2238,7 +2246,7 @@ export function App() {
           folder_id: evaluationFolderId || null,
           jsonl_cases: evaluationCases,
           modes: evaluationModes,
-          agent_id: selectedAgentId || null,
+          agent_id: effectiveEvaluationAgentId || null,
         },
       });
       setEvaluationDetail(detail);
@@ -4748,7 +4756,15 @@ export function App() {
       const matchesStatus = evaluationStatusFilter === "all" || run.status === evaluationStatusFilter;
       const matchesView = evaluationRunMatchesView(run, evaluationRunView, selectedRunId, showArchivedEvaluations);
       const modeText = parseEvaluationModes(run.modes_json).map(friendlyModeName).join(" ");
-      return matchesStatus && matchesView && matchesSearch(evaluationSearch, run.name, run.status, run.id, modeText);
+      return matchesStatus && matchesView && matchesSearch(
+        evaluationSearch,
+        run.name,
+        run.status,
+        run.id,
+        modeText,
+        run.agent_config_id,
+        evaluationAgentLabel(run.agent_config_id),
+      );
     });
     const displayedEvaluationRuns = filteredEvaluationRuns.slice(0, MAX_VISIBLE_EVALUATION_RUNS);
     const hiddenEvaluationRunCount = Math.max(filteredEvaluationRuns.length - displayedEvaluationRuns.length, 0);
@@ -4767,6 +4783,7 @@ export function App() {
     const selectedFailureCount = evaluationDetail?.results.filter((result) => !result.passed).length ?? 0;
     const selectedLanguages = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.language))] : [];
     const selectedResultModes = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.mode))] : [];
+    const selectedEvaluationAgentName = evaluationDetail ? evaluationAgentLabel(evaluationDetail.run.agent_config_id) : "No run selected";
 
     return (
       <div className="evaluation-console">
@@ -4804,6 +4821,16 @@ export function App() {
               <Badge tone={evaluationModes.length ? "good" : "warn"}>{evaluationModes.length} modes</Badge>
             </div>
             <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} /></label>
+            <label>
+              Evaluation target agent
+              <select value={effectiveEvaluationAgentId} onChange={(event) => setEvaluationAgentId(event.target.value)}>
+                <option value="">Default evaluation agent</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>{agent.name}{agent.archived_at ? " (archived)" : ""}</option>
+                ))}
+              </select>
+              <small>Choose a target agent to link results to its quality posture, or leave blank to use the system-v1 default evaluation agent.</small>
+            </label>
             <div className="folder-scope-banner">
               <span>Current folder</span>
               <strong>{selectedEvaluationFolderLabel}</strong>
@@ -4857,6 +4884,11 @@ export function App() {
                 <small>{evaluationDetail ? `${evaluationDetail.results.length} results · ${selectedFailureCount} failures` : "Run or select an evaluation to inspect results."}</small>
               </div>
               <div>
+                <span>Target agent</span>
+                <strong>{selectedEvaluationAgentName}</strong>
+                <small>{evaluationDetail?.run.agent_config_id ? shortId(evaluationDetail.run.agent_config_id) : "System-v1 default when no agent is linked"}</small>
+              </div>
+              <div>
                 <span>Coverage</span>
                 <strong>{selectedLanguages.length ? selectedLanguages.map((language) => language.toUpperCase()).join(" / ") : "No languages"}</strong>
                 <small>{selectedResultModes.length ? selectedResultModes.map(friendlyModeName).join(" · ") : "No modes loaded"}</small>
@@ -4875,7 +4907,7 @@ export function App() {
               ))}
             </div>
             <div className="library-toolbar evaluation-toolbar">
-              <label>Search runs<input value={evaluationSearch} onChange={(event) => setEvaluationSearch(event.target.value)} placeholder="Run name, mode, status, or id" /></label>
+              <label>Search runs<input value={evaluationSearch} onChange={(event) => setEvaluationSearch(event.target.value)} placeholder="Run name, agent, mode, status, or id" /></label>
               <label>Status<select value={evaluationStatusFilter} onChange={(event) => setEvaluationStatusFilter(event.target.value)}>
                 <option value="all">All statuses</option>
                 <option value="completed">Completed</option>
@@ -4895,6 +4927,7 @@ export function App() {
                       <Badge tone={run.archived_at ? "neutral" : toneForStatus(run.status)}>{run.archived_at ? "archived" : run.status}</Badge>
                     </button>
                     <span>{run.total_cases} cases · {folderLabel("evaluation_run", run.folder_id)} · {formatDate(run.created_at)}</span>
+                    <span>Agent: {evaluationAgentLabel(run.agent_config_id)}</span>
                     <span>{modes.length ? modes.map(friendlyModeName).join(" · ") : "No modes recorded"}</span>
                     {run.archived_at && <span>Archived {formatDate(run.archived_at)}</span>}
                     <div className="resource-actions">
@@ -4928,7 +4961,7 @@ export function App() {
             </div>
             {evaluationDetail && <Badge tone={toneForStatus(evaluationDetail.run.status)}>{evaluationDetail.run.status}</Badge>}
           </div>
-          {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} /> : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
+          {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} agents={agents} /> : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
         </section>
       </div>
     );
@@ -7116,7 +7149,7 @@ function evaluationRunMatchesView(
   return includeArchivedInBroadViews || !run.archived_at;
 }
 
-function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
+function EvaluationDashboard({ detail, agents }: { detail: EvaluationDetail; agents: Agent[] }) {
   const passCount = detail.results.filter((result) => result.passed).length;
   const failCount = detail.results.length - passCount;
   const averageLatency = detail.results.length
@@ -7126,6 +7159,8 @@ function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
   const totalCost = detail.results.reduce((sum, result) => sum + result.estimated_cost, 0);
   const languages = [...new Set(detail.results.map((result) => result.language))];
   const modes = [...new Set(detail.results.map((result) => result.mode))];
+  const targetAgent = detail.run.agent_config_id ? agents.find((agent) => agent.id === detail.run.agent_config_id) : null;
+  const targetAgentLabel = targetAgent?.name ?? (detail.run.agent_config_id ? `Unknown agent ${shortId(detail.run.agent_config_id)}` : "Default evaluation agent");
   const groupedMetrics = detail.metrics.reduce<Record<string, EvaluationMetric[]>>((groups, metric) => {
     const key = `${metric.mode}:${metric.language}`;
     groups[key] = [...(groups[key] ?? []), metric];
@@ -7136,6 +7171,7 @@ function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
     <div className="evaluation-dashboard">
       <div className="metric-grid">
         <Metric label="Run" value={detail.run.name} />
+        <Metric label="Target agent" value={targetAgentLabel} />
         <Metric label="Pass rate" value={detail.results.length ? `${Math.round((passCount / detail.results.length) * 100)}%` : "-"} />
         <Metric label="Failed cases" value={failCount} />
         <Metric label="Languages" value={languages.length ? languages.join(", ") : "-"} />
