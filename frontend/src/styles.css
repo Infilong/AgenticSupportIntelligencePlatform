@@ -2785,3 +2785,77 @@ th {
     position: static;
   }
 }
+
+.system-health-console {
+  display: grid;
+  gap: 16px;
+}
+
+.system-health-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 18px;
+  align-items: stretch;
+  background: var(--surface-muted);
+}
+
+.system-check-grid,
+.system-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.system-check-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 14px;
+}
+
+.system-check-card p {
+  margin: 0;
+  color: var(--text-subtle);
+  line-height: 1.45;
+}
+
+.system-section-card {
+  min-width: 0;
+}
+
+.system-metric-list {
+  display: grid;
+  gap: 8px;
+}
+
+.system-metric-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 10px 12px;
+}
+
+.system-metric-row span,
+.system-metric-row strong,
+.system-metric-row small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.system-metric-row span {
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  font-weight: 740;
+}
+
+.system-metric-row small {
+  grid-column: 1 / -1;
+  color: var(--text-subtle);
+  line-height: 1.35;
+}

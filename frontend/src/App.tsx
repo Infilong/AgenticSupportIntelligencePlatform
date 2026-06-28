@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models";
+type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models" | "system";
 type WorkspaceMemberRole = "owner" | "member";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin";
 
@@ -544,6 +544,39 @@ type AuditLog = {
   created_at: string;
 };
 
+type HealthStatus = "ok" | "warning" | "critical" | "not_configured";
+
+type SystemHealthCheck = {
+  id: string;
+  label: string;
+  status: HealthStatus;
+  message: string;
+};
+
+type SystemHealthMetric = {
+  label: string;
+  value: string | number;
+  status: HealthStatus;
+  detail: string | null;
+};
+
+type SystemHealthSection = {
+  id: string;
+  title: string;
+  status: HealthStatus;
+  summary: string;
+  metrics: SystemHealthMetric[];
+};
+
+type SystemHealth = {
+  workspace_id: string;
+  generated_at: string;
+  overall_status: HealthStatus;
+  checks: SystemHealthCheck[];
+  sections: SystemHealthSection[];
+};
+
+
 
 type PromptTemplate = {
   id: string;
@@ -591,6 +624,7 @@ const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purp
   { id: "members", label: "Members", token: "MB", group: "Admin", purpose: "Manage workspace members, owner rights, and available permissions." },
   { id: "prompts", label: "Prompts", token: "PR", group: "Admin", purpose: "Version and activate LangChain prompt templates by language." },
   { id: "models", label: "Models", token: "MO", group: "Admin", purpose: "Control provider, model purpose, context, and token pricing." },
+  { id: "system", label: "System health", token: "SH", group: "Admin", purpose: "Inspect provider readiness, limits, failures, data, and governance posture." },
   { id: "audit", label: "Audit", token: "AU", group: "Admin", purpose: "Inspect accountable workspace and AI operations changes." },
 ];
 
@@ -753,6 +787,13 @@ function Badge({ tone = "neutral", children }: { tone?: "neutral" | "good" | "wa
   return <span className={`badge badge-${tone}`}>{children}</span>;
 }
 
+function healthTone(status: HealthStatus): "neutral" | "good" | "warn" | "bad" {
+  if (status === "ok") return "good";
+  if (status === "critical") return "bad";
+  if (status === "warning") return "warn";
+  return "neutral";
+}
+
 function JsonBlock({ value }: { value: unknown }) {
   const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return <pre className="json-block">{text}</pre>;
@@ -834,6 +875,7 @@ export function App() {
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [attentionSummary, setAttentionSummary] = useState<AttentionSummary | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
@@ -903,6 +945,7 @@ export function App() {
     { label: "Members", done: workspaceMembers.length > 0, tab: "members" as Tab },
     { label: "Prompts", done: promptTemplates.some((template) => template.active), tab: "prompts" as Tab },
     { label: "Models", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
+    { label: "System health", done: Boolean(systemHealth), tab: "system" as Tab },
     { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
   ];
   const nextStep = setupSteps.find((step) => !step.done);
@@ -1016,6 +1059,7 @@ export function App() {
       loadGuardrails(),
       loadEvaluations(),
       loadCosts(),
+      loadSystemHealth(),
       loadAuditLogs(),
       loadPromptTemplates(),
       loadModelConfigs(),
@@ -1719,6 +1763,12 @@ export function App() {
     setCostSummary(data);
   }
 
+  async function loadSystemHealth() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<SystemHealth>(workspacePath("/system-health"), { token });
+    setSystemHealth(data);
+  }
+
   async function loadAttentionSummary() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<AttentionSummary>(workspacePath("/attention"), { token });
@@ -1964,6 +2014,7 @@ export function App() {
             <Metric label="Pending reviews" value={pendingReviews} />
             <Metric label="AI runs" value={costSummary?.total_runs ?? 0} />
             <Metric label="Token cost" value={formatCost(costSummary?.total_estimated_cost)} />
+            <Metric label="System health" value={systemHealth ? systemHealth.overall_status : "unknown"} />
             <Metric label="Audit events" value={auditLogs.length} />
           </section>
         )}
@@ -2003,6 +2054,8 @@ export function App() {
         return PromptsPanel();
       case "models":
         return ModelsPanel();
+      case "system":
+        return SystemHealthPanel();
       default:
         return OverviewPanel();
     }
@@ -4019,6 +4072,115 @@ export function App() {
             ))}
           </div>
           {promptTemplates.length === 0 && <EmptyState title="No prompt templates" detail="Defaults are created on first agent run, or create a version manually." />}
+        </section>
+      </div>
+    );
+  }
+
+  function SystemHealthPanel() {
+    if (!systemHealth) {
+      return (
+        <EmptyState
+          title="System health is loading"
+          detail="Refresh the workspace to inspect provider readiness, limits, failures, and governance posture."
+        />
+      );
+    }
+    const criticalSections = systemHealth.sections.filter((section) => section.status === "critical");
+    const warningSections = systemHealth.sections.filter((section) => section.status === "warning");
+    const notConfiguredMetrics = systemHealth.sections.flatMap((section) =>
+      section.metrics.filter((metric) => metric.status === "not_configured"),
+    );
+
+    return (
+      <div className="system-health-console">
+        <section className="panel system-health-hero">
+          <div>
+            <p className="eyebrow">System health</p>
+            <h2>Workspace readiness and operational risk</h2>
+            <p className="muted">This page reports real backend state: provider readiness, token budget posture, failed runs, data coverage, guardrails, and auditability.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Overall status</span>
+            <strong>{systemHealth.overall_status}</strong>
+            <p>Generated {formatDate(systemHealth.generated_at)}</p>
+            <button type="button" onClick={() => void runAction("System health refreshed", loadSystemHealth)}>Refresh health</button>
+          </div>
+        </section>
+
+        <section className="settings-summary-grid">
+          <Metric label="Runtime checks" value={systemHealth.checks.length} />
+          <Metric label="Critical sections" value={criticalSections.length} />
+          <Metric label="Warning sections" value={warningSections.length} />
+          <Metric label="Planned controls" value={notConfiguredMetrics.length} />
+        </section>
+
+        <section className="system-check-grid">
+          {systemHealth.checks.map((check) => (
+            <article className="system-check-card" key={check.id}>
+              <div className="row-head">
+                <strong>{check.label}</strong>
+                <Badge tone={healthTone(check.status)}>{check.status}</Badge>
+              </div>
+              <p>{check.message}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="system-section-grid">
+          {systemHealth.sections.map((section) => (
+            <article className="panel stack system-section-card" key={section.id}>
+              <div className="row-head">
+                <div>
+                  <h3>{section.title}</h3>
+                  <p className="muted">{section.summary}</p>
+                </div>
+                <Badge tone={healthTone(section.status)}>{section.status}</Badge>
+              </div>
+              <div className="system-metric-list">
+                {section.metrics.map((metric) => (
+                  <div className="system-metric-row" key={`${section.id}-${metric.label}`}>
+                    <span>{metric.label}</span>
+                    <strong>{metric.value}</strong>
+                    <Badge tone={healthTone(metric.status)}>{metric.status}</Badge>
+                    {metric.detail && <small>{metric.detail}</small>}
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="panel stack full-width">
+          <div className="row-head">
+            <div>
+              <h3>Admin follow-up paths</h3>
+              <p className="muted">Use these pages to fix the health signals instead of editing fake local state.</p>
+            </div>
+            <Badge>{systemHealth.overall_status}</Badge>
+          </div>
+          <div className="overview-admin-grid">
+            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("models")}>
+              <span>Provider routes</span>
+              <strong>Models</strong>
+              <small>Configure active provider, model, context, and pricing.</small>
+            </button>
+            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("tasks")}>
+              <span>Failures and queues</span>
+              <strong>My Tasks</strong>
+              <small>Review backend-ranked operational work.</small>
+            </button>
+            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("costs")}>
+              <span>Token spend</span>
+              <strong>Usage & costs</strong>
+              <small>Inspect ledger cost, latency, and cache behavior.</small>
+            </button>
+            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("audit")}>
+              <span>Accountability</span>
+              <strong>Audit</strong>
+              <small>Inspect workspace changes and AI operations events.</small>
+            </button>
+          </div>
         </section>
       </div>
     );
