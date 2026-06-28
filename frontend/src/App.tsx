@@ -425,6 +425,13 @@ type GuardrailFailure = {
   created_at: string;
 };
 
+type GuardrailPolicyDraft = {
+  enabled: boolean;
+  severity: "low" | "medium" | "high";
+  action_on_fail: "route_to_human_review" | "record_only";
+  threshold: string;
+};
+
 type GuardrailCatalogItem = {
   guardrail_type: string;
   label: string;
@@ -433,7 +440,9 @@ type GuardrailCatalogItem = {
   enabled: boolean;
   configurable: boolean;
   default_severity: string;
-  action_on_fail: string;
+  severity: "low" | "medium" | "high";
+  action_on_fail: "route_to_human_review" | "record_only" | string;
+  threshold: number | null;
   related_workflow_nodes: string[];
   usage: {
     total_evaluations: number;
@@ -867,6 +876,7 @@ export function App() {
   const [tools, setTools] = useState<ToolCatalogItem[]>([]);
   const [toolConfigDrafts, setToolConfigDrafts] = useState<Record<string, { enabled: boolean; timeout_ms: string; max_retries: string }>>({});
   const [guardrails, setGuardrails] = useState<GuardrailCatalogItem[]>([]);
+  const [guardrailPolicyDrafts, setGuardrailPolicyDrafts] = useState<Record<string, GuardrailPolicyDraft>>({});
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
@@ -925,6 +935,7 @@ export function App() {
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const canManageResources = Boolean(workspaceMembership?.can_manage_resources);
   const canConfigureTools = Boolean(workspaceMembership?.permissions.includes("tools:configure"));
+  const canConfigureGuardrails = Boolean(workspaceMembership?.permissions.includes("guardrails:configure"));
   const workspaceRole = !selectedWorkspaceId
     ? "No workspace"
     : workspaceMembership
@@ -1726,6 +1737,49 @@ export function App() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<GuardrailCatalogItem[]>(workspacePath("/guardrails"), { token });
     setGuardrails(data);
+    setGuardrailPolicyDrafts((current) => {
+      const next = { ...current };
+      for (const guardrail of data) {
+        if (!next[guardrail.guardrail_type]) {
+          next[guardrail.guardrail_type] = {
+            enabled: guardrail.enabled,
+            severity: guardrail.severity,
+            action_on_fail: guardrail.action_on_fail === "record_only" ? "record_only" : "route_to_human_review",
+            threshold: guardrail.threshold == null ? "" : String(guardrail.threshold),
+          };
+        }
+      }
+      return next;
+    });
+  }
+
+  async function saveGuardrailPolicy(guardrail: GuardrailCatalogItem) {
+    const draft = guardrailPolicyDrafts[guardrail.guardrail_type] ?? {
+      enabled: guardrail.enabled,
+      severity: guardrail.severity,
+      action_on_fail: guardrail.action_on_fail === "record_only" ? "record_only" : "route_to_human_review",
+      threshold: guardrail.threshold == null ? "" : String(guardrail.threshold),
+    };
+    await runAction("Guardrail policy saved", async () => {
+      await apiRequest<GuardrailCatalogItem>(workspacePath(`/guardrails/${guardrail.guardrail_type}/policy`), {
+        method: "PATCH",
+        token,
+        body: {
+          enabled: draft.enabled,
+          severity: draft.severity,
+          action_on_fail: draft.action_on_fail,
+          threshold: draft.threshold.trim() ? Number(draft.threshold) : null,
+        },
+      });
+      setGuardrailPolicyDrafts((current) => {
+        const next = { ...current };
+        delete next[guardrail.guardrail_type];
+        return next;
+      });
+      await loadGuardrails();
+      await loadAuditLogs();
+      await loadSystemHealth();
+    });
   }
 
   async function claimReview(review: HumanReview) {
@@ -3346,7 +3400,15 @@ export function App() {
 
         <section className="guardrail-workbench">
           <div className="guardrail-grid">
-            {guardrails.map((guardrail) => (
+            {guardrails.map((guardrail) => {
+              const draft = guardrailPolicyDrafts[guardrail.guardrail_type] ?? {
+                enabled: guardrail.enabled,
+                severity: guardrail.severity,
+                action_on_fail: guardrail.action_on_fail === "record_only" ? "record_only" : "route_to_human_review",
+                threshold: guardrail.threshold == null ? "" : String(guardrail.threshold),
+              };
+              const thresholdSupported = guardrail.guardrail_type === "confidence_threshold";
+              return (
               <article className="panel stack guardrail-card" key={guardrail.guardrail_type}>
                 <div className="row-head">
                   <div>
@@ -3363,10 +3425,88 @@ export function App() {
                   <Metric label="Last failed" value={formatDate(guardrail.usage.last_failed_at)} />
                 </div>
                 <div className="tool-chip-row">
-                  <Badge tone={toneForReviewReason(guardrail.guardrail_type)}>{guardrail.default_severity}</Badge>
+                  <Badge tone={toneForReviewReason(guardrail.guardrail_type)}>{guardrail.severity}</Badge>
                   <Badge>{guardrail.configurable ? "configurable" : "fixed policy"}</Badge>
                   <Badge>{guardrail.action_on_fail}</Badge>
+                  {thresholdSupported && <Badge>threshold {guardrail.threshold ?? "default"}</Badge>}
                   {guardrail.related_workflow_nodes.map((node) => <Badge key={node}>{formatStepName(node)}</Badge>)}
+                </div>
+                <div className="tool-config-panel">
+                  <div className="row-head">
+                    <div>
+                      <strong>Workspace policy</strong>
+                      <p className="muted">Applied by route_review_or_finalize and post-run guardrail evaluation.</p>
+                    </div>
+                    <Badge tone={guardrail.configurable && canConfigureGuardrails ? "good" : "warn"}>
+                      {guardrail.configurable ? (canConfigureGuardrails ? "owner editable" : "read only") : "fixed safety policy"}
+                    </Badge>
+                  </div>
+                  <div className="tool-config-grid guardrail-policy-grid">
+                    <label className="check-row single-check settings-toggle">
+                      <input
+                        type="checkbox"
+                        checked={draft.enabled}
+                        disabled={!guardrail.configurable || !canConfigureGuardrails || loading}
+                        onChange={(event) => setGuardrailPolicyDrafts((current) => ({
+                          ...current,
+                          [guardrail.guardrail_type]: { ...draft, enabled: event.target.checked },
+                        }))}
+                      />
+                      Enabled
+                    </label>
+                    <label>
+                      Severity
+                      <select
+                        value={draft.severity}
+                        disabled={!guardrail.configurable || !canConfigureGuardrails || loading}
+                        onChange={(event) => setGuardrailPolicyDrafts((current) => ({
+                          ...current,
+                          [guardrail.guardrail_type]: { ...draft, severity: event.target.value as GuardrailPolicyDraft["severity"] },
+                        }))}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </select>
+                    </label>
+                    <label>
+                      Failure action
+                      <select
+                        value={draft.action_on_fail}
+                        disabled={!guardrail.configurable || !canConfigureGuardrails || loading}
+                        onChange={(event) => setGuardrailPolicyDrafts((current) => ({
+                          ...current,
+                          [guardrail.guardrail_type]: { ...draft, action_on_fail: event.target.value as GuardrailPolicyDraft["action_on_fail"] },
+                        }))}
+                      >
+                        <option value="route_to_human_review">Route to human review</option>
+                        <option value="record_only">Record only</option>
+                      </select>
+                    </label>
+                    <label>
+                      Threshold
+                      <input
+                        inputMode="decimal"
+                        placeholder={thresholdSupported ? "0.50" : "not supported"}
+                        value={draft.threshold}
+                        disabled={!thresholdSupported || !guardrail.configurable || !canConfigureGuardrails || loading}
+                        onChange={(event) => setGuardrailPolicyDrafts((current) => ({
+                          ...current,
+                          [guardrail.guardrail_type]: { ...draft, threshold: event.target.value },
+                        }))}
+                      />
+                    </label>
+                  </div>
+                  <div className="run-action-bar">
+                    <button
+                      type="button"
+                      onClick={() => void saveGuardrailPolicy(guardrail)}
+                      disabled={!guardrail.configurable || !canConfigureGuardrails || loading}
+                    >
+                      Save guardrail policy
+                    </button>
+                    <button type="button" onClick={() => setActiveTab("trace")} disabled={guardrail.recent_failures.length === 0}>Open traces</button>
+                  </div>
                 </div>
                 <div className="tool-call-list">
                   <div className="row-head">
@@ -3393,7 +3533,8 @@ export function App() {
                   {guardrail.recent_failures.length === 0 && <EmptyState title="No failures" detail="Failures appear here after a run is blocked or routed." />}
                 </div>
               </article>
-            ))}
+              );
+            })}
             {guardrails.length === 0 && <EmptyState title="No guardrails loaded" detail="Refresh the workspace or run an agent to load runtime guardrail policies." />}
           </div>
 
@@ -3423,7 +3564,7 @@ export function App() {
               </button>
             ))}
             {recentFailures.length === 0 && <EmptyState title="No failures" detail="Guardrail failures will appear here with trace links." />}
-            <p className="permission-note">Policy editing is intentionally not exposed yet. This page reflects runtime-enforced guardrails and persisted results.</p>
+            <p className="permission-note">Policy editing is owner-gated. Fixed safety guardrails remain enforced; configurable policies are applied by the backend runtime and recorded in audit logs.</p>
           </aside>
         </section>
       </div>
@@ -4281,6 +4422,10 @@ export function App() {
               <button type="button" onClick={() => setActiveTab("tools")}>
                 <strong>Tool defaults</strong>
                 <span>{tools.length} tools · {canConfigureTools ? "owner editable" : "read only"}</span>
+              </button>
+              <button type="button" onClick={() => setActiveTab("guardrails")}>
+                <strong>Guardrail policies</strong>
+                <span>{guardrails.filter((item) => item.configurable).length} configurable · {canConfigureGuardrails ? "owner editable" : "read only"}</span>
               </button>
               <button type="button" onClick={() => setActiveTab("prompts")}>
                 <strong>Prompt versions</strong>

@@ -27,6 +27,7 @@ from app.models import (  # noqa: F401
     EvaluationRun,
     GraphRun,
     GraphStep,
+    GuardrailPolicy,
     GuardrailResult,
     HumanReview,
     ImportBatch,

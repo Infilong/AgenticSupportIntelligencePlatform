@@ -7,7 +7,16 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.guardrail import GuardrailPolicy
 from app.models.review import GuardrailResult
+
+
+class GuardrailPolicyNotFoundError(ValueError):
+    pass
+
+
+class GuardrailPolicyNotConfigurableError(ValueError):
+    pass
 
 
 @dataclass(frozen=True)
@@ -21,6 +30,16 @@ class GuardrailDefinition:
     default_severity: str
     action_on_fail: str
     related_workflow_nodes: list[str]
+    threshold: float | None = None
+
+
+@dataclass(frozen=True)
+class GuardrailEffectivePolicy:
+    guardrail_type: str
+    enabled: bool
+    severity: str
+    action_on_fail: str
+    threshold: float | None
 
 
 @dataclass(frozen=True)
@@ -44,6 +63,7 @@ class GuardrailFailure:
 @dataclass(frozen=True)
 class GuardrailCatalogItem:
     definition: GuardrailDefinition
+    policy: GuardrailEffectivePolicy
     usage: GuardrailUsageSummary
     recent_failures: list[GuardrailFailure]
 
@@ -61,6 +81,39 @@ RUNTIME_GUARDRAIL_DEFINITIONS = [
         related_workflow_nodes=["route_review_or_finalize"],
     ),
     GuardrailDefinition(
+        guardrail_type="privacy_complaint",
+        label="Privacy complaint",
+        description="Escalates messages reporting possible personal data exposure or privacy harm.",
+        stage="classification routing",
+        enabled=True,
+        configurable=False,
+        default_severity="high",
+        action_on_fail="route_to_human_review",
+        related_workflow_nodes=["classify_intent", "route_review_or_finalize"],
+    ),
+    GuardrailDefinition(
+        guardrail_type="high_safety_risk",
+        label="High safety risk",
+        description="Escalates high-risk safety classifications before finalization.",
+        stage="classification routing",
+        enabled=True,
+        configurable=False,
+        default_severity="high",
+        action_on_fail="route_to_human_review",
+        related_workflow_nodes=["classify_intent", "route_review_or_finalize"],
+    ),
+    GuardrailDefinition(
+        guardrail_type="escalation_needed",
+        label="Escalation needed",
+        description="Routes business-critical escalations to human review.",
+        stage="classification routing",
+        enabled=True,
+        configurable=True,
+        default_severity="medium",
+        action_on_fail="route_to_human_review",
+        related_workflow_nodes=["classify_intent", "route_review_or_finalize"],
+    ),
+    GuardrailDefinition(
         guardrail_type="citation_required",
         label="Citation required",
         description=(
@@ -68,7 +121,7 @@ RUNTIME_GUARDRAIL_DEFINITIONS = [
         ),
         stage="post-retrieval answer validation",
         enabled=True,
-        configurable=False,
+        configurable=True,
         default_severity="medium",
         action_on_fail="route_to_human_review",
         related_workflow_nodes=["retrieve_evidence", "route_review_or_finalize"],
@@ -79,7 +132,7 @@ RUNTIME_GUARDRAIL_DEFINITIONS = [
         description="Blocks answers when no retrieved evidence supports the response.",
         stage="post-retrieval answer validation",
         enabled=True,
-        configurable=False,
+        configurable=True,
         default_severity="high",
         action_on_fail="route_to_human_review",
         related_workflow_nodes=["retrieve_evidence", "route_review_or_finalize"],
@@ -101,7 +154,7 @@ RUNTIME_GUARDRAIL_DEFINITIONS = [
         description="Checks that generated answers preserve the detected user language.",
         stage="post-draft validation",
         enabled=True,
-        configurable=False,
+        configurable=True,
         default_severity="medium",
         action_on_fail="route_to_human_review",
         related_workflow_nodes=["draft_response", "route_review_or_finalize"],
@@ -150,9 +203,12 @@ class GuardrailCatalogService:
         for guardrail_type in sorted(discovered_types - definitions_by_type.keys()):
             definitions_by_type[guardrail_type] = _discovered_guardrail_definition(guardrail_type)
 
+        policies = self.effective_policies(workspace_id=workspace_id)
         return [
             GuardrailCatalogItem(
                 definition=definition,
+                policy=policies.get(definition.guardrail_type)
+                or _effective_policy(definition, None),
                 usage=self._usage(
                     workspace_id=workspace_id,
                     guardrail_type=definition.guardrail_type,
@@ -164,6 +220,70 @@ class GuardrailCatalogService:
             )
             for definition in sorted(definitions_by_type.values(), key=lambda item: item.label)
         ]
+
+    def effective_policies(self, *, workspace_id: UUID) -> dict[str, GuardrailEffectivePolicy]:
+        definitions = {
+            definition.guardrail_type: definition
+            for definition in RUNTIME_GUARDRAIL_DEFINITIONS
+        }
+        stored = {
+            policy.guardrail_type: policy
+            for policy in self.db.scalars(
+                select(GuardrailPolicy).where(GuardrailPolicy.workspace_id == workspace_id)
+            ).all()
+        }
+        return {
+            guardrail_type: _effective_policy(definition, stored.get(guardrail_type))
+            for guardrail_type, definition in definitions.items()
+        }
+
+    def update_policy(
+        self,
+        *,
+        workspace_id: UUID,
+        guardrail_type: str,
+        enabled: bool,
+        severity: str,
+        action_on_fail: str,
+        threshold: float | None,
+    ) -> GuardrailCatalogItem:
+        definition = _definition_for_update(guardrail_type)
+        if threshold is not None and guardrail_type != "confidence_threshold":
+            raise GuardrailPolicyNotConfigurableError(
+                "Threshold is only supported for the confidence_threshold guardrail."
+            )
+        policy = self.db.scalar(
+            select(GuardrailPolicy).where(
+                GuardrailPolicy.workspace_id == workspace_id,
+                GuardrailPolicy.guardrail_type == guardrail_type,
+            )
+        )
+        if policy is None:
+            policy = GuardrailPolicy(
+                workspace_id=workspace_id,
+                guardrail_type=guardrail_type,
+                enabled=enabled,
+                severity=severity,
+                action_on_fail=action_on_fail,
+                threshold=threshold,
+            )
+            self.db.add(policy)
+        else:
+            policy.enabled = enabled
+            policy.severity = severity
+            policy.action_on_fail = action_on_fail
+            policy.threshold = threshold
+        self.db.commit()
+        self.db.refresh(policy)
+        effective = _effective_policy(definition, policy)
+        return GuardrailCatalogItem(
+            definition=definition,
+            policy=effective,
+            usage=self._usage(workspace_id=workspace_id, guardrail_type=definition.guardrail_type),
+            recent_failures=self._recent_failures(
+                workspace_id=workspace_id, guardrail_type=definition.guardrail_type
+            ),
+        )
 
     def _usage(self, *, workspace_id: UUID, guardrail_type: str) -> GuardrailUsageSummary:
         filters = (
@@ -214,6 +334,29 @@ class GuardrailCatalogService:
             )
             for failure in failures
         ]
+
+
+def _definition_for_update(guardrail_type: str) -> GuardrailDefinition:
+    for definition in RUNTIME_GUARDRAIL_DEFINITIONS:
+        if definition.guardrail_type == guardrail_type:
+            if not definition.configurable:
+                raise GuardrailPolicyNotConfigurableError(
+                    f"{guardrail_type} is a fixed runtime guardrail."
+                )
+            return definition
+    raise GuardrailPolicyNotFoundError("Guardrail policy was not found.")
+
+
+def _effective_policy(
+    definition: GuardrailDefinition, policy: GuardrailPolicy | None
+) -> GuardrailEffectivePolicy:
+    return GuardrailEffectivePolicy(
+        guardrail_type=definition.guardrail_type,
+        enabled=policy.enabled if policy is not None else definition.enabled,
+        severity=policy.severity if policy is not None else definition.default_severity,
+        action_on_fail=policy.action_on_fail if policy is not None else definition.action_on_fail,
+        threshold=policy.threshold if policy is not None else definition.threshold,
+    )
 
 
 def _discovered_guardrail_definition(guardrail_type: str) -> GuardrailDefinition:

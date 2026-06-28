@@ -18,6 +18,7 @@ from app.models.agent import (
     ToolCall,
 )
 from app.models.ai import AIRun
+from app.services.guardrail_catalog_service import GuardrailCatalogService, GuardrailEffectivePolicy
 from app.services.langchain_support import (
     CLASSIFICATION_TEMPLATE_TEXT,
     DRAFT_RESPONSE_TEMPLATE_TEXT,
@@ -349,8 +350,11 @@ class SupportAgentGraphRunner:
 
     def route_review_or_finalize(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
-        confidence_threshold = _confidence_threshold(state)
-        route_reasons = _route_reasons(state, confidence_threshold)
+        policies = GuardrailCatalogService(self.db).effective_policies(
+            workspace_id=UUID(state["workspace_id"])
+        )
+        confidence_threshold = _confidence_threshold(state, policies)
+        route_reasons = _route_reasons(state, confidence_threshold, policies)
         decision = "human_review" if route_reasons else "finalize"
         output: SupportAgentState = {
             "route_decision": decision,
@@ -665,27 +669,33 @@ def _agent_model_config_id(state: SupportAgentState) -> UUID | None:
     return UUID(str(raw_value))
 
 
-def _route_reasons(state: SupportAgentState, confidence_threshold: float) -> list[str]:
-    reasons: list[str] = []
-    if state.get("model_provider_failure"):
-        reasons.append("model_provider_failure")
-    if state.get("model_budget_failure"):
-        reasons.append("model_budget_failure")
-    if state.get("confidence_score", 0) < confidence_threshold:
-        reasons.append("confidence_threshold")
-    if state.get("intent") == "prompt_injection":
-        reasons.append("prompt_injection")
-    if state.get("intent") == "privacy_complaint":
-        reasons.append("privacy_complaint")
-    if state.get("safety_risk") == "high":
-        reasons.append("high_safety_risk")
-    if state.get("escalation_needed"):
-        reasons.append("escalation_needed")
-    if not state.get("citations"):
-        reasons.append("citation_required")
-    if state.get("no_source"):
-        reasons.append("unsupported_answer")
-    return reasons
+def _route_reasons(
+    state: SupportAgentState,
+    confidence_threshold: float,
+    policies: dict[str, GuardrailEffectivePolicy],
+) -> list[str]:
+    checks = {
+        "model_provider_failure": bool(state.get("model_provider_failure")),
+        "model_budget_failure": bool(state.get("model_budget_failure")),
+        "confidence_threshold": state.get("confidence_score", 0) < confidence_threshold,
+        "prompt_injection": state.get("intent") == "prompt_injection",
+        "privacy_complaint": state.get("intent") == "privacy_complaint",
+        "high_safety_risk": state.get("safety_risk") == "high",
+        "escalation_needed": bool(state.get("escalation_needed")),
+        "citation_required": not bool(state.get("citations")),
+        "unsupported_answer": bool(state.get("no_source")),
+    }
+    return [
+        guardrail_type
+        for guardrail_type, failed in checks.items()
+        if failed and _policy_routes_to_review(policies.get(guardrail_type))
+    ]
+
+
+def _policy_routes_to_review(policy: GuardrailEffectivePolicy | None) -> bool:
+    if policy is None:
+        return True
+    return policy.enabled and policy.action_on_fail == "route_to_human_review"
 
 
 def _retrieval_top_k(state: SupportAgentState) -> int:
@@ -707,7 +717,12 @@ def _retrieval_threshold(state: SupportAgentState) -> float:
     return 0.2
 
 
-def _confidence_threshold(state: SupportAgentState) -> float:
+def _confidence_threshold(
+    state: SupportAgentState, policies: dict[str, GuardrailEffectivePolicy] | None = None
+) -> float:
+    policy_threshold = (policies or {}).get("confidence_threshold")
+    if policy_threshold and policy_threshold.threshold is not None:
+        return min(0.95, max(0.1, float(policy_threshold.threshold)))
     configured = _agent_settings(state).get("confidence_threshold")
     if isinstance(configured, int | float):
         return min(0.95, max(0.1, float(configured)))

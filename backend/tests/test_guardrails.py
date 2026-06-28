@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 
@@ -121,3 +123,120 @@ def test_guardrail_catalog_is_workspace_scoped(client: TestClient) -> None:
     citation = guardrail_by_type(other_response.json(), "citation_required")
     assert citation["usage"]["total_evaluations"] == 0
     assert citation["recent_failures"] == []
+
+
+
+def test_owner_can_update_guardrail_policy_and_catalog_shows_effective_values(
+    client: TestClient,
+) -> None:
+    register(client, "guardrail-policy-owner@example.com")
+    token = login(client, "guardrail-policy-owner@example.com")
+    workspace = create_workspace(client, token)
+
+    response = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails/citation_required/policy",
+        headers=auth_headers(token),
+        json={
+            "enabled": False,
+            "severity": "low",
+            "action_on_fail": "record_only",
+            "threshold": None,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["guardrail_type"] == "citation_required"
+    assert body["enabled"] is False
+    assert body["severity"] == "low"
+    assert body["action_on_fail"] == "record_only"
+
+    catalog = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails",
+        headers=auth_headers(token),
+    )
+    assert catalog.status_code == 200
+    citation = guardrail_by_type(catalog.json(), "citation_required")
+    assert citation["enabled"] is False
+    assert citation["action_on_fail"] == "record_only"
+
+
+def test_guardrail_policy_updates_require_owner_and_configurable_policy(
+    client: TestClient,
+) -> None:
+    register(client, "guardrail-policy-owner-2@example.com")
+    owner_token = login(client, "guardrail-policy-owner-2@example.com")
+    workspace = create_workspace(client, owner_token)
+    register(client, "guardrail-policy-member@example.com")
+    member_token = login(client, "guardrail-policy-member@example.com")
+    add_member = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+        json={"email": "guardrail-policy-member@example.com", "role": "member"},
+    )
+    assert add_member.status_code == 201
+
+    member_response = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails/citation_required/policy",
+        headers=auth_headers(member_token),
+        json={"enabled": False, "severity": "low", "action_on_fail": "record_only"},
+    )
+    fixed_response = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails/prompt_injection/policy",
+        headers=auth_headers(owner_token),
+        json={"enabled": False, "severity": "low", "action_on_fail": "record_only"},
+    )
+    missing_response = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails/not_real/policy",
+        headers=auth_headers(owner_token),
+        json={"enabled": False, "severity": "low", "action_on_fail": "record_only"},
+    )
+
+    assert member_response.status_code == 403
+    assert member_response.json()["detail"]["code"] == "workspace_owner_required"
+    assert fixed_response.status_code == 400
+    assert fixed_response.json()["detail"]["code"] == "guardrail_policy_not_configurable"
+    assert missing_response.status_code == 404
+    assert missing_response.json()["detail"]["code"] == "guardrail_policy_not_found"
+
+
+def test_disabled_citation_guardrail_is_removed_from_route_trace(
+    client: TestClient,
+) -> None:
+    register(client, "guardrail-policy-runtime@example.com")
+    token = login(client, "guardrail-policy-runtime@example.com")
+    workspace = create_workspace(client, token)
+    agent = create_agent(client, token, workspace["id"])
+    policy = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails/citation_required/policy",
+        headers=auth_headers(token),
+        json={
+            "enabled": False,
+            "severity": "medium",
+            "action_on_fail": "route_to_human_review",
+            "threshold": None,
+        },
+    )
+    assert policy.status_code == 200
+
+    run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "How do I permanently delete my account?"},
+    )
+    assert run.status_code == 201
+    assert run.json()["route_decision"] == "human_review"
+
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{run.json()['id']}/trace",
+        headers=auth_headers(token),
+    )
+    assert trace.status_code == 200
+    route_step = next(
+        step for step in trace.json()["steps"] if step["step_name"] == "route_review_or_finalize"
+    )
+    route_output = json.loads(route_step["output_json"])
+    assert "citation_required" not in route_output["route_reasons"]
+    guardrail_types = {item["guardrail_type"] for item in trace.json()["guardrails"]}
+    assert "citation_required" not in guardrail_types
+    assert "unsupported_answer" in guardrail_types

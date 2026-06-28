@@ -4,6 +4,7 @@ from app.models.audit import AuditLog
 from app.models.dataset import ConversationExample, Dataset, ImportBatch, Label, Message
 from app.models.evaluation import EvaluationCase, EvaluationMetric, EvaluationResult, EvaluationRun
 from app.models.folder import ResourceFolder
+from app.models.guardrail import GuardrailPolicy
 from app.models.knowledge import DocumentChunk, DocumentVersion, Embedding, KnowledgeDocument
 from app.models.retrieval import RetrievalTrace, RetrievedChunk
 from app.models.review import GuardrailResult, HumanReview
@@ -15,6 +16,7 @@ __all__ = [
     "AgentConfig",
     "Checkpoint",
     "GraphRun",
+    "GuardrailPolicy",
     "GuardrailResult",
     "HumanReview",
     "GraphStep",

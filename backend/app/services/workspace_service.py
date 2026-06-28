@@ -28,6 +28,7 @@ OWNER_PERMISSIONS = [
     "resources:delete",
     "agents:delete",
     "tools:configure",
+    "guardrails:configure",
 ]
 
 
