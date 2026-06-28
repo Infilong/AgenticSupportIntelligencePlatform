@@ -2859,3 +2859,35 @@ th {
   color: var(--text-subtle);
   line-height: 1.35;
 }
+
+.workspace-settings-console {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-map-list {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-map-list button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+}
+
+.settings-map-list strong,
+.settings-map-list span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-map-list span {
+  color: var(--text-subtle);
+  font-size: 0.86rem;
+}
+
+.settings-boundary-list span {
+  overflow-wrap: anywhere;
+}

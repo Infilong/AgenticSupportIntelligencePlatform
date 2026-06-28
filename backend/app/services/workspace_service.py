@@ -95,6 +95,11 @@ class WorkspaceService:
         )
         return self.db.scalar(statement)
 
+    def update_workspace_name(self, *, workspace: Workspace, name: str) -> Workspace:
+        workspace.name = name.strip()
+        self.db.commit()
+        self.db.refresh(workspace)
+        return workspace
 
     def list_members(self, *, workspace_id: UUID) -> list[WorkspaceMember]:
         statement = (

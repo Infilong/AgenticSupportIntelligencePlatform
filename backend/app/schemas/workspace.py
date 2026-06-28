@@ -18,6 +18,18 @@ class WorkspaceCreateRequest(BaseModel):
         return stripped
 
 
+class WorkspaceUpdateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("name cannot be blank")
+        return stripped
+
+
 class WorkspaceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

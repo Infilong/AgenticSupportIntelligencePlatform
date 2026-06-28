@@ -2,9 +2,9 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models" | "system";
+type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models" | "system" | "settings";
 type WorkspaceMemberRole = "owner" | "member";
-type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin";
+type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin" | "Settings";
 
 type CurrentUser = {
   id: string;
@@ -626,6 +626,7 @@ const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purp
   { id: "models", label: "Models", token: "MO", group: "Admin", purpose: "Control provider, model purpose, context, and token pricing." },
   { id: "system", label: "System health", token: "SH", group: "Admin", purpose: "Inspect provider readiness, limits, failures, data, and governance posture." },
   { id: "audit", label: "Audit", token: "AU", group: "Admin", purpose: "Inspect accountable workspace and AI operations changes." },
+  { id: "settings", label: "Settings", token: "ST", group: "Settings", purpose: "Manage workspace identity and route to provider, permission, budget, and health settings." },
 ];
 
 const navSections: Array<{ title: NavGroup; items: typeof tabs }> = [
@@ -634,6 +635,7 @@ const navSections: Array<{ title: NavGroup; items: typeof tabs }> = [
   { title: "Operate", items: tabs.filter((tab) => tab.group === "Operate") },
   { title: "Evaluate", items: tabs.filter((tab) => tab.group === "Evaluate") },
   { title: "Admin", items: tabs.filter((tab) => tab.group === "Admin") },
+  { title: "Settings", items: tabs.filter((tab) => tab.group === "Settings") },
 ];
 
 const agentPrompts: Array<{
@@ -812,6 +814,7 @@ export function App() {
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<WorkspaceMemberRole>("member");
   const [workspaceName, setWorkspaceName] = useState("Agentic Platform Demo");
+  const [workspaceSettingsName, setWorkspaceSettingsName] = useState("");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -908,6 +911,11 @@ export function App() {
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
     [selectedWorkspaceId, workspaces],
   );
+
+  useEffect(() => {
+    setWorkspaceSettingsName(selectedWorkspace?.name ?? "");
+  }, [selectedWorkspace?.id, selectedWorkspace?.name]);
+
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
     [agents, selectedAgentId],
@@ -947,6 +955,7 @@ export function App() {
     { label: "Models", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
     { label: "System health", done: Boolean(systemHealth), tab: "system" as Tab },
     { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
+    { label: "Settings", done: Boolean(selectedWorkspaceId && workspaceMembership), tab: "settings" as Tab },
   ];
   const nextStep = setupSteps.find((step) => !step.done);
   const completedStepCount = setupSteps.filter((step) => step.done).length;
@@ -1043,6 +1052,23 @@ export function App() {
       });
       await loadWorkspaces();
       setSelectedWorkspaceId(workspace.id);
+    });
+  }
+
+  async function updateWorkspaceSettings(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedWorkspaceId) return;
+    await runAction("Workspace settings updated", async () => {
+      const updated = await apiRequest<Workspace>(workspacePath(""), {
+        method: "PATCH",
+        token,
+        body: { name: workspaceSettingsName },
+      });
+      await loadWorkspaces();
+      setSelectedWorkspaceId(updated.id);
+      setWorkspaceSettingsName(updated.name);
+      await loadAuditLogs();
+      await loadSystemHealth();
     });
   }
 
@@ -2056,6 +2082,8 @@ export function App() {
         return ModelsPanel();
       case "system":
         return SystemHealthPanel();
+      case "settings":
+        return SettingsPanel();
       default:
         return OverviewPanel();
     }
@@ -4072,6 +4100,104 @@ export function App() {
             ))}
           </div>
           {promptTemplates.length === 0 && <EmptyState title="No prompt templates" detail="Defaults are created on first agent run, or create a version manually." />}
+        </section>
+      </div>
+    );
+  }
+
+  function SettingsPanel() {
+    const canManageWorkspace = Boolean(workspaceMembership?.can_manage_workspace);
+    const liveProviderCount = modelConfigs.filter((config) => config.active && config.provider !== "mock").length;
+    const activeModelCount = modelConfigs.filter((config) => config.active).length;
+    const pendingHealthSignals = systemHealth
+      ? systemHealth.sections.filter((section) => section.status !== "ok").length
+      : 0;
+
+    return (
+      <div className="settings-console workspace-settings-console">
+        <section className="panel settings-hero">
+          <div>
+            <p className="eyebrow">Workspace settings</p>
+            <h2>Configure workspace identity and administration paths</h2>
+            <p className="muted">Settings are workspace-scoped and backend-enforced. This page keeps identity controls separate from provider routing, members, audit, and system health.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Your permission</span>
+            <strong>{canManageWorkspace ? "Owner controls" : "Read-only"}</strong>
+            <p>{canManageWorkspace ? "You can update workspace identity and manage admin resources." : "You can inspect settings, but owner-only changes are disabled."}</p>
+            <button type="button" onClick={() => void runAction("Workspace data refreshed", refreshWorkspaceData)}>Refresh workspace</button>
+          </div>
+        </section>
+
+        <section className="settings-summary-grid">
+          <Metric label="Workspace" value={selectedWorkspace?.name ?? "none"} />
+          <Metric label="Role" value={workspaceRole} />
+          <Metric label="Active models" value={activeModelCount} />
+          <Metric label="Health signals" value={pendingHealthSignals} />
+        </section>
+
+        <section className="settings-workbench">
+          <form className="panel stack settings-editor-panel" onSubmit={updateWorkspaceSettings}>
+            <div className="row-head">
+              <div>
+                <h3>Workspace identity</h3>
+                <p className="muted">Rename the workspace shown in navigation, traces, audit views, and all workspace-scoped admin pages.</p>
+              </div>
+              <Badge tone={canManageWorkspace ? "good" : "warn"}>{canManageWorkspace ? "owner action" : "restricted"}</Badge>
+            </div>
+            <label>
+              Workspace name
+              <input
+                value={workspaceSettingsName}
+                onChange={(event) => setWorkspaceSettingsName(event.target.value)}
+                disabled={!canManageWorkspace || loading}
+              />
+            </label>
+            <div className="settings-note">Workspace identity changes are written through the backend and recorded as `workspace.updated` audit events.</div>
+            <div className="run-action-bar">
+              <button className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading}>Save workspace</button>
+              <button type="button" onClick={() => setActiveTab("audit")}>Open audit trail</button>
+            </div>
+          </form>
+
+          <aside className="panel stack settings-side-panel">
+            <h3>Settings map</h3>
+            <p className="muted">Advanced controls live on dedicated pages so this does not become one giant settings form.</p>
+            <div className="settings-map-list">
+              <button type="button" onClick={() => setActiveTab("members")}>
+                <strong>Members and permissions</strong>
+                <span>{workspaceMembers.length} users · {workspaceRole}</span>
+              </button>
+              <button type="button" onClick={() => setActiveTab("models")}>
+                <strong>Provider and model routing</strong>
+                <span>{activeModelCount} active configs · {liveProviderCount} live routes</span>
+              </button>
+              <button type="button" onClick={() => setActiveTab("system")}>
+                <strong>Budgets, rate limits, and health</strong>
+                <span>{systemHealth ? `${systemHealth.overall_status} · ${pendingHealthSignals} signals` : "load system health"}</span>
+              </button>
+              <button type="button" onClick={() => setActiveTab("prompts")}>
+                <strong>Prompt versions</strong>
+                <span>{promptTemplates.length} versions · LangChain templates</span>
+              </button>
+            </div>
+          </aside>
+        </section>
+
+        <section className="panel stack full-width">
+          <div className="row-head">
+            <div>
+              <h3>Security and configuration boundaries</h3>
+              <p className="muted">The local portfolio build keeps secrets in environment configuration and exposes readiness through System Health instead of storing API keys in the browser.</p>
+            </div>
+            <Badge tone="good">workspace scoped</Badge>
+          </div>
+          <div className="policy-list settings-boundary-list">
+            <span>Workspace rename requires owner permission and backend authorization.</span>
+            <span>Provider/model routes are configured in Models; missing API keys are reported in System Health.</span>
+            <span>Global monthly budgets and rate limits are intentionally marked not configured until backend enforcement exists.</span>
+            <span>Membership, resource deletion, and audit-sensitive actions remain owner-gated where required.</span>
+          </div>
         </section>
       </div>
     );

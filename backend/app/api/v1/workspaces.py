@@ -16,6 +16,7 @@ from app.schemas.workspace import (
     WorkspaceMemberRoleUpdateRequest,
     WorkspaceMembershipResponse,
     WorkspaceResponse,
+    WorkspaceUpdateRequest,
 )
 from app.services.audit_log_service import AuditLogService
 from app.services.workspace_service import (
@@ -56,6 +57,25 @@ def create_workspace(
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 def get_workspace(workspace: WorkspaceMemberAccess) -> WorkspaceResponse:
     return WorkspaceResponse.model_validate(workspace)
+
+
+@router.patch("/{workspace_id}", response_model=WorkspaceResponse)
+def update_workspace_settings(
+    payload: WorkspaceUpdateRequest,
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> WorkspaceResponse:
+    updated = WorkspaceService(db).update_workspace_name(workspace=workspace, name=payload.name)
+    AuditLogService(db).record(
+        workspace_id=updated.id,
+        actor_user_id=current_user.id,
+        action="workspace.updated",
+        resource_type="workspace",
+        resource_id=updated.id,
+        metadata={"name": updated.name},
+    )
+    return WorkspaceResponse.model_validate(updated)
 
 
 @router.get("/{workspace_id}/membership", response_model=WorkspaceMembershipResponse)

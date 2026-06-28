@@ -395,3 +395,81 @@ def test_workspace_member_list_is_workspace_scoped(client: TestClient) -> None:
 
     assert forbidden.status_code == 404
     assert forbidden.json()["detail"]["code"] == "workspace_not_found"
+
+
+def test_workspace_owner_can_update_workspace_settings(client: TestClient) -> None:
+    register(client, "workspace-settings-owner@example.com")
+    token = login(client, "workspace-settings-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Original Workspace"},
+        headers=auth_headers(token),
+    ).json()
+
+    updated = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(token),
+        json={"name": "Production AI Platform"},
+    )
+    detail = client.get(
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(token),
+    )
+
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "Production AI Platform"
+    assert detail.json()["name"] == "Production AI Platform"
+
+
+def test_workspace_settings_update_requires_owner(client: TestClient, db_session: Session) -> None:
+    register(client, "workspace-settings-owner-rbac@example.com")
+    owner_token = login(client, "workspace-settings-owner-rbac@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Owner Settings Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    register(client, "workspace-settings-member@example.com")
+    member_token = login(client, "workspace-settings-member@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="workspace-settings-member@example.com",
+        role=WorkspaceRole.member,
+    )
+
+    member_update = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(member_token),
+        json={"name": "Member Rename Attempt"},
+    )
+    blank_update = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(owner_token),
+        json={"name": "   "},
+    )
+
+    assert member_update.status_code == 403
+    assert member_update.json()["detail"]["code"] == "workspace_owner_required"
+    assert blank_update.status_code == 422
+
+
+def test_workspace_settings_update_is_workspace_scoped(client: TestClient) -> None:
+    register(client, "workspace-settings-owner-a@example.com")
+    token_a = login(client, "workspace-settings-owner-a@example.com")
+    workspace_a = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Workspace A"},
+        headers=auth_headers(token_a),
+    ).json()
+    register(client, "workspace-settings-owner-b@example.com")
+    token_b = login(client, "workspace-settings-owner-b@example.com")
+
+    forbidden = client.patch(
+        f"/api/v1/workspaces/{workspace_a['id']}",
+        headers=auth_headers(token_b),
+        json={"name": "Cross Workspace Attempt"},
+    )
+
+    assert forbidden.status_code == 404
+    assert forbidden.json()["detail"]["code"] == "workspace_not_found"
