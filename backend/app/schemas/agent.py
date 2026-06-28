@@ -97,6 +97,11 @@ class AgentOperationalSummaryResponse(BaseModel):
     total_estimated_cost: float
     average_ai_latency_ms: float | None
     last_run_at: datetime | None
+    evaluation_runs: int
+    evaluation_result_count: int
+    failed_evaluation_results: int
+    evaluation_pass_rate: float | None
+    last_evaluation_at: datetime | None
 
 
 class RuntimeComponentResponse(BaseModel):

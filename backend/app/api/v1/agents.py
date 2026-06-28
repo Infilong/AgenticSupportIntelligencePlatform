@@ -51,9 +51,7 @@ AgentConfigureAccess = Annotated[
     Workspace, Depends(require_workspace_permission("agents:configure"))
 ]
 AgentRunAccess = Annotated[Workspace, Depends(require_workspace_permission("agents:run"))]
-AgentDeleteAccess = Annotated[
-    Workspace, Depends(require_workspace_permission("agents:delete"))
-]
+AgentDeleteAccess = Annotated[Workspace, Depends(require_workspace_permission("agents:delete"))]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 IncludeArchived = Annotated[bool, Query()]
 AgentId = Annotated[UUID, Path()]
@@ -136,6 +134,11 @@ def get_agent_summary(
         total_estimated_cost=summary["total_estimated_cost"],
         average_ai_latency_ms=summary["average_ai_latency_ms"],
         last_run_at=summary["last_run_at"],
+        evaluation_runs=summary["evaluation_runs"],
+        evaluation_result_count=summary["evaluation_result_count"],
+        failed_evaluation_results=summary["failed_evaluation_results"],
+        evaluation_pass_rate=summary["evaluation_pass_rate"],
+        last_evaluation_at=summary["last_evaluation_at"],
     )
 
 
@@ -172,8 +175,7 @@ def get_agent_workflow(
                 estimated_cost=node["estimated_cost"],
                 last_executed_at=node["last_executed_at"],
                 recent_failures=[
-                    WorkflowNodeFailureResponse(**failure)
-                    for failure in node["recent_failures"]
+                    WorkflowNodeFailureResponse(**failure) for failure in node["recent_failures"]
                 ],
             )
             for node in workflow["nodes"]

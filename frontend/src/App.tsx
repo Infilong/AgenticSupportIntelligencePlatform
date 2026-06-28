@@ -183,6 +183,11 @@ type AgentOperationalSummary = {
   total_estimated_cost: number;
   average_ai_latency_ms: number | null;
   last_run_at: string | null;
+  evaluation_runs: number;
+  evaluation_result_count: number;
+  failed_evaluation_results: number;
+  evaluation_pass_rate: number | null;
+  last_evaluation_at: string | null;
 };
 
 type RuntimeComponent = {
@@ -436,6 +441,7 @@ type EvaluationRun = {
   name: string;
   modes_json: string;
   folder_id: string | null;
+  agent_config_id: string | null;
   status: string;
   total_cases: number;
   created_at: string;
@@ -3437,6 +3443,11 @@ export function App() {
         value: summary ? `${summary.total_runs} recorded` : "No summary",
         ready: Boolean(summary && summary.total_runs > 0),
       },
+      {
+        label: "Evaluation",
+        value: summary?.evaluation_runs ? `${formatPercent(summary.evaluation_pass_rate)} pass` : "No linked eval",
+        ready: Boolean(summary && summary.evaluation_runs > 0 && summary.failed_evaluation_results === 0),
+      },
     ];
     return (
       <div className="agent-console">
@@ -3575,6 +3586,16 @@ export function App() {
               <Metric label="Cost" value={formatCost(summary?.total_estimated_cost)} />
               <Metric label="Avg AI latency" value={formatLatency(summary?.average_ai_latency_ms)} />
               <Metric label="Last run" value={formatDate(summary?.last_run_at ?? null)} />
+              <Metric label="Eval runs" value={summary?.evaluation_runs ?? 0} />
+              <Metric label="Eval pass" value={summary?.evaluation_result_count ? formatPercent(summary.evaluation_pass_rate) : "-"} />
+            </div>
+            <div className="agent-evaluation-posture">
+              <div>
+                <span>Evaluation posture</span>
+                <strong>{summary?.evaluation_runs ? `${summary.failed_evaluation_results} failed of ${summary.evaluation_result_count} results` : "No linked evaluations"}</strong>
+                <small>{summary?.last_evaluation_at ? `Latest evaluation ${formatDate(summary.last_evaluation_at)}` : "Run a system-v1 evaluation for this agent to prove regression quality."}</small>
+              </div>
+              <button type="button" onClick={() => goToTab("evaluations")}>Open evaluations</button>
             </div>
             <div className="agent-lifecycle-actions">
               {canDeleteAgent ? (

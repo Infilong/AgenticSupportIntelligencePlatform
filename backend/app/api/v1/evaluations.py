@@ -17,6 +17,7 @@ from app.schemas.evaluation import (
     EvaluationRunRequest,
     EvaluationRunResponse,
 )
+from app.services.agent_service import AgentNotFoundError
 from app.services.audit_log_service import AuditLogService
 from app.services.evaluation_loader import EvaluationCaseLoadError
 from app.services.evaluation_runner import EvaluationRunner, EvaluationRunNotFoundError
@@ -58,6 +59,11 @@ def run_evaluation(
         detail = EvaluationRunner(db).get_run_detail(workspace_id=workspace.id, run_id=run.id)
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
+    except AgentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
     except EvaluationCaseLoadError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

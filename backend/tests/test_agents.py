@@ -52,9 +52,7 @@ def add_workspace_member(
 ) -> None:
     user = db_session.scalar(select(User).where(User.email == user_email))
     assert user is not None
-    db_session.add(
-        WorkspaceMember(workspace_id=UUID(workspace_id), user_id=user.id, role=role)
-    )
+    db_session.add(WorkspaceMember(workspace_id=UUID(workspace_id), user_id=user.id, role=role))
     db_session.commit()
 
 
@@ -171,8 +169,7 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     ]
     assert any(step["tool_calls"] for step in trace_body["steps"])
     assert all(
-        step["runtime_framework"] == "LangGraph StateGraph node"
-        for step in trace_body["steps"]
+        step["runtime_framework"] == "LangGraph StateGraph node" for step in trace_body["steps"]
     )
     assert any(step["uses_langchain"] for step in trace_body["steps"])
     retrieval_step = next(
@@ -214,8 +211,7 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     )
     assert all("severity" in guardrail for guardrail in trace_body["guardrails"])
     assert all(
-        guardrail["graph_step_id"] == route_step["id"]
-        for guardrail in trace_body["guardrails"]
+        guardrail["graph_step_id"] == route_step["id"] for guardrail in trace_body["guardrails"]
     )
     checkpoint_keys = [checkpoint["checkpoint_key"] for checkpoint in trace_body["checkpoints"]]
     assert checkpoint_keys == [f"{name}:after" for name in step_names]
@@ -490,8 +486,7 @@ def test_support_agent_routes_proactive_model_budget_failure_to_human_review(
     assert classify_step["ai_run"] is None
     assert not trace_body["ai_runs"]
     assert any(
-        guardrail["guardrail_type"] == "model_budget_failure"
-        and guardrail["passed"] is False
+        guardrail["guardrail_type"] == "model_budget_failure" and guardrail["passed"] is False
         for guardrail in trace_body["guardrails"]
     )
     reviews = db_session.scalars(select(HumanReview)).all()
@@ -554,9 +549,7 @@ def test_support_agent_trims_retrieved_context_before_draft_model_call(
     )
     assert trace.status_code == 200
     trace_body = trace.json()
-    draft_step = next(
-        step for step in trace_body["steps"] if step["step_name"] == "draft_response"
-    )
+    draft_step = next(step for step in trace_body["steps"] if step["step_name"] == "draft_response")
     output = safe_json(draft_step["output_json"])
     assert output["token_budget_action"] == "trimmed_retrieved_context"
     assert output["trimmed_context_count"] > 0
@@ -705,6 +698,57 @@ def test_agent_operational_summary_aggregates_runs_tokens_and_review_routes(
         second_run.json()["id"],
         first_run.json()["id"],
     ]
+
+
+def test_agent_summary_includes_linked_evaluation_posture(client: TestClient) -> None:
+    register(client, "agent-eval-posture@example.com")
+    token = login(client, "agent-eval-posture@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"], "en")
+    agent = create_agent(client, token, workspace["id"])
+    other_agent = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        json={"name": "Other Agent", "token_budget": 4000},
+    ).json()
+
+    evaluation = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        json={
+            "name": "Agent Regression",
+            "agent_id": agent["id"],
+            "modes": ["system_v1"],
+            "jsonl_cases": (
+                '{"id":"en_agent_eval_001","language":"en",'
+                '"input_message":"Can I get a refund within 30 days?",'
+                '"expected_route":"finalize","must_include":["30 days"]}'
+            ),
+        },
+    )
+    assert evaluation.status_code == 201
+    assert evaluation.json()["run"]["agent_config_id"] == agent["id"]
+
+    summary = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/summary",
+        headers=auth_headers(token),
+    )
+    other_summary = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{other_agent['id']}/summary",
+        headers=auth_headers(token),
+    )
+
+    assert summary.status_code == 200
+    body = summary.json()
+    assert body["evaluation_runs"] == 1
+    assert body["evaluation_result_count"] == 1
+    assert body["failed_evaluation_results"] == 0
+    assert body["evaluation_pass_rate"] == 1.0
+    assert body["last_evaluation_at"] is not None
+    assert other_summary.status_code == 200
+    assert other_summary.json()["evaluation_runs"] == 0
+    assert other_summary.json()["evaluation_result_count"] == 0
+    assert other_summary.json()["evaluation_pass_rate"] is None
 
 
 def test_agent_operational_summary_enforces_workspace_isolation(client: TestClient) -> None:

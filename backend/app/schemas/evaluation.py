@@ -85,6 +85,7 @@ class EvaluationRunResponse(BaseModel):
     workspace_id: UUID
     name: str
     folder_id: UUID | None
+    agent_config_id: UUID | None
     modes_json: str
     status: EvaluationRunStatus
     total_cases: int

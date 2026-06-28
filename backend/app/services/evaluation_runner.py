@@ -20,7 +20,7 @@ from app.models.evaluation import (
 )
 from app.models.review import GuardrailResult
 from app.models.user import User
-from app.services.agent_service import AgentService
+from app.services.agent_service import AgentNotFoundError, AgentService
 from app.services.evaluation_loader import LoadedEvaluationCase, load_jsonl_cases
 from app.services.evaluation_metrics import calculate_metrics
 from app.services.folder_service import ResourceFolderService
@@ -52,10 +52,22 @@ class EvaluationRunner:
         ResourceFolderService(self.db).validate_folder(
             workspace_id=workspace_id, folder_id=folder_id, resource_type="evaluation_run"
         )
+        attached_agent_id = agent_id
+        if EvaluationMode.system_v1 in modes and attached_agent_id is None:
+            attached_agent_id = self._ensure_default_agent(workspace_id).id
+        if (
+            attached_agent_id is not None
+            and AgentService(self.db).get_agent(
+                workspace_id=workspace_id, agent_id=attached_agent_id
+            )
+            is None
+        ):
+            raise AgentNotFoundError("Agent was not found.")
         run = EvaluationRun(
             workspace_id=workspace_id,
             name=name.strip(),
             folder_id=folder_id,
+            agent_config_id=attached_agent_id,
             modes_json=json.dumps([mode.value for mode in modes]),
             status=EvaluationRunStatus.running,
             total_cases=len(loaded_cases),
@@ -66,7 +78,7 @@ class EvaluationRunner:
         cases = [self._persist_case(workspace_id, loaded_case) for loaded_case in loaded_cases]
         self.db.commit()
         if EvaluationMode.system_v1 in modes:
-            agent_id = agent_id or self._ensure_default_agent(workspace_id).id
+            agent_id = attached_agent_id
         results: list[EvaluationResult] = []
         for case, loaded_case in zip(cases, loaded_cases, strict=True):
             for mode in modes:

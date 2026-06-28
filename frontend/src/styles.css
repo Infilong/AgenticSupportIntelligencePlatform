@@ -1734,6 +1734,28 @@ small {
   color: var(--text-subtle);
 }
 
+.agent-evaluation-posture {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.agent-evaluation-posture span,
+.agent-evaluation-posture small {
+  display: block;
+  color: var(--text-muted);
+}
+
+.agent-evaluation-posture strong {
+  display: block;
+  margin: 3px 0;
+}
+
 .run-console textarea {
   min-height: 180px;
 }

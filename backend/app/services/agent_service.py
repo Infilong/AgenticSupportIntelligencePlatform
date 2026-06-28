@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
 from app.models.ai import AIRun, ModelConfig
+from app.models.evaluation import EvaluationResult, EvaluationRun
 from app.models.user import User
 from app.services.budget_policy_service import BudgetPolicyService
 from app.services.guardrails import GuardrailService, has_blocking_guardrail
@@ -72,9 +73,7 @@ class AgentService:
             filters.append(AgentConfig.archived_at.is_(None))
         return list(
             self.db.scalars(
-                select(AgentConfig)
-                .where(*filters)
-                .order_by(AgentConfig.created_at.desc())
+                select(AgentConfig).where(*filters).order_by(AgentConfig.created_at.desc())
             ).all()
         )
 
@@ -249,10 +248,7 @@ class AgentService:
         run_ids = select(GraphRun.id).where(*run_filter)
         recent_runs = list(
             self.db.scalars(
-                select(GraphRun)
-                .where(*run_filter)
-                .order_by(GraphRun.created_at.desc())
-                .limit(8)
+                select(GraphRun).where(*run_filter).order_by(GraphRun.created_at.desc()).limit(8)
             ).all()
         )
 
@@ -294,6 +290,38 @@ class AgentService:
             )
         )
         last_run_at = self.db.scalar(select(func.max(GraphRun.created_at)).where(*run_filter))
+        evaluation_run_filter = (
+            EvaluationRun.workspace_id == workspace_id,
+            EvaluationRun.agent_config_id == agent_id,
+            EvaluationRun.archived_at.is_(None),
+        )
+        evaluation_run_ids = select(EvaluationRun.id).where(*evaluation_run_filter)
+        evaluation_runs = scalar_int(
+            select(func.count(EvaluationRun.id)).where(*evaluation_run_filter)
+        )
+        evaluation_result_count = scalar_int(
+            select(func.count(EvaluationResult.id)).where(
+                EvaluationResult.workspace_id == workspace_id,
+                EvaluationResult.evaluation_run_id.in_(evaluation_run_ids),
+            )
+        )
+        failed_evaluation_results = scalar_int(
+            select(func.count(EvaluationResult.id)).where(
+                EvaluationResult.workspace_id == workspace_id,
+                EvaluationResult.evaluation_run_id.in_(evaluation_run_ids),
+                EvaluationResult.passed.is_(False),
+            )
+        )
+        last_evaluation_at = self.db.scalar(
+            select(func.max(EvaluationRun.completed_at)).where(*evaluation_run_filter)
+        )
+        evaluation_pass_rate = (
+            round(
+                (evaluation_result_count - failed_evaluation_results) / evaluation_result_count, 4
+            )
+            if evaluation_result_count
+            else None
+        )
 
         model_config = (
             self._get_model_config(workspace_id=workspace_id, model_config_id=agent.model_config_id)
@@ -315,6 +343,11 @@ class AgentService:
                 float(average_latency) if average_latency is not None else None
             ),
             "last_run_at": last_run_at,
+            "evaluation_runs": evaluation_runs,
+            "evaluation_result_count": evaluation_result_count,
+            "failed_evaluation_results": failed_evaluation_results,
+            "evaluation_pass_rate": evaluation_pass_rate,
+            "last_evaluation_at": last_evaluation_at,
         }
 
     def get_workflow_summary(self, *, workspace_id: UUID, agent_id: UUID) -> dict[str, Any]:
@@ -326,9 +359,7 @@ class AgentService:
             select(
                 GraphStep.step_name,
                 func.count(GraphStep.id),
-                func.coalesce(
-                    func.sum(case((GraphStep.status == "failed", 1), else_=0)), 0
-                ),
+                func.coalesce(func.sum(case((GraphStep.status == "failed", 1), else_=0)), 0),
                 func.avg(GraphStep.latency_ms),
                 func.coalesce(func.sum(GraphStep.token_count), 0),
                 func.coalesce(func.sum(GraphStep.estimated_cost), 0.0),
