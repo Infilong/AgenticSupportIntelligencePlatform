@@ -77,6 +77,8 @@ def get_cost_summary(
         failed_ai_runs=summary.failed_ai_runs,
         failed_graph_runs=summary.failed_graph_runs,
         failed_tool_calls=summary.failed_tool_calls,
+        graph_run_total=summary.graph_run_total,
+        ai_run_total=summary.ai_run_total,
         by_purpose=[
             CostPurposeSummaryResponse(
                 purpose=item.purpose,

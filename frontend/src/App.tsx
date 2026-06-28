@@ -661,6 +661,8 @@ type CostSummary = {
   failed_ai_runs: number;
   failed_graph_runs: number;
   failed_tool_calls: number;
+  graph_run_total: number;
+  ai_run_total: number;
   by_purpose: Array<{ purpose: string; runs: number; tokens: number; estimated_cost: number }>;
   by_model: Array<{ provider: string; model: string; runs: number; tokens: number; estimated_cost: number }>;
   by_agent: Array<{
@@ -7066,9 +7068,9 @@ export function App() {
     const aiLedgerPageStart = aiLedgerPage * MAX_VISIBLE_COST_ITEMS + (displayedAIRuns.length ? 1 : 0);
     const aiLedgerPageEnd = aiLedgerPage * MAX_VISIBLE_COST_ITEMS + displayedAIRuns.length;
     const canGoToPreviousCostRunPage = costRunPage > 0;
-    const canGoToNextCostRunPage = displayedRecentRuns.length === MAX_VISIBLE_COST_ITEMS;
+    const canGoToNextCostRunPage = costSummary ? (costRunPage + 1) * MAX_VISIBLE_COST_ITEMS < costSummary.graph_run_total : false;
     const canGoToPreviousAiLedgerPage = aiLedgerPage > 0;
-    const canGoToNextAiLedgerPage = displayedAIRuns.length === MAX_VISIBLE_COST_ITEMS;
+    const canGoToNextAiLedgerPage = costSummary ? (aiLedgerPage + 1) * MAX_VISIBLE_COST_ITEMS < costSummary.ai_run_total : false;
     const displayedAgentSpend = filteredAgentSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
     const displayedPurposeSpend = filteredPurposeSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
     const displayedModelSpend = filteredModelSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
@@ -7280,7 +7282,7 @@ export function App() {
                   <h3>Recent graph-run spend</h3>
                   <p className="muted">Each row links cost back to a trace so developers can inspect prompts, tools, guardrails, and routing decisions.</p>
                 </div>
-                <Badge>{displayedRecentRuns.length} runs shown</Badge>
+                <Badge>{displayedRecentRuns.length} of {costSummary.graph_run_total} runs shown</Badge>
               </div>
               <div className="cost-run-list">
                 {displayedRecentRuns.map((run) => (
@@ -7303,10 +7305,10 @@ export function App() {
                 {costSummary.recent_runs.length === 0 && <EmptyState title="No graph-run spend matches" detail={costRunPage > 0 ? "Move to the previous page or clear filters." : "Run an agent, clear search, or change graph-run status filter."} />}
                 <div className="pagination-bar">
                   <button type="button" onClick={() => setCostRunPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousCostRunPage || loading}>Previous</button>
-                  <span>Page {costRunPage + 1} · {displayedRecentRuns.length ? `${costRunPageStart}-${costRunPageEnd}` : "0"} graph runs shown</span>
+                  <span>Page {costRunPage + 1} · {displayedRecentRuns.length ? `${costRunPageStart}-${costRunPageEnd}` : "0"} of {costSummary.graph_run_total} graph runs</span>
                   <button type="button" onClick={() => setCostRunPage((page) => page + 1)} disabled={!canGoToNextCostRunPage || loading}>Next</button>
                 </div>
-                <p className="permission-note">Graph-run spend is loaded from the backend by search, status, offset, and limit so trace-linked cost history stays bounded.</p>
+                <p className="permission-note">Graph-run spend is loaded from the backend by search, status, offset, limit, and total count so trace-linked cost history stays bounded without guessing next pages.</p>
               </div>
             </section>
 
@@ -7376,7 +7378,7 @@ export function App() {
                   <h3>Recent AI run ledger</h3>
                   <p className="muted">The latest model calls expose status, token split, cache behavior, provider, model, and error messages.</p>
                 </div>
-                <Badge>{displayedAIRuns.length} calls shown</Badge>
+                <Badge>{displayedAIRuns.length} of {costSummary.ai_run_total} calls shown</Badge>
               </div>
               <div className="ai-ledger-list">
                 {displayedAIRuns.map((run) => (
@@ -7405,10 +7407,10 @@ export function App() {
                 {costSummary.recent_ai_runs.length === 0 && <EmptyState title="No AI ledger rows match" detail={aiLedgerPage > 0 ? "Move to the previous page or clear filters." : "Model calls create ledger rows here. Clear search or change AI call status filter if rows exist."} />}
                 <div className="pagination-bar">
                   <button type="button" onClick={() => setAiLedgerPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousAiLedgerPage || loading}>Previous</button>
-                  <span>Page {aiLedgerPage + 1} · {displayedAIRuns.length ? `${aiLedgerPageStart}-${aiLedgerPageEnd}` : "0"} AI calls shown</span>
+                  <span>Page {aiLedgerPage + 1} · {displayedAIRuns.length ? `${aiLedgerPageStart}-${aiLedgerPageEnd}` : "0"} of {costSummary.ai_run_total} AI calls</span>
                   <button type="button" onClick={() => setAiLedgerPage((page) => page + 1)} disabled={!canGoToNextAiLedgerPage || loading}>Next</button>
                 </div>
-                <p className="permission-note">AI ledger rows are loaded from the backend by search, status, offset, and limit; totals above remain full workspace accounting.</p>
+                <p className="permission-note">AI ledger rows are loaded from the backend by search, status, offset, limit, and total count; accounting totals above remain full workspace totals.</p>
               </div>
             </section>
           </>

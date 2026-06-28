@@ -473,6 +473,8 @@ def test_cost_summary_filters_and_paginates_recent_drilldowns(
 
     assert alpha_page.status_code == 200
     assert alpha_page.json()["total_runs"] == 3
+    assert alpha_page.json()["graph_run_total"] == 2
+    assert alpha_page.json()["ai_run_total"] == 2
     assert len(alpha_page.json()["recent_runs"]) == 1
     assert alpha_page.json()["recent_runs"][0]["agent_name"] == "Alpha Cost Agent"
     assert len(alpha_page.json()["recent_ai_runs"]) == 1
@@ -488,9 +490,13 @@ def test_cost_summary_filters_and_paginates_recent_drilldowns(
         alpha_next.json()["recent_ai_runs"][0]["id"] != alpha_page.json()["recent_ai_runs"][0]["id"]
     )
     assert review_route.status_code == 200
+    assert review_route.json()["graph_run_total"] == 1
+    assert review_route.json()["ai_run_total"] == 2
     assert [run["route_decision"] for run in review_route.json()["recent_runs"]] == ["human_review"]
     assert {row["status"] for row in review_route.json()["recent_ai_runs"]} == {"succeeded"}
     assert failed_ai.status_code == 200
+    assert failed_ai.json()["graph_run_total"] == 3
+    assert failed_ai.json()["ai_run_total"] == 1
     assert [row["status"] for row in failed_ai.json()["recent_ai_runs"]] == ["failed"]
 
 
@@ -546,5 +552,7 @@ def test_cost_drilldown_filters_do_not_leak_other_workspaces(
 
     assert other_summary.status_code == 200
     assert other_summary.json()["total_runs"] == 0
+    assert other_summary.json()["graph_run_total"] == 0
+    assert other_summary.json()["ai_run_total"] == 0
     assert other_summary.json()["recent_runs"] == []
     assert other_summary.json()["recent_ai_runs"] == []

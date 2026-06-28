@@ -89,6 +89,8 @@ class CostSummary:
     failed_ai_runs: int
     failed_graph_runs: int
     failed_tool_calls: int
+    graph_run_total: int
+    ai_run_total: int
     by_purpose: list[CostPurposeSummary]
     by_model: list[CostModelSummary]
     by_agent: list[CostAgentSummary]
@@ -221,6 +223,26 @@ class CostService:
             .group_by(AgentConfig.id, AgentConfig.name)
             .order_by(func.coalesce(func.sum(AIRun.estimated_cost), 0.0).desc())
         ).all()
+        graph_run_total = (
+            self.db.scalar(
+                select(func.count(distinct(GraphRun.id)))
+                .select_from(AIRun)
+                .join(GraphRun, GraphRun.id == AIRun.graph_run_id)
+                .join(AgentConfig, AgentConfig.id == GraphRun.agent_config_id)
+                .where(*_graph_run_cost_filters(workspace_id, search, graph_run_status))
+            )
+            or 0
+        )
+        ai_run_total = (
+            self.db.scalar(
+                select(func.count(AIRun.id))
+                .select_from(AIRun)
+                .outerjoin(GraphRun, AIRun.graph_run_id == GraphRun.id)
+                .outerjoin(AgentConfig, GraphRun.agent_config_id == AgentConfig.id)
+                .where(*_ai_run_cost_filters(workspace_id, search, ai_run_status))
+            )
+            or 0
+        )
         grouped_by_run_statement = (
             select(
                 GraphRun.id,
@@ -276,6 +298,8 @@ class CostService:
             failed_ai_runs=int(failed_ai_runs),
             failed_graph_runs=int(failed_graph_runs),
             failed_tool_calls=int(failed_tool_calls),
+            graph_run_total=int(graph_run_total),
+            ai_run_total=int(ai_run_total),
             by_purpose=[
                 CostPurposeSummary(
                     purpose=purpose,

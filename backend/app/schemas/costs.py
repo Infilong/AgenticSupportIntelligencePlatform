@@ -88,6 +88,8 @@ class CostSummaryResponse(BaseModel):
     failed_ai_runs: int
     failed_graph_runs: int
     failed_tool_calls: int
+    graph_run_total: int
+    ai_run_total: int
     by_purpose: list[CostPurposeSummaryResponse]
     by_model: list[CostModelSummaryResponse]
     by_agent: list[CostAgentSummaryResponse]
