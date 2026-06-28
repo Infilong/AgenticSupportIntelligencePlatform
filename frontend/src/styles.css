@@ -1349,10 +1349,21 @@ small {
 }
 
 .agent-harness-meta,
-.runtime-settings-readout {
+.runtime-settings-readout,
+.agent-lifecycle-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.agent-lifecycle-actions {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.agent-lifecycle-actions small {
+  color: var(--text-subtle);
 }
 
 .run-console textarea {

@@ -45,6 +45,7 @@ class AgentResponse(BaseModel):
     active: bool
     token_budget: int
     settings_json: str
+    archived_at: datetime | None
     created_at: datetime
 
 

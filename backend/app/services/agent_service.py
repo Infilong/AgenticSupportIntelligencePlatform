@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -20,6 +21,10 @@ class AgentNotFoundError(ValueError):
     pass
 
 
+class AgentUnavailableError(ValueError):
+    pass
+
+
 class GraphRunNotFoundError(ValueError):
     pass
 
@@ -35,11 +40,16 @@ class AgentService:
         self.db.refresh(agent)
         return agent
 
-    def list_agents(self, *, workspace_id: UUID) -> list[AgentConfig]:
+    def list_agents(
+        self, *, workspace_id: UUID, include_archived: bool = False
+    ) -> list[AgentConfig]:
+        filters = [AgentConfig.workspace_id == workspace_id]
+        if not include_archived:
+            filters.append(AgentConfig.archived_at.is_(None))
         return list(
             self.db.scalars(
                 select(AgentConfig)
-                .where(AgentConfig.workspace_id == workspace_id)
+                .where(*filters)
                 .order_by(AgentConfig.created_at.desc())
             ).all()
         )
@@ -82,6 +92,8 @@ class AgentService:
         agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
         if agent is None:
             raise AgentNotFoundError("Agent was not found.")
+        if not agent.active or agent.archived_at is not None:
+            raise AgentUnavailableError("Agent is inactive or archived.")
         graph_run = GraphRun(
             workspace_id=workspace_id,
             agent_config_id=agent.id,
@@ -135,6 +147,17 @@ class AgentService:
                 AgentConfig.id == agent_id,
             )
         )
+
+    def archive_agent(self, *, workspace_id: UUID, agent_id: UUID) -> AgentConfig:
+        agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
+        if agent is None:
+            raise AgentNotFoundError("Agent was not found.")
+        agent.active = False
+        if agent.archived_at is None:
+            agent.archived_at = datetime.now(UTC)
+        self.db.commit()
+        self.db.refresh(agent)
+        return agent
 
     def get_run(self, *, workspace_id: UUID, run_id: UUID) -> GraphRun:
         run = self.db.scalar(

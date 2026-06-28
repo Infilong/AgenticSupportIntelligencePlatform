@@ -2,13 +2,13 @@ import json
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.workspace import require_workspace_member, require_workspace_owner
 from app.models.agent import Checkpoint
 from app.models.ai import AIRun
 from app.models.review import GuardrailResult
@@ -30,13 +30,20 @@ from app.schemas.agent import (
     RuntimeComponentResponse,
     ToolCallResponse,
 )
-from app.services.agent_service import AgentNotFoundError, AgentService, GraphRunNotFoundError
+from app.services.agent_service import (
+    AgentNotFoundError,
+    AgentService,
+    AgentUnavailableError,
+    GraphRunNotFoundError,
+)
 from app.services.audit_log_service import AuditLogService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["agents"])
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
+IncludeArchived = Annotated[bool, Query()]
 AgentId = Annotated[UUID, Path()]
 RunId = Annotated[UUID, Path()]
 
@@ -63,8 +70,14 @@ def create_agent(
 
 
 @router.get("/agents", response_model=list[AgentResponse])
-def list_agents(workspace: WorkspaceMemberAccess, db: DbSession) -> list[AgentResponse]:
-    agents = AgentService(db).list_agents(workspace_id=workspace.id)
+def list_agents(
+    workspace: WorkspaceMemberAccess,
+    db: DbSession,
+    include_archived: IncludeArchived = False,
+) -> list[AgentResponse]:
+    agents = AgentService(db).list_agents(
+        workspace_id=workspace.id, include_archived=include_archived
+    )
     return [AgentResponse.model_validate(agent) for agent in agents]
 
 
@@ -139,6 +152,33 @@ def update_agent(
     return AgentResponse.model_validate(agent)
 
 
+@router.delete("/agents/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
+def archive_agent(
+    agent_id: AgentId,
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> None:
+    try:
+        agent = AgentService(db).archive_agent(workspace_id=workspace.id, agent_id=agent_id)
+    except AgentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="agent.archived",
+        resource_type="agent",
+        resource_id=agent.id,
+        metadata={
+            "name": agent.name,
+            "archived_at": agent.archived_at.isoformat() if agent.archived_at else None,
+        },
+    )
+
+
 @router.post("/agents/{agent_id}/runs", response_model=GraphRunResponse, status_code=201)
 def run_agent(
     agent_id: AgentId,
@@ -158,6 +198,14 @@ def run_agent(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
+    except AgentUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "agent_unavailable",
+                "message": "Agent is inactive or archived and cannot be run.",
+            },
         ) from exc
     AuditLogService(db).record(
         workspace_id=workspace.id,

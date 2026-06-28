@@ -25,6 +25,7 @@ OWNER_PERMISSIONS = [
     "workspace:manage",
     "resource_folders:manage",
     "resources:delete",
+    "agents:delete",
 ]
 
 

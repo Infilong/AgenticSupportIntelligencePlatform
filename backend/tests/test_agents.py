@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from app.models.agent import Checkpoint, GraphStep, ToolCall
 from app.models.ai import AIRun, PromptTemplate
 from app.models.review import HumanReview
+from app.models.user import User
+from app.models.workspace import WorkspaceMember, WorkspaceRole
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -32,6 +34,21 @@ def create_workspace(client: TestClient, token: str, name: str = "Support Worksp
     response = client.post("/api/v1/workspaces", json={"name": name}, headers=auth_headers(token))
     assert response.status_code == 201
     return response.json()
+
+
+def add_workspace_member(
+    db_session: Session,
+    *,
+    workspace_id: str,
+    user_email: str,
+    role: WorkspaceRole = WorkspaceRole.member,
+) -> None:
+    user = db_session.scalar(select(User).where(User.email == user_email))
+    assert user is not None
+    db_session.add(
+        WorkspaceMember(workspace_id=UUID(workspace_id), user_id=user.id, role=role)
+    )
+    db_session.commit()
 
 
 def upload_document(client: TestClient, token: str, workspace_id: str, language: str) -> dict:
@@ -598,6 +615,99 @@ def test_agent_operational_summary_enforces_workspace_isolation(client: TestClie
 
     assert forbidden.status_code == 404
     assert forbidden.json()["detail"]["code"] == "agent_not_found"
+
+
+def test_owner_can_archive_agent_without_deleting_run_history(client: TestClient) -> None:
+    register(client, "agent-lifecycle-owner@example.com")
+    token = login(client, "agent-lifecycle-owner@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"], "en")
+    agent = create_agent(client, token, workspace["id"])
+    run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    ).json()
+
+    archived = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(token),
+    )
+    default_list = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+    )
+    archived_list = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"include_archived": True},
+    )
+    rerun = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund?"},
+    )
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{run['id']}/trace",
+        headers=auth_headers(token),
+    )
+    audit_logs = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+    )
+
+    assert archived.status_code == 204
+    assert default_list.status_code == 200
+    assert default_list.json() == []
+    assert archived_list.status_code == 200
+    assert archived_list.json()[0]["id"] == agent["id"]
+    assert archived_list.json()[0]["active"] is False
+    assert archived_list.json()[0]["archived_at"] is not None
+    assert rerun.status_code == 409
+    assert rerun.json()["detail"]["code"] == "agent_unavailable"
+    assert trace.status_code == 200
+    assert trace.json()["run"]["id"] == run["id"]
+    assert any(log["action"] == "agent.archived" for log in audit_logs.json())
+
+
+def test_agent_archive_requires_owner_and_is_workspace_scoped(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "agent-lifecycle-owner-rbac@example.com")
+    owner_token = login(client, "agent-lifecycle-owner-rbac@example.com")
+    owner_workspace = create_workspace(client, owner_token, "Owner Workspace")
+    agent = create_agent(client, owner_token, owner_workspace["id"])
+
+    register(client, "agent-lifecycle-member-rbac@example.com")
+    member_token = login(client, "agent-lifecycle-member-rbac@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=owner_workspace["id"],
+        user_email="agent-lifecycle-member-rbac@example.com",
+    )
+
+    register(client, "agent-lifecycle-other-rbac@example.com")
+    other_token = login(client, "agent-lifecycle-other-rbac@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Workspace")
+
+    member_delete = client.delete(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(member_token),
+    )
+    other_delete = client.delete(
+        f"/api/v1/workspaces/{other_workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(other_token),
+    )
+    owner_list = client.get(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agents",
+        headers=auth_headers(owner_token),
+    )
+
+    assert member_delete.status_code == 403
+    assert member_delete.json()["detail"]["code"] == "workspace_owner_required"
+    assert other_delete.status_code == 404
+    assert other_delete.json()["detail"]["code"] == "agent_not_found"
+    assert [item["id"] for item in owner_list.json()] == [agent["id"]]
 
 
 def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:

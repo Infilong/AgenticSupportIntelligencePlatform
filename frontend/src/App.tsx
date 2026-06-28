@@ -113,6 +113,7 @@ type Agent = {
   active: boolean;
   token_budget: number;
   settings_json: string;
+  archived_at: string | null;
   created_at: string;
 };
 
@@ -1203,6 +1204,18 @@ export function App() {
     setAgentRetrievalMinScore(Number(record.retrieval_min_score ?? 0.2));
   }
 
+  async function archiveSelectedAgent() {
+    if (!selectedAgentId || !selectedAgent) return;
+    if (!window.confirm(`Archive ${selectedAgent.name}? Existing traces stay available, but the agent cannot be run.`)) return;
+    await runAction("Agent archived", async () => {
+      await apiRequest(workspacePath(`/agents/${selectedAgentId}`), { method: "DELETE", token });
+      setSelectedAgentId("");
+      setAgentSummary(null);
+      await loadAgents();
+      await loadAuditLogs();
+    });
+  }
+
   async function updateAgentRuntime(event: FormEvent) {
     event.preventDefault();
     if (!selectedAgentId) {
@@ -2249,6 +2262,21 @@ export function App() {
               <Metric label="Cost" value={formatCost(summary?.total_estimated_cost)} />
               <Metric label="Avg AI latency" value={formatLatency(summary?.average_ai_latency_ms)} />
               <Metric label="Last run" value={formatDate(summary?.last_run_at ?? null)} />
+            </div>
+            <div className="agent-lifecycle-actions">
+              {canManageResources ? (
+                <button
+                  type="button"
+                  className="danger-button"
+                  disabled={!selectedAgentId || loading}
+                  onClick={() => void archiveSelectedAgent()}
+                >
+                  Archive agent
+                </button>
+              ) : (
+                <p className="permission-note">Agent archive and destructive lifecycle actions require workspace owner permission.</p>
+              )}
+              <small>Archiving preserves historical runs and traces for auditability.</small>
             </div>
           </article>
 
