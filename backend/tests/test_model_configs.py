@@ -134,6 +134,58 @@ def test_model_config_admin_can_create_list_and_activate_configs(
     assert {config.model for config in stored} == {"mock-cheap", "mock-admin-classifier"}
 
 
+def test_model_config_list_supports_search_status_and_offset(client: TestClient) -> None:
+    register(client, "model-page-owner@example.com")
+    token = login(client, "model-page-owner@example.com")
+    workspace = create_workspace(client, token)
+    path = f"/api/v1/workspaces/{workspace['id']}/model-configs"
+
+    created: list[dict] = []
+    for index in range(4):
+        response = client.post(
+            path,
+            headers=auth_headers(token),
+            json={
+                "provider": "mock-page",
+                "model": f"mock-page-model-{index}",
+                "purpose": "classification",
+                "prompt_token_cost_per_1k": 0.001 + index,
+                "completion_token_cost_per_1k": 0.002 + index,
+                "max_context_tokens": 4096 + index,
+                "active": index == 0,
+            },
+        )
+        assert response.status_code == 201
+        created.append(response.json())
+
+    archived = client.delete(f"{path}/{created[1]['id']}", headers=auth_headers(token))
+    first_page = client.get(path, headers=auth_headers(token), params={"limit": 2, "offset": 0})
+    second_page = client.get(path, headers=auth_headers(token), params={"limit": 2, "offset": 2})
+    active_page = client.get(path, headers=auth_headers(token), params={"status": "active"})
+    draft_page = client.get(path, headers=auth_headers(token), params={"status": "draft"})
+    archived_page = client.get(path, headers=auth_headers(token), params={"status": "archived"})
+    search_page = client.get(
+        path, headers=auth_headers(token), params={"search": "mock-page-model-3"}
+    )
+
+    assert archived.status_code == 204
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert active_page.status_code == 200
+    assert draft_page.status_code == 200
+    assert archived_page.status_code == 200
+    assert search_page.status_code == 200
+    assert len(first_page.json()) == 2
+    assert len(second_page.json()) == 1
+    assert {item["id"] for item in first_page.json()}.isdisjoint(
+        {item["id"] for item in second_page.json()}
+    )
+    assert [item["id"] for item in active_page.json()] == [created[0]["id"]]
+    assert {item["id"] for item in draft_page.json()} == {created[2]["id"], created[3]["id"]}
+    assert [item["id"] for item in archived_page.json()] == [created[1]["id"]]
+    assert [item["id"] for item in search_page.json()] == [created[3]["id"]]
+
+
 def test_model_configs_are_workspace_scoped(client: TestClient) -> None:
     register(client, "owner-model@example.com")
     owner_token = login(client, "owner-model@example.com")

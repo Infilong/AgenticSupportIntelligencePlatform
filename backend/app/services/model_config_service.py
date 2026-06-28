@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import String, cast, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import AgentConfig
@@ -20,23 +20,52 @@ class ModelConfigService:
         self.db = db
 
     def list_configs(
-        self, *, workspace_id: UUID, include_archived: bool = False
+        self,
+        *,
+        workspace_id: UUID,
+        include_archived: bool = False,
+        status_filter: str = "all",
+        search: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[ModelConfig]:
         filters = [ModelConfig.workspace_id == workspace_id]
-        if not include_archived:
+        if status_filter == "active":
+            filters.extend([ModelConfig.active.is_(True), ModelConfig.archived_at.is_(None)])
+        elif status_filter == "draft":
+            filters.extend([ModelConfig.active.is_(False), ModelConfig.archived_at.is_(None)])
+        elif status_filter == "archived":
+            filters.append(ModelConfig.archived_at.is_not(None))
+        elif not include_archived:
             filters.append(ModelConfig.archived_at.is_(None))
-        return list(
-            self.db.scalars(
-                select(ModelConfig)
-                .where(*filters)
-                .order_by(
-                    ModelConfig.purpose.asc(),
-                    ModelConfig.active.desc(),
-                    ModelConfig.archived_at.is_not(None),
-                    ModelConfig.created_at.desc(),
+
+        normalized_search = (search or "").strip()
+        if normalized_search:
+            pattern = f"%{normalized_search}%"
+            filters.append(
+                or_(
+                    ModelConfig.provider.ilike(pattern),
+                    ModelConfig.model.ilike(pattern),
+                    ModelConfig.purpose.ilike(pattern),
+                    cast(ModelConfig.max_context_tokens, String).ilike(pattern),
+                    cast(ModelConfig.id, String).ilike(pattern),
                 )
-            ).all()
+            )
+
+        statement = (
+            select(ModelConfig)
+            .where(*filters)
+            .order_by(
+                ModelConfig.purpose.asc(),
+                ModelConfig.active.desc(),
+                ModelConfig.archived_at.is_not(None),
+                ModelConfig.created_at.desc(),
+            )
+            .offset(offset)
         )
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
 
     def create_config(
         self,

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -26,6 +26,12 @@ PromptWriteAccess = Annotated[Workspace, Depends(require_workspace_permission("p
 CurrentUser = Annotated[User, Depends(get_current_user)]
 TemplateId = Annotated[UUID, Path()]
 IncludeArchived = Annotated[bool, Query()]
+HistoryStatusFilter = Annotated[
+    Literal["all", "active", "draft", "archived"], Query(alias="status")
+]
+HistorySearchFilter = Annotated[str | None, Query(max_length=160)]
+HistoryLimit = Annotated[int | None, Query(ge=1, le=500)]
+HistoryOffset = Annotated[int, Query(ge=0)]
 
 
 @router.get("", response_model=list[PromptTemplateResponse])
@@ -33,9 +39,18 @@ def list_prompt_templates(
     workspace: PromptReadAccess,
     db: DbSession,
     include_archived: IncludeArchived = False,
+    status_filter: HistoryStatusFilter = "all",
+    search: HistorySearchFilter = None,
+    limit: HistoryLimit = None,
+    offset: HistoryOffset = 0,
 ) -> list[PromptTemplateResponse]:
     templates = PromptTemplateService(db).list_templates(
-        workspace_id=workspace.id, include_archived=include_archived
+        workspace_id=workspace.id,
+        include_archived=include_archived,
+        status_filter=status_filter,
+        search=search,
+        limit=limit,
+        offset=offset,
     )
     return [PromptTemplateResponse.model_validate(template) for template in templates]
 

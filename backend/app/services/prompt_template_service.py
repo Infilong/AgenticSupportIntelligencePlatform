@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
@@ -19,23 +19,52 @@ class PromptTemplateService:
         self.db = db
 
     def list_templates(
-        self, *, workspace_id: UUID, include_archived: bool = False
+        self,
+        *,
+        workspace_id: UUID,
+        include_archived: bool = False,
+        status_filter: str = "all",
+        search: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[PromptTemplate]:
         filters = [PromptTemplate.workspace_id == workspace_id]
-        if not include_archived:
+        if status_filter == "active":
+            filters.extend([PromptTemplate.active.is_(True), PromptTemplate.archived_at.is_(None)])
+        elif status_filter == "draft":
+            filters.extend([PromptTemplate.active.is_(False), PromptTemplate.archived_at.is_(None)])
+        elif status_filter == "archived":
+            filters.append(PromptTemplate.archived_at.is_not(None))
+        elif not include_archived:
             filters.append(PromptTemplate.archived_at.is_(None))
-        return list(
-            self.db.scalars(
-                select(PromptTemplate)
-                .where(*filters)
-                .order_by(
-                    PromptTemplate.name.asc(),
-                    PromptTemplate.language.asc(),
-                    PromptTemplate.archived_at.is_not(None),
-                    PromptTemplate.version.desc(),
+
+        normalized_search = (search or "").strip()
+        if normalized_search:
+            pattern = f"%{normalized_search}%"
+            filters.append(
+                or_(
+                    PromptTemplate.name.ilike(pattern),
+                    PromptTemplate.language.ilike(pattern),
+                    cast(PromptTemplate.version, String).ilike(pattern),
+                    cast(PromptTemplate.id, String).ilike(pattern),
+                    PromptTemplate.template_text.ilike(pattern),
                 )
-            ).all()
+            )
+
+        statement = (
+            select(PromptTemplate)
+            .where(*filters)
+            .order_by(
+                PromptTemplate.name.asc(),
+                PromptTemplate.language.asc(),
+                PromptTemplate.archived_at.is_not(None),
+                PromptTemplate.version.desc(),
+            )
+            .offset(offset)
         )
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
 
     def get_active_or_create_default(
         self,
