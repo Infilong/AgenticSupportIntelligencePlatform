@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "datasets" | "documents" | "agent" | "tools" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
+type Tab = "overview" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin";
 
 type CurrentUser = {
@@ -363,6 +363,34 @@ type EvaluationResult = {
   created_at: string;
 };
 
+type GuardrailFailure = {
+  id: string;
+  graph_run_id: string;
+  graph_step_id: string | null;
+  severity: string;
+  message: string;
+  created_at: string;
+};
+
+type GuardrailCatalogItem = {
+  guardrail_type: string;
+  label: string;
+  description: string;
+  stage: string;
+  enabled: boolean;
+  configurable: boolean;
+  default_severity: string;
+  action_on_fail: string;
+  related_workflow_nodes: string[];
+  usage: {
+    total_evaluations: number;
+    failed_evaluations: number;
+    pass_rate: number;
+    last_failed_at: string | null;
+  };
+  recent_failures: GuardrailFailure[];
+};
+
 type EvaluationMetric = {
   id: string;
   mode: Mode;
@@ -437,6 +465,7 @@ const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purp
   { id: "documents", label: "Knowledge", token: "KB", group: "Build", purpose: "Manage RAG policies, FAQs, versions, chunks, and citations." },
   { id: "agent", label: "Agents", token: "AG", group: "Build", purpose: "Configure and run governed LangGraph agent workflows." },
   { id: "tools", label: "Tools", token: "TL", group: "Build", purpose: "Inspect agent tools, schemas, permissions, usage, and errors." },
+  { id: "guardrails", label: "Guardrails", token: "GR", group: "Build", purpose: "Inspect governance checks, policy coverage, failures, and review routing." },
   { id: "trace", label: "Runs & traces", token: "TR", group: "Operate", purpose: "Inspect graph state, tools, guardrails, evidence, and model calls." },
   { id: "reviews", label: "Human review", token: "RV", group: "Operate", purpose: "Resolve blocked, risky, low-confidence, or unsupported runs." },
   { id: "evaluations", label: "Evaluations", token: "EV", group: "Evaluate", purpose: "Compare quality, routing, language preservation, and baselines." },
@@ -663,6 +692,7 @@ export function App() {
   const [trace, setTrace] = useState<GraphTrace | null>(null);
   const [traceRunId, setTraceRunId] = useState("");
   const [tools, setTools] = useState<ToolCatalogItem[]>([]);
+  const [guardrails, setGuardrails] = useState<GuardrailCatalogItem[]>([]);
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
@@ -735,6 +765,7 @@ export function App() {
     { label: "Knowledge", done: documents.length > 0, tab: "documents" as Tab },
     { label: "Agents", done: agents.length > 0, tab: "agent" as Tab },
     { label: "Tools", done: tools.some((tool) => tool.usage.total_calls > 0), tab: "tools" as Tab },
+    { label: "Guardrails", done: guardrails.some((item) => item.usage.total_evaluations > 0), tab: "guardrails" as Tab },
     { label: "Runs & traces", done: Boolean(trace), tab: "trace" as Tab },
     { label: "Human review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
     { label: "Evaluations", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
@@ -849,6 +880,7 @@ export function App() {
       loadAgents(),
       loadReviews(),
       loadTools(),
+      loadGuardrails(),
       loadEvaluations(),
       loadCosts(),
       loadAuditLogs(),
@@ -1316,6 +1348,12 @@ export function App() {
     setTools(data);
   }
 
+  async function loadGuardrails() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<GuardrailCatalogItem[]>(workspacePath("/guardrails"), { token });
+    setGuardrails(data);
+  }
+
   async function claimReview(review: HumanReview) {
     await runAction("Review claimed", async () => {
       await apiRequest(workspacePath(`/human-reviews/${review.id}/claim`), {
@@ -1678,6 +1716,8 @@ export function App() {
         return AgentPanel();
       case "tools":
         return ToolsPanel();
+      case "guardrails":
+        return GuardrailsPanel();
       case "trace":
         return TracePanel();
       case "reviews":
@@ -1966,11 +2006,11 @@ export function App() {
             <strong>{tools.some((tool) => tool.usage.total_calls > 0) ? "Runtime measured" : "Catalog ready"}</strong>
             <small>Tool contracts and recent executions are now visible outside individual traces.</small>
           </button>
-          <article className="overview-admin-card">
+          <button className="overview-admin-card" onClick={() => setActiveTab("guardrails")}>
             <span>Guardrails</span>
-            <strong>Runtime visible</strong>
-            <small>Prompt injection, citation, language, confidence, and budget checks are shown in traces and reviews.</small>
-          </article>
+            <strong>{guardrails.some((item) => item.usage.failed_evaluations > 0) ? "Failures visible" : "Policy catalog"}</strong>
+            <small>Runtime guardrail policies and failures are visible outside individual traces.</small>
+          </button>
           <article className="overview-admin-card">
             <span>Permissions</span>
             <strong>Workspace scoped</strong>
@@ -2562,6 +2602,128 @@ export function App() {
             </article>
           ))}
           {tools.length === 0 && <EmptyState title="No tools loaded" detail="Refresh the workspace or run an agent to load runtime tool definitions." />}
+        </section>
+      </div>
+    );
+  }
+
+
+  function GuardrailsPanel() {
+    const totalEvaluations = guardrails.reduce((sum, item) => sum + item.usage.total_evaluations, 0);
+    const failedEvaluations = guardrails.reduce((sum, item) => sum + item.usage.failed_evaluations, 0);
+    const enabledGuardrails = guardrails.filter((item) => item.enabled).length;
+    const configurableGuardrails = guardrails.filter((item) => item.configurable).length;
+    const recentFailures = guardrails.flatMap((item) =>
+      item.recent_failures.map((failure) => ({ ...failure, label: item.label, guardrail_type: item.guardrail_type })),
+    ).sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 8);
+    const passRate = totalEvaluations ? Math.round(((totalEvaluations - failedEvaluations) / totalEvaluations) * 100) : 0;
+
+    return (
+      <div className="guardrail-console">
+        <section className="panel guardrail-hero">
+          <div>
+            <p className="eyebrow">Governance</p>
+            <h2>Inspect runtime guardrails and review routing</h2>
+            <p className="muted">This page is backed by the same guardrail decisions stored for LangGraph runs. It shows what each policy checks, when it runs, what action failure triggers, and which traces need review.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Guardrail posture</span>
+            <strong>{totalEvaluations ? `${passRate}% pass rate` : "Ready for first run"}</strong>
+            <p>{failedEvaluations ? `${failedEvaluations} failed evaluations are linked to traces.` : "No guardrail failures recorded in this workspace."}</p>
+            <button type="button" onClick={() => void runAction("Guardrails refreshed", loadGuardrails)}>Refresh guardrails</button>
+          </div>
+        </section>
+
+        <section className="queue-summary-grid">
+          <Metric label="Guardrails" value={guardrails.length} />
+          <Metric label="Enabled" value={enabledGuardrails} />
+          <Metric label="Configurable" value={configurableGuardrails} />
+          <Metric label="Evaluations" value={totalEvaluations} />
+          <Metric label="Failures" value={failedEvaluations} />
+          <Metric label="Pass rate" value={`${passRate}%`} />
+        </section>
+
+        <section className="guardrail-workbench">
+          <div className="guardrail-grid">
+            {guardrails.map((guardrail) => (
+              <article className="panel stack guardrail-card" key={guardrail.guardrail_type}>
+                <div className="row-head">
+                  <div>
+                    <p className="eyebrow">{guardrail.stage}</p>
+                    <h3>{guardrail.label}</h3>
+                  </div>
+                  <Badge tone={guardrail.enabled ? "good" : "warn"}>{guardrail.enabled ? "enabled" : "disabled"}</Badge>
+                </div>
+                <p className="muted">{guardrail.description}</p>
+                <div className="metric-grid compact">
+                  <Metric label="Evaluations" value={guardrail.usage.total_evaluations} />
+                  <Metric label="Failures" value={guardrail.usage.failed_evaluations} />
+                  <Metric label="Pass rate" value={`${Math.round(guardrail.usage.pass_rate * 100)}%`} />
+                  <Metric label="Last failed" value={formatDate(guardrail.usage.last_failed_at)} />
+                </div>
+                <div className="tool-chip-row">
+                  <Badge tone={toneForReviewReason(guardrail.guardrail_type)}>{guardrail.default_severity}</Badge>
+                  <Badge>{guardrail.configurable ? "configurable" : "fixed policy"}</Badge>
+                  <Badge>{guardrail.action_on_fail}</Badge>
+                  {guardrail.related_workflow_nodes.map((node) => <Badge key={node}>{formatStepName(node)}</Badge>)}
+                </div>
+                <div className="tool-call-list">
+                  <div className="row-head">
+                    <strong>Recent failures</strong>
+                    <Badge>{guardrail.recent_failures.length}</Badge>
+                  </div>
+                  {guardrail.recent_failures.map((failure) => (
+                    <button
+                      type="button"
+                      className="recent-run-row"
+                      key={failure.id}
+                      onClick={() => { setTraceRunId(failure.graph_run_id); void loadTrace(failure.graph_run_id); setActiveTab("trace"); }}
+                    >
+                      <span>
+                        <strong>{failure.message}</strong>
+                        <small>{failure.graph_run_id}</small>
+                      </span>
+                      <span className="recent-run-meta">
+                        <Badge tone={toneForStatus(failure.severity)}>{failure.severity}</Badge>
+                        <small>{formatDate(failure.created_at)}</small>
+                      </span>
+                    </button>
+                  ))}
+                  {guardrail.recent_failures.length === 0 && <EmptyState title="No failures" detail="Failures appear here after a run is blocked or routed." />}
+                </div>
+              </article>
+            ))}
+            {guardrails.length === 0 && <EmptyState title="No guardrails loaded" detail="Refresh the workspace or run an agent to load runtime guardrail policies." />}
+          </div>
+
+          <aside className="panel stack guardrail-failure-panel">
+            <div className="row-head">
+              <div>
+                <p className="eyebrow">Attention</p>
+                <h3>Recent guardrail failures</h3>
+              </div>
+              <Badge tone={recentFailures.length ? "warn" : "good"}>{recentFailures.length}</Badge>
+            </div>
+            {recentFailures.map((failure) => (
+              <button
+                type="button"
+                className="recent-run-row"
+                key={`${failure.guardrail_type}:${failure.id}`}
+                onClick={() => { setTraceRunId(failure.graph_run_id); void loadTrace(failure.graph_run_id); setActiveTab("trace"); }}
+              >
+                <span>
+                  <strong>{failure.label}</strong>
+                  <small>{failure.message}</small>
+                </span>
+                <span className="recent-run-meta">
+                  <Badge tone={toneForStatus(failure.severity)}>{failure.severity}</Badge>
+                  <small>{formatDate(failure.created_at)}</small>
+                </span>
+              </button>
+            ))}
+            {recentFailures.length === 0 && <EmptyState title="No failures" detail="Guardrail failures will appear here with trace links." />}
+            <p className="permission-note">Policy editing is intentionally not exposed yet. This page reflects runtime-enforced guardrails and persisted results.</p>
+          </aside>
         </section>
       </div>
     );
