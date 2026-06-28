@@ -2183,45 +2183,110 @@ export function App() {
   }
 
   function AuditPanel() {
+    const resourceCounts = auditLogs.reduce<Record<string, number>>((counts, log) => {
+      counts[log.resource_type] = (counts[log.resource_type] ?? 0) + 1;
+      return counts;
+    }, {});
+    const actorCounts = auditLogs.reduce<Record<string, number>>((counts, log) => {
+      const actor = log.actor_user_id ? "user" : "system";
+      counts[actor] = (counts[actor] ?? 0) + 1;
+      return counts;
+    }, {});
+    const highImpactLogs = auditLogs.filter((log) => auditImpact(log.action) === "high");
+    const latestLog = auditLogs[0] ?? null;
+    const resourceBreakdown = Object.entries(resourceCounts).sort((left, right) => right[1] - left[1]);
+
     return (
-      <section className="panel stack">
-        <ActionGuide
-          title="Audit logs make operations accountable"
-          detail="Every high-risk admin action should leave a workspace-scoped record: who changed it, what resource was affected, and when it happened."
-          action="Refresh audit logs"
-          onAction={() => void runAction("Audit logs refreshed", loadAuditLogs)}
-        />
-        <div className="row-head">
+      <div className="audit-console">
+        <section className="panel audit-hero">
           <div>
-            <h3>Workspace audit trail</h3>
-            <p className="muted">Recent agent, knowledge, prompt, model, and review operations.</p>
+            <p className="eyebrow">Audit trail</p>
+            <h2>Review accountable workspace operations</h2>
+            <p className="muted">Every sensitive AI platform action should say who acted, what changed, when it happened, and which workspace resource was affected.</p>
           </div>
-          <Badge tone={auditLogs.length ? "good" : "neutral"}>{auditLogs.length} events</Badge>
-        </div>
-        {auditLogs.length ? (
-          <div className="result-list">
-            {auditLogs.map((log) => (
-              <article className="result-row" key={log.id}>
-                <div className="row-head">
-                  <div>
-                    <strong>{log.action}</strong>
-                    <p className="muted">{log.resource_type}{log.resource_id ? ` · ${log.resource_id}` : ""}</p>
-                  </div>
-                  <Badge>{formatDate(log.created_at)}</Badge>
-                </div>
-                <div className="metric-grid compact">
-                  <Metric label="Actor" value={log.actor_user_id ?? "system"} />
-                  <Metric label="Resource" value={log.resource_type} />
-                  <Metric label="Action" value={log.action} />
-                </div>
-                <details><summary>Metadata</summary><JsonBlock value={safeJson(log.metadata_json)} /></details>
-              </article>
-            ))}
+          <div className="next-action-card">
+            <span>Latest activity</span>
+            <strong>{latestLog ? friendlyAuditAction(latestLog.action) : "No audit events"}</strong>
+            <p>{latestLog ? `${latestLog.resource_type} · ${formatDate(latestLog.created_at)}` : "Create or update agents, knowledge, prompts, models, or reviews to produce audit records."}</p>
+            <button type="button" onClick={() => void runAction("Audit logs refreshed", loadAuditLogs)}>Refresh audit logs</button>
           </div>
-        ) : (
-          <EmptyState title="No audit events yet" detail="Create or update an agent, model config, prompt, document, or review to create audit records." />
-        )}
-      </section>
+        </section>
+
+        <section className="settings-summary-grid">
+          <Metric label="Total events" value={auditLogs.length} />
+          <Metric label="High impact" value={highImpactLogs.length} />
+          <Metric label="User actions" value={actorCounts.user ?? 0} />
+          <Metric label="System actions" value={actorCounts.system ?? 0} />
+        </section>
+
+        <section className="audit-workbench">
+          <div className="panel stack audit-timeline-panel">
+            <div className="row-head">
+              <div>
+                <h3>Operations timeline</h3>
+                <p className="muted">Recent workspace-scoped changes across agents, knowledge, prompts, models, and human review.</p>
+              </div>
+              <Badge tone={auditLogs.length ? "good" : "neutral"}>{auditLogs.length} events</Badge>
+            </div>
+
+            {auditLogs.length ? (
+              <div className="audit-timeline">
+                {auditLogs.map((log) => {
+                  const metadata = safeJson(log.metadata_json);
+                  const impact = auditImpact(log.action);
+                  return (
+                    <article className={`audit-event audit-${impact}`} key={log.id}>
+                      <div className="audit-event-marker" />
+                      <div className="audit-event-body">
+                        <div className="row-head">
+                          <div>
+                            <strong>{friendlyAuditAction(log.action)}</strong>
+                            <p className="muted">{log.resource_type}{log.resource_id ? ` · ${shortId(log.resource_id)}` : ""}</p>
+                          </div>
+                          <div className="review-actions">
+                            <Badge tone={toneForAuditImpact(impact)}>{impact}</Badge>
+                            <Badge>{formatDate(log.created_at)}</Badge>
+                          </div>
+                        </div>
+                        <div className="metric-grid compact">
+                          <Metric label="Actor" value={log.actor_user_id ? shortId(log.actor_user_id) : "system"} />
+                          <Metric label="Resource" value={log.resource_type} />
+                          <Metric label="Action" value={log.action} />
+                        </div>
+                        <details><summary>Metadata</summary><JsonBlock value={metadata} /></details>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState title="No audit events yet" detail="Create or update an agent, model config, prompt, document, or review to create audit records." />
+            )}
+          </div>
+
+          <aside className="panel stack audit-side-panel">
+            <h3>Audit coverage</h3>
+            <p className="muted">These event families prove the portfolio has operational accountability, not only AI responses.</p>
+            <div className="policy-list">
+              <span>Agent configuration and run completion</span>
+              <span>Knowledge upload, reindex, and deletion</span>
+              <span>Human review claim, release, and resolution</span>
+              <span>Prompt version creation and activation</span>
+              <span>Model config creation and activation</span>
+            </div>
+            <h3>By resource</h3>
+            <div className="audit-breakdown-list">
+              {resourceBreakdown.map(([resource, count]) => (
+                <div className="metric-line" key={resource}>
+                  <span>{resource}</span>
+                  <strong>{count}</strong>
+                </div>
+              ))}
+              {resourceBreakdown.length === 0 && <p className="muted">No resources recorded yet.</p>}
+            </div>
+          </aside>
+        </section>
+      </div>
     );
   }
 
@@ -2606,6 +2671,26 @@ export function App() {
   }
 }
 
+
+function shortId(value: string): string {
+  return value.length > 8 ? value.slice(0, 8) : value;
+}
+
+function friendlyAuditAction(action: string): string {
+  return action.split(".").map((part) => formatStepName(part)).join(" · ");
+}
+
+function auditImpact(action: string): "low" | "medium" | "high" {
+  if (action.includes("deleted") || action.includes("activated") || action.includes("resolved")) return "high";
+  if (action.includes("reindexed") || action.includes("updated") || action.includes("created")) return "medium";
+  return "low";
+}
+
+function toneForAuditImpact(impact: "low" | "medium" | "high"): "neutral" | "good" | "warn" | "bad" {
+  if (impact === "high") return "warn";
+  if (impact === "medium") return "neutral";
+  return "good";
+}
 
 function toneForStatus(status: string): "neutral" | "good" | "warn" | "bad" {
   if (["completed", "succeeded", "indexed", "approved"].includes(status)) return "good";
