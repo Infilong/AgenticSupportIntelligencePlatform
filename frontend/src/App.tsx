@@ -1127,6 +1127,34 @@ export function App() {
     return items.filter((item) => item.folder_id === selectedFolderId);
   }
 
+  function folderSelectionToFormValue(folderId: string) {
+    return folderId === "all" || folderId === "unfiled" ? "" : folderId;
+  }
+
+  function selectDataFolder(folderId: string) {
+    setSelectedDataFolderId(folderId);
+    setDatasetFolderId(folderSelectionToFormValue(folderId));
+    const scopedDatasets = filterByFolder(datasets, folderId);
+    if (!scopedDatasets.some((dataset) => dataset.id === selectedDatasetId)) {
+      const nextDatasetId = scopedDatasets[0]?.id ?? "";
+      setSelectedDatasetId(nextDatasetId);
+      if (nextDatasetId) {
+        void loadExamples(nextDatasetId);
+      } else {
+        setExamples([]);
+      }
+    }
+  }
+
+  function selectKnowledgeFolder(folderId: string) {
+    setSelectedKnowledgeFolderId(folderId);
+    setDocumentFolderId(folderSelectionToFormValue(folderId));
+    const scopedDocuments = filterByFolder(documents, folderId);
+    if (!scopedDocuments.some((document) => document.id === selectedDocumentId)) {
+      resetDocumentForm(folderId);
+    }
+  }
+
   function matchesSearch(query: string, ...values: Array<string | null | undefined>) {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return true;
@@ -1371,41 +1399,55 @@ export function App() {
     });
   }
 
-  function resetDocumentForm() {
+  function resetDocumentForm(folderId = selectedKnowledgeFolderId) {
     setSelectedDocumentId("");
     setDocumentDetail(null);
     setDocumentTitle("Refund Policy EN");
     setDocumentLanguage("en");
-    setDocumentFolderId("");
+    setDocumentFolderId(folderSelectionToFormValue(folderId));
     setDocumentContent(demoDocument);
+  }
+
+  async function deleteDocument(documentId: string) {
+    const document = documents.find((item) => item.id === documentId);
+    const title = document?.title ?? "this knowledge document";
+    if (!window.confirm(`Delete "${title}" and its indexed chunks?`)) return;
+    await runAction("Document deleted", async () => {
+      await apiRequest(workspacePath(`/knowledge-documents/${documentId}`), {
+        method: "DELETE",
+        token,
+      });
+      if (selectedDocumentId === documentId) {
+        resetDocumentForm();
+      }
+      await loadDocuments();
+      await loadAuditLogs();
+    });
   }
 
   async function deleteSelectedDocument() {
     if (!selectedDocumentId) return;
-    if (!window.confirm("Delete this knowledge document and its indexed chunks?")) return;
-    await runAction("Document deleted", async () => {
-      await apiRequest(workspacePath(`/knowledge-documents/${selectedDocumentId}`), {
-        method: "DELETE",
+    await deleteDocument(selectedDocumentId);
+  }
+
+  async function moveDocumentFolder(documentId: string, folderId: string) {
+    await runAction("Document moved", async () => {
+      await apiRequest<KnowledgeDocument>(workspacePath(`/knowledge-documents/${documentId}/folder`), {
+        method: "PATCH",
         token,
+        body: { folder_id: folderId || null },
       });
-      resetDocumentForm();
       await loadDocuments();
+      if (selectedDocumentId === documentId) {
+        await loadDocumentDetail(documentId);
+      }
       await loadAuditLogs();
     });
   }
 
   async function moveSelectedDocumentFolder() {
     if (!selectedDocumentId) return;
-    await runAction("Document moved", async () => {
-      await apiRequest<KnowledgeDocument>(workspacePath(`/knowledge-documents/${selectedDocumentId}/folder`), {
-        method: "PATCH",
-        token,
-        body: { folder_id: documentFolderId || null },
-      });
-      await loadDocuments();
-      await loadDocumentDetail(selectedDocumentId);
-      await loadAuditLogs();
-    });
+    await moveDocumentFolder(selectedDocumentId, documentFolderId);
   }
 
 
@@ -2596,7 +2638,7 @@ export function App() {
           title: "Dataset folders",
           detail: "Keep imports grouped by product, client, language, or test purpose as the workspace grows.",
           selectedFolderId: selectedDataFolderId,
-          onSelectFolder: setSelectedDataFolderId,
+          onSelectFolder: selectDataFolder,
           folderName: dataFolderName,
           onFolderNameChange: setDataFolderName,
         })}
@@ -2623,6 +2665,11 @@ export function App() {
               <span>Current folder</span>
               <strong>{selectedFolderLabel}</strong>
               <small>{visibleDatasets.length} datasets shown from {folderDatasets.length} in this folder scope.</small>
+            </div>
+            <div className="folder-scope-banner">
+              <span>Import target</span>
+              <strong>{folderLabel("dataset", datasetFolderId || null)}</strong>
+              <small>New JSONL imports are saved into this folder so the dataset list stays organized as it grows.</small>
             </div>
             <label>
               Search current folder
@@ -2732,7 +2779,7 @@ export function App() {
             title: "Knowledge folders",
             detail: "Organize uploaded policies, FAQs, release notes, and manuals before the library becomes large.",
             selectedFolderId: selectedKnowledgeFolderId,
-            onSelectFolder: setSelectedKnowledgeFolderId,
+            onSelectFolder: selectKnowledgeFolder,
             folderName: knowledgeFolderName,
             onFolderNameChange: setKnowledgeFolderName,
           })}
@@ -2742,13 +2789,18 @@ export function App() {
                 <h3>Document library</h3>
                 <p className="muted">Workspace-owned policies and FAQs available to retrieval.</p>
               </div>
-              <button type="button" onClick={resetDocumentForm}>New</button>
+              <button type="button" onClick={() => resetDocumentForm()}>New</button>
             </div>
             <div className="library-toolbar">
               <div className="folder-scope-banner">
                 <span>Current folder</span>
                 <strong>{selectedFolderLabel}</strong>
                 <small>{visibleDocuments.length} documents shown from {folderDocuments.length} in this folder scope.</small>
+              </div>
+              <div className="folder-scope-banner">
+                <span>Upload target</span>
+                <strong>{folderLabel("knowledge_document", documentFolderId || null)}</strong>
+                <small>New knowledge files and edits stay attached to this folder unless you choose another target.</small>
               </div>
               <label>
                 Search current folder
@@ -2764,18 +2816,29 @@ export function App() {
             </div>
             <div className="document-list">
               {visibleDocuments.map((document) => (
-                <button
+                <article
                   key={document.id}
                   className={`document-card ${selectedDocumentId === document.id ? "selected" : ""}`}
-                  onClick={() => void loadDocumentDetail(document.id)}
                 >
-                  <div className="row-head">
+                  <button type="button" className="resource-main-button document-select-button" onClick={() => void loadDocumentDetail(document.id)}>
                     <strong>{document.title}</strong>
                     <Badge tone={document.status === "indexed" ? "good" : document.status === "failed" ? "bad" : "warn"}>{document.status}</Badge>
-                  </div>
+                  </button>
                   <span>{document.language.toUpperCase()} · {folderLabel("knowledge_document", document.folder_id)} · updated {formatDate(document.updated_at)}</span>
                   {document.error_message && <small>{document.error_message}</small>}
-                </button>
+                  <div className="resource-actions">
+                    <select
+                      value={document.folder_id ?? ""}
+                      onChange={(event) => void moveDocumentFolder(document.id, event.target.value)}
+                      disabled={!canManageResources || loading}
+                      aria-label={`Move ${document.title} to folder`}
+                    >
+                      <option value="">Unfiled</option>
+                      {knowledgeFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+                    </select>
+                    <button type="button" className="danger-button" onClick={() => void deleteDocument(document.id)} disabled={!canManageResources || loading}>Delete</button>
+                  </div>
+                </article>
               ))}
               {visibleDocuments.length === 0 && (
                 <EmptyState
@@ -2817,7 +2880,7 @@ export function App() {
             <div className="run-action-bar">
               <button className="primary" disabled={loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
               {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResources || loading}>Move only</button>}
-              {selectedDocumentId && <button type="button" onClick={resetDocumentForm}>Start new document</button>}
+              {selectedDocumentId && <button type="button" onClick={() => resetDocumentForm()}>Start new document</button>}
               <button type="button" onClick={() => setActiveTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
             </div>
           </form>

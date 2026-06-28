@@ -46,3 +46,26 @@ Do not add pagination or a tree-heavy file manager yet. The current dataset/docu
 - Prompt templates and model configs are not file uploads, but they may need archive controls when the settings surface grows.
 - Nested folders exist at schema level but are not exposed in UI. Keep this out of v1 unless users need deeper hierarchy.
 - Pagination is still postponed until resource counts justify it.
+
+
+## Follow-up Implementation Record: Document Row Actions and Folder Targets
+
+User feedback after the first folder pass: any upload/import surface must expose manipulation options, and fields that can grow with many file names should be folder-managed.
+
+Additional frontend changes:
+- Knowledge document rows now expose inline owner-gated move and delete controls, matching dataset rows.
+- Selecting a dataset folder sets the import form target to that folder.
+- Selecting a knowledge folder sets the upload form target when creating a new document.
+- Data and Knowledge libraries now show both current folder scope and import/upload target so users understand where new resources will land.
+- The browser smoke test now creates a real knowledge document through the backend and verifies its move/delete controls are visible.
+
+Current audit conclusion:
+- Upload/import file-like surfaces in v1 are Knowledge documents and Datasets.
+- Both surfaces now support create/import, update where applicable, folder assignment, move, delete, workspace scoping, owner-only destructive actions, and audit logging.
+- Prompt templates/model configs are growing admin records, not file uploads; future archive/delete controls should be handled in a separate settings-lifecycle ticket.
+
+Validation:
+- `cd frontend && npm run typecheck`: passed.
+- `cd frontend && npm run build`: passed.
+- `cd backend && uv run pytest -s -q tests/test_resource_folders.py`: 4 passed.
+- `make frontend-e2e-docker`: passed.
