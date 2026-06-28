@@ -6965,6 +6965,59 @@ function formatScore(value: number | undefined) {
   return typeof value === "number" ? value.toFixed(3) : "-";
 }
 
+function traceContextPacking(value: unknown): {
+  action: string;
+  packedCount: number;
+  citationCount: number;
+  trimmedCount: number;
+  totalTokens: number | null;
+  maxTokens: number | null;
+  model: string | null;
+} | null {
+  const record = asRecord(value);
+  if (!record || record.token_budget_action === undefined) return null;
+  const packedChunks = Array.isArray(record.packed_context_chunks) ? record.packed_context_chunks : [];
+  const packedCitations = Array.isArray(record.packed_context_citations) ? record.packed_context_citations : [];
+  return {
+    action: typeof record.token_budget_action === "string" ? record.token_budget_action : "unknown",
+    packedCount: packedChunks.length,
+    citationCount: packedCitations.length,
+    trimmedCount: typeof record.trimmed_context_count === "number" ? record.trimmed_context_count : 0,
+    totalTokens: typeof record.context_total_tokens === "number" ? record.context_total_tokens : null,
+    maxTokens: typeof record.context_max_tokens === "number" ? record.context_max_tokens : null,
+    model: typeof record.context_model === "string" ? record.context_model : null,
+  };
+}
+
+function ContextPackingPanel({ summary }: { summary: ReturnType<typeof traceContextPacking> }) {
+  if (!summary) return null;
+  const pressure = summary.totalTokens !== null && summary.maxTokens
+    ? Math.min(100, Math.round((summary.totalTokens / summary.maxTokens) * 100))
+    : null;
+  return (
+    <section className="trace-context-panel" aria-label="Context packing summary">
+      <div className="row-head">
+        <div>
+          <span>Context packing</span>
+          <strong>{friendlySignalValue(summary.action)}</strong>
+        </div>
+        <Badge tone={summary.trimmedCount > 0 ? "warn" : "good"}>{summary.trimmedCount > 0 ? `${summary.trimmedCount} trimmed` : "within budget"}</Badge>
+      </div>
+      <div className="trace-context-meter" aria-label="Context token pressure">
+        <span style={{ width: `${pressure ?? 0}%` }} />
+      </div>
+      <div className="metric-grid compact">
+        <Metric label="Packed chunks" value={summary.packedCount} />
+        <Metric label="Packed citations" value={summary.citationCount} />
+        <Metric label="Token plan" value={summary.totalTokens !== null ? formatNumber(summary.totalTokens) : "-"} />
+        <Metric label="Context limit" value={summary.maxTokens !== null ? formatNumber(summary.maxTokens) : "-"} />
+        <Metric label="Pressure" value={pressure !== null ? `${pressure}%` : "-"} />
+        <Metric label="Model" value={summary.model ?? "-"} />
+      </div>
+    </section>
+  );
+}
+
 function TraceEvidenceCards({ chunks }: { chunks: TraceRetrievedChunk[] }) {
   if (chunks.length === 0) return null;
   const displayedChunks = chunks.slice(0, 3);
@@ -7442,6 +7495,7 @@ function TraceStepInspector({
   const input = safeJson(step.input_json);
   const outputSignals = traceStepSignals(output);
   const retrievedChunks = traceRetrievedChunks(output);
+  const contextPacking = traceContextPacking(output);
   const inputRecord = asRecord(input) ?? {};
   const checkpointState = checkpoint ? asRecord(safeJson(checkpoint.state_json)) : null;
   const checkpointMeta = asRecord(checkpointState?.checkpoint) ?? {};
@@ -7482,6 +7536,7 @@ function TraceStepInspector({
           </div>
         </div>
       )}
+      <ContextPackingPanel summary={contextPacking} />
       <TraceEvidenceCards chunks={retrievedChunks} />
       <div className="trace-inspector-grid">
         <div className="trace-evidence-box">
@@ -7492,7 +7547,7 @@ function TraceStepInspector({
         <div className="trace-evidence-box">
           <span>Checkpoint</span>
           <strong>{checkpoint ? formatStepName(String(checkpointMeta.completed_step ?? checkpoint.checkpoint_key)) : "not stored"}</strong>
-          <p>{checkpoint ? `${String(checkpointMeta.retrieved_chunk_count ?? 0)} chunks, ${String(checkpointMeta.citation_count ?? 0)} citations` : "No checkpoint matched this node."}</p>
+          <p>{checkpoint ? `${String(checkpointMeta.retrieved_chunk_count ?? 0)} retrieved, ${String(checkpointMeta.packed_context_count ?? 0)} packed, ${String(checkpointMeta.citation_count ?? 0)} citations` : "No checkpoint matched this node."}</p>
         </div>
       </div>
       {step.ai_run && <AIRunPanel aiRun={step.ai_run} />}
@@ -7546,7 +7601,8 @@ function CheckpointCard({ checkpoint, index }: { checkpoint: CheckpointTrace; in
         <Badge tone={meta.status === "failed" ? "bad" : "good"}>{String(meta.status ?? "stored")}</Badge>
       </div>
       <div className="metric-grid compact">
-        <Metric label="Chunks" value={String(meta.retrieved_chunk_count ?? 0)} />
+        <Metric label="Retrieved" value={String(meta.retrieved_chunk_count ?? 0)} />
+        <Metric label="Packed" value={String(meta.packed_context_count ?? 0)} />
         <Metric label="Citations" value={String(meta.citation_count ?? 0)} />
         <Metric label="Draft" value={meta.has_draft_answer ? "yes" : "no"} />
         <Metric label="Final" value={meta.has_final_answer ? "yes" : "no"} />
@@ -7561,6 +7617,7 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
   const output = safeJson(step.output_json);
   const signals = traceStepSignals(output);
   const retrievedChunks = traceRetrievedChunks(output);
+  const contextPacking = traceContextPacking(output);
   return (
     <article className="trace-step">
       <div className="row-head">
@@ -7587,6 +7644,7 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
           ))}
         </div>
       )}
+      <ContextPackingPanel summary={contextPacking} />
       <TraceEvidenceCards chunks={retrievedChunks} />
       <div className="metric-grid compact">
         <Metric label="Span" value={step.span_id ? shortId(step.span_id) : "-"} />

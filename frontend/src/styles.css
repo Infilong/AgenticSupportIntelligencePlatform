@@ -2324,6 +2324,43 @@ th {
   line-height: 1.45;
 }
 
+.trace-context-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.trace-context-panel .row-head span {
+  color: var(--text-subtle);
+  font-size: 0.74rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.trace-context-panel .row-head strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.trace-context-meter {
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.trace-context-meter span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  max-width: 100%;
+  background: var(--text);
+}
+
 .trace-evidence-section {
   display: grid;
   gap: 10px;

@@ -258,6 +258,12 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByRole("heading", { name: "Runtime decision board" })).toBeVisible();
   await expect(page.getByText("Model purpose routes", { exact: true })).toBeVisible();
   await expect(page.getByText("Prompt versions", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Compress Context/i }).click();
+  await expect(page.getByLabel("Context packing summary").first()).toBeVisible();
+  await expect(page.getByText("Context packing", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Packed chunks", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Token plan", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Context limit", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Prompt Injection").first()).toBeVisible();
   await expect(page.locator(".trace-entry-panel").getByText("human_review")).toHaveCount(0);
 
