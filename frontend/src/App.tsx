@@ -634,6 +634,7 @@ type PromptTemplate = {
   version: number;
   template_text: string;
   active: boolean;
+  archived_at: string | null;
   created_at: string;
 };
 
@@ -647,6 +648,7 @@ type ModelConfig = {
   completion_token_cost_per_1k: number;
   max_context_tokens: number;
   active: boolean;
+  archived_at: string | null;
   created_at: string;
 };
 
@@ -960,6 +962,7 @@ export function App() {
   const [promptLanguage, setPromptLanguage] = useState<Language>("en");
   const [promptText, setPromptText] = useState(defaultPromptTemplateText);
   const [promptActive, setPromptActive] = useState(true);
+  const [showArchivedPrompts, setShowArchivedPrompts] = useState(false);
 
   const [modelConfigs, setModelConfigs] = useState<ModelConfig[]>([]);
   const [modelProvider, setModelProvider] = useState("mock");
@@ -969,6 +972,7 @@ export function App() {
   const [modelCompletionCost, setModelCompletionCost] = useState(0.0002);
   const [modelMaxContext, setModelMaxContext] = useState(4096);
   const [modelActive, setModelActive] = useState(true);
+  const [showArchivedModels, setShowArchivedModels] = useState(false);
   const selectedModelProvider = modelProviderOptions.find((option) => option.id === modelProvider);
 
   function applyModelProvider(provider: string) {
@@ -1001,6 +1005,8 @@ export function App() {
   );
   const canConfigureTools = Boolean(workspaceMembership?.permissions.includes("tools:configure"));
   const canConfigureGuardrails = Boolean(workspaceMembership?.permissions.includes("guardrails:configure"));
+  const canManagePrompts = Boolean(workspaceMembership?.permissions.includes("prompts:write"));
+  const canManageModels = Boolean(workspaceMembership?.permissions.includes("models:write"));
   const workspaceRole = !selectedWorkspaceId
     ? "No workspace"
     : workspaceMembership
@@ -1031,7 +1037,7 @@ export function App() {
     { label: "Usage", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
     { label: "Members", done: workspaceMembers.length > 0, tab: "members" as Tab },
     { label: "Prompts", done: promptTemplates.some((template) => template.active), tab: "prompts" as Tab },
-    { label: "Models", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
+    { label: "Models", done: modelConfigs.some((config) => config.active && !config.archived_at), tab: "models" as Tab },
     { label: "System health", done: Boolean(systemHealth), tab: "system" as Tab },
     { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
     { label: "Settings", done: Boolean(selectedWorkspaceId && workspaceMembership), tab: "settings" as Tab },
@@ -2070,9 +2076,10 @@ export function App() {
     setAuditLogs(data);
   }
 
-  async function loadPromptTemplates() {
+  async function loadPromptTemplates(includeArchived = showArchivedPrompts) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<PromptTemplate[]>(workspacePath("/prompt-templates"), { token });
+    const suffix = includeArchived ? "?include_archived=true" : "";
+    const data = await apiRequest<PromptTemplate[]>(workspacePath(`/prompt-templates${suffix}`), { token });
     setPromptTemplates(data);
   }
 
@@ -2090,6 +2097,8 @@ export function App() {
         },
       });
       await loadPromptTemplates();
+      await loadAuditLogs();
+      await loadSystemHealth();
     });
   }
 
@@ -2100,12 +2109,30 @@ export function App() {
         token,
       });
       await loadPromptTemplates();
+      await loadAuditLogs();
+      await loadSystemHealth();
     });
   }
 
-  async function loadModelConfigs() {
+  async function archivePromptTemplate(template: PromptTemplate) {
+    if (!window.confirm(`Archive prompt template ${template.name} v${template.version}?`)) return;
+    await runAction("Prompt template archived", async () => {
+      await apiRequest(workspacePath(`/prompt-templates/${template.id}`), { method: "DELETE", token });
+      await loadPromptTemplates();
+      await loadAuditLogs();
+      await loadSystemHealth();
+    });
+  }
+
+  function toggleArchivedPrompts(value: boolean) {
+    setShowArchivedPrompts(value);
+    void loadPromptTemplates(value);
+  }
+
+  async function loadModelConfigs(includeArchived = showArchivedModels) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<ModelConfig[]>(workspacePath("/model-configs"), { token });
+    const suffix = includeArchived ? "?include_archived=true" : "";
+    const data = await apiRequest<ModelConfig[]>(workspacePath(`/model-configs${suffix}`), { token });
     setModelConfigs(data);
   }
 
@@ -2127,6 +2154,8 @@ export function App() {
       });
       await loadModelConfigs();
       await loadCosts();
+      await loadAuditLogs();
+      await loadSystemHealth();
     });
   }
 
@@ -2137,7 +2166,28 @@ export function App() {
         token,
       });
       await loadModelConfigs();
+      await loadAgents();
+      await loadCosts();
+      await loadAuditLogs();
+      await loadSystemHealth();
     });
+  }
+
+  async function archiveModelConfig(config: ModelConfig) {
+    if (!window.confirm(`Archive model config ${config.provider}/${config.model}?`)) return;
+    await runAction("Model config archived", async () => {
+      await apiRequest(workspacePath(`/model-configs/${config.id}`), { method: "DELETE", token });
+      await loadModelConfigs();
+      await loadAgents();
+      await loadCosts();
+      await loadAuditLogs();
+      await loadSystemHealth();
+    });
+  }
+
+  function toggleArchivedModels(value: boolean) {
+    setShowArchivedModels(value);
+    void loadModelConfigs(value);
   }
 
   function toggleMode(mode: Mode) {
@@ -2448,7 +2498,7 @@ export function App() {
   function OverviewPanel() {
     const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
     const failedDocumentCount = documents.filter((document) => document.status === "failed").length;
-    const activeModelCount = modelConfigs.filter((config) => config.active).length;
+    const activeModelCount = modelConfigs.filter((config) => config.active && !config.archived_at).length;
     const latestRoute = latestRun?.route_decision ?? latestRun?.status ?? "No run";
     const evaluationFailureCount = evaluationDetail?.results.filter((result) => !result.passed).length ?? 0;
     const topModelSpend = [...(costSummary?.by_model ?? [])].sort(
@@ -3049,7 +3099,7 @@ export function App() {
     const selectedAgentModelConfig = summary?.assigned_model_config
       ?? modelConfigs.find((config) => config.id === selectedAgent?.model_config_id)
       ?? null;
-    const fallbackModelConfig = modelConfigs.find((config) => config.active && config.purpose === "draft_response")
+    const fallbackModelConfig = modelConfigs.find((config) => config.active && !config.archived_at && config.purpose === "draft_response")
       ?? modelConfigs.find((config) => config.active)
       ?? null;
     const modelRouteSummary = selectedAgentModelConfig
@@ -3370,7 +3420,7 @@ export function App() {
             <label>Default model route
               <select value={agentModelConfigId} onChange={(event) => setAgentModelConfigId(event.target.value)}>
                 <option value="">Workspace purpose routing</option>
-                {modelConfigs.map((config) => (
+                {modelConfigs.filter((config) => !config.archived_at).map((config) => (
                   <option key={config.id} value={config.id}>
                     {config.provider} / {config.model} · {config.purpose}{config.active ? " · active" : ""}
                   </option>
@@ -4481,12 +4531,13 @@ export function App() {
   }
 
   function PromptsPanel() {
-    const activeTemplates = promptTemplates.filter((template) => template.active);
+    const activeTemplates = promptTemplates.filter((template) => template.active && !template.archived_at);
+    const archivedPromptCount = promptTemplates.filter((template) => template.archived_at).length;
     const classifierActive = activeTemplates.find((template) => template.name === "support_intent_classifier");
     const drafterActive = activeTemplates.find((template) => template.name === "support_response_drafter");
     const activeLanguages = [...new Set(activeTemplates.map((template) => template.language))];
     const promptGroups = ["support_intent_classifier", "support_response_drafter"].map((name) => {
-      const versions = promptTemplates.filter((template) => template.name === name);
+      const versions = promptTemplates.filter((template) => template.name === name && !template.archived_at);
       const active = versions.find((template) => template.active);
       return { name, versions, active };
     });
@@ -4509,7 +4560,8 @@ export function App() {
 
         <section className="settings-summary-grid">
           <Metric label="Active prompts" value={activeTemplates.length} />
-          <Metric label="Total versions" value={promptTemplates.length} />
+          <Metric label="Visible versions" value={promptTemplates.length} />
+          <Metric label="Archived" value={archivedPromptCount} />
           <Metric label="Classifier" value={classifierActive ? `v${classifierActive.version}` : "missing"} />
           <Metric label="Drafter" value={drafterActive ? `v${drafterActive.version}` : "missing"} />
         </section>
@@ -4521,35 +4573,35 @@ export function App() {
                 <h3>Create prompt version</h3>
                 <p className="muted">Publish a controlled prompt change, then validate it through Trace and Evaluation.</p>
               </div>
-              <Badge tone={promptActive ? "good" : "neutral"}>{promptActive ? "activate" : "draft"}</Badge>
+              <Badge tone={canManagePrompts ? (promptActive ? "good" : "neutral") : "warn"}>{canManagePrompts ? (promptActive ? "activate" : "draft") : "owner only"}</Badge>
             </div>
             <div className="settings-meta-grid">
               <label>
                 Template name
-                <select value={promptName} onChange={(event) => setPromptName(event.target.value)}>
+                <select value={promptName} disabled={!canManagePrompts || loading} onChange={(event) => setPromptName(event.target.value)}>
                   <option value="support_intent_classifier">support_intent_classifier</option>
                   <option value="support_response_drafter">support_response_drafter</option>
                 </select>
               </label>
               <label>
                 Language
-                <select value={promptLanguage} onChange={(event) => setPromptLanguage(event.target.value as Language)}>
+                <select value={promptLanguage} disabled={!canManagePrompts || loading} onChange={(event) => setPromptLanguage(event.target.value as Language)}>
                   <option value="en">English</option>
                   <option value="ja">Japanese</option>
                   <option value="zh">Chinese</option>
                 </select>
               </label>
               <label className="check-row single-check settings-toggle">
-                <input type="checkbox" checked={promptActive} onChange={(event) => setPromptActive(event.target.checked)} />
+                <input type="checkbox" checked={promptActive} disabled={!canManagePrompts || loading} onChange={(event) => setPromptActive(event.target.checked)} />
                 Activate immediately
               </label>
             </div>
             <label>
               Template source
-              <textarea rows={16} value={promptText} onChange={(event) => setPromptText(event.target.value)} />
+              <textarea rows={16} value={promptText} disabled={!canManagePrompts || loading} onChange={(event) => setPromptText(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={loading}>Create version</button>
+              <button className="primary" disabled={!canManagePrompts || loading}>Create version</button>
               <button type="button" onClick={() => setActiveTab("agent")}>Run agent</button>
               <button type="button" onClick={() => setActiveTab("trace")}>Inspect trace</button>
             </div>
@@ -4576,11 +4628,21 @@ export function App() {
               <h3>Prompt version history</h3>
               <p className="muted">Activate a version to make future graph runs use it. Existing traces keep the prompt version they used.</p>
             </div>
-            <Badge>{promptTemplates.length} versions</Badge>
+            <div className="review-actions">
+              <label className="check-row single-check settings-toggle compact-toggle">
+                <input
+                  type="checkbox"
+                  checked={showArchivedPrompts}
+                  onChange={(event) => toggleArchivedPrompts(event.target.checked)}
+                />
+                Show archived
+              </label>
+              <Badge>{promptTemplates.length} versions</Badge>
+            </div>
           </div>
           <div className="prompt-template-list settings-card-grid">
             {promptTemplates.map((template) => (
-              <article className={template.active ? "prompt-card active-prompt" : "prompt-card"} key={template.id}>
+              <article className={template.active ? "prompt-card active-prompt" : template.archived_at ? "prompt-card archived-card" : "prompt-card"} key={template.id}>
                 <div className="row-head">
                   <div>
                     <strong>{template.name}</strong>
@@ -4588,7 +4650,9 @@ export function App() {
                   </div>
                   <div className="review-actions">
                     {template.active && <Badge tone="good">active</Badge>}
-                    <button disabled={template.active || loading} onClick={() => void activatePromptTemplate(template.id)}>Activate</button>
+                    {template.archived_at && <Badge>archived</Badge>}
+                    <button disabled={template.active || Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void activatePromptTemplate(template.id)}>Activate</button>
+                    <button className="danger-button" disabled={Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void archivePromptTemplate(template)}>Archive</button>
                   </div>
                 </div>
                 <JsonBlock value={template.template_text} />
@@ -4603,8 +4667,8 @@ export function App() {
 
   function SettingsPanel() {
     const canManageWorkspace = Boolean(workspaceMembership?.can_manage_workspace);
-    const liveProviderCount = modelConfigs.filter((config) => config.active && config.provider !== "mock").length;
-    const activeModelCount = modelConfigs.filter((config) => config.active).length;
+    const liveProviderCount = modelConfigs.filter((config) => config.active && !config.archived_at && config.provider !== "mock").length;
+    const activeModelCount = modelConfigs.filter((config) => config.active && !config.archived_at).length;
     const pendingHealthSignals = systemHealth
       ? systemHealth.sections.filter((section) => section.status !== "ok").length
       : 0;
@@ -4821,9 +4885,10 @@ export function App() {
   }
 
   function ModelsPanel() {
-    const activeConfigs = modelConfigs.filter((config) => config.active);
+    const activeConfigs = modelConfigs.filter((config) => config.active && !config.archived_at);
+    const archivedModelCount = modelConfigs.filter((config) => config.archived_at).length;
     const purposeSummary = modelPurposes.map((purpose) => {
-      const active = modelConfigs.find((config) => config.purpose === purpose && config.active);
+      const active = modelConfigs.find((config) => config.purpose === purpose && config.active && !config.archived_at);
       return { purpose, active };
     });
     const configuredPurposeCount = purposeSummary.filter(({ active }) => Boolean(active)).length;
@@ -4848,6 +4913,7 @@ export function App() {
 
         <section className="settings-summary-grid">
           <Metric label="Active configs" value={activeConfigs.length} />
+          <Metric label="Archived" value={archivedModelCount} />
           <Metric label="Configured purposes" value={`${configuredPurposeCount}/${modelPurposes.length}`} />
           <Metric label="Live providers" value={liveProviderCount} />
           <Metric label="Max context" value={maxContext ? formatNumber(maxContext) : "mock default"} />
@@ -4860,47 +4926,47 @@ export function App() {
                 <h3>Create model config</h3>
                 <p className="muted">Use mock for deterministic local testing, or activate OpenAI/OpenAI-compatible configs for real model calls with ledger tracking.</p>
               </div>
-              <Badge tone={modelActive ? "good" : "neutral"}>{modelActive ? "active" : "draft"}</Badge>
+              <Badge tone={canManageModels ? (modelActive ? "good" : "neutral") : "warn"}>{canManageModels ? (modelActive ? "active" : "draft") : "owner only"}</Badge>
             </div>
             <div className="settings-meta-grid">
               <label>
                 Purpose
-                <select value={modelPurpose} onChange={(event) => setModelPurpose(event.target.value)}>
+                <select value={modelPurpose} disabled={!canManageModels || loading} onChange={(event) => setModelPurpose(event.target.value)}>
                   {modelPurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
                 </select>
               </label>
               <label>
                 Provider
-                <select value={modelProvider} onChange={(event) => applyModelProvider(event.target.value)}>
+                <select value={modelProvider} disabled={!canManageModels || loading} onChange={(event) => applyModelProvider(event.target.value)}>
                   {modelProviderOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
                 </select>
               </label>
               <label>
                 Model
-                <input value={modelName} onChange={(event) => setModelName(event.target.value)} />
+                <input value={modelName} disabled={!canManageModels || loading} onChange={(event) => setModelName(event.target.value)} />
               </label>
             </div>
             {selectedModelProvider && <div className="settings-note">{selectedModelProvider.note}</div>}
             <div className="settings-meta-grid">
               <label>
                 Prompt cost / 1K
-                <input type="number" min="0" step="0.0001" value={modelPromptCost} onChange={(event) => setModelPromptCost(Number(event.target.value))} />
+                <input type="number" min="0" step="0.0001" value={modelPromptCost} disabled={!canManageModels || loading} onChange={(event) => setModelPromptCost(Number(event.target.value))} />
               </label>
               <label>
                 Completion cost / 1K
-                <input type="number" min="0" step="0.0001" value={modelCompletionCost} onChange={(event) => setModelCompletionCost(Number(event.target.value))} />
+                <input type="number" min="0" step="0.0001" value={modelCompletionCost} disabled={!canManageModels || loading} onChange={(event) => setModelCompletionCost(Number(event.target.value))} />
               </label>
               <label>
                 Max context tokens
-                <input type="number" min="256" step="256" value={modelMaxContext} onChange={(event) => setModelMaxContext(Number(event.target.value))} />
+                <input type="number" min="256" step="256" value={modelMaxContext} disabled={!canManageModels || loading} onChange={(event) => setModelMaxContext(Number(event.target.value))} />
               </label>
             </div>
             <label className="check-row single-check settings-toggle">
-              <input type="checkbox" checked={modelActive} onChange={(event) => setModelActive(event.target.checked)} />
+              <input type="checkbox" checked={modelActive} disabled={!canManageModels || loading} onChange={(event) => setModelActive(event.target.checked)} />
               Activate this config immediately
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={loading}>Create config</button>
+              <button className="primary" disabled={!canManageModels || loading}>Create config</button>
               <button type="button" onClick={() => setActiveTab("agent")}>Run agent</button>
               <button type="button" onClick={() => setActiveTab("costs")}>Inspect costs</button>
             </div>
@@ -4925,13 +4991,23 @@ export function App() {
           <div className="row-head">
             <div>
               <h3>Model configuration history</h3>
-              <p className="muted">Activating a config deactivates other configs for the same purpose in this workspace.</p>
+              <p className="muted">Activating a config deactivates other configs for the same purpose in this workspace. Archived configs are excluded from routing.</p>
             </div>
-            <Badge>{modelConfigs.length} configs</Badge>
+            <div className="review-actions">
+              <label className="check-row single-check settings-toggle compact-toggle">
+                <input
+                  type="checkbox"
+                  checked={showArchivedModels}
+                  onChange={(event) => toggleArchivedModels(event.target.checked)}
+                />
+                Show archived
+              </label>
+              <Badge>{modelConfigs.length} configs</Badge>
+            </div>
           </div>
           <div className="model-config-list settings-card-grid">
             {modelConfigs.map((config) => (
-              <article className={config.active ? "model-card active-model" : "model-card"} key={config.id}>
+              <article className={config.active ? "model-card active-model" : config.archived_at ? "model-card archived-card" : "model-card"} key={config.id}>
                 <div className="row-head">
                   <div>
                     <strong>{config.purpose}</strong>
@@ -4939,7 +5015,9 @@ export function App() {
                   </div>
                   <div className="review-actions">
                     {config.active && <Badge tone="good">active</Badge>}
-                    <button disabled={config.active || loading} onClick={() => void activateModelConfig(config.id)}>Activate</button>
+                    {config.archived_at && <Badge>archived</Badge>}
+                    <button disabled={config.active || Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void activateModelConfig(config.id)}>Activate</button>
+                    <button className="danger-button" disabled={Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void archiveModelConfig(config)}>Archive</button>
                   </div>
                 </div>
                 <div className="metric-grid compact">

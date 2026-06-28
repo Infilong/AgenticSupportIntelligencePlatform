@@ -16,6 +16,7 @@ class PromptTemplateResponse(BaseModel):
     version: int
     template_text: str
     active: bool
+    archived_at: datetime | None
     created_at: datetime
 
 

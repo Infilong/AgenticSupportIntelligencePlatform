@@ -268,6 +268,8 @@ ModelConfig
 - input_cost_per_1k
 - output_cost_per_1k
 - active
+- archived_at nullable
+- created_at
 
 PromptTemplate
 - id
@@ -277,6 +279,7 @@ PromptTemplate
 - version
 - template_text
 - active
+- archived_at nullable
 - created_at
 
 AIRun

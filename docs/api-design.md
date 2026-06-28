@@ -133,6 +133,29 @@ Current v1 behavior:
 - enforces workspace membership on create, list, and detail routes and workspace ownership on archive.
 - uses mock providers in tests; no test calls a real model provider.
 
+
+## Prompt Templates And Model Configs
+```text
+GET    /api/v1/workspaces/{workspace_id}/prompt-templates
+GET    /api/v1/workspaces/{workspace_id}/prompt-templates?include_archived=true
+POST   /api/v1/workspaces/{workspace_id}/prompt-templates
+POST   /api/v1/workspaces/{workspace_id}/prompt-templates/{template_id}/activate
+DELETE /api/v1/workspaces/{workspace_id}/prompt-templates/{template_id}
+
+GET    /api/v1/workspaces/{workspace_id}/model-configs
+GET    /api/v1/workspaces/{workspace_id}/model-configs?include_archived=true
+POST   /api/v1/workspaces/{workspace_id}/model-configs
+POST   /api/v1/workspaces/{workspace_id}/model-configs/{model_config_id}/activate
+DELETE /api/v1/workspaces/{workspace_id}/model-configs/{model_config_id}
+```
+
+Current v1 behavior:
+- list routes require workspace membership and hide archived records by default.
+- create, activate, and archive routes require workspace owner access.
+- archive is a soft delete through `archived_at`; archived records remain available with `include_archived=true`.
+- archived prompt templates and model configs are excluded from active runtime lookup.
+- archiving a model config clears agent-level model assignments that referenced it.
+
 ## Observability, Budget Policy, And Cost
 ```text
 GET /api/v1/workspaces/{workspace_id}/budget-policy

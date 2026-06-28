@@ -1,12 +1,12 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.workspace import require_workspace_member, require_workspace_owner
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.prompt_template import (
@@ -22,22 +22,28 @@ from app.services.prompt_template_service import (
 router = APIRouter(prefix="/workspaces/{workspace_id}/prompt-templates", tags=["prompt-templates"])
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 TemplateId = Annotated[UUID, Path()]
+IncludeArchived = Annotated[bool, Query()]
 
 
 @router.get("", response_model=list[PromptTemplateResponse])
 def list_prompt_templates(
-    workspace: WorkspaceMemberAccess, db: DbSession
+    workspace: WorkspaceMemberAccess,
+    db: DbSession,
+    include_archived: IncludeArchived = False,
 ) -> list[PromptTemplateResponse]:
-    templates = PromptTemplateService(db).list_templates(workspace_id=workspace.id)
+    templates = PromptTemplateService(db).list_templates(
+        workspace_id=workspace.id, include_archived=include_archived
+    )
     return [PromptTemplateResponse.model_validate(template) for template in templates]
 
 
 @router.post("", response_model=PromptTemplateResponse, status_code=status.HTTP_201_CREATED)
 def create_prompt_template_version(
     payload: PromptTemplateCreateVersionRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: WorkspaceOwnerAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> PromptTemplateResponse:
@@ -66,7 +72,7 @@ def create_prompt_template_version(
 @router.post("/{template_id}/activate", response_model=PromptTemplateResponse)
 def activate_prompt_template(
     template_id: TemplateId,
-    workspace: WorkspaceMemberAccess,
+    workspace: WorkspaceOwnerAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> PromptTemplateResponse:
@@ -95,3 +101,37 @@ def activate_prompt_template(
         },
     )
     return PromptTemplateResponse.model_validate(template)
+
+
+@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+def archive_prompt_template(
+    template_id: TemplateId,
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> None:
+    try:
+        template = PromptTemplateService(db).archive(
+            workspace_id=workspace.id, template_id=template_id
+        )
+    except PromptTemplateNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "prompt_template_not_found",
+                "message": "Prompt template was not found.",
+            },
+        ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="prompt_template.archived",
+        resource_type="prompt_template",
+        resource_id=template.id,
+        metadata={
+            "name": template.name,
+            "language": template.language,
+            "version": template.version,
+            "archived_at": template.archived_at.isoformat() if template.archived_at else None,
+        },
+    )

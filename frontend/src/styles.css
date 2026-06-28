@@ -2784,6 +2784,18 @@ th {
   background: #f2f2f2;
 }
 
+.prompt-card.archived-card,
+.model-card.archived-card {
+  border-style: dashed;
+  background: #fafafa;
+  color: var(--text-subtle);
+}
+
+.compact-toggle {
+  margin: 0;
+  min-width: max-content;
+}
+
 .single-check {
   display: flex;
   align-items: center;

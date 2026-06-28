@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -17,14 +18,20 @@ class PromptTemplateService:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_templates(self, *, workspace_id: UUID) -> list[PromptTemplate]:
+    def list_templates(
+        self, *, workspace_id: UUID, include_archived: bool = False
+    ) -> list[PromptTemplate]:
+        filters = [PromptTemplate.workspace_id == workspace_id]
+        if not include_archived:
+            filters.append(PromptTemplate.archived_at.is_(None))
         return list(
             self.db.scalars(
                 select(PromptTemplate)
-                .where(PromptTemplate.workspace_id == workspace_id)
+                .where(*filters)
                 .order_by(
                     PromptTemplate.name.asc(),
                     PromptTemplate.language.asc(),
+                    PromptTemplate.archived_at.is_not(None),
                     PromptTemplate.version.desc(),
                 )
             ).all()
@@ -45,6 +52,7 @@ class PromptTemplateService:
                 PromptTemplate.name == name,
                 PromptTemplate.language == language,
                 PromptTemplate.active.is_(True),
+                PromptTemplate.archived_at.is_(None),
             )
             .order_by(PromptTemplate.version.desc())
         )
@@ -56,7 +64,6 @@ class PromptTemplateService:
             language=language,
             template_text=template_text,
             active=True,
-            version=1,
         )
 
     def get_or_create_default(
@@ -74,17 +81,26 @@ class PromptTemplateService:
                 PromptTemplate.name == name,
                 PromptTemplate.language == language,
                 PromptTemplate.version == version,
+                PromptTemplate.archived_at.is_(None),
             )
         )
         if template is not None:
             return template
+        archived_version = self.db.scalar(
+            select(PromptTemplate.id).where(
+                PromptTemplate.workspace_id == workspace_id,
+                PromptTemplate.name == name,
+                PromptTemplate.language == language,
+                PromptTemplate.version == version,
+            )
+        )
         return self.create_version(
             workspace_id=workspace_id,
             name=name,
             language=language,
             template_text=template_text,
             active=True,
-            version=version,
+            version=None if archived_version is not None else version,
         )
 
     def create_version(
@@ -122,7 +138,9 @@ class PromptTemplateService:
     def activate(self, *, workspace_id: UUID, template_id: UUID) -> PromptTemplate:
         template = self.db.scalar(
             select(PromptTemplate).where(
-                PromptTemplate.workspace_id == workspace_id, PromptTemplate.id == template_id
+                PromptTemplate.workspace_id == workspace_id,
+                PromptTemplate.id == template_id,
+                PromptTemplate.archived_at.is_(None),
             )
         )
         if template is None:
@@ -131,6 +149,22 @@ class PromptTemplateService:
             workspace_id=workspace_id, name=template.name, language=template.language
         )
         template.active = True
+        self.db.commit()
+        self.db.refresh(template)
+        return template
+
+    def archive(self, *, workspace_id: UUID, template_id: UUID) -> PromptTemplate:
+        template = self.db.scalar(
+            select(PromptTemplate).where(
+                PromptTemplate.workspace_id == workspace_id,
+                PromptTemplate.id == template_id,
+            )
+        )
+        if template is None:
+            raise PromptTemplateNotFoundError("Prompt template was not found.")
+        template.active = False
+        if template.archived_at is None:
+            template.archived_at = datetime.now(UTC)
         self.db.commit()
         self.db.refresh(template)
         return template
@@ -156,6 +190,7 @@ class PromptTemplateService:
                 PromptTemplate.name == name,
                 PromptTemplate.language == language,
                 PromptTemplate.active.is_(True),
+                PromptTemplate.archived_at.is_(None),
             )
         ).all()
         for template in templates:

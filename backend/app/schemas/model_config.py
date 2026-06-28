@@ -16,6 +16,7 @@ class ModelConfigResponse(BaseModel):
     completion_token_cost_per_1k: float
     max_context_tokens: int
     active: bool
+    archived_at: datetime | None
     created_at: datetime
 
 

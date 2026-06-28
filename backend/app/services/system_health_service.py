@@ -96,14 +96,22 @@ class SystemHealthService:
         return checks
 
     def _provider_section(self, *, workspace_id: UUID) -> SystemHealthSection:
-        total = self._count(ModelConfig, ModelConfig.workspace_id == workspace_id)
+        total = self._count(
+            ModelConfig,
+            ModelConfig.workspace_id == workspace_id,
+            ModelConfig.archived_at.is_(None),
+        )
         active = self._count(
-            ModelConfig, ModelConfig.workspace_id == workspace_id, ModelConfig.active.is_(True)
+            ModelConfig,
+            ModelConfig.workspace_id == workspace_id,
+            ModelConfig.active.is_(True),
+            ModelConfig.archived_at.is_(None),
         )
         live_active = self._count(
             ModelConfig,
             ModelConfig.workspace_id == workspace_id,
             ModelConfig.active.is_(True),
+            ModelConfig.archived_at.is_(None),
             ModelConfig.provider != "mock",
         )
         has_api_key = bool(self.settings.openai_api_key)
@@ -154,7 +162,9 @@ class SystemHealthService:
         max_context = (
             self.db.scalar(
                 select(func.max(ModelConfig.max_context_tokens)).where(
-                    ModelConfig.workspace_id == workspace_id, ModelConfig.active.is_(True)
+                    ModelConfig.workspace_id == workspace_id,
+                    ModelConfig.active.is_(True),
+                    ModelConfig.archived_at.is_(None),
                 )
             )
             or 0
@@ -346,6 +356,7 @@ class SystemHealthService:
             PromptTemplate,
             PromptTemplate.workspace_id == workspace_id,
             PromptTemplate.active.is_(True),
+            PromptTemplate.archived_at.is_(None),
         )
         audit_events = self._count(AuditLog, AuditLog.workspace_id == workspace_id)
         status: HealthStatus = (

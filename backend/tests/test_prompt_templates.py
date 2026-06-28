@@ -1,8 +1,11 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.ai import PromptTemplate
+from app.models.workspace import WorkspaceMember, WorkspaceRole
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -23,6 +26,16 @@ def login(client: TestClient, email: str, password: str = "strong-password") -> 
 def auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
+
+
+
+def add_member(db_session: Session, *, workspace_id: str, user_id: str) -> None:
+    db_session.add(
+        WorkspaceMember(
+            workspace_id=UUID(workspace_id), user_id=UUID(user_id), role=WorkspaceRole.member
+        )
+    )
+    db_session.commit()
 
 def create_workspace(client: TestClient, token: str, name: str = "Support Workspace") -> dict:
     response = client.post("/api/v1/workspaces", json={"name": name}, headers=auth_headers(token))
@@ -176,3 +189,78 @@ def test_prompt_templates_are_workspace_scoped(client: TestClient) -> None:
     assert forbidden_activate.json()["detail"]["code"] == "prompt_template_not_found"
     assert other_list.status_code == 200
     assert other_list.json() == []
+
+
+def test_prompt_template_archive_and_owner_only_mutation(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "prompt-lifecycle-owner@example.com")
+    owner_token = login(client, "prompt-lifecycle-owner@example.com")
+    workspace = create_workspace(client, owner_token)
+    member = register(client, "prompt-lifecycle-member@example.com")
+    member_token = login(client, "prompt-lifecycle-member@example.com")
+    add_member(db_session, workspace_id=workspace["id"], user_id=member["id"])
+    path = f"/api/v1/workspaces/{workspace['id']}/prompt-templates"
+
+    member_create = client.post(
+        path,
+        headers=auth_headers(member_token),
+        json={
+            "name": "support_intent_classifier",
+            "language": "en",
+            "template_text": "system: member should not change prompts\nhuman: {input_message}",
+            "active": True,
+        },
+    )
+    assert member_create.status_code == 403
+    assert member_create.json()["detail"]["code"] == "workspace_owner_required"
+
+    created = client.post(
+        path,
+        headers=auth_headers(owner_token),
+        json={
+            "name": "support_intent_classifier",
+            "language": "en",
+            "template_text": "system: owner prompt lifecycle\nhuman: {input_message}",
+            "active": True,
+        },
+    )
+    assert created.status_code == 201
+
+    member_archive = client.delete(
+        f"{path}/{created.json()['id']}", headers=auth_headers(member_token)
+    )
+    assert member_archive.status_code == 403
+
+    archived = client.delete(f"{path}/{created.json()['id']}", headers=auth_headers(owner_token))
+    default_list = client.get(path, headers=auth_headers(owner_token))
+    archived_list = client.get(f"{path}?include_archived=true", headers=auth_headers(owner_token))
+    activate_archived = client.post(
+        f"{path}/{created.json()['id']}/activate", headers=auth_headers(owner_token)
+    )
+
+    assert archived.status_code == 204
+    assert default_list.status_code == 200
+    assert default_list.json() == []
+    assert archived_list.status_code == 200
+    assert archived_list.json()[0]["archived_at"] is not None
+    assert archived_list.json()[0]["active"] is False
+    assert activate_archived.status_code == 404
+    assert activate_archived.json()["detail"]["code"] == "prompt_template_not_found"
+
+    recreated = client.post(
+        path,
+        headers=auth_headers(owner_token),
+        json={
+            "name": "support_intent_classifier",
+            "language": "en",
+            "template_text": "system: owner prompt lifecycle v2\nhuman: {input_message}",
+            "active": True,
+        },
+    )
+    assert recreated.status_code == 201
+    assert recreated.json()["version"] == 2
+
+    stored = db_session.scalars(select(PromptTemplate)).all()
+    assert len(stored) == 2
+    assert sum(1 for template in stored if template.archived_at is not None) == 1

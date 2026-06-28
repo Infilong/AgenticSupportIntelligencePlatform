@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.agent import AgentConfig
 from app.models.ai import ModelConfig
 from app.services.token_accounting import ModelPricing, pricing_for_model
 
@@ -17,14 +19,20 @@ class ModelConfigService:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_configs(self, *, workspace_id: UUID) -> list[ModelConfig]:
+    def list_configs(
+        self, *, workspace_id: UUID, include_archived: bool = False
+    ) -> list[ModelConfig]:
+        filters = [ModelConfig.workspace_id == workspace_id]
+        if not include_archived:
+            filters.append(ModelConfig.archived_at.is_(None))
         return list(
             self.db.scalars(
                 select(ModelConfig)
-                .where(ModelConfig.workspace_id == workspace_id)
+                .where(*filters)
                 .order_by(
                     ModelConfig.purpose.asc(),
                     ModelConfig.active.desc(),
+                    ModelConfig.archived_at.is_not(None),
                     ModelConfig.created_at.desc(),
                 )
             ).all()
@@ -67,6 +75,7 @@ class ModelConfigService:
             select(ModelConfig).where(
                 ModelConfig.workspace_id == workspace_id,
                 ModelConfig.id == model_config_id,
+                ModelConfig.archived_at.is_(None),
             )
         )
         if config is None:
@@ -77,13 +86,36 @@ class ModelConfigService:
         self.db.refresh(config)
         return config
 
-    def get_config(self, *, workspace_id: UUID, model_config_id: UUID) -> ModelConfig | None:
-        return self.db.scalar(
-            select(ModelConfig).where(
-                ModelConfig.workspace_id == workspace_id,
-                ModelConfig.id == model_config_id,
-            )
+    def archive(self, *, workspace_id: UUID, model_config_id: UUID) -> ModelConfig:
+        config = self.get_config(
+            workspace_id=workspace_id,
+            model_config_id=model_config_id,
+            include_archived=True,
         )
+        if config is None:
+            raise ModelConfigNotFoundError("Model config was not found.")
+        config.active = False
+        if config.archived_at is None:
+            config.archived_at = datetime.now(UTC)
+        agents = self.db.scalars(
+            select(AgentConfig).where(
+                AgentConfig.workspace_id == workspace_id,
+                AgentConfig.model_config_id == config.id,
+            )
+        ).all()
+        for agent in agents:
+            agent.model_config_id = None
+        self.db.commit()
+        self.db.refresh(config)
+        return config
+
+    def get_config(
+        self, *, workspace_id: UUID, model_config_id: UUID, include_archived: bool = False
+    ) -> ModelConfig | None:
+        filters = [ModelConfig.workspace_id == workspace_id, ModelConfig.id == model_config_id]
+        if not include_archived:
+            filters.append(ModelConfig.archived_at.is_(None))
+        return self.db.scalar(select(ModelConfig).where(*filters))
 
     def resolve_pricing(
         self,
@@ -103,6 +135,7 @@ class ModelConfigService:
                     ModelConfig.workspace_id == workspace_id,
                     ModelConfig.purpose == purpose,
                     ModelConfig.active.is_(True),
+                    ModelConfig.archived_at.is_(None),
                 )
                 .order_by(ModelConfig.created_at.desc())
             )
@@ -122,6 +155,7 @@ class ModelConfigService:
                 ModelConfig.workspace_id == workspace_id,
                 ModelConfig.purpose == purpose,
                 ModelConfig.active.is_(True),
+                ModelConfig.archived_at.is_(None),
             )
         ).all()
         for config in configs:
