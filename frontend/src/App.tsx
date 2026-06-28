@@ -19,6 +19,7 @@ const MAX_VISIBLE_CHUNKS = 80;
 const MAX_VISIBLE_FOLDERS = 24;
 const MAX_VISIBLE_RESOURCES = 40;
 const MAX_VISIBLE_EVALUATION_RUNS = 20;
+const MAX_VISIBLE_ADMIN_ASSETS = 30;
 
 type CurrentUser = {
   id: string;
@@ -1135,6 +1136,8 @@ export function App() {
   const [promptText, setPromptText] = useState(defaultPromptTemplateText);
   const [promptActive, setPromptActive] = useState(true);
   const [showArchivedPrompts, setShowArchivedPrompts] = useState(false);
+  const [promptSearch, setPromptSearch] = useState("");
+  const [promptHistoryView, setPromptHistoryView] = useState("all");
 
   const [modelConfigs, setModelConfigs] = useState<ModelConfig[]>([]);
   const [modelProvider, setModelProvider] = useState("mock");
@@ -1145,6 +1148,8 @@ export function App() {
   const [modelMaxContext, setModelMaxContext] = useState(4096);
   const [modelActive, setModelActive] = useState(true);
   const [showArchivedModels, setShowArchivedModels] = useState(false);
+  const [modelSearch, setModelSearch] = useState("");
+  const [modelHistoryView, setModelHistoryView] = useState("all");
   const selectedModelProvider = modelProviderOptions.find((option) => option.id === modelProvider);
 
   function applyModelProvider(provider: string) {
@@ -5367,6 +5372,22 @@ export function App() {
       const active = versions.find((template) => template.active);
       return { name, versions, active };
     });
+    const filteredPromptTemplates = promptTemplates.filter((template) => {
+      const matchesView = promptHistoryView === "all"
+        || (promptHistoryView === "active" && template.active && !template.archived_at)
+        || (promptHistoryView === "draft" && !template.active && !template.archived_at)
+        || (promptHistoryView === "archived" && Boolean(template.archived_at));
+      return matchesView && matchesSearch(
+        promptSearch,
+        template.name,
+        template.language,
+        String(template.version),
+        template.id,
+        template.template_text,
+      );
+    });
+    const displayedPromptTemplates = filteredPromptTemplates.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
+    const hiddenPromptCount = Math.max(filteredPromptTemplates.length - displayedPromptTemplates.length, 0);
 
     return (
       <div className="settings-console prompt-console">
@@ -5463,11 +5484,31 @@ export function App() {
                 />
                 Show archived
               </label>
-              <Badge>{promptTemplates.length} versions</Badge>
+              <Badge>{displayedPromptTemplates.length}/{filteredPromptTemplates.length} shown</Badge>
             </div>
           </div>
+          <div className="library-toolbar settings-history-toolbar">
+            <label>
+              Search prompt history
+              <input
+                value={promptSearch}
+                onChange={(event) => setPromptSearch(event.target.value)}
+                placeholder="Name, language, version, source, or id"
+              />
+            </label>
+            <label>
+              Status
+              <select value={promptHistoryView} onChange={(event) => setPromptHistoryView(event.target.value)}>
+                <option value="all">All loaded</option>
+                <option value="active">Active</option>
+                <option value="draft">Draft/inactive</option>
+                <option value="archived">Archived</option>
+              </select>
+            </label>
+            <p className="permission-note">Prompt source is collapsed by default so version history stays scannable. Enable archived versions above when auditing older changes.</p>
+          </div>
           <div className="prompt-template-list settings-card-grid">
-            {promptTemplates.map((template) => (
+            {displayedPromptTemplates.map((template) => (
               <article className={template.active ? "prompt-card active-prompt" : template.archived_at ? "prompt-card archived-card" : "prompt-card"} key={template.id}>
                 <div className="row-head">
                   <div>
@@ -5481,11 +5522,16 @@ export function App() {
                     <button type="button" className="danger-button" disabled={Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void archivePromptTemplate(template)}>Archive</button>
                   </div>
                 </div>
-                <JsonBlock value={template.template_text} />
+                <details>
+                  <summary>Prompt source</summary>
+                  <JsonBlock value={template.template_text} />
+                </details>
               </article>
             ))}
           </div>
+          {hiddenPromptCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {filteredPromptTemplates.length} matching prompt versions. Search by name, language, version, source, or id to narrow history.</p>}
           {promptTemplates.length === 0 && <EmptyState title="No prompt templates" detail="Defaults are created on first agent run, or create a version manually." />}
+          {promptTemplates.length > 0 && filteredPromptTemplates.length === 0 && <EmptyState title="No prompt versions match this view" detail="Clear search, change status, or load archived versions." />}
         </section>
       </div>
     );
@@ -5720,6 +5766,22 @@ export function App() {
     const configuredPurposeCount = purposeSummary.filter(({ active }) => Boolean(active)).length;
     const liveProviderCount = activeConfigs.filter((config) => config.provider !== "mock").length;
     const maxContext = activeConfigs.length ? Math.max(...activeConfigs.map((config) => config.max_context_tokens)) : 0;
+    const filteredModelConfigs = modelConfigs.filter((config) => {
+      const matchesView = modelHistoryView === "all"
+        || (modelHistoryView === "active" && config.active && !config.archived_at)
+        || (modelHistoryView === "draft" && !config.active && !config.archived_at)
+        || (modelHistoryView === "archived" && Boolean(config.archived_at));
+      return matchesView && matchesSearch(
+        modelSearch,
+        config.provider,
+        config.model,
+        config.purpose,
+        config.id,
+        String(config.max_context_tokens),
+      );
+    });
+    const displayedModelConfigs = filteredModelConfigs.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
+    const hiddenModelConfigCount = Math.max(filteredModelConfigs.length - displayedModelConfigs.length, 0);
 
     return (
       <div className="settings-console model-console">
@@ -5828,11 +5890,31 @@ export function App() {
                 />
                 Show archived
               </label>
-              <Badge>{modelConfigs.length} configs</Badge>
+              <Badge>{displayedModelConfigs.length}/{filteredModelConfigs.length} shown</Badge>
             </div>
           </div>
+          <div className="library-toolbar settings-history-toolbar">
+            <label>
+              Search model configs
+              <input
+                value={modelSearch}
+                onChange={(event) => setModelSearch(event.target.value)}
+                placeholder="Provider, model, purpose, context, or id"
+              />
+            </label>
+            <label>
+              Status
+              <select value={modelHistoryView} onChange={(event) => setModelHistoryView(event.target.value)}>
+                <option value="all">All loaded</option>
+                <option value="active">Active</option>
+                <option value="draft">Draft/inactive</option>
+                <option value="archived">Archived</option>
+              </select>
+            </label>
+            <p className="permission-note">Model configs stay searchable by provider, purpose, context, and id so routing history remains operable as experiments grow.</p>
+          </div>
           <div className="model-config-list settings-card-grid">
-            {modelConfigs.map((config) => (
+            {displayedModelConfigs.map((config) => (
               <article className={config.active ? "model-card active-model" : config.archived_at ? "model-card archived-card" : "model-card"} key={config.id}>
                 <div className="row-head">
                   <div>
@@ -5855,7 +5937,9 @@ export function App() {
               </article>
             ))}
           </div>
+          {hiddenModelConfigCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {filteredModelConfigs.length} matching model configs. Search by provider, model, purpose, context, or id to narrow history.</p>}
           {modelConfigs.length === 0 && <EmptyState title="No model configs" detail="The backend falls back to deterministic mock mode until you activate a workspace model config." />}
+          {modelConfigs.length > 0 && filteredModelConfigs.length === 0 && <EmptyState title="No model configs match this view" detail="Clear search, change status, or load archived configs." />}
           {activeConfigs.length > 0 && <p className="muted">Active OpenAI/OpenAI-compatible configs perform live calls when the backend has an API key; otherwise the failed attempt is visible in trace, review, and cost records.</p>}
         </section>
       </div>

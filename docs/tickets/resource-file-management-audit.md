@@ -40,3 +40,8 @@ Documentation-only ticket. Existing backend behavior is covered by `backend/test
 - Agent configs are now managed as folder-bounded workspace resources through the `agent_config` folder type.
 - Agents use archive rather than hard delete, preserving run, trace, evaluation, and cost evidence.
 - The Agents page now follows the same folder rail, search, bounded list, and move-control pattern used for file/import-backed resources.
+
+## 2026-06-29 Prompt And Model Catalog Follow-up
+- Prompt templates and model configs remain admin catalogs rather than folder-backed file libraries.
+- Their history panels are now searchable, status-filtered, bounded, and archive-aware.
+- Long prompt source text is collapsed by default so version history remains scannable.
