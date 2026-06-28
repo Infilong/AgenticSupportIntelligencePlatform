@@ -981,20 +981,26 @@ export function App() {
   }
 
   function reviewDraft(review: HumanReview): ReviewDraft {
-    const hasProposedAnswer = Boolean(review.proposed_answer ?? review.run?.final_answer);
+    const proposedAnswer = review.proposed_answer ?? review.run?.final_answer ?? "";
+    const hasProposedAnswer = Boolean(proposedAnswer);
     return reviewDrafts[review.id] ?? {
-      decision: hasProposedAnswer ? "approved" : "rejected",
-      edited_answer: review.proposed_answer ?? review.run?.final_answer ?? "",
+      decision: hasProposedAnswer ? "approved" : "edited",
+      edited_answer: proposedAnswer,
       comments: "",
     };
   }
 
-  function updateReviewDraft(reviewId: string, patch: Partial<ReviewDraft>) {
+  function updateReviewDraft(review: HumanReview, patch: Partial<ReviewDraft>) {
     setReviewDrafts((current) => {
-      const existing = current[reviewId] ?? { decision: "approved", edited_answer: "", comments: "" };
+      const proposedAnswer = review.proposed_answer ?? review.run?.final_answer ?? "";
+      const existing = current[review.id] ?? {
+        decision: proposedAnswer ? "approved" : "edited",
+        edited_answer: proposedAnswer,
+        comments: "",
+      };
       return {
         ...current,
-        [reviewId]: { ...existing, ...patch },
+        [review.id]: { ...existing, ...patch },
       };
     });
   }
@@ -1790,27 +1796,45 @@ export function App() {
     const unassignedCount = pendingReviewItems.filter((review) => review.reviewer_id === null).length;
     const evidenceCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "evidence", currentUser)).length;
     const modelCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "model", currentUser)).length;
+    const nextAction = pendingReviewItems.length
+      ? `${filteredPendingReviewItems.length} visible case${filteredPendingReviewItems.length === 1 ? "" : "s"} need a decision`
+      : "Queue clear";
 
     return (
-      <div className="stack">
-        <ActionGuide
-          title="Human review is the safety valve"
-          detail="Resolve each blocked run independently. Reviewers can inspect the trace, approve the draft, edit a final answer, or reject unsupported output."
-          action="Next: run evaluation"
-          onAction={() => setActiveTab("evaluations")}
-        />
+      <div className="review-console">
+        <section className="panel review-hero">
+          <div>
+            <p className="eyebrow">Human review</p>
+            <h2>Resolve blocked agent runs</h2>
+            <p className="muted">Each item is a LangGraph run that could not safely finalize. Inspect why it was blocked, write or approve a sourced answer, then resolve the case.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Operator task</span>
+            <strong>{nextAction}</strong>
+            <p>{pendingReviewItems.length ? "Start with critical, unassigned, and evidence-blocked cases." : "Run a risky or unsupported scenario to test the review workflow."}</p>
+            <button type="button" onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh queue</button>
+          </div>
+        </section>
+
+        <section className="queue-summary-grid">
+          <Metric label="Pending" value={pendingReviewItems.length} />
+          <Metric label="Mine" value={mineCount} />
+          <Metric label="Unassigned" value={unassignedCount} />
+          <Metric label="Critical" value={criticalCount} />
+          <Metric label="Evidence issues" value={evidenceCount} />
+          <Metric label="Model/budget" value={modelCount} />
+        </section>
+
         <section className="review-workbench">
           <div className="panel stack">
             <div className="row-head">
               <div>
-                <h3>Pending queue</h3>
-                <p className="muted">Cases blocked by guardrails, weak evidence, or low confidence.</p>
+                <h3>Cases waiting for review</h3>
+                <p className="muted">Filter the queue, then resolve one case at a time. Pending items always show the customer request and the required human action.</p>
               </div>
-              <div className="review-actions">
-                <Badge tone={pendingReviewItems.length ? "warn" : "good"}>{pendingReviewItems.length} pending</Badge>
-                <button onClick={() => void runAction("Reviews refreshed", loadReviews)}>Refresh</button>
-              </div>
+              <Badge tone={pendingReviewItems.length ? "warn" : "good"}>{pendingReviewItems.length} pending</Badge>
             </div>
+
             <div className="review-queue-controls">
               <div className="segmented review-filter" aria-label="Review queue filter">
                 {reviewFilterOptions.map((option) => (
@@ -1833,177 +1857,178 @@ export function App() {
                 </select>
               </label>
             </div>
-            <div className="metric-grid compact">
-              <Metric label="Mine" value={mineCount} />
-              <Metric label="Unassigned" value={unassignedCount} />
-              <Metric label="Critical" value={criticalCount} />
-              <Metric label="Showing" value={filteredPendingReviewItems.length} />
-            </div>
-            {filteredPendingReviewItems.map((review) => {
-              const draft = reviewDraft(review);
-              const guardrailParts = reviewReasonParts(review.reason);
-              const severity = reviewSeverity(review.reason);
-              const assignedToMe = review.reviewer_id === currentUser?.id;
-              const assignedToOther = Boolean(review.reviewer_id && !assignedToMe);
-              const unassigned = review.reviewer_id === null;
-              const ownerLabel = reviewOwnerLabel(review, currentUser);
-              const run = review.run;
-              const context = review.review_context;
-              const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? null;
-              const canApprove = Boolean(proposedAnswer);
-              const classification = context?.classification;
-              const evidence = context?.evidence;
-              return (
-                <article className="review-row pending-review review-card" key={review.id}>
-                  <div className="row-head">
-                    <div>
-                      <p className="mini-label">Review item</p>
-                      <strong>{friendlyReviewReason(review.reason)}</strong>
-                      <p className="muted">Created {formatDate(review.created_at)}</p>
-                    </div>
-                    <div className="review-actions">
-                      <Badge tone={toneForReviewSeverity(severity)}>{severity}</Badge>
-                      <Badge tone={assignedToMe ? "good" : assignedToOther ? "neutral" : "warn"}>{ownerLabel}</Badge>
-                    </div>
-                  </div>
 
-                  <div className="review-context-grid">
-                    <div className="answer-box review-question">
-                      <span>Customer request</span>
-                      <p>{run?.input_message ?? "Run context is unavailable."}</p>
-                    </div>
-                    <div className="signal-grid review-signals">
-                      <div className="signal"><span>Language</span><strong>{run?.language ?? "unknown"}</strong></div>
-                      <div className="signal"><span>Run status</span><strong>{run?.status ?? "unknown"}</strong></div>
-                      <div className="signal"><span>Route</span><strong>{run?.route_decision ?? "human_review"}</strong></div>
-                      <div className="signal"><span>Severity</span><strong>{severity}</strong></div>
-                      <div className="signal"><span>Owner</span><strong>{ownerLabel}</strong></div>
-                    </div>
-                  </div>
+            <div className="review-case-list">
+              {filteredPendingReviewItems.map((review) => {
+                const draft = reviewDraft(review);
+                const guardrailParts = reviewReasonParts(review.reason);
+                const severity = reviewSeverity(review.reason);
+                const assignedToMe = review.reviewer_id === currentUser?.id;
+                const assignedToOther = Boolean(review.reviewer_id && !assignedToMe);
+                const unassigned = review.reviewer_id === null;
+                const ownerLabel = reviewOwnerLabel(review, currentUser);
+                const run = review.run;
+                const context = review.review_context;
+                const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? "";
+                const canApprove = Boolean(proposedAnswer);
+                const classification = context?.classification;
+                const evidence = context?.evidence;
+                const blockers = context?.blockers.length
+                  ? context.blockers
+                  : guardrailParts.map((part) => ({
+                    code: part,
+                    label: friendlyGuardrailName(part),
+                    severity: "warning",
+                    action: "Inspect the trace before resolving.",
+                  }));
+                const answerRequired = !canApprove || draft.decision === "edited";
 
-                  {context && (
-                    <section className="review-decision-brief">
+                return (
+                  <article className="review-case-card pending-review" key={review.id}>
+                    <header className="review-case-header">
                       <div>
-                        <span>Recommended action</span>
-                        <strong>{context.headline}</strong>
-                        <p>{context.recommended_action}</p>
+                        <p className="mini-label">Blocked run</p>
+                        <h3>{friendlyReviewReason(review.reason)}</h3>
+                        <p className="muted">Created {formatDate(review.created_at)} · {review.graph_run_id ? `Run ${review.graph_run_id.slice(0, 8)}` : "run unavailable"}</p>
+                      </div>
+                      <div className="review-actions">
+                        <Badge tone={toneForReviewSeverity(severity)}>{severity}</Badge>
+                        <Badge tone={assignedToMe ? "good" : assignedToOther ? "neutral" : "warn"}>{ownerLabel}</Badge>
+                      </div>
+                    </header>
+
+                    <section className="case-section customer-request-card">
+                      <span>1. Customer request</span>
+                      <p>{run?.input_message ?? "Run context is unavailable."}</p>
+                    </section>
+
+                    <section className="case-section">
+                      <span>2. Why it stopped</span>
+                      {context ? (
+                        <div className="review-decision-brief">
+                          <strong>{context.headline}</strong>
+                          <p>{context.recommended_action}</p>
+                        </div>
+                      ) : (
+                        <p className="muted">This run was routed to human review by the guardrail reasons below.</p>
+                      )}
+                      <div className="guardrail-list">
+                        {blockers.map((blocker) => (
+                          <div className="blocker-chip" key={blocker.code}>
+                            <Badge tone={toneForReviewReason(blocker.code)}>{blocker.label}</Badge>
+                            <span>{blocker.action}</span>
+                          </div>
+                        ))}
                       </div>
                     </section>
-                  )}
 
-                  <div className="guardrail-list">
-                    {(context?.blockers.length ? context.blockers : guardrailParts.map((part) => ({ code: part, label: friendlyGuardrailName(part), severity: "warning", action: "Inspect the trace before resolving." }))).map((blocker) => (
-                      <div className="blocker-chip" key={blocker.code}>
-                        <Badge tone={toneForReviewReason(blocker.code)}>{blocker.label}</Badge>
-                        <span>{blocker.action}</span>
+                    <section className="review-context-grid">
+                      <div className="case-section">
+                        <span>3. Classification</span>
+                        <div className="signal-grid review-signals">
+                          <div className="signal"><span>Intent</span><strong>{classification?.intent ?? "unknown"}</strong></div>
+                          <div className="signal"><span>Area</span><strong>{classification?.product_area ?? "unknown"}</strong></div>
+                          <div className="signal"><span>Risk</span><strong>{classification?.safety_risk ?? "unknown"}</strong></div>
+                          <div className="signal"><span>Confidence</span><strong>{formatPercent(classification?.confidence)}</strong></div>
+                        </div>
+                        {classification?.rationale && <p>{classification.rationale}</p>}
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="review-context-grid">
-                    <div className="answer-box">
-                      <span>Classification</span>
-                      <div className="signal-grid review-signals">
-                        <div className="signal"><span>Intent</span><strong>{classification?.intent ?? "unknown"}</strong></div>
-                        <div className="signal"><span>Area</span><strong>{classification?.product_area ?? "unknown"}</strong></div>
-                        <div className="signal"><span>Risk</span><strong>{classification?.safety_risk ?? "unknown"}</strong></div>
-                        <div className="signal"><span>Confidence</span><strong>{formatPercent(classification?.confidence)}</strong></div>
+                      <div className="case-section">
+                        <span>4. Evidence</span>
+                        <div className="signal-grid review-signals">
+                          <div className="signal"><span>Chunks</span><strong>{evidence?.retrieved_chunk_count ?? 0}</strong></div>
+                          <div className="signal"><span>Citations</span><strong>{evidence?.citation_count ?? 0}</strong></div>
+                          <div className="signal"><span>No source</span><strong>{evidence?.no_source ? "yes" : "no"}</strong></div>
+                        </div>
+                        {evidence?.citations.length ? (
+                          <ul className="citation-list">
+                            {evidence.citations.map((citation) => <li key={citation}>{citation}</li>)}
+                          </ul>
+                        ) : <p>No cited source was selected for this run.</p>}
                       </div>
-                      {classification?.rationale && <p>{classification.rationale}</p>}
-                    </div>
-                    <div className="answer-box">
-                      <span>Evidence</span>
-                      <div className="signal-grid review-signals">
-                        <div className="signal"><span>Chunks</span><strong>{evidence?.retrieved_chunk_count ?? 0}</strong></div>
-                        <div className="signal"><span>Citations</span><strong>{evidence?.citation_count ?? 0}</strong></div>
-                        <div className="signal"><span>No source</span><strong>{evidence?.no_source ? "yes" : "no"}</strong></div>
+                    </section>
+
+                    <section className="case-section proposed-answer-card">
+                      <span>5. Proposed answer</span>
+                      {canApprove ? <p>{proposedAnswer}</p> : <p>No safe model draft was generated. A reviewer must write a human-approved response or reject the run.</p>}
+                    </section>
+
+                    <section className="review-resolution-panel">
+                      <div>
+                        <span>6. Resolution</span>
+                        <strong>{answerRequired ? "Human answer required" : "Approve or edit the proposed answer"}</strong>
+                        <p>{answerRequired ? "Write the exact answer that can be sent to the customer, or reject the run if the evidence is insufficient." : "Approve only if the proposed answer is grounded in the cited evidence."}</p>
                       </div>
-                      {evidence?.citations.length ? (
-                        <ul className="citation-list">
-                          {evidence.citations.map((citation) => <li key={citation}>{citation}</li>)}
-                        </ul>
-                      ) : <p>No cited source was selected for this run.</p>}
-                    </div>
-                  </div>
+                      <div className="review-editor">
+                        <label>
+                          Decision
+                          <select
+                            value={draft.decision}
+                            onChange={(event) =>
+                              updateReviewDraft(review, {
+                                decision: event.target.value as "approved" | "edited" | "rejected",
+                              })
+                            }
+                          >
+                            <option value="approved" disabled={!canApprove}>Approve proposed answer</option>
+                            <option value="edited">Send human-edited answer</option>
+                            <option value="rejected">Reject unsupported run</option>
+                          </select>
+                        </label>
+                        <label>
+                          Human-approved answer
+                          <textarea
+                            rows={6}
+                            disabled={draft.decision === "approved"}
+                            placeholder={canApprove ? "Optional when approving with edits." : "Write the response the support team can send."}
+                            value={draft.edited_answer}
+                            onChange={(event) => updateReviewDraft(review, { edited_answer: event.target.value })}
+                          />
+                        </label>
+                        <label>
+                          Reviewer note
+                          <textarea
+                            rows={6}
+                            placeholder="Explain the decision, edit, or rejection."
+                            value={draft.comments}
+                            onChange={(event) => updateReviewDraft(review, { comments: event.target.value })}
+                          />
+                        </label>
+                      </div>
+                    </section>
 
-                  <div className="answer-box">
-                    <span>Proposed answer</span>
-                    <p>{proposedAnswer ?? "No safe draft was generated. Write a sourced human response or reject this run after inspecting the trace."}</p>
-                  </div>
+                    <footer className="review-actions review-case-actions">
+                      <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
+                        Inspect trace
+                      </button>
+                      {unassigned && <button type="button" onClick={() => void claimReview(review)}>Claim</button>}
+                      {assignedToMe && <button type="button" onClick={() => void releaseReview(review)}>Release</button>}
+                      <button type="button" className="primary" disabled={assignedToOther} onClick={() => void resolveReview(review)}>
+                        {assignedToOther ? "Assigned to another reviewer" : "Resolve review"}
+                      </button>
+                    </footer>
+                  </article>
+                );
+              })}
+            </div>
 
-                  <div className="review-editor">
-                    <label>
-                      Decision
-                      <select
-                        value={draft.decision}
-                        onChange={(event) =>
-                          updateReviewDraft(review.id, {
-                            decision: event.target.value as "approved" | "edited" | "rejected",
-                          })
-                        }
-                      >
-                        <option value="approved" disabled={!canApprove}>Approve proposed answer</option>
-                        <option value="edited">Approve with edited answer</option>
-                        <option value="rejected">Reject unsupported answer</option>
-                      </select>
-                    </label>
-                    <label>
-                      Human-approved answer
-                      <textarea
-                        rows={5}
-                        disabled={draft.decision !== "edited"}
-                        placeholder="Required only when approving with edits."
-                        value={draft.edited_answer}
-                        onChange={(event) => updateReviewDraft(review.id, { edited_answer: event.target.value })}
-                      />
-                    </label>
-                    <label>
-                      Reviewer note
-                      <textarea
-                        rows={5}
-                        placeholder="Explain why this is safe, edited, or rejected."
-                        value={draft.comments}
-                        onChange={(event) => updateReviewDraft(review.id, { comments: event.target.value })}
-                      />
-                    </label>
-                  </div>
-                  {!canApprove && draft.decision === "rejected" && (
-                    <p className="muted">This item has no model draft. Reject it or choose edited to write a human-approved response.</p>
-                  )}
-                  <div className="review-actions">
-                    <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
-                      Inspect trace
-                    </button>
-                    {unassigned && <button type="button" onClick={() => void claimReview(review)}>Claim</button>}
-                    {assignedToMe && <button type="button" onClick={() => void releaseReview(review)}>Release</button>}
-                    <button type="button" className="primary" disabled={assignedToOther} onClick={() => void resolveReview(review)}>
-                      {assignedToOther ? "Assigned to another reviewer" : "Resolve review"}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
             {pendingReviewItems.length === 0 && (
               <EmptyState
-                title="No pending reviews"
-                detail="Run a privacy complaint, prompt injection, or unsupported request to create a review item."
+                title="No cases waiting for human review"
+                detail="Run a privacy complaint, prompt injection, unsupported request, or low-confidence scenario to create a review item."
               />
             )}
             {pendingReviewItems.length > 0 && filteredPendingReviewItems.length === 0 && (
               <EmptyState
-                title="No reviews match this filter"
+                title="No cases match this filter"
                 detail="Change the filter or refresh the queue."
               />
             )}
           </div>
 
-          <aside className="panel stack">
+          <aside className="panel stack review-policy-panel">
             <h3>Review policy</h3>
-            <Metric label="Pending" value={pendingReviewItems.length} />
-            <Metric label="Mine" value={mineCount} />
-            <Metric label="Unassigned" value={unassignedCount} />
-            <Metric label="Critical" value={criticalCount} />
-            <Metric label="Resolved" value={resolvedReviewItems.length} />
+            <p className="muted">The reviewer should approve only grounded, same-language, policy-safe answers. Otherwise write a human answer or reject the run.</p>
             <div className="policy-list">
               <span>Citations missing or weak</span>
               <span>Prompt injection attempt</span>
@@ -2016,34 +2041,43 @@ export function App() {
         </section>
 
         <section className="panel stack">
-          <h3>Resolved review history</h3>
-          {resolvedReviewItems.map((review) => (
-            <article className="review-row resolved-review" key={review.id}>
-              <div className="row-head">
-                <div>
-                  <strong>{friendlyReviewReason(review.reason)}</strong>
-                  <p className="muted">Resolved {formatDate(review.resolved_at)}</p>
+          <div className="row-head">
+            <div>
+              <h3>Resolved review history</h3>
+              <p className="muted">Closed decisions remain available for audit and trace inspection.</p>
+            </div>
+            <Badge>{resolvedReviewItems.length} resolved</Badge>
+          </div>
+          {resolvedReviewItems.map((review) => {
+            const storedAnswer = review.edited_answer ?? review.proposed_answer ?? review.run?.final_answer ?? "No answer was stored.";
+            return (
+              <article className="review-row resolved-review" key={review.id}>
+                <div className="row-head">
+                  <div>
+                    <strong>{friendlyReviewReason(review.reason)}</strong>
+                    <p className="muted">Resolved {formatDate(review.resolved_at)}</p>
+                  </div>
+                  <div className="review-actions">
+                    <Badge tone={toneForStatus(review.reviewer_decision)}>{review.reviewer_decision}</Badge>
+                    {review.reviewer_id && <Badge>{reviewOwnerLabel(review, currentUser)}</Badge>}
+                    {review.run && <Badge tone={toneForStatus(review.run.status)}>{review.run.route_decision ?? review.run.status}</Badge>}
+                  </div>
                 </div>
-                <div className="review-actions">
-                  <Badge tone={toneForStatus(review.reviewer_decision)}>{review.reviewer_decision}</Badge>
-                  {review.reviewer_id && <Badge>{reviewOwnerLabel(review, currentUser)}</Badge>}
-                  {review.run && <Badge tone={toneForStatus(review.run.status)}>{review.run.route_decision ?? review.run.status}</Badge>}
-                </div>
-              </div>
-              {review.run && (
-                <div className="metric-grid compact">
-                  <Metric label="Run status" value={review.run.status} />
-                  <Metric label="Route" value={review.run.route_decision ?? "-"} />
-                  <Metric label="Language" value={review.run.language ?? "-"} />
-                </div>
-              )}
-              <p>{review.run?.final_answer ?? review.edited_answer ?? review.proposed_answer ?? "No answer was stored."}</p>
-              {review.comments && <p className="muted">Comment: {review.comments}</p>}
-              <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
-                Inspect finalization trace
-              </button>
-            </article>
-          ))}
+                {review.run && (
+                  <div className="metric-grid compact">
+                    <Metric label="Run status" value={review.run.status} />
+                    <Metric label="Route" value={review.run.route_decision ?? "-"} />
+                    <Metric label="Language" value={review.run.language ?? "-"} />
+                  </div>
+                )}
+                <div className="answer-box"><span>Stored answer</span><p>{storedAnswer}</p></div>
+                {review.comments && <p className="muted">Comment: {review.comments}</p>}
+                <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
+                  Inspect finalization trace
+                </button>
+              </article>
+            );
+          })}
           {resolvedReviewItems.length === 0 && (
             <EmptyState title="No resolved reviews" detail="Completed decisions will appear here." />
           )}
