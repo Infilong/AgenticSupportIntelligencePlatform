@@ -2408,6 +2408,19 @@ export function App() {
     });
   }
 
+  async function deleteArchivedEvaluation(run: EvaluationRun) {
+    if (!run.archived_at) return;
+    if (!window.confirm(`Permanently delete archived evaluation run "${run.name}"? This removes the run, result rows, metrics, and uploaded JSONL cases.`)) return;
+    await runAction("Evaluation deleted", async () => {
+      await apiRequest(workspacePath(`/evaluations/${run.id}/permanent`), { method: "DELETE", token });
+      if (evaluationDetail?.run.id === run.id) {
+        setEvaluationDetail(null);
+      }
+      await loadEvaluations(showArchivedEvaluations);
+      await loadAuditLogsIfAllowed();
+    });
+  }
+
   async function moveEvaluationFolder(runId: string, folderId: string) {
     await runAction("Evaluation moved", async () => {
       const movedRun = await apiRequest<EvaluationRun>(workspacePath(`/evaluations/${runId}/folder`), {
@@ -5220,7 +5233,7 @@ export function App() {
                 <option value="running">Running</option>
               </select></label>
               <label className="check-row"><input type="checkbox" checked={showArchivedEvaluations} onChange={(event) => toggleArchivedEvaluations(event.target.checked)} /> Include archived runs in All view</label>
-              <p className="permission-note">Folder managers organize runs; owners archive stale runs without deleting results, metrics, or audit evidence.</p>
+              <p className="permission-note">Folder managers organize runs. Owners archive active runs first, then can permanently delete archived runs when cleanup is required.</p>
             </div>
             <div className="evaluation-run-buttons bounded-evaluation-list">
               {displayedEvaluationRuns.map((run) => {
@@ -5247,6 +5260,7 @@ export function App() {
                       />
                       <button type="button" onClick={() => void loadEvaluationDetail(run.id)}>Inspect</button>
                       {!run.archived_at && <button type="button" className="danger-button" onClick={() => void archiveEvaluation(run)} disabled={!canManageResources || loading}>Archive</button>}
+                      {run.archived_at && <button type="button" className="danger-button" onClick={() => void deleteArchivedEvaluation(run)} disabled={!canManageResources || loading}>Delete permanently</button>}
                     </div>
                   </article>
                 );

@@ -33,6 +33,10 @@ class EvaluationRunNotFoundError(ValueError):
     pass
 
 
+class EvaluationRunNotArchivedError(ValueError):
+    pass
+
+
 class EvaluationRunner:
     def __init__(self, db: Session):
         self.db = db
@@ -171,6 +175,37 @@ class EvaluationRunner:
         run.metrics.sort(
             key=lambda metric: (str(metric.mode), str(metric.language), metric.metric_name)
         )
+        return run
+
+    def delete_archived_run(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
+        run = self.db.scalar(
+            select(EvaluationRun)
+            .options(selectinload(EvaluationRun.results), selectinload(EvaluationRun.metrics))
+            .where(EvaluationRun.workspace_id == workspace_id, EvaluationRun.id == run_id)
+        )
+        if run is None:
+            raise EvaluationRunNotFoundError("Evaluation run was not found.")
+        if run.archived_at is None:
+            raise EvaluationRunNotArchivedError(
+                "Archive the evaluation run before permanent deletion."
+            )
+
+        case_ids = [result.evaluation_case_id for result in run.results]
+        for metric in list(run.metrics):
+            self.db.delete(metric)
+        for result in list(run.results):
+            self.db.delete(result)
+        for case_id in case_ids:
+            case = self.db.scalar(
+                select(EvaluationCase).where(
+                    EvaluationCase.workspace_id == workspace_id,
+                    EvaluationCase.id == case_id,
+                )
+            )
+            if case is not None:
+                self.db.delete(case)
+        self.db.delete(run)
+        self.db.commit()
         return run
 
     def _persist_case(

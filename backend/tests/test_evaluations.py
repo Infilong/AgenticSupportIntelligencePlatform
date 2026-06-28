@@ -1,9 +1,12 @@
 import json
+from uuid import UUID
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
-from app.models.evaluation import EvaluationResult
+from app.models.evaluation import EvaluationCase, EvaluationMetric, EvaluationResult, EvaluationRun
 from app.services.evaluation_loader import EvaluationCaseLoadError, load_jsonl_cases
 from app.services.evaluation_metrics import calculate_metrics
 
@@ -347,6 +350,52 @@ def test_owner_can_archive_evaluation_run_without_losing_detail(client: TestClie
     assert len(detail.json()["results"]) == 1
 
 
+def test_owner_can_permanently_delete_archived_evaluation_run(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "eval-delete-owner@example.com")
+    token = login(client, "eval-delete-owner@example.com")
+    workspace = create_workspace(client, token)
+    run = run_simple_evaluation(client, token, workspace["id"])
+
+    delete_before_archive = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{run['id']}/permanent",
+        headers=auth_headers(token),
+    )
+    archive = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{run['id']}",
+        headers=auth_headers(token),
+    )
+    permanent_delete = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{run['id']}/permanent",
+        headers=auth_headers(token),
+    )
+    detail_after_delete = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{run['id']}",
+        headers=auth_headers(token),
+    )
+    list_after_delete = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"include_archived": True},
+    )
+
+    assert delete_before_archive.status_code == 409
+    assert delete_before_archive.json()["detail"]["code"] == "evaluation_not_archived"
+    assert archive.status_code == 204
+    assert permanent_delete.status_code == 204
+    assert detail_after_delete.status_code == 404
+    assert list_after_delete.status_code == 200
+    assert list_after_delete.json() == []
+    deleted_run = db_session.scalar(
+        select(EvaluationRun).where(EvaluationRun.id == UUID(run["id"]))
+    )
+    assert deleted_run is None
+    assert db_session.scalars(select(EvaluationResult)).all() == []
+    assert db_session.scalars(select(EvaluationMetric)).all() == []
+    assert db_session.scalars(select(EvaluationCase)).all() == []
+
+
 def test_evaluation_archive_requires_owner_and_workspace_scope(client: TestClient) -> None:
     register(client, "eval-owner@example.com")
     owner_token = login(client, "eval-owner@example.com")
@@ -366,6 +415,10 @@ def test_evaluation_archive_requires_owner_and_workspace_scope(client: TestClien
         f"/api/v1/workspaces/{owner_workspace['id']}/evaluations/{run['id']}",
         headers=auth_headers(member_token),
     )
+    member_permanent_delete = client.delete(
+        f"/api/v1/workspaces/{owner_workspace['id']}/evaluations/{run['id']}/permanent",
+        headers=auth_headers(member_token),
+    )
 
     register(client, "eval-other-owner@example.com")
     other_token = login(client, "eval-other-owner@example.com")
@@ -374,12 +427,21 @@ def test_evaluation_archive_requires_owner_and_workspace_scope(client: TestClien
         f"/api/v1/workspaces/{other_workspace['id']}/evaluations/{run['id']}",
         headers=auth_headers(other_token),
     )
+    cross_workspace_permanent_delete = client.delete(
+        f"/api/v1/workspaces/{other_workspace['id']}/evaluations/{run['id']}/permanent",
+        headers=auth_headers(other_token),
+    )
 
     assert member_archive.status_code == 403
     assert member_archive.json()["detail"]["code"] == "workspace_permission_required"
     assert member_archive.json()["detail"]["required_permission"] == "resources:delete"
+    assert member_permanent_delete.status_code == 403
+    assert member_permanent_delete.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_permanent_delete.json()["detail"]["required_permission"] == "resources:delete"
     assert cross_workspace_archive.status_code == 404
     assert cross_workspace_archive.json()["detail"]["code"] == "evaluation_not_found"
+    assert cross_workspace_permanent_delete.status_code == 404
+    assert cross_workspace_permanent_delete.json()["detail"]["code"] == "evaluation_not_found"
 
 
 def test_evaluation_runs_can_be_foldered_filtered_and_moved(client: TestClient) -> None:

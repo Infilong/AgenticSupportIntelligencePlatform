@@ -20,7 +20,11 @@ from app.schemas.evaluation import (
 from app.services.agent_service import AgentNotFoundError
 from app.services.audit_log_service import AuditLogService
 from app.services.evaluation_loader import EvaluationCaseLoadError
-from app.services.evaluation_runner import EvaluationRunner, EvaluationRunNotFoundError
+from app.services.evaluation_runner import (
+    EvaluationRunner,
+    EvaluationRunNotArchivedError,
+    EvaluationRunNotFoundError,
+)
 from app.services.folder_service import ResourceFolderNotFoundError
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/evaluations", tags=["evaluations"])
@@ -162,6 +166,37 @@ def archive_evaluation(
             "name": run.name,
             "archived_at": run.archived_at.isoformat() if run.archived_at else None,
         },
+    )
+
+
+@router.delete("/{evaluation_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
+def permanently_delete_evaluation(
+    evaluation_id: EvaluationId,
+    workspace: ResourceDeleteAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> None:
+    try:
+        run = EvaluationRunner(db).delete_archived_run(
+            workspace_id=workspace.id, run_id=evaluation_id
+        )
+    except EvaluationRunNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "evaluation_not_found", "message": "Evaluation was not found."},
+        ) from exc
+    except EvaluationRunNotArchivedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "evaluation_not_archived", "message": str(exc)},
+        ) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="evaluation.deleted",
+        resource_type="evaluation_run",
+        resource_id=run.id,
+        metadata={"name": run.name},
     )
 
 
