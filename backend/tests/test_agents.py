@@ -273,6 +273,63 @@ def test_support_agent_preserves_japanese_response_language(client: TestClient) 
     assert "返金" in body["final_answer"]
 
 
+def test_support_agent_uses_chinese_knowledge_in_trace(client: TestClient) -> None:
+    register(client, "zh-trace@example.com")
+    token = login(client, "zh-trace@example.com")
+    workspace = create_workspace(client, token)
+    upload_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        json={
+            "title": "退款与账号安全政策 ZH",
+            "content_type": "text/plain",
+            "language": "zh",
+            "content": (
+                "用户在购买后30天内，且账号状态正常时，可以申请退款。"
+                "计费方案变更应在工作区设置中处理，并可能影响下一期账单。"
+                "涉及个人信息泄露或安全事件的请求，必须先转交人工审核。"
+            ),
+        },
+    )
+    assert upload_response.status_code == 201
+    agent = create_agent(client, token, workspace["id"])
+
+    response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "我可以在购买后30天内申请退款吗？"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["language"] == "zh"
+    assert body["status"] == "completed"
+    assert body["route_decision"] == "finalize"
+    assert "购买后30天内可以申请退款" in body["final_answer"]
+
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{body['id']}/trace",
+        headers=auth_headers(token),
+    )
+
+    assert trace.status_code == 200
+    trace_body = trace.json()
+    retrieval_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "retrieve_evidence"
+    )
+    retrieval_output = safe_json(retrieval_step["output_json"])
+    retrieved_chunks = retrieval_output["retrieved_chunks"]
+    assert retrieved_chunks
+    assert {chunk["language"] for chunk in retrieved_chunks} == {"zh"}
+    assert any("购买后30天内" in chunk["content"] for chunk in retrieved_chunks)
+    assert any("退款与账号安全政策 ZH" in chunk["citation"] for chunk in retrieved_chunks)
+    assert retrieval_step["tool_calls"][0]["framework"] == "langchain_core.tools.StructuredTool"
+    assert {guardrail["guardrail_type"] for guardrail in trace_body["guardrails"]} >= {
+        "citation_required",
+        "language_preservation",
+    }
+
+
 def test_support_agent_routes_no_source_to_human_review(client: TestClient) -> None:
     register(client, "owner@example.com")
     token = login(client, "owner@example.com")

@@ -779,9 +779,7 @@ def _mock_answer(
     evidence = " ".join(str(chunk.get("content", "")) for chunk in chunks[:2])
     combined = f"{input_message} {evidence}".lower()
     if language == SupportedLanguage.ja:
-        if intent == "account_security" or any(
-            term in combined for term in ["ログイン", "端末", "パスワード"]
-        ):
+        if intent == "account_security":
             return (
                 "関連資料によると、すぐにパスワードを変更し、"
                 "すべての端末からログアウトし、二要素認証を有効にしてください。"
@@ -791,21 +789,27 @@ def _mock_answer(
                 "関連資料によると、返金は購入から30日以内に申請できます。"
                 "31日目以降は例外として人間の担当者が確認します。"
             )
+        if any(term in combined for term in ["ログイン", "端末", "パスワード"]):
+            return (
+                "関連資料によると、すぐにパスワードを変更し、"
+                "すべての端末からログアウトし、二要素認証を有効にしてください。"
+            )
         return "関連資料に基づき、人間のサポート担当者が確認できる範囲で対応します。"
     if language == SupportedLanguage.zh:
-        if intent == "privacy_complaint" or any(
-            term in combined for term in ["个人信息", "泄露", "隐私"]
-        ):
+        if intent == "privacy_complaint":
             return (
                 "根据相关政策，个人信息泄露投诉必须升级给隐私与安全团队进行人工审核，"
                 "不能透露内部调查细节。"
             )
         if intent == "refund_request":
             return "根据相关资料，购买后30天内可以申请退款。超过期限的情况需要人工审核。"
+        if any(term in combined for term in ["个人信息", "泄露", "隐私"]):
+            return (
+                "根据相关政策，个人信息泄露投诉必须升级给隐私与安全团队进行人工审核，"
+                "不能透露内部调查细节。"
+            )
         return "根据相关资料，支持团队会在有依据的范围内处理该请求。"
-    if intent == "account_security" or any(
-        term in combined for term in ["login", "security", "password"]
-    ):
+    if intent == "account_security":
         return (
             "According to the account security guide, change your password, "
             "sign out of all devices, and enable two-factor authentication immediately."
@@ -818,6 +822,11 @@ def _mock_answer(
                 "in the same billing cycle."
             )
         return "According to the retrieved policy, refunds can be requested within 30 days."
+    if any(term in combined for term in ["login", "security", "password"]):
+        return (
+            "According to the account security guide, change your password, "
+            "sign out of all devices, and enable two-factor authentication immediately."
+        )
     return (
         "The retrieved support policy does not provide enough detail for a final answer; "
         "a human review is recommended."
