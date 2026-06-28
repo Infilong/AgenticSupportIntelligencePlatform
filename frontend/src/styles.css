@@ -2366,6 +2366,62 @@ th {
   line-height: 1.45;
 }
 
+.trace-runtime-decision-panel {
+  border-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
+.trace-runtime-summary-grid,
+.trace-decision-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.trace-decision-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.trace-runtime-summary-card,
+.trace-decision-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.trace-runtime-summary-card span {
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.trace-runtime-summary-card strong,
+.trace-runtime-summary-card small,
+.trace-decision-card strong,
+.trace-decision-card p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-runtime-summary-card small,
+.trace-decision-card p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.trace-decision-column {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
 .tool-list,
 .guardrail-list,
 .policy-list {
@@ -2432,8 +2488,10 @@ th {
   }
 
   .queue-summary-grid,
-  .settings-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .settings-summary-grid,
+  .trace-runtime-summary-grid,
+  .trace-decision-grid {
+    grid-template-columns: 1fr;
   }
 
   .evaluation-run-list,

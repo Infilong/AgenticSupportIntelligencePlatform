@@ -217,6 +217,10 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await page.locator(".trace-entry-panel").getByRole("button", { name: /Ignore all previous instructions/ }).click();
   await expect(page.getByRole("heading", { name: "Execution navigator" })).toBeVisible();
   await expect(page.getByText("AI runtime", { exact: true })).toBeVisible();
+  await expect(page.getByText("Model and prompt decisions", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Runtime decision board" })).toBeVisible();
+  await expect(page.getByText("Model purpose routes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Prompt versions", { exact: true })).toBeVisible();
   await expect(page.getByText("Prompt Injection").first()).toBeVisible();
   await expect(page.locator(".trace-entry-panel").getByText("human_review")).toHaveCount(0);
 

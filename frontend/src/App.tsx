@@ -6095,6 +6095,26 @@ type TraceEntryPoint = {
   source: string;
 };
 
+type AIRunPurposeSummary = {
+  purpose: string;
+  models: string[];
+  calls: number;
+  failedCalls: number;
+  tokens: number;
+  cost: number;
+  latencyMs: number;
+};
+
+type PromptTemplateSummary = {
+  key: string;
+  name: string;
+  versionLabel: string;
+  purposes: string[];
+  calls: number;
+  promptTokens: number;
+  hasSource: boolean;
+};
+
 function buildTraceEntries({
   latestRun,
   recentRuns,
@@ -6145,6 +6165,57 @@ function buildTraceEntries({
   return [...unique.values()].slice(0, 8);
 }
 
+function summarizeAIRunPurposes(runs: AIRunTrace[]): AIRunPurposeSummary[] {
+  const summaries = new Map<string, AIRunPurposeSummary>();
+  for (const run of runs) {
+    const current = summaries.get(run.purpose) ?? {
+      purpose: run.purpose,
+      models: [],
+      calls: 0,
+      failedCalls: 0,
+      tokens: 0,
+      cost: 0,
+      latencyMs: 0,
+    };
+    const modelLabel = `${run.provider}/${run.model}`;
+    summaries.set(run.purpose, {
+      ...current,
+      models: current.models.includes(modelLabel) ? current.models : [...current.models, modelLabel],
+      calls: current.calls + 1,
+      failedCalls: current.failedCalls + (run.status === "failed" ? 1 : 0),
+      tokens: current.tokens + run.total_tokens,
+      cost: current.cost + run.estimated_cost,
+      latencyMs: current.latencyMs + run.latency_ms,
+    });
+  }
+  return [...summaries.values()].sort((left, right) => right.cost - left.cost || left.purpose.localeCompare(right.purpose));
+}
+
+function summarizePromptTemplates(runs: AIRunTrace[]): PromptTemplateSummary[] {
+  const summaries = new Map<string, PromptTemplateSummary>();
+  for (const run of runs) {
+    if (!run.prompt_template_id && !run.prompt_template_name && !run.prompt_version) continue;
+    const key = run.prompt_template_id ?? `${run.prompt_template_name ?? "unversioned"}:${run.prompt_version ?? "none"}`;
+    const current = summaries.get(key) ?? {
+      key,
+      name: run.prompt_template_name ?? "Unversioned prompt",
+      versionLabel: run.prompt_version ? `v${run.prompt_version}` : "unversioned",
+      purposes: [],
+      calls: 0,
+      promptTokens: 0,
+      hasSource: Boolean(run.prompt_template_text),
+    };
+    summaries.set(key, {
+      ...current,
+      purposes: current.purposes.includes(run.purpose) ? current.purposes : [...current.purposes, run.purpose],
+      calls: current.calls + 1,
+      promptTokens: current.promptTokens + run.prompt_tokens,
+      hasSource: current.hasSource || Boolean(run.prompt_template_text),
+    });
+  }
+  return [...summaries.values()].sort((left, right) => right.promptTokens - left.promptTokens || left.name.localeCompare(right.name));
+}
+
 function TraceViewer({ trace }: { trace: GraphTrace }) {
   const [stepFilter, setStepFilter] = useState<TraceStepFilter>("all");
   const [selectedStepId, setSelectedStepId] = useState(trace.steps[0]?.id ?? "");
@@ -6177,6 +6248,14 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
     { id: "tools", label: "Tool calls", count: trace.steps.filter((step) => traceStepMatchesFilter(step, "tools")).length },
     { id: "langchain", label: "LangChain", count: trace.steps.filter((step) => traceStepMatchesFilter(step, "langchain")).length },
   ];
+  const purposeSummaries = summarizeAIRunPurposes(trace.ai_runs);
+  const promptSummaries = summarizePromptTemplates(trace.ai_runs);
+  const versionedPromptCalls = trace.ai_runs.filter((run) => run.prompt_template_id).length;
+  const failedModelCalls = trace.ai_runs.filter((run) => run.status === "failed").length;
+  const topCostRun = trace.ai_runs.reduce<AIRunTrace | null>((top, run) => {
+    if (!top || run.estimated_cost > top.estimated_cost) return run;
+    return top;
+  }, null);
 
   return (
     <section className="trace-workbench">
@@ -6238,6 +6317,79 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
               <p>{component.role}</p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="panel stack full-width trace-runtime-decision-panel">
+        <div className="row-head">
+          <div>
+            <p className="eyebrow">Model and prompt decisions</p>
+            <h3>Runtime decision board</h3>
+            <p className="muted">Trace model routing, prompt version coverage, token pressure, cache behavior, and failed provider calls from the persisted AI run ledger.</p>
+          </div>
+          <Badge tone={failedModelCalls ? "warn" : "good"}>{failedModelCalls ? `${failedModelCalls} failed calls` : "model calls clean"}</Badge>
+        </div>
+        <div className="trace-runtime-summary-grid">
+          <div className="trace-runtime-summary-card">
+            <span>Prompt coverage</span>
+            <strong>{versionedPromptCalls}/{trace.ai_runs.length}</strong>
+            <small>{versionedPromptCalls === trace.ai_runs.length && trace.ai_runs.length > 0 ? "Every model call is tied to a prompt template version." : "Unversioned calls usually come from deterministic baselines or fallback model calls."}</small>
+          </div>
+          <div className="trace-runtime-summary-card">
+            <span>Top cost call</span>
+            <strong>{topCostRun ? `${topCostRun.provider}/${topCostRun.model}` : "No model calls"}</strong>
+            <small>{topCostRun ? `${formatStepName(topCostRun.purpose)} · ${formatCost(topCostRun.estimated_cost)} · ${topCostRun.total_tokens} tokens` : "Run an agent to record AI ledger rows."}</small>
+          </div>
+          <div className="trace-runtime-summary-card">
+            <span>Cache behavior</span>
+            <strong>{trace.ai_runs.filter((run) => run.cache_hit).length} hits</strong>
+            <small>{trace.ai_runs.length ? `${trace.ai_runs.length - trace.ai_runs.filter((run) => run.cache_hit).length} misses in this trace` : "No cacheable model calls recorded."}</small>
+          </div>
+        </div>
+        <div className="trace-decision-grid">
+          <div className="trace-decision-column">
+            <div className="row-head">
+              <strong>Model purpose routes</strong>
+              <Badge>{purposeSummaries.length} purposes</Badge>
+            </div>
+            {purposeSummaries.map((summary) => (
+              <article className="trace-decision-card" key={summary.purpose}>
+                <div className="row-head">
+                  <strong>{formatStepName(summary.purpose)}</strong>
+                  <Badge tone={summary.failedCalls ? "warn" : "good"}>{summary.failedCalls ? `${summary.failedCalls} failed` : "ok"}</Badge>
+                </div>
+                <p>{summary.models.join(" · ")}</p>
+                <div className="metric-grid compact">
+                  <Metric label="Calls" value={summary.calls} />
+                  <Metric label="Tokens" value={summary.tokens} />
+                  <Metric label="Cost" value={formatCost(summary.cost)} />
+                  <Metric label="Latency" value={formatLatency(summary.latencyMs)} />
+                </div>
+              </article>
+            ))}
+            {purposeSummaries.length === 0 && <EmptyState title="No model purposes" detail="This trace has no AI run ledger rows." />}
+          </div>
+          <div className="trace-decision-column">
+            <div className="row-head">
+              <strong>Prompt versions</strong>
+              <Badge>{promptSummaries.length} templates</Badge>
+            </div>
+            {promptSummaries.map((summary) => (
+              <article className="trace-decision-card" key={summary.key}>
+                <div className="row-head">
+                  <strong>{summary.name}</strong>
+                  <Badge>{summary.versionLabel}</Badge>
+                </div>
+                <p>{summary.purposes.map(formatStepName).join(" · ")}</p>
+                <div className="metric-grid compact">
+                  <Metric label="Calls" value={summary.calls} />
+                  <Metric label="Prompt tokens" value={summary.promptTokens} />
+                  <Metric label="Source" value={summary.hasSource ? "stored" : "missing"} />
+                </div>
+              </article>
+            ))}
+            {promptSummaries.length === 0 && <EmptyState title="No prompt templates" detail="No model calls in this trace are linked to prompt template records." />}
+          </div>
         </div>
       </section>
 
