@@ -436,6 +436,14 @@ type HumanReview = {
   review_context: ReviewContext | null;
 };
 
+type HumanReviewListResponse = {
+  items: HumanReview[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_next: boolean;
+};
+
 type ReviewDraft = {
   decision: "approved" | "edited" | "rejected";
   edited_answer: string;
@@ -1123,6 +1131,10 @@ export function App() {
   const [reviewSearch, setReviewSearch] = useState("");
   const [pendingReviewPage, setPendingReviewPage] = useState(0);
   const [resolvedReviewPage, setResolvedReviewPage] = useState(0);
+  const [pendingReviewTotal, setPendingReviewTotal] = useState(0);
+  const [resolvedReviewTotal, setResolvedReviewTotal] = useState(0);
+  const [pendingReviewHasNext, setPendingReviewHasNext] = useState(false);
+  const [resolvedReviewHasNext, setResolvedReviewHasNext] = useState(false);
 
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
@@ -1757,6 +1769,10 @@ export function App() {
   function clearReviewState() {
     setReviews([]);
     setSelectedReviewId("");
+    setPendingReviewTotal(0);
+    setResolvedReviewTotal(0);
+    setPendingReviewHasNext(false);
+    setResolvedReviewHasNext(false);
   }
 
   function clearEvaluationState() {
@@ -2448,20 +2464,24 @@ export function App() {
   ) {
     if (!selectedWorkspaceId) return;
     const [pending, resolved] = await Promise.all([
-      apiRequest<HumanReview[]>(
+      apiRequest<HumanReviewListResponse>(
         workspaceListPath("/human-reviews", reviewListParams("pending", pendingPage, filter, sort, search)),
         { token },
       ),
-      apiRequest<HumanReview[]>(
+      apiRequest<HumanReviewListResponse>(
         workspaceListPath("/human-reviews", reviewListParams("resolved", resolvedPage, filter, sort, search)),
         { token },
       ),
     ]);
-    const data = [...pending, ...resolved];
+    const data = [...pending.items, ...resolved.items];
     setReviews(data);
+    setPendingReviewTotal(pending.total);
+    setResolvedReviewTotal(resolved.total);
+    setPendingReviewHasNext(pending.has_next);
+    setResolvedReviewHasNext(resolved.has_next);
     setSelectedReviewId((current) => {
-      if (current && pending.some((review) => review.id === current)) return current;
-      return pending[0]?.id ?? "";
+      if (current && pending.items.some((review) => review.id === current)) return current;
+      return pending.items[0]?.id ?? "";
     });
   }
 
@@ -5216,9 +5236,9 @@ export function App() {
     const resolvedReviewPageStart = resolvedReviewPage * MAX_VISIBLE_REVIEWS + (displayedResolvedReviewItems.length ? 1 : 0);
     const resolvedReviewPageEnd = resolvedReviewPage * MAX_VISIBLE_REVIEWS + displayedResolvedReviewItems.length;
     const canGoToPreviousPendingReviewPage = pendingReviewPage > 0;
-    const canGoToNextPendingReviewPage = displayedPendingReviewItems.length === MAX_VISIBLE_REVIEWS;
+    const canGoToNextPendingReviewPage = pendingReviewHasNext;
     const canGoToPreviousResolvedReviewPage = resolvedReviewPage > 0;
-    const canGoToNextResolvedReviewPage = displayedResolvedReviewItems.length === MAX_VISIBLE_REVIEWS;
+    const canGoToNextResolvedReviewPage = resolvedReviewHasNext;
     const criticalCount = pendingReviewItems.filter((review) => reviewSeverity(review.reason) === "critical").length;
     const mineCount = pendingReviewItems.filter((review) => review.reviewer_id === currentUser?.id).length;
     const unassignedCount = pendingReviewItems.filter((review) => review.reviewer_id === null).length;
@@ -5229,7 +5249,7 @@ export function App() {
       ?? null;
     const selectedBlockers = selectedPendingReview ? reviewReasonParts(selectedPendingReview.reason) : [];
     const nextAction = pendingReviewItems.length
-      ? `${pendingReviewItems.length} loaded case${pendingReviewItems.length === 1 ? "" : "s"} need a decision`
+      ? `${pendingReviewTotal} matching case${pendingReviewTotal === 1 ? "" : "s"} need a decision`
       : "Queue clear";
 
     return (
@@ -5249,7 +5269,7 @@ export function App() {
         </section>
 
         <section className="queue-summary-grid">
-          <Metric label="Loaded pending" value={pendingReviewItems.length} />
+          <Metric label="Matching pending" value={pendingReviewTotal} />
           <Metric label="Loaded mine" value={mineCount} />
           <Metric label="Loaded unassigned" value={unassignedCount} />
           <Metric label="Loaded critical" value={criticalCount} />
@@ -5264,7 +5284,7 @@ export function App() {
                 <h3>Review queue</h3>
                 <p className="muted">Select one pending case. The decision editor stays on the selected case so typing does not jump between cards.</p>
               </div>
-              <Badge tone={pendingReviewItems.length ? "warn" : "good"}>{pendingReviewItems.length} pending</Badge>
+              <Badge tone={pendingReviewTotal ? "warn" : "good"}>{pendingReviewTotal} pending</Badge>
             </div>
 
             <div className="review-queue-controls">
@@ -5324,7 +5344,7 @@ export function App() {
             </div>
             <div className="pagination-bar">
               <button type="button" onClick={() => setPendingReviewPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousPendingReviewPage || loading}>Previous</button>
-              <span>Page {pendingReviewPage + 1} · {displayedPendingReviewItems.length ? `${pendingReviewPageStart}-${pendingReviewPageEnd}` : "0"} pending shown</span>
+              <span>Page {pendingReviewPage + 1} · {displayedPendingReviewItems.length ? `${pendingReviewPageStart}-${pendingReviewPageEnd}` : "0"} of {pendingReviewTotal} pending</span>
               <button type="button" onClick={() => setPendingReviewPage((page) => page + 1)} disabled={!canGoToNextPendingReviewPage || loading}>Next</button>
             </div>
             <p className="permission-note">Pending reviews are loaded from the backend by filter, search, sort, offset, and limit so the queue does not grow as one long browser list.</p>
@@ -5534,7 +5554,7 @@ export function App() {
               <h3>Resolved review history</h3>
               <p className="muted">Closed decisions remain available for audit and trace inspection.</p>
             </div>
-            <Badge>{resolvedReviewItems.length} resolved</Badge>
+            <Badge>{resolvedReviewTotal} resolved</Badge>
           </div>
           {displayedResolvedReviewItems.map((review) => {
             const storedAnswer = review.edited_answer ?? review.proposed_answer ?? review.run?.final_answer ?? "No answer was stored.";
@@ -5568,7 +5588,7 @@ export function App() {
           })}
           <div className="pagination-bar">
             <button type="button" onClick={() => setResolvedReviewPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousResolvedReviewPage || loading}>Previous</button>
-            <span>Page {resolvedReviewPage + 1} · {displayedResolvedReviewItems.length ? `${resolvedReviewPageStart}-${resolvedReviewPageEnd}` : "0"} resolved shown</span>
+            <span>Page {resolvedReviewPage + 1} · {displayedResolvedReviewItems.length ? `${resolvedReviewPageStart}-${resolvedReviewPageEnd}` : "0"} of {resolvedReviewTotal} resolved</span>
             <button type="button" onClick={() => setResolvedReviewPage((page) => page + 1)} disabled={!canGoToNextResolvedReviewPage || loading}>Next</button>
           </div>
           <p className="permission-note">Resolved reviews are loaded from the backend by search, offset, and limit so audit history stays bounded.</p>

@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import String, case, cast, or_, select
+from sqlalchemy import String, case, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import Checkpoint, GraphRun, GraphRunStatus
@@ -74,17 +74,13 @@ class HumanReviewService:
         limit: int = 30,
         offset: int = 0,
     ) -> list[HumanReview]:
-        filters = [HumanReview.workspace_id == workspace_id]
-        if decision == "pending":
-            filters.append(HumanReview.reviewer_decision == ReviewDecision.pending)
-        elif decision == "resolved":
-            filters.append(HumanReview.reviewer_decision != ReviewDecision.pending)
-
-        filters.extend(_queue_filter_conditions(queue_filter=queue_filter, reviewer_id=reviewer_id))
-        search_term = (search or "").strip()
-        if search_term:
-            filters.append(_review_search_condition(search_term))
-
+        filters = self._review_filters(
+            workspace_id=workspace_id,
+            decision=decision,
+            queue_filter=queue_filter,
+            reviewer_id=reviewer_id,
+            search=search,
+        )
         statement = (
             select(HumanReview)
             .join(GraphRun, HumanReview.graph_run_id == GraphRun.id)
@@ -102,6 +98,50 @@ class HumanReviewService:
         return list(
             self.db.scalars(statement.offset(max(offset, 0)).limit(max(min(limit, 100), 1))).all()
         )
+
+    def count_reviews(
+        self,
+        *,
+        workspace_id: UUID,
+        decision: str = "all",
+        queue_filter: str = "all",
+        reviewer_id: UUID | None = None,
+        search: str | None = None,
+    ) -> int:
+        filters = self._review_filters(
+            workspace_id=workspace_id,
+            decision=decision,
+            queue_filter=queue_filter,
+            reviewer_id=reviewer_id,
+            search=search,
+        )
+        total = self.db.scalar(
+            select(func.count(HumanReview.id))
+            .join(GraphRun, HumanReview.graph_run_id == GraphRun.id)
+            .where(*filters)
+        )
+        return int(total or 0)
+
+    def _review_filters(
+        self,
+        *,
+        workspace_id: UUID,
+        decision: str,
+        queue_filter: str,
+        reviewer_id: UUID | None,
+        search: str | None,
+    ) -> list:
+        filters = [HumanReview.workspace_id == workspace_id]
+        if decision == "pending":
+            filters.append(HumanReview.reviewer_decision == ReviewDecision.pending)
+        elif decision == "resolved":
+            filters.append(HumanReview.reviewer_decision != ReviewDecision.pending)
+
+        filters.extend(_queue_filter_conditions(queue_filter=queue_filter, reviewer_id=reviewer_id))
+        search_term = (search or "").strip()
+        if search_term:
+            filters.append(_review_search_condition(search_term))
+        return filters
 
     def get_review(self, *, workspace_id: UUID, review_id: UUID) -> HumanReview:
         review = self.db.scalar(

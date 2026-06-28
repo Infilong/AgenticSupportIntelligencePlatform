@@ -14,6 +14,7 @@ from app.models.review import HumanReview
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.human_review import (
+    HumanReviewListResponse,
     HumanReviewResolveRequest,
     HumanReviewResponse,
     HumanReviewRunContext,
@@ -43,7 +44,7 @@ ListLimit = Annotated[int, Query(ge=1, le=100)]
 ListOffset = Annotated[int, Query(ge=0)]
 
 
-@router.get("", response_model=list[HumanReviewResponse])
+@router.get("", response_model=HumanReviewListResponse)
 def list_human_reviews(
     workspace: ReviewReadAccess,
     current_user: CurrentUser,
@@ -54,8 +55,9 @@ def list_human_reviews(
     sort: ReviewSortFilter = "severity",
     limit: ListLimit = 30,
     offset: ListOffset = 0,
-) -> list[HumanReviewResponse]:
-    reviews = HumanReviewService(db).list_reviews(
+) -> HumanReviewListResponse:
+    service = HumanReviewService(db)
+    reviews = service.list_reviews(
         workspace_id=workspace.id,
         decision=decision,
         queue_filter=queue_filter,
@@ -65,7 +67,20 @@ def list_human_reviews(
         limit=limit,
         offset=offset,
     )
-    return [_review_response(review, db) for review in reviews]
+    total = service.count_reviews(
+        workspace_id=workspace.id,
+        decision=decision,
+        queue_filter=queue_filter,
+        reviewer_id=current_user.id,
+        search=search,
+    )
+    return HumanReviewListResponse(
+        items=[_review_response(review, db) for review in reviews],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(reviews) < total,
+    )
 
 
 @router.get("/{review_id}", response_model=HumanReviewResponse)

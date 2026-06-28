@@ -147,8 +147,11 @@ def test_no_source_run_creates_guardrails_and_pending_review(
         headers=auth_headers(token),
     )
     assert reviews.status_code == 200
-    assert len(reviews.json()) == 1
-    review_body = reviews.json()[0]
+    reviews_body = reviews.json()
+    assert reviews_body["total"] == 1
+    assert reviews_body["has_next"] is False
+    assert len(reviews_body["items"]) == 1
+    review_body = reviews_body["items"][0]
     assert review_body["reviewer_decision"] == "pending"
     assert review_body["run"] is not None
     assert review_body["run"]["input_message"] == "How do I permanently delete my account?"
@@ -189,7 +192,7 @@ def test_prompt_injection_routes_to_review_even_with_retrieved_evidence(client: 
     reviews = client.get(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews",
         headers=auth_headers(token),
-    ).json()
+    ).json()["items"]
     assert "prompt_injection" in reviews[0]["reason"]
 
 
@@ -207,7 +210,7 @@ def test_reviewer_can_edit_and_resolve_review(client: TestClient, db_session: Se
     review = client.get(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews",
         headers=auth_headers(token),
-    ).json()[0]
+    ).json()["items"][0]
 
     resolved = client.post(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/resolve",
@@ -269,7 +272,7 @@ def test_reviewer_cannot_approve_missing_proposed_answer(client: TestClient) -> 
     review = client.get(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews",
         headers=auth_headers(token),
-    ).json()[0]
+    ).json()["items"][0]
     assert review["proposed_answer"] is None
 
     invalid = client.post(
@@ -305,7 +308,7 @@ def test_reviewer_can_reject_missing_proposed_answer(client: TestClient) -> None
     review = client.get(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews",
         headers=auth_headers(token),
-    ).json()[0]
+    ).json()["items"][0]
 
     resolved = client.post(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews/{review['id']}/resolve",
@@ -338,7 +341,7 @@ def test_review_claim_release_and_assignment_conflict(
     review = client.get(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews",
         headers=auth_headers(owner_token),
-    ).json()[0]
+    ).json()["items"][0]
 
     reviewer = register(client, "claim-reviewer@example.com")
     reviewer_token = login(client, "claim-reviewer@example.com")
@@ -396,7 +399,7 @@ def test_human_reviews_enforce_workspace_isolation(client: TestClient) -> None:
     review = client.get(
         f"/api/v1/workspaces/{owner_workspace['id']}/human-reviews",
         headers=auth_headers(owner_token),
-    ).json()[0]
+    ).json()["items"][0]
 
     register(client, "other@example.com")
     other_token = login(client, "other@example.com")
@@ -490,15 +493,32 @@ def test_human_review_list_supports_backend_filters_search_sort_and_pagination(
     )
 
     assert pending_page.status_code == 200
-    assert [item["id"] for item in pending_page.json()] == [str(critical.id), str(model.id)]
+    pending_body = pending_page.json()
+    assert pending_body["total"] == 3
+    assert pending_body["limit"] == 2
+    assert pending_body["offset"] == 0
+    assert pending_body["has_next"] is True
+    assert [item["id"] for item in pending_body["items"]] == [str(critical.id), str(model.id)]
     assert next_page.status_code == 200
-    assert [item["id"] for item in next_page.json()] == [str(evidence.id)]
+    next_body = next_page.json()
+    assert next_body["total"] == 3
+    assert next_body["limit"] == 2
+    assert next_body["offset"] == 2
+    assert next_body["has_next"] is False
+    assert [item["id"] for item in next_body["items"]] == [str(evidence.id)]
     assert model_only.status_code == 200
-    assert [item["id"] for item in model_only.json()] == [str(model.id)]
+    model_body = model_only.json()
+    assert model_body["total"] == 1
+    assert model_body["has_next"] is False
+    assert [item["id"] for item in model_body["items"]] == [str(model.id)]
     assert mine.status_code == 200
-    assert [item["id"] for item in mine.json()] == [str(model.id)]
+    mine_body = mine.json()
+    assert mine_body["total"] == 1
+    assert [item["id"] for item in mine_body["items"]] == [str(model.id)]
     assert resolved_search.status_code == 200
-    assert [item["id"] for item in resolved_search.json()] == [str(resolved.id)]
+    resolved_body = resolved_search.json()
+    assert resolved_body["total"] == 1
+    assert [item["id"] for item in resolved_body["items"]] == [str(resolved.id)]
 
 
 def test_human_review_list_filters_do_not_leak_other_workspaces(
@@ -537,4 +557,6 @@ def test_human_review_list_filters_do_not_leak_other_workspaces(
     )
 
     assert listed.status_code == 200
-    assert [item["id"] for item in listed.json()] == [str(other_review.id)]
+    listed_body = listed.json()
+    assert listed_body["total"] == 1
+    assert [item["id"] for item in listed_body["items"]] == [str(other_review.id)]

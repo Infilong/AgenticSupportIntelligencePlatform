@@ -38,6 +38,14 @@ class HumanReviewResponse(BaseModel):
     review_context: dict[str, Any] | None = None
 
 
+class HumanReviewListResponse(BaseModel):
+    items: list[HumanReviewResponse]
+    total: int
+    limit: int
+    offset: int
+    has_next: bool
+
+
 class HumanReviewResolveRequest(BaseModel):
     decision: ReviewDecision
     edited_answer: str | None = Field(default=None, max_length=4000)
