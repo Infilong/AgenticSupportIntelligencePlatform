@@ -20,6 +20,7 @@ const MAX_VISIBLE_FOLDERS = 24;
 const MAX_VISIBLE_RESOURCES = 40;
 const MAX_VISIBLE_EVALUATION_RUNS = 20;
 const MAX_VISIBLE_ADMIN_ASSETS = 30;
+const MAX_VISIBLE_AUDIT_EVENTS = 30;
 
 type CurrentUser = {
   id: string;
@@ -1130,6 +1131,9 @@ export function App() {
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [attentionSummary, setAttentionSummary] = useState<AttentionSummary | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditImpactFilter, setAuditImpactFilter] = useState("all");
+  const [auditActorFilter, setAuditActorFilter] = useState("all");
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [promptName, setPromptName] = useState("support_response_drafter");
   const [promptLanguage, setPromptLanguage] = useState<Language>("en");
@@ -5266,6 +5270,22 @@ export function App() {
     const highImpactLogs = auditLogs.filter((log) => auditImpact(log.action) === "high");
     const latestLog = auditLogs[0] ?? null;
     const resourceBreakdown = Object.entries(resourceCounts).sort((left, right) => right[1] - left[1]);
+    const filteredAuditLogs = auditLogs.filter((log) => {
+      const impact = auditImpact(log.action);
+      const actor = log.actor_user_id ? "user" : "system";
+      const matchesImpact = auditImpactFilter === "all" || auditImpactFilter === impact;
+      const matchesActor = auditActorFilter === "all" || auditActorFilter === actor;
+      return matchesImpact && matchesActor && matchesSearch(
+        auditSearch,
+        log.action,
+        log.resource_type,
+        log.resource_id,
+        log.actor_user_id,
+        log.metadata_json,
+      );
+    });
+    const displayedAuditLogs = filteredAuditLogs.slice(0, MAX_VISIBLE_AUDIT_EVENTS);
+    const hiddenAuditCount = Math.max(filteredAuditLogs.length - displayedAuditLogs.length, 0);
 
     return (
       <div className="audit-console">
@@ -5297,12 +5317,41 @@ export function App() {
                 <h3>Operations timeline</h3>
                 <p className="muted">Recent workspace-scoped changes across agents, knowledge, prompts, models, and human review.</p>
               </div>
-              <Badge tone={auditLogs.length ? "good" : "neutral"}>{auditLogs.length} events</Badge>
+              <Badge tone={auditLogs.length ? "good" : "neutral"}>{displayedAuditLogs.length}/{filteredAuditLogs.length} shown</Badge>
             </div>
 
-            {auditLogs.length ? (
+            <div className="library-toolbar audit-toolbar">
+              <label>
+                Search audit events
+                <input
+                  value={auditSearch}
+                  onChange={(event) => setAuditSearch(event.target.value)}
+                  placeholder="Action, resource, actor, metadata, or id"
+                />
+              </label>
+              <label>
+                Impact
+                <select value={auditImpactFilter} onChange={(event) => setAuditImpactFilter(event.target.value)}>
+                  <option value="all">All impacts</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </label>
+              <label>
+                Actor
+                <select value={auditActorFilter} onChange={(event) => setAuditActorFilter(event.target.value)}>
+                  <option value="all">All actors</option>
+                  <option value="user">User actions</option>
+                  <option value="system">System actions</option>
+                </select>
+              </label>
+              <p className="permission-note">The backend loads the latest 100 workspace events; this board filters and bounds the visible timeline for review.</p>
+            </div>
+
+            {filteredAuditLogs.length ? (
               <div className="audit-timeline">
-                {auditLogs.map((log) => {
+                {displayedAuditLogs.map((log) => {
                   const metadata = safeJson(log.metadata_json);
                   const impact = auditImpact(log.action);
                   return (
@@ -5331,8 +5380,12 @@ export function App() {
                 })}
               </div>
             ) : (
-              <EmptyState title="No audit events yet" detail="Create or update an agent, model config, prompt, document, or review to create audit records." />
+              <EmptyState
+                title={auditLogs.length ? "No audit events match this view" : "No audit events yet"}
+                detail={auditLogs.length ? "Clear search or change impact/actor filters." : "Create or update an agent, model config, prompt, document, or review to create audit records."}
+              />
             )}
+            {hiddenAuditCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_AUDIT_EVENTS} of {filteredAuditLogs.length} matching audit events. Search by action, resource, actor, metadata, or id to narrow review.</p>}
           </div>
 
           <aside className="panel stack audit-side-panel">

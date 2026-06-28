@@ -45,3 +45,7 @@ Documentation-only ticket. Existing backend behavior is covered by `backend/test
 - Prompt templates and model configs remain admin catalogs rather than folder-backed file libraries.
 - Their history panels are now searchable, status-filtered, bounded, and archive-aware.
 - Long prompt source text is collapsed by default so version history remains scannable.
+
+## 2026-06-29 Audit Trail Follow-up
+- Audit logs are loaded through the existing workspace-scoped, server-limited API.
+- The Audit page now adds frontend search, impact filtering, actor filtering, and bounded rendering so admin review remains usable as events grow.
