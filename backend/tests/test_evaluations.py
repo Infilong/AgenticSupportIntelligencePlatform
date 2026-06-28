@@ -57,6 +57,34 @@ def jsonl_content(*rows: dict) -> str:
     return "\n".join(json.dumps(row, ensure_ascii=False) for row in rows)
 
 
+
+
+def run_simple_evaluation(
+    client: TestClient,
+    token: str,
+    workspace_id: str,
+    name: str = "Lifecycle Evaluation",
+) -> dict:
+    response = client.post(
+        f"/api/v1/workspaces/{workspace_id}/evaluations",
+        headers=auth_headers(token),
+        json={
+            "name": name,
+            "modes": ["direct_llm"],
+            "jsonl_cases": jsonl_content(
+                {
+                    "id": "en_refund_lifecycle_001",
+                    "language": "en",
+                    "input_message": "Can I get a refund within 30 days?",
+                    "expected_route": "finalize",
+                }
+            ),
+        },
+    )
+    assert response.status_code == 201
+    return response.json()["run"]
+
+
 def test_jsonl_loader_validates_cases() -> None:
     cases = load_jsonl_cases(
         jsonl_content(
@@ -210,3 +238,73 @@ def test_evaluation_routes_enforce_workspace_isolation(client: TestClient) -> No
 
     assert forbidden.status_code == 404
     assert forbidden.json()["detail"]["code"] == "evaluation_not_found"
+
+
+def test_owner_can_archive_evaluation_run_without_losing_detail(client: TestClient) -> None:
+    register(client, "eval-archive-owner@example.com")
+    token = login(client, "eval-archive-owner@example.com")
+    workspace = create_workspace(client, token)
+    run = run_simple_evaluation(client, token, workspace["id"])
+
+    archive = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{run['id']}",
+        headers=auth_headers(token),
+    )
+    listed_default = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+    )
+    listed_with_archive = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"include_archived": True},
+    )
+    detail = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{run['id']}",
+        headers=auth_headers(token),
+    )
+
+    assert archive.status_code == 204
+    assert listed_default.status_code == 200
+    assert [item["id"] for item in listed_default.json()] == []
+    assert listed_with_archive.status_code == 200
+    archived_run = listed_with_archive.json()[0]
+    assert archived_run["id"] == run["id"]
+    assert archived_run["archived_at"] is not None
+    assert detail.status_code == 200
+    assert detail.json()["run"]["archived_at"] is not None
+    assert len(detail.json()["results"]) == 1
+
+
+def test_evaluation_archive_requires_owner_and_workspace_scope(client: TestClient) -> None:
+    register(client, "eval-owner@example.com")
+    owner_token = login(client, "eval-owner@example.com")
+    owner_workspace = create_workspace(client, owner_token, "Owner Eval Workspace")
+    run = run_simple_evaluation(client, owner_token, owner_workspace["id"])
+
+    register(client, "eval-member@example.com")
+    member_token = login(client, "eval-member@example.com")
+    add_member = client.post(
+        f"/api/v1/workspaces/{owner_workspace['id']}/members",
+        headers=auth_headers(owner_token),
+        json={"email": "eval-member@example.com", "role": "member"},
+    )
+    assert add_member.status_code == 201
+
+    member_archive = client.delete(
+        f"/api/v1/workspaces/{owner_workspace['id']}/evaluations/{run['id']}",
+        headers=auth_headers(member_token),
+    )
+
+    register(client, "eval-other-owner@example.com")
+    other_token = login(client, "eval-other-owner@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Eval Workspace")
+    cross_workspace_archive = client.delete(
+        f"/api/v1/workspaces/{other_workspace['id']}/evaluations/{run['id']}",
+        headers=auth_headers(other_token),
+    )
+
+    assert member_archive.status_code == 403
+    assert member_archive.json()["detail"]["code"] == "workspace_owner_required"
+    assert cross_workspace_archive.status_code == 404
+    assert cross_workspace_archive.json()["detail"]["code"] == "evaluation_not_found"

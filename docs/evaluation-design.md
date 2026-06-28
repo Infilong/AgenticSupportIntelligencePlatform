@@ -9,6 +9,7 @@ Evaluation is not a cosmetic dashboard feature. It is the proof that the AI work
 - Workspace-scoped evaluation API.
 - JSONL evaluation-case loader with validation.
 - Stored `EvaluationCase`, `EvaluationRun`, `EvaluationResult`, and `EvaluationMetric` rows.
+- Owner-only evaluation-run archive that preserves results and metrics while hiding stale runs by default.
 - Three comparison modes: `direct_llm`, `vector_rag`, and `system_v1`.
 - Per-language, per-mode metric rows.
 - Demo JSONL cases under `backend/demo_data/evaluations/support_eval_cases.jsonl`.
@@ -18,7 +19,9 @@ Evaluation is not a cosmetic dashboard feature. It is the proof that the AI work
 ```text
 POST /api/v1/workspaces/{workspace_id}/evaluations
 GET  /api/v1/workspaces/{workspace_id}/evaluations
+GET  /api/v1/workspaces/{workspace_id}/evaluations?include_archived=true
 GET  /api/v1/workspaces/{workspace_id}/evaluations/{evaluation_id}
+DELETE /api/v1/workspaces/{workspace_id}/evaluations/{evaluation_id}
 ```
 
 Create request:
@@ -32,6 +35,12 @@ Create request:
 ```
 
 `agent_id` is optional for `system_v1`; the runner creates a default workspace agent when needed.
+
+Archive behavior:
+- `DELETE` is a soft archive, not a hard delete.
+- Archived runs are hidden from the default list so active baselines stay focused.
+- Results, metrics, and detail views remain available for audit and comparison history.
+- Archive requires workspace owner permission.
 
 ## JSONL Evaluation Case Schema
 ```json

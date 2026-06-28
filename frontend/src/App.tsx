@@ -397,6 +397,7 @@ type EvaluationRun = {
   total_cases: number;
   created_at: string;
   completed_at: string | null;
+  archived_at: string | null;
 };
 
 type EvaluationResult = {
@@ -889,6 +890,9 @@ export function App() {
   const [evaluationName, setEvaluationName] = useState("Smoke Evaluation");
   const [evaluationCases, setEvaluationCases] = useState(demoEvaluation);
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
+  const [evaluationSearch, setEvaluationSearch] = useState("");
+  const [evaluationStatusFilter, setEvaluationStatusFilter] = useState("all");
+  const [showArchivedEvaluations, setShowArchivedEvaluations] = useState(false);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
@@ -1898,9 +1902,10 @@ export function App() {
     });
   }
 
-  async function loadEvaluations() {
+  async function loadEvaluations(includeArchived = showArchivedEvaluations) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<EvaluationRun[]>(workspacePath("/evaluations"), { token });
+    const query = includeArchived ? "?include_archived=true" : "";
+    const data = await apiRequest<EvaluationRun[]>(workspacePath(`/evaluations${query}`), { token });
     setEvaluationRuns(data);
   }
 
@@ -1926,6 +1931,23 @@ export function App() {
   async function loadEvaluationDetail(runId: string) {
     const detail = await apiRequest<EvaluationDetail>(workspacePath(`/evaluations/${runId}`), { token });
     setEvaluationDetail(detail);
+  }
+
+  async function archiveEvaluation(run: EvaluationRun) {
+    if (!window.confirm(`Archive evaluation run "${run.name}"? Results remain available when archived runs are shown.`)) return;
+    await runAction("Evaluation archived", async () => {
+      await apiRequest(workspacePath(`/evaluations/${run.id}`), { method: "DELETE", token });
+      if (evaluationDetail?.run.id === run.id) {
+        setEvaluationDetail(null);
+      }
+      await loadEvaluations(showArchivedEvaluations);
+      await loadAuditLogs();
+    });
+  }
+
+  function toggleArchivedEvaluations(value: boolean) {
+    setShowArchivedEvaluations(value);
+    void loadEvaluations(value);
   }
 
   async function loadCosts() {
@@ -4006,12 +4028,19 @@ export function App() {
   }
 
   function EvaluationsPanel() {
-    const latestEvaluation = evaluationRuns[0] ?? null;
+    const activeEvaluationRuns = evaluationRuns.filter((run) => !run.archived_at);
+    const filteredEvaluationRuns = evaluationRuns.filter((run) => {
+      const matchesStatus = evaluationStatusFilter === "all" || run.status === evaluationStatusFilter;
+      const matchesArchive = showArchivedEvaluations || !run.archived_at;
+      return matchesStatus && matchesArchive && matchesSearch(evaluationSearch, run.name, run.status, run.id);
+    });
+    const latestEvaluation = activeEvaluationRuns[0] ?? evaluationRuns[0] ?? null;
     const selectedModes = evaluationModes.join(", ") || "none";
-    const runStatusCounts = evaluationRuns.reduce<Record<string, number>>((counts, run) => {
+    const runStatusCounts = filteredEvaluationRuns.reduce<Record<string, number>>((counts, run) => {
       counts[run.status] = (counts[run.status] ?? 0) + 1;
       return counts;
     }, {});
+    const archivedEvaluationCount = evaluationRuns.filter((run) => run.archived_at).length;
 
     return (
       <div className="evaluation-console">
@@ -4024,8 +4053,8 @@ export function App() {
           <div className="next-action-card">
             <span>Current experiment</span>
             <strong>{selectedModes}</strong>
-            <p>{latestEvaluation ? `Latest run: ${latestEvaluation.name} · ${latestEvaluation.status}` : "Run the seeded multilingual cases to create a quality baseline."}</p>
-            <button type="button" onClick={() => void runAction("Evaluations refreshed", loadEvaluations)}>Refresh runs</button>
+            <p>{latestEvaluation ? `Latest active run: ${latestEvaluation.name} · ${latestEvaluation.status}` : "Run the seeded multilingual cases to create a quality baseline."}</p>
+            <button type="button" onClick={() => void runAction("Evaluations refreshed", () => loadEvaluations(showArchivedEvaluations))}>Refresh runs</button>
           </div>
         </section>
 
@@ -4064,24 +4093,41 @@ export function App() {
                 <h3>Evaluation runs</h3>
                 <p className="muted">Select a run to inspect language-specific metrics and case failures.</p>
               </div>
-              <Badge>{evaluationRuns.length} runs</Badge>
+              <Badge>{filteredEvaluationRuns.length} shown</Badge>
             </div>
             <div className="metric-grid compact">
               <Metric label="Completed" value={runStatusCounts.completed ?? 0} />
               <Metric label="Failed" value={runStatusCounts.failed ?? 0} />
-              <Metric label="Total cases" value={evaluationRuns.reduce((sum, run) => sum + run.total_cases, 0)} />
+              <Metric label="Archived" value={archivedEvaluationCount} />
+              <Metric label="Total cases" value={filteredEvaluationRuns.reduce((sum, run) => sum + run.total_cases, 0)} />
+            </div>
+            <div className="library-toolbar evaluation-toolbar">
+              <label>Search runs<input value={evaluationSearch} onChange={(event) => setEvaluationSearch(event.target.value)} placeholder="Run name, status, or id" /></label>
+              <label>Status<select value={evaluationStatusFilter} onChange={(event) => setEvaluationStatusFilter(event.target.value)}>
+                <option value="all">All statuses</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+                <option value="running">Running</option>
+              </select></label>
+              <label className="check-row"><input type="checkbox" checked={showArchivedEvaluations} onChange={(event) => toggleArchivedEvaluations(event.target.checked)} /> Show archived runs</label>
+              <p className="permission-note">Owner controls: archive stale evaluation runs without deleting results, metrics, or audit evidence.</p>
             </div>
             <div className="evaluation-run-buttons">
-              {evaluationRuns.map((run) => (
-                <button key={run.id} className="evaluation-run-button" onClick={() => void loadEvaluationDetail(run.id)}>
-                  <div className="row-head">
+              {filteredEvaluationRuns.map((run) => (
+                <article key={run.id} className={`evaluation-run-button ${evaluationDetail?.run.id === run.id ? "selected-list-item" : ""}`}>
+                  <button type="button" className="resource-main-button" onClick={() => void loadEvaluationDetail(run.id)}>
                     <strong>{run.name}</strong>
-                    <Badge tone={toneForStatus(run.status)}>{run.status}</Badge>
-                  </div>
+                    <Badge tone={run.archived_at ? "neutral" : toneForStatus(run.status)}>{run.archived_at ? "archived" : run.status}</Badge>
+                  </button>
                   <span>{run.total_cases} cases · {formatDate(run.created_at)}</span>
-                </button>
+                  {run.archived_at && <span>Archived {formatDate(run.archived_at)}</span>}
+                  <div className="resource-actions">
+                    <button type="button" onClick={() => void loadEvaluationDetail(run.id)}>Inspect</button>
+                    {!run.archived_at && <button type="button" className="danger-button" onClick={() => void archiveEvaluation(run)} disabled={!canManageResources || loading}>Archive</button>}
+                  </div>
+                </article>
               ))}
-              {evaluationRuns.length === 0 && <EmptyState title="No evaluations" detail="Run JSONL cases to compare baselines and system v1." />}
+              {filteredEvaluationRuns.length === 0 && <EmptyState title="No evaluations match this view" detail={evaluationRuns.length === 0 ? "Run JSONL cases to compare baselines and system v1." : "Clear search, change status, or include archived runs."} />}
             </div>
           </aside>
         </section>

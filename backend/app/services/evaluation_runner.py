@@ -91,14 +91,33 @@ class EvaluationRunner:
         self.db.refresh(run)
         return run
 
-    def list_runs(self, *, workspace_id: UUID) -> list[EvaluationRun]:
+    def list_runs(
+        self, *, workspace_id: UUID, include_archived: bool = False
+    ) -> list[EvaluationRun]:
+        filters = [EvaluationRun.workspace_id == workspace_id]
+        if not include_archived:
+            filters.append(EvaluationRun.archived_at.is_(None))
         return list(
             self.db.scalars(
                 select(EvaluationRun)
-                .where(EvaluationRun.workspace_id == workspace_id)
+                .where(*filters)
                 .order_by(EvaluationRun.created_at.desc())
             ).all()
         )
+
+    def archive_run(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
+        run = self.db.scalar(
+            select(EvaluationRun).where(
+                EvaluationRun.workspace_id == workspace_id, EvaluationRun.id == run_id
+            )
+        )
+        if run is None:
+            raise EvaluationRunNotFoundError("Evaluation run was not found.")
+        if run.archived_at is None:
+            run.archived_at = datetime.now(UTC)
+        self.db.commit()
+        self.db.refresh(run)
+        return run
 
     def get_run_detail(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
         run = self.db.scalar(

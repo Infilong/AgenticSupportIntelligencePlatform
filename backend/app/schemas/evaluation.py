@@ -85,6 +85,7 @@ class EvaluationRunResponse(BaseModel):
     created_by_user_id: UUID
     created_at: datetime
     completed_at: datetime | None
+    archived_at: datetime | None
 
 
 class EvaluationDetailResponse(BaseModel):

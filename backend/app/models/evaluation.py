@@ -64,6 +64,7 @@ class EvaluationRun(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     results = relationship("EvaluationResult", back_populates="evaluation_run")
     metrics = relationship("EvaluationMetric", back_populates="evaluation_run")

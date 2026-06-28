@@ -108,7 +108,9 @@ Current v1 behavior:
 ```text
 POST /api/v1/workspaces/{workspace_id}/evaluations
 GET  /api/v1/workspaces/{workspace_id}/evaluations
+GET  /api/v1/workspaces/{workspace_id}/evaluations?include_archived=true
 GET  /api/v1/workspaces/{workspace_id}/evaluations/{evaluation_id}
+DELETE /api/v1/workspaces/{workspace_id}/evaluations/{evaluation_id}
 ```
 
 Current v1 payload:
@@ -126,7 +128,9 @@ Current v1 behavior:
 - runs selected modes synchronously for local v1.
 - stores one `EvaluationResult` per case and mode.
 - stores aggregate `EvaluationMetric` rows by mode and language.
-- enforces workspace membership on create, list, and detail routes.
+- archives evaluation runs through an owner-only soft-delete endpoint that preserves results and metrics.
+- hides archived runs by default; `include_archived=true` returns them for audit and comparison history.
+- enforces workspace membership on create, list, and detail routes and workspace ownership on archive.
 - uses mock providers in tests; no test calls a real model provider.
 
 ## Observability And Cost

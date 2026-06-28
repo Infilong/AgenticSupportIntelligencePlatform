@@ -338,9 +338,10 @@ EvaluationRun
 - modes_json
 - status: running / completed / failed
 - total_cases
-- created_by_user_id nullable
+- created_by_user_id
 - created_at
 - completed_at nullable
+- archived_at nullable
 
 EvaluationResult
 - id
