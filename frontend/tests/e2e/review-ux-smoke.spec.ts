@@ -39,6 +39,20 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   });
   expect(document.status()).toBe(201);
 
+  const datasetName = `E2E Dataset ${runId}`;
+  const dataset = await api.post(`/api/v1/workspaces/${workspaceBody.id}/datasets/import`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      dataset_name: datasetName,
+      source_type: "jsonl",
+      content: JSON.stringify({
+        external_id: `case-${runId}`,
+        messages: [{ role: "user", content: "Can I get a refund?" }],
+      }),
+    },
+  });
+  expect(dataset.status()).toBe(201);
+
   const agent = await api.post(`/api/v1/workspaces/${workspaceBody.id}/agents`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { name: "E2E Support Agent", token_budget: 4000 },
@@ -64,6 +78,13 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByText(workspaceName).first()).toBeVisible();
 
   const productNav = page.getByRole("navigation", { name: "Product navigation" });
+  await productNav.getByRole("button", { name: "Data", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Datasets" })).toBeVisible();
+  const datasetLibrary = page.locator(".dataset-library-panel");
+  await expect(datasetLibrary.getByRole("button", { name: new RegExp(datasetName) })).toBeVisible();
+  await expect(page.getByLabel(`Move ${datasetName} to folder`)).toBeVisible();
+  await expect(datasetLibrary.getByRole("button", { name: "Delete" }).first()).toBeVisible();
+
   await productNav.getByRole("button", { name: "Knowledge", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Manage retrieval evidence" })).toBeVisible();
   await expect(page.getByText(documentTitle)).toBeVisible();
