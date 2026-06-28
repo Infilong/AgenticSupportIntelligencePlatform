@@ -18,6 +18,7 @@ from app.models.evaluation import (
     EvaluationRun,
     EvaluationRunStatus,
 )
+from app.models.review import GuardrailResult
 from app.models.user import User
 from app.services.agent_service import AgentService
 from app.services.evaluation_loader import LoadedEvaluationCase, load_jsonl_cases
@@ -175,7 +176,14 @@ class EvaluationRunner:
             expected_route=loaded_case.expected_route,
             safety_risk=loaded_case.safety_risk,
             max_prompt_tokens=loaded_case.max_prompt_tokens,
-            metadata_json=json.dumps(loaded_case.metadata, ensure_ascii=False),
+            metadata_json=json.dumps(
+                {
+                    **loaded_case.metadata,
+                    "expected_tool_calls": loaded_case.expected_tool_calls,
+                    "expected_guardrail_failures": loaded_case.expected_guardrail_failures,
+                },
+                ensure_ascii=False,
+            ),
         )
         self.db.add(case)
         self.db.flush()
@@ -209,6 +217,8 @@ class EvaluationRunner:
         prompt_tokens = estimate_tokens(loaded_case.input_message, loaded_case.language)
         estimated_cost = 0.0
         error_message = None
+        actual_tool_calls: list[str] = []
+        actual_guardrail_failures: list[str] = []
         try:
             if mode == EvaluationMode.direct_llm:
                 response = MockModelProvider(self.db).complete(
@@ -249,6 +259,10 @@ class EvaluationRunner:
                     workspace_id=workspace_id, run_id=graph_run.id
                 )
                 citations = _citations_from_steps(trace)
+                actual_tool_calls = _tool_calls_from_steps(trace)
+                actual_guardrail_failures = _failed_guardrails_for_run(
+                    self.db, workspace_id=workspace_id, run_id=graph_run.id
+                )
                 prompt_tokens = sum(step.token_count or 0 for step in trace.steps) or prompt_tokens
                 estimated_cost = sum(step.estimated_cost or 0.0 for step in trace.steps)
         except Exception as exc:
@@ -260,6 +274,8 @@ class EvaluationRunner:
             actual_route=actual_route,
             answer=answer,
             citations=citations,
+            actual_tool_calls=actual_tool_calls,
+            actual_guardrail_failures=actual_guardrail_failures,
         )
         result = EvaluationResult(
             workspace_id=workspace_id,
@@ -289,7 +305,9 @@ def _score_case(
     actual_route: str,
     answer: str | None,
     citations: list[str],
-) -> dict[str, float]:
+    actual_tool_calls: list[str],
+    actual_guardrail_failures: list[str],
+) -> dict[str, float | list[str]]:
     answer_text = answer or ""
     route_match = 1.0 if actual_route == loaded_case.expected_route else 0.0
     must_include = 1.0 if all(item in answer_text for item in loaded_case.must_include) else 0.0
@@ -311,6 +329,10 @@ def _score_case(
         citation_accuracy = 1.0 if citations else 0.0
     groundedness = 1.0 if loaded_case.expected_route != "finalize" or bool(citations) else 0.0
     language_preserved = _language_preserved(answer_text, loaded_case.language)
+    tool_call_match = _expected_subset_score(loaded_case.expected_tool_calls, actual_tool_calls)
+    guardrail_failure_match = _expected_subset_score(
+        loaded_case.expected_guardrail_failures, actual_guardrail_failures
+    )
     return {
         "route_match": route_match,
         "must_include": must_include,
@@ -318,7 +340,18 @@ def _score_case(
         "citation_accuracy": citation_accuracy,
         "groundedness": groundedness,
         "language_preserved": language_preserved,
+        "tool_call_match": tool_call_match,
+        "guardrail_failure_match": guardrail_failure_match,
+        "actual_tool_calls": actual_tool_calls,
+        "actual_guardrail_failures": actual_guardrail_failures,
     }
+
+
+def _expected_subset_score(expected: list[str], actual: list[str]) -> float:
+    if not expected:
+        return 1.0
+    actual_set = set(actual)
+    return 1.0 if all(item in actual_set for item in expected) else 0.0
 
 
 def _language_preserved(answer: str, language) -> float:
@@ -328,6 +361,27 @@ def _language_preserved(answer: str, language) -> float:
         return 1.0 if detect_language(answer) == language else 0.0
     except ValueError:
         return 0.0
+
+
+def _failed_guardrails_for_run(db: Session, *, workspace_id: UUID, run_id: UUID) -> list[str]:
+    return list(
+        db.scalars(
+            select(GuardrailResult.guardrail_type)
+            .where(
+                GuardrailResult.workspace_id == workspace_id,
+                GuardrailResult.graph_run_id == run_id,
+                GuardrailResult.passed.is_(False),
+            )
+            .order_by(GuardrailResult.created_at.asc())
+        ).all()
+    )
+
+
+def _tool_calls_from_steps(graph_run) -> list[str]:
+    names: list[str] = []
+    for step in graph_run.steps:
+        names.extend(tool_call.tool_name for tool_call in step.tool_calls)
+    return names
 
 
 def _citations_from_steps(graph_run) -> list[str]:

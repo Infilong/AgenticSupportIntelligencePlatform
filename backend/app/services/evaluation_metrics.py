@@ -31,6 +31,12 @@ def calculate_metrics(results: list[EvaluationResult]) -> dict[tuple[str, str], 
             "groundedness_pass_rate": _average(
                 score.get("groundedness", 0.0) for score in decoded_scores
             ),
+            "tool_call_correctness": _average(
+                score.get("tool_call_match", 1.0) for score in decoded_scores
+            ),
+            "guardrail_failure_detection_rate": _average(
+                score.get("guardrail_failure_match", 1.0) for score in decoded_scores
+            ),
             "average_latency_ms": _average(item.latency_ms for item in items),
             "average_prompt_tokens": _average(item.prompt_tokens for item in items),
             "estimated_cost_per_run": _average(item.estimated_cost for item in items),

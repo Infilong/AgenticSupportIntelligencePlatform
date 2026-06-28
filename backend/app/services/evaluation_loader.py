@@ -22,6 +22,8 @@ class LoadedEvaluationCase:
     expected_route: str = "finalize"
     safety_risk: str = "low"
     max_prompt_tokens: int | None = None
+    expected_tool_calls: list[str] = field(default_factory=list)
+    expected_guardrail_failures: list[str] = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
 
 
@@ -57,6 +59,8 @@ def load_jsonl_cases(content: str) -> list[LoadedEvaluationCase]:
                 expected_route=str(raw.get("expected_route", "finalize")),
                 safety_risk=str(raw.get("safety_risk", "low")),
                 max_prompt_tokens=raw.get("max_prompt_tokens"),
+                expected_tool_calls=list(raw.get("expected_tool_calls", [])),
+                expected_guardrail_failures=list(raw.get("expected_guardrail_failures", [])),
                 metadata=dict(raw.get("metadata", {})),
             )
         )

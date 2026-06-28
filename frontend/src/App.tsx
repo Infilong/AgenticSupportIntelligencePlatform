@@ -7017,6 +7017,39 @@ function friendlyModeName(mode: Mode): string {
   return "System v1";
 }
 
+function friendlyEvaluationMetricName(metricName: string): string {
+  const labels: Record<string, string> = {
+    case_pass_rate: "Case pass rate",
+    human_review_routing_accuracy: "Review routing accuracy",
+    language_preservation_pass_rate: "Language preservation",
+    citation_accuracy: "Citation accuracy",
+    groundedness_pass_rate: "Groundedness",
+    tool_call_correctness: "Tool call correctness",
+    guardrail_failure_detection_rate: "Guardrail failure detection",
+    average_latency_ms: "Average latency ms",
+    average_prompt_tokens: "Average prompt tokens",
+    estimated_cost_per_run: "Estimated cost/run",
+  };
+  return labels[metricName] ?? metricName.replaceAll("_", " ");
+}
+
+function evaluationMetricPriority(metricName: string): number {
+  const order = [
+    "case_pass_rate",
+    "human_review_routing_accuracy",
+    "tool_call_correctness",
+    "guardrail_failure_detection_rate",
+    "groundedness_pass_rate",
+    "citation_accuracy",
+    "language_preservation_pass_rate",
+    "average_prompt_tokens",
+    "estimated_cost_per_run",
+    "average_latency_ms",
+  ];
+  const index = order.indexOf(metricName);
+  return index === -1 ? order.length : index;
+}
+
 function modeDescription(mode: Mode): string {
   if (mode === "direct_llm") return "No retrieval baseline for cost and hallucination comparison.";
   if (mode === "vector_rag") return "Retrieval baseline without the full guardrail workflow.";
@@ -7091,9 +7124,11 @@ function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
                       <strong>{language.toUpperCase()}</strong>
                       <Badge tone={languageResults.length > 0 && passed === languageResults.length ? "good" : "warn"}>{passed}/{languageResults.length}</Badge>
                     </div>
-                    {metrics.slice(0, 4).map((metric) => (
+                    {[...metrics]
+                      .sort((left, right) => evaluationMetricPriority(left.metric_name) - evaluationMetricPriority(right.metric_name))
+                      .map((metric) => (
                       <div className="metric-line" key={metric.id}>
-                        <span>{metric.metric_name}</span>
+                        <span>{friendlyEvaluationMetricName(metric.metric_name)}</span>
                         <strong>{metric.metric_value.toFixed(3)}</strong>
                       </div>
                     ))}
