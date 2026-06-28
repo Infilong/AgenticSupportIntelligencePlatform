@@ -137,8 +137,10 @@ class DatasetService:
         *,
         workspace_id: UUID,
         folder_id: UUID | None = None,
+        unfiled: bool = False,
         search: str | None = None,
         limit: int | None = None,
+        offset: int = 0,
     ) -> list[Dataset]:
         conditions = [Dataset.workspace_id == workspace_id]
         if folder_id is not None:
@@ -146,11 +148,18 @@ class DatasetService:
                 workspace_id=workspace_id, folder_id=folder_id, resource_type="dataset"
             )
             conditions.append(Dataset.folder_id == folder_id)
+        elif unfiled:
+            conditions.append(Dataset.folder_id.is_(None))
         normalized_search = (search or "").strip()
         if normalized_search:
             pattern = f"%{normalized_search}%"
             conditions.append(or_(Dataset.name.ilike(pattern), Dataset.description.ilike(pattern)))
-        statement = select(Dataset).where(*conditions).order_by(Dataset.created_at.desc())
+        statement = (
+            select(Dataset)
+            .where(*conditions)
+            .order_by(Dataset.created_at.desc())
+            .offset(offset)
+        )
         if limit is not None:
             statement = statement.limit(limit)
         return list(self.db.scalars(statement).all())

@@ -1059,6 +1059,7 @@ export function App() {
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
   const [selectedDataFolderId, setSelectedDataFolderId] = useState("all");
   const [datasetSearch, setDatasetSearch] = useState("");
+  const [datasetPage, setDatasetPage] = useState(0);
   const [exampleSearch, setExampleSearch] = useState("");
   const [dataFolderName, setDataFolderName] = useState("Training data");
   const [examples, setExamples] = useState<ConversationExample[]>([]);
@@ -1338,6 +1339,12 @@ export function App() {
     void loadDocuments();
   }, [token, selectedWorkspaceId, activeTab, selectedKnowledgeFolderId, documentSearch, documentPage, permissionKey]);
 
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "datasets") return;
+    if (!permissionList.includes("data:read")) return;
+    void loadDatasets();
+  }, [token, selectedWorkspaceId, activeTab, selectedDataFolderId, datasetSearch, datasetPage, permissionKey]);
+
   function setSessionToken(value: string) {
     setToken(value);
     localStorage.setItem("asi_token", value);
@@ -1493,6 +1500,7 @@ export function App() {
 
   function selectDataFolder(folderId: string) {
     setSelectedDataFolderId(folderId);
+    setDatasetPage(0);
     setDatasetFolderId(folderSelectionToFormValue(folderId));
     const scopedDatasets = filterByFolder(datasets, folderId);
     if (!scopedDatasets.some((dataset) => dataset.id === selectedDatasetId)) {
@@ -1722,9 +1730,28 @@ export function App() {
     });
   }
 
-  async function loadDatasets() {
+  function datasetListParams(page = datasetPage) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_RESOURCES,
+      offset: page * MAX_VISIBLE_RESOURCES,
+    };
+    if (selectedDataFolderId === "unfiled") {
+      params.unfiled = true;
+    } else if (selectedDataFolderId !== "all") {
+      params.folder_id = selectedDataFolderId;
+    }
+    if (datasetSearch.trim()) {
+      params.search = datasetSearch.trim();
+    }
+    return params;
+  }
+
+  async function loadDatasets(page = datasetPage) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<Dataset[]>(workspaceListPath("/datasets", { limit: RESOURCE_LIST_FETCH_LIMIT }), { token });
+    const data = await apiRequest<Dataset[]>(
+      workspaceListPath("/datasets", datasetListParams(page)),
+      { token },
+    );
     setDatasets(data);
     setSelectedDatasetId((current) => current || data[0]?.id || "");
   }
@@ -1743,7 +1770,8 @@ export function App() {
           content: datasetContent,
         },
       });
-      await loadDatasets();
+      setDatasetPage(0);
+      await loadDatasets(0);
       await loadResourceFolders();
       setSelectedDatasetId(response.dataset.id);
       await loadExamples(response.dataset.id);
@@ -1757,7 +1785,8 @@ export function App() {
         token,
         body: { folder_id: folderId || null },
       });
-      await loadDatasets();
+      setDatasetPage(0);
+      await loadDatasets(0);
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -1771,7 +1800,8 @@ export function App() {
         setSelectedDatasetId("");
         setExamples([]);
       }
-      await loadDatasets();
+      setDatasetPage(0);
+      await loadDatasets(0);
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -3284,14 +3314,16 @@ export function App() {
 
   function DatasetsPanel() {
     const datasetFolders = foldersFor("dataset");
-    const folderDatasets = filterByFolder(datasets, selectedDataFolderId);
-    const visibleDatasets = folderDatasets.filter((dataset) =>
-      matchesSearch(datasetSearch, dataset.name, dataset.id, folderLabel("dataset", dataset.folder_id)),
-    );
-    const displayedDatasets = visibleDatasets.slice(0, MAX_VISIBLE_RESOURCES);
-    const hiddenDatasetCount = Math.max(visibleDatasets.length - displayedDatasets.length, 0);
+    const displayedDatasets = datasets;
     const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
     const selectedFolderLabel = selectedDataFolderId === "all" ? "All dataset folders" : selectedDataFolderId === "unfiled" ? "Unfiled datasets" : folderLabel("dataset", selectedDataFolderId);
+    const selectedFolderDatasetCount = resourceItemCount("dataset", selectedDataFolderId);
+    const datasetPageStart = datasetPage * MAX_VISIBLE_RESOURCES + (datasets.length ? 1 : 0);
+    const datasetPageEnd = datasetPage * MAX_VISIBLE_RESOURCES + datasets.length;
+    const canGoToPreviousDatasetPage = datasetPage > 0;
+    const canGoToNextDatasetPage = datasetSearch.trim()
+      ? datasets.length === MAX_VISIBLE_RESOURCES
+      : datasetPageEnd < selectedFolderDatasetCount;
     const visibleExamples = examples.filter((example) =>
       matchesSearch(
         exampleSearch,
@@ -3343,13 +3375,13 @@ export function App() {
               <h3>Datasets</h3>
               <p className="muted">{selectedDataset ? `Selected: ${selectedDataset.name}` : "Select a dataset to inspect examples."}</p>
             </div>
-            <Badge>{visibleDatasets.length} shown</Badge>
+            <Badge>{datasets.length} shown</Badge>
           </div>
           <div className="library-toolbar">
             <div className="folder-scope-banner">
               <span>Current folder</span>
               <strong>{selectedFolderLabel}</strong>
-              <small>{visibleDatasets.length} datasets shown from {folderDatasets.length} in this folder scope.</small>
+              <small>{datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} shown from {selectedFolderDatasetCount} in this folder scope.</small>
             </div>
             <div className="folder-scope-banner">
               <span>Import target</span>
@@ -3360,7 +3392,7 @@ export function App() {
               Search current folder
               <input
                 value={datasetSearch}
-                onChange={(event) => setDatasetSearch(event.target.value)}
+                onChange={(event) => { setDatasetPage(0); setDatasetSearch(event.target.value); }}
                 placeholder="Dataset name, folder, or id"
               />
             </label>
@@ -3393,13 +3425,18 @@ export function App() {
               </article>
             ))}
           </div>
-          {visibleDatasets.length === 0 && (
+          {datasets.length === 0 && (
             <EmptyState
               title="No datasets match this view"
-              detail={folderDatasets.length === 0 ? "Import data here or switch folders." : "Clear search or try another folder."}
+              detail={selectedFolderDatasetCount === 0 ? "Import data here or switch folders." : "Clear search, move to the previous page, or try another folder."}
             />
           )}
-          {hiddenDatasetCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_RESOURCES} of {visibleDatasets.length} matching datasets in this folder. Search by name, folder, or id before moving or deleting resources in large workspaces.</p>}
+          <div className="pagination-bar">
+            <button type="button" onClick={() => setDatasetPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousDatasetPage || loading}>Previous</button>
+            <span>Page {datasetPage + 1} · {datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} shown</span>
+            <button type="button" onClick={() => setDatasetPage((page) => page + 1)} disabled={!canGoToNextDatasetPage || loading}>Next</button>
+          </div>
+          <p className="permission-note">Dataset history is loaded from the backend by folder, search, offset, and limit so large import libraries stay navigable without loading every dataset into the browser.</p>
         </section>
         <section className="panel stack full-width inspector-panel">
           <div className="row-head">

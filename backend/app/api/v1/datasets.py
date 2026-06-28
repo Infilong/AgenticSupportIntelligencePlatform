@@ -42,6 +42,8 @@ ResourceDeleteAccess = Annotated[
 FolderFilter = Annotated[UUID | None, Query()]
 SearchFilter = Annotated[str | None, Query(max_length=120)]
 ListLimit = Annotated[int | None, Query(ge=1, le=500)]
+ListOffset = Annotated[int, Query(ge=0)]
+UnfiledFilter = Annotated[bool, Query()]
 DatasetId = Annotated[UUID, Path()]
 ExampleId = Annotated[UUID, Path()]
 
@@ -86,12 +88,27 @@ def list_datasets(
     workspace: DatasetReadAccess,
     db: DbSession,
     folder_id: FolderFilter = None,
+    unfiled: UnfiledFilter = False,
     search: SearchFilter = None,
     limit: ListLimit = None,
+    offset: ListOffset = 0,
 ) -> list[DatasetResponse]:
+    if folder_id is not None and unfiled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "dataset_filter_conflict",
+                "message": "Use either folder_id or unfiled, not both.",
+            },
+        )
     try:
         datasets = DatasetService(db).list_datasets(
-            workspace_id=workspace.id, folder_id=folder_id, search=search, limit=limit
+            workspace_id=workspace.id,
+            folder_id=folder_id,
+            unfiled=unfiled,
+            search=search,
+            limit=limit,
+            offset=offset,
         )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc

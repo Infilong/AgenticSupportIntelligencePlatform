@@ -242,3 +242,93 @@ def test_dataset_routes_reject_unauthenticated_requests(client: TestClient) -> N
     response = client.get("/api/v1/workspaces/00000000-0000-0000-0000-000000000000/datasets")
 
     assert response.status_code == 401
+
+
+
+def test_dataset_list_supports_folder_unfiled_search_and_offset(client: TestClient) -> None:
+    register(client, "dataset-page-owner@example.com")
+    token = login(client, "dataset-page-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(token),
+        json={"resource_type": "dataset", "name": "Training data"},
+    )
+    assert folder_response.status_code == 201
+    folder_id = folder_response.json()["id"]
+
+    created_names: list[str] = []
+    for index in range(4):
+        name = f"Paged Dataset {index}"
+        response = client.post(
+            f"/api/v1/workspaces/{workspace['id']}/datasets/import",
+            headers=auth_headers(token),
+            json={
+                "dataset_name": name,
+                "description": f"Dataset page test {index}",
+                "source_type": "jsonl",
+                "folder_id": folder_id if index < 3 else None,
+                "content": jsonl_content(
+                    {"messages": [{"role": "user", "content": f"Message {index}"}]}
+                ),
+            },
+        )
+        assert response.status_code == 201
+        created_names.append(name)
+
+    first_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(token),
+        params={"folder_id": folder_id, "limit": 2, "offset": 0},
+    )
+    second_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(token),
+        params={"folder_id": folder_id, "limit": 2, "offset": 2},
+    )
+    unfiled_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(token),
+        params={"unfiled": True, "limit": 10},
+    )
+    search_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(token),
+        params={"folder_id": folder_id, "search": "Paged Dataset 1", "limit": 10},
+    )
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert unfiled_page.status_code == 200
+    assert search_page.status_code == 200
+    assert [item["name"] for item in first_page.json()] == ["Paged Dataset 2", "Paged Dataset 1"]
+    assert [item["name"] for item in second_page.json()] == ["Paged Dataset 0"]
+    assert [item["name"] for item in unfiled_page.json()] == ["Paged Dataset 3"]
+    assert [item["name"] for item in search_page.json()] == ["Paged Dataset 1"]
+    assert created_names == [
+        "Paged Dataset 0",
+        "Paged Dataset 1",
+        "Paged Dataset 2",
+        "Paged Dataset 3",
+    ]
+
+
+def test_dataset_list_rejects_folder_and_unfiled_conflict(client: TestClient) -> None:
+    register(client, "dataset-conflict-owner@example.com")
+    token = login(client, "dataset-conflict-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(token),
+        json={"resource_type": "dataset", "name": "Training data"},
+    )
+    assert folder_response.status_code == 201
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(token),
+        params={"folder_id": folder_response.json()["id"], "unfiled": True},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "dataset_filter_conflict"
