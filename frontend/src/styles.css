@@ -329,19 +329,20 @@ small {
   color: #0f3f3a;
 }
 
-.nav-number {
+.nav-token {
   display: grid;
   width: 26px;
   height: 26px;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #eef2f6;
   color: #526071;
-  font-size: 0.8rem;
+  font-size: 0.66rem;
   font-weight: 850;
+  letter-spacing: 0;
 }
 
-.tab-nav button.active .nav-number {
+.tab-nav button.active .nav-token {
   background: #0f766e;
   color: #ffffff;
 }
@@ -501,6 +502,10 @@ small {
 
 .overview-admin-card small {
   line-height: 1.4;
+}
+
+.platform-coverage-grid {
+  margin-top: -4px;
 }
 
 .command-center p,

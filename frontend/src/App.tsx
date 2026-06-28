@@ -3,6 +3,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
 type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
+type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin";
 
 type CurrentUser = {
   id: string;
@@ -362,24 +363,26 @@ type ApiOptions = {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-const tabs: Array<{ id: Tab; label: string; number: string; group: "Setup" | "Operate" | "Observe"; purpose: string }> = [
-  { id: "overview", label: "Workspace", number: "1", group: "Setup", purpose: "Control center and system readiness." },
-  { id: "datasets", label: "Conversations", number: "2", group: "Setup", purpose: "Import and label multilingual examples." },
-  { id: "documents", label: "Knowledge", number: "3", group: "Setup", purpose: "Manage RAG policies, FAQs, versions, and chunks." },
-  { id: "agent", label: "Support agent", number: "4", group: "Operate", purpose: "Run the governed LangGraph workflow." },
-  { id: "trace", label: "Trace explorer", number: "5", group: "Operate", purpose: "Inspect state, tools, evidence, and model calls." },
-  { id: "reviews", label: "Human review", number: "6", group: "Operate", purpose: "Resolve guardrail and low-confidence cases." },
-  { id: "evaluations", label: "Evaluation", number: "7", group: "Observe", purpose: "Compare quality, routing, language, and baselines." },
-  { id: "costs", label: "Cost ledger", number: "8", group: "Observe", purpose: "Monitor token, latency, cache, and purpose cost." },
-  { id: "audit", label: "Audit logs", number: "9", group: "Observe", purpose: "Inspect workspace admin and AI operations changes." },
-  { id: "prompts", label: "Prompt settings", number: "10", group: "Observe", purpose: "Version and activate LangChain prompt templates." },
-  { id: "models", label: "Model settings", number: "11", group: "Observe", purpose: "Control model purpose, context, and token pricing." },
+const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purpose: string }> = [
+  { id: "overview", label: "Dashboard", token: "DB", group: "Platform", purpose: "Workspace health, next action, and platform coverage." },
+  { id: "datasets", label: "Data", token: "DT", group: "Build", purpose: "Import and label multilingual examples for evaluation and routing." },
+  { id: "documents", label: "Knowledge", token: "KB", group: "Build", purpose: "Manage RAG policies, FAQs, versions, chunks, and citations." },
+  { id: "agent", label: "Agents", token: "AG", group: "Build", purpose: "Configure and run governed LangGraph agent workflows." },
+  { id: "trace", label: "Runs & traces", token: "TR", group: "Operate", purpose: "Inspect graph state, tools, guardrails, evidence, and model calls." },
+  { id: "reviews", label: "Human review", token: "RV", group: "Operate", purpose: "Resolve blocked, risky, low-confidence, or unsupported runs." },
+  { id: "evaluations", label: "Evaluations", token: "EV", group: "Evaluate", purpose: "Compare quality, routing, language preservation, and baselines." },
+  { id: "costs", label: "Usage & costs", token: "US", group: "Evaluate", purpose: "Monitor tokens, latency, cache behavior, model purpose, and spend." },
+  { id: "prompts", label: "Prompts", token: "PR", group: "Admin", purpose: "Version and activate LangChain prompt templates by language." },
+  { id: "models", label: "Models", token: "MO", group: "Admin", purpose: "Control provider, model purpose, context, and token pricing." },
+  { id: "audit", label: "Audit", token: "AU", group: "Admin", purpose: "Inspect accountable workspace and AI operations changes." },
 ];
 
-const navSections = [
-  { title: "Setup", items: tabs.filter((tab) => tab.group === "Setup") },
+const navSections: Array<{ title: NavGroup; items: typeof tabs }> = [
+  { title: "Platform", items: tabs.filter((tab) => tab.group === "Platform") },
+  { title: "Build", items: tabs.filter((tab) => tab.group === "Build") },
   { title: "Operate", items: tabs.filter((tab) => tab.group === "Operate") },
-  { title: "Observe", items: tabs.filter((tab) => tab.group === "Observe") },
+  { title: "Evaluate", items: tabs.filter((tab) => tab.group === "Evaluate") },
+  { title: "Admin", items: tabs.filter((tab) => tab.group === "Admin") },
 ];
 
 const agentPrompts: Array<{
@@ -541,7 +544,7 @@ export function App() {
   const [displayName, setDisplayName] = useState("Demo User");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [workspaceName, setWorkspaceName] = useState("Support Intelligence Demo");
+  const [workspaceName, setWorkspaceName] = useState("Agentic Platform Demo");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(false);
@@ -563,7 +566,7 @@ export function App() {
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
 
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [agentName, setAgentName] = useState("Support Agent");
+  const [agentName, setAgentName] = useState("Support Workflow Agent");
   const [agentTokenBudget, setAgentTokenBudget] = useState(4000);
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
   const [agentRetrievalTopK, setAgentRetrievalTopK] = useState(4);
@@ -624,16 +627,17 @@ export function App() {
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
   const setupSteps = [
-    { label: "Workspace", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
-    { label: "Conversations", done: datasets.length > 0, tab: "datasets" as Tab },
+    { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
+    { label: "Data", done: datasets.length > 0, tab: "datasets" as Tab },
     { label: "Knowledge", done: documents.length > 0, tab: "documents" as Tab },
-    { label: "Support agent", done: agents.length > 0, tab: "agent" as Tab },
-    { label: "Trace", done: Boolean(trace), tab: "trace" as Tab },
-    { label: "Review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
-    { label: "Evaluation", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
-    { label: "Cost", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
+    { label: "Agents", done: agents.length > 0, tab: "agent" as Tab },
+    { label: "Runs & traces", done: Boolean(trace), tab: "trace" as Tab },
+    { label: "Human review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
+    { label: "Evaluations", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
+    { label: "Usage", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
+    { label: "Prompts", done: promptTemplates.some((template) => template.active), tab: "prompts" as Tab },
+    { label: "Models", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
     { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
-    { label: "Model settings", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
   ];
   const nextStep = setupSteps.find((step) => !step.done);
   const completedStepCount = setupSteps.filter((step) => step.done).length;
@@ -1148,18 +1152,18 @@ export function App() {
     return (
       <main className="auth-page">
         <section className="auth-copy">
-          <p className="eyebrow">AI support intelligence</p>
-          <h1>See how a support AI answer is built, checked, reviewed, and measured.</h1>
+          <p className="eyebrow">Agentic intelligence platform</p>
+          <h1>Build, run, trace, evaluate, and govern stateful AI agents.</h1>
           <p>
-            This is an internal operations tool for AI support teams. It imports multilingual customer
-            examples, indexes support knowledge, runs a governed LangGraph workflow, and shows the
-            evidence, review route, evaluation score, and token cost behind each answer.
+            This is an internal AI platform console for technical teams. It imports multilingual data,
+            manages retrieval knowledge, runs governed LangGraph workflows, and exposes traces,
+            review routes, evaluation quality, prompts, models, and token cost behind each run.
           </p>
           <div className="auth-highlights">
             <span>English / Japanese / Chinese</span>
             <span>RAG with citations</span>
             <span>Human review</span>
-            <span>Cost ledger</span>
+            <span>Usage ledger</span>
           </div>
         </section>
         <form className="auth-panel" onSubmit={handleAuth}>
@@ -1195,7 +1199,7 @@ export function App() {
           <div className="brand-mark">AI</div>
           <div>
             <p className="eyebrow">Agentic platform</p>
-            <h1>Support Intelligence</h1>
+            <h1>Agentic Intelligence</h1>
           </div>
         </div>
 
@@ -1241,7 +1245,7 @@ export function App() {
                   className={activeTab === tab.id ? "active" : ""}
                   onClick={() => setActiveTab(tab.id)}
                 >
-                  <span className="nav-number">{tab.number}</span>
+                  <span className="nav-token">{tab.token}</span>
                   <span className="nav-copy"><strong>{tab.label}</strong><small>{tab.purpose}</small></span>
                 </button>
               ))}
@@ -1255,7 +1259,7 @@ export function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">{selectedWorkspace ? selectedWorkspace.name : "No workspace selected"}</p>
-            <h2>{activeTabInfo.number}. {activeTabInfo.label}</h2>
+            <h2>{activeTabInfo.label}</h2>
             <p className="page-purpose">{activeTabInfo.purpose}</p>
           </div>
           <div className="topbar-actions">
@@ -1320,7 +1324,7 @@ export function App() {
       ? { label: "Resolve human review", tab: "reviews" as Tab, detail: "A routed case is waiting for a reviewer." }
       : nextStep
         ? { label: `Continue setup: ${nextStep.label}`, tab: nextStep.tab, detail: "Complete the next required workspace capability." }
-        : { label: "Run support agent", tab: "agent" as Tab, detail: "Workspace is ready for an end-to-end workflow run." };
+        : { label: "Run agent", tab: "agent" as Tab, detail: "Workspace is ready for an end-to-end workflow run." };
     const healthCards: Array<{
       label: string;
       value: string | number;
@@ -1357,9 +1361,9 @@ export function App() {
       <div className="overview-console">
         <section className="panel overview-hero">
           <div>
-            <p className="eyebrow">Workspace control center</p>
-            <h2>{selectedWorkspace?.name ?? "Support workspace"}</h2>
-            <p className="muted">Operate a multilingual, stateful AI support workflow with governed RAG, LangGraph traces, human review, evaluation, and token-cost accounting.</p>
+            <p className="eyebrow">Platform dashboard</p>
+            <h2>{selectedWorkspace?.name ?? "Agentic workspace"}</h2>
+            <p className="muted">Build and operate multilingual, stateful AI agents with governed RAG, LangGraph traces, human review, evaluation, prompt/model controls, and token-cost accounting.</p>
           </div>
           <div className="next-action-card">
             <span>Recommended next action</span>
@@ -1386,20 +1390,20 @@ export function App() {
           <section className="panel stack setup-path-panel">
             <div className="row-head">
               <div>
-                <h3>Setup path</h3>
-                <p className="muted">Follow the numbered path once, then operate from Agent, Review, Trace, and Cost.</p>
+                <h3>Platform readiness</h3>
+                <p className="muted">Complete the core capabilities once, then operate from Agents, Runs & traces, Human review, Evaluations, and Usage.</p>
               </div>
               <Badge tone={readinessPercent === 100 ? "good" : "warn"}>{readinessPercent}%</Badge>
             </div>
             <div className="progress-track large"><span style={{ width: `${readinessPercent}%` }} /></div>
             <div className="step-grid compact-steps">
-              {setupSteps.map((step, index) => (
+              {setupSteps.map((step) => (
                 <button
                   key={step.label}
                   className={`step-card ${step.done ? "done" : ""}`}
                   onClick={() => setActiveTab(step.tab)}
                 >
-                  <span>{index + 1}</span>
+                  <span>{tabs.find((tab) => tab.id === step.tab)?.token ?? "OK"}</span>
                   <strong>{step.label}</strong>
                   <small>{step.done ? "Ready" : "Open"}</small>
                 </button>
@@ -1421,33 +1425,56 @@ export function App() {
             <div className="overview-action-list">
               <button onClick={() => setActiveTab("agent")}>Run agent</button>
               <button onClick={() => setActiveTab("reviews")}>Human review</button>
-              <button onClick={() => setActiveTab("trace")} disabled={!traceRunId}>Trace explorer</button>
-              <button onClick={() => setActiveTab("costs")}>Cost ledger</button>
+              <button onClick={() => setActiveTab("trace")} disabled={!traceRunId}>Runs & traces</button>
+              <button onClick={() => setActiveTab("costs")}>Usage & costs</button>
             </div>
           </aside>
         </section>
 
         <section className="overview-admin-grid">
           <button className="overview-admin-card" onClick={() => setActiveTab("documents")}>
-            <span>Knowledge admin</span>
+            <span>Knowledge base</span>
             <strong>{documents.length} documents</strong>
             <small>Upload, edit, reindex, and inspect chunks.</small>
           </button>
           <button className="overview-admin-card" onClick={() => setActiveTab("prompts")}>
-            <span>Prompt operations</span>
+            <span>Prompt registry</span>
             <strong>{promptTemplates.length} templates</strong>
             <small>Version LangChain prompts by language.</small>
           </button>
           <button className="overview-admin-card" onClick={() => setActiveTab("models")}>
-            <span>Model controls</span>
+            <span>Model routing</span>
             <strong>{activeModelCount} active</strong>
             <small>Configure model purpose, cost, and context limits.</small>
           </button>
           <button className="overview-admin-card" onClick={() => setActiveTab("audit")}>
-            <span>Audit trail</span>
+            <span>Governance audit</span>
             <strong>{auditLogs.length} events</strong>
             <small>Review workspace and AI operations changes.</small>
           </button>
+        </section>
+
+        <section className="overview-admin-grid platform-coverage-grid">
+          <article className="overview-admin-card">
+            <span>Tools</span>
+            <strong>Trace-backed</strong>
+            <small>Tool executions are visible inside runs today; a first-class tool registry is a future ticket.</small>
+          </article>
+          <article className="overview-admin-card">
+            <span>Guardrails</span>
+            <strong>Runtime visible</strong>
+            <small>Prompt injection, citation, language, confidence, and budget checks are shown in traces and reviews.</small>
+          </article>
+          <article className="overview-admin-card">
+            <span>Permissions</span>
+            <strong>Workspace scoped</strong>
+            <small>All product data is routed through workspace-scoped APIs and audit records.</small>
+          </article>
+          <article className="overview-admin-card">
+            <span>Scale path</span>
+            <strong>Local-first MVP</strong>
+            <small>This build is for a small team; docs describe the path to managed cloud services.</small>
+          </article>
         </section>
       </div>
     );
@@ -1457,13 +1484,13 @@ export function App() {
     return (
       <div className="grid two-wide-left">
         <ActionGuide
-          title="Conversations are the raw material"
-          detail="Import support examples in English, Japanese, and Chinese. Labels make the data useful for evaluation and routing checks."
+          title="Data powers evaluation and routing"
+          detail="Import real conversation examples in English, Japanese, and Chinese. Labels make the data useful for evaluation, routing, and safety checks."
           action="Next after import: upload knowledge documents"
           onAction={() => setActiveTab("documents")}
         />
         <form className="panel stack" onSubmit={importDataset}>
-          <h3>Import conversations</h3>
+          <h3>Import multilingual data</h3>
           <label>Dataset name<input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} /></label>
           <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => setDatasetContent(event.target.value)} /></label>
           <button className="primary" disabled={loading}>Import JSONL</button>
@@ -1648,9 +1675,9 @@ export function App() {
       <div className="agent-console">
         <section className="panel agent-hero">
           <div className="agent-hero-copy">
-            <p className="eyebrow">Support agent</p>
+            <p className="eyebrow">Agent runtime</p>
             <h2>Run a governed LangGraph workflow</h2>
-            <p className="muted">Select a scenario or paste a customer message. The result will either finalize with citations or move into human review with a clear reason.</p>
+            <p className="muted">Select a scenario or paste a request. The workflow will finalize with citations or move into human review with a clear reason.</p>
           </div>
           <div className="agent-hero-actions">
             <select
@@ -1735,7 +1762,7 @@ export function App() {
               <div className="run-next-actions">
                 <button type="button" onClick={() => { setTraceRunId(latestRun.id); void loadTrace(latestRun.id); setActiveTab("trace"); }}>Inspect trace</button>
                 {latestRun.route_decision === "human_review" && <button type="button" onClick={() => setActiveTab("reviews")}>Resolve review</button>}
-                <button type="button" onClick={() => setActiveTab("costs")}>Cost ledger</button>
+                <button type="button" onClick={() => setActiveTab("costs")}>Usage & costs</button>
               </div>
             )}
           </aside>
@@ -1767,9 +1794,9 @@ export function App() {
     return (
       <div className="stack">
         <ActionGuide
-          title="Trace explains the answer"
-          detail="Use this page to see each LangGraph node, tool call, retrieved citations, token estimates, latency, and errors."
-          action="Next: review routed cases"
+          title="Trace explains the workflow"
+          detail="Use this page to see each LangGraph node, state transition, tool call, retrieved citation, guardrail, model call, token estimate, latency, and error."
+          action="Next: resolve routed cases"
           onAction={() => setActiveTab("reviews")}
         />
         <section className="panel inline-form">
