@@ -1156,6 +1156,7 @@ export function App() {
   const [auditSearch, setAuditSearch] = useState("");
   const [auditImpactFilter, setAuditImpactFilter] = useState("all");
   const [auditActorFilter, setAuditActorFilter] = useState("all");
+  const [auditPage, setAuditPage] = useState(0);
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [promptName, setPromptName] = useState("support_response_drafter");
   const [promptLanguage, setPromptLanguage] = useState<Language>("en");
@@ -1372,6 +1373,12 @@ export function App() {
     }
     void loadEvaluationAgentOptions();
   }, [token, selectedWorkspaceId, activeTab, evaluationAgentSearch, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "audit") return;
+    if (!permissionList.includes("audit:read")) return;
+    void loadAuditLogs();
+  }, [token, selectedWorkspaceId, activeTab, auditSearch, auditImpactFilter, auditActorFilter, auditPage, permissionKey]);
 
   function setSessionToken(value: string) {
     setToken(value);
@@ -2738,9 +2745,29 @@ export function App() {
     setAttentionSummary(data);
   }
 
-  async function loadAuditLogs() {
+  function auditLogListParams(page = auditPage) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_AUDIT_EVENTS,
+      offset: page * MAX_VISIBLE_AUDIT_EVENTS,
+    };
+    if (auditSearch.trim()) {
+      params.search = auditSearch.trim();
+    }
+    if (auditImpactFilter !== "all") {
+      params.impact = auditImpactFilter;
+    }
+    if (auditActorFilter !== "all") {
+      params.actor = auditActorFilter;
+    }
+    return params;
+  }
+
+  async function loadAuditLogs(page = auditPage) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<AuditLog[]>(workspacePath("/audit-logs"), { token });
+    const data = await apiRequest<AuditLog[]>(
+      workspaceListPath("/audit-logs", auditLogListParams(page)),
+      { token },
+    );
     setAuditLogs(data);
   }
 
@@ -5715,22 +5742,11 @@ export function App() {
     const highImpactLogs = auditLogs.filter((log) => auditImpact(log.action) === "high");
     const latestLog = auditLogs[0] ?? null;
     const resourceBreakdown = Object.entries(resourceCounts).sort((left, right) => right[1] - left[1]);
-    const filteredAuditLogs = auditLogs.filter((log) => {
-      const impact = auditImpact(log.action);
-      const actor = log.actor_user_id ? "user" : "system";
-      const matchesImpact = auditImpactFilter === "all" || auditImpactFilter === impact;
-      const matchesActor = auditActorFilter === "all" || auditActorFilter === actor;
-      return matchesImpact && matchesActor && matchesSearch(
-        auditSearch,
-        log.action,
-        log.resource_type,
-        log.resource_id,
-        log.actor_user_id,
-        log.metadata_json,
-      );
-    });
-    const displayedAuditLogs = filteredAuditLogs.slice(0, MAX_VISIBLE_AUDIT_EVENTS);
-    const hiddenAuditCount = Math.max(filteredAuditLogs.length - displayedAuditLogs.length, 0);
+    const displayedAuditLogs = auditLogs;
+    const auditPageStart = auditPage * MAX_VISIBLE_AUDIT_EVENTS + (auditLogs.length ? 1 : 0);
+    const auditPageEnd = auditPage * MAX_VISIBLE_AUDIT_EVENTS + auditLogs.length;
+    const canGoToPreviousAuditPage = auditPage > 0;
+    const canGoToNextAuditPage = auditLogs.length === MAX_VISIBLE_AUDIT_EVENTS;
 
     return (
       <div className="audit-console">
@@ -5744,12 +5760,12 @@ export function App() {
             <span>Latest activity</span>
             <strong>{latestLog ? friendlyAuditAction(latestLog.action) : "No audit events"}</strong>
             <p>{latestLog ? `${latestLog.resource_type} · ${formatDate(latestLog.created_at)}` : "Create or update agents, knowledge, prompts, models, or reviews to produce audit records."}</p>
-            <button type="button" onClick={() => void runAction("Audit logs refreshed", loadAuditLogs)}>Refresh audit logs</button>
+            <button type="button" onClick={() => void runAction("Audit logs refreshed", () => loadAuditLogs(auditPage))}>Refresh audit logs</button>
           </div>
         </section>
 
         <section className="settings-summary-grid">
-          <Metric label="Total events" value={auditLogs.length} />
+          <Metric label="Loaded events" value={auditLogs.length} />
           <Metric label="High impact" value={highImpactLogs.length} />
           <Metric label="User actions" value={actorCounts.user ?? 0} />
           <Metric label="System actions" value={actorCounts.system ?? 0} />
@@ -5762,7 +5778,7 @@ export function App() {
                 <h3>Operations timeline</h3>
                 <p className="muted">Recent workspace-scoped changes across agents, knowledge, prompts, models, and human review.</p>
               </div>
-              <Badge tone={auditLogs.length ? "good" : "neutral"}>{displayedAuditLogs.length}/{filteredAuditLogs.length} shown</Badge>
+              <Badge tone={auditLogs.length ? "good" : "neutral"}>{auditLogs.length} shown</Badge>
             </div>
 
             <div className="library-toolbar audit-toolbar">
@@ -5770,13 +5786,13 @@ export function App() {
                 Search audit events
                 <input
                   value={auditSearch}
-                  onChange={(event) => setAuditSearch(event.target.value)}
+                  onChange={(event) => { setAuditPage(0); setAuditSearch(event.target.value); }}
                   placeholder="Action, resource, actor, metadata, or id"
                 />
               </label>
               <label>
                 Impact
-                <select value={auditImpactFilter} onChange={(event) => setAuditImpactFilter(event.target.value)}>
+                <select value={auditImpactFilter} onChange={(event) => { setAuditPage(0); setAuditImpactFilter(event.target.value); }}>
                   <option value="all">All impacts</option>
                   <option value="high">High</option>
                   <option value="medium">Medium</option>
@@ -5785,16 +5801,16 @@ export function App() {
               </label>
               <label>
                 Actor
-                <select value={auditActorFilter} onChange={(event) => setAuditActorFilter(event.target.value)}>
+                <select value={auditActorFilter} onChange={(event) => { setAuditPage(0); setAuditActorFilter(event.target.value); }}>
                   <option value="all">All actors</option>
                   <option value="user">User actions</option>
                   <option value="system">System actions</option>
                 </select>
               </label>
-              <p className="permission-note">The backend loads the latest 100 workspace events; this board filters and bounds the visible timeline for review.</p>
+              <p className="permission-note">The backend filters by search, impact, actor, offset, and limit so audit review stays usable as event history grows.</p>
             </div>
 
-            {filteredAuditLogs.length ? (
+            {displayedAuditLogs.length ? (
               <div className="audit-timeline">
                 {displayedAuditLogs.map((log) => {
                   const metadata = safeJson(log.metadata_json);
@@ -5826,11 +5842,16 @@ export function App() {
               </div>
             ) : (
               <EmptyState
-                title={auditLogs.length ? "No audit events match this view" : "No audit events yet"}
-                detail={auditLogs.length ? "Clear search or change impact/actor filters." : "Create or update an agent, model config, prompt, document, or review to create audit records."}
+                title="No audit events match this view"
+                detail={auditPage > 0 ? "Move to the previous page or clear filters." : "Create or update an agent, model config, prompt, document, or review to create audit records, or clear filters."}
               />
             )}
-            {hiddenAuditCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_AUDIT_EVENTS} of {filteredAuditLogs.length} matching audit events. Search by action, resource, actor, metadata, or id to narrow review.</p>}
+            <div className="pagination-bar">
+              <button type="button" onClick={() => setAuditPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousAuditPage || loading}>Previous</button>
+              <span>Page {auditPage + 1} · {auditLogs.length ? `${auditPageStart}-${auditPageEnd}` : "0"} shown</span>
+              <button type="button" onClick={() => setAuditPage((page) => page + 1)} disabled={!canGoToNextAuditPage || loading}>Next</button>
+            </div>
+            <p className="permission-note">Audit events are loaded from the backend by search, impact, actor, offset, and limit. A full page enables Next; empty next pages mean the current filter has no more matches.</p>
           </div>
 
           <aside className="panel stack audit-side-panel">

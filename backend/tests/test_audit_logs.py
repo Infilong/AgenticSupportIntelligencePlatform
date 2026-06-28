@@ -1,6 +1,10 @@
 import json
+from uuid import UUID
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.services.audit_log_service import AuditLogService
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -88,6 +92,108 @@ def test_audit_logs_record_admin_actions_and_metadata(client: TestClient) -> Non
     assert metadata["model"] == "mock-cheap"
     assert all(log["workspace_id"] == workspace["id"] for log in body)
     assert all(log["actor_user_id"] is not None for log in body)
+
+
+def test_audit_logs_support_backend_search_actor_impact_and_offset(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "audit-filter-owner@example.com")
+    token = login(client, "audit-filter-owner@example.com")
+    workspace = create_workspace(client, token)
+
+    agent = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        json={"name": "Audit Filter Agent", "token_budget": 4000},
+    )
+    assert agent.status_code == 201
+    updated = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent.json()['id']}",
+        headers=auth_headers(token),
+        json={"confidence_threshold": 0.75},
+    )
+    assert updated.status_code == 200
+
+    AuditLogService(db_session).record(
+        workspace_id=UUID(workspace["id"]),
+        actor_user_id=None,
+        action="prompt_template.activated",
+        resource_type="prompt_template",
+        resource_id="activation-test",
+        metadata={"note": "activation-test"},
+    )
+    AuditLogService(db_session).record(
+        workspace_id=UUID(workspace["id"]),
+        actor_user_id=None,
+        action="system.heartbeat",
+        resource_type="system",
+        resource_id="system-low",
+        metadata={"note": "system-low"},
+    )
+
+    first_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"limit": 2, "offset": 0},
+    )
+    second_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"limit": 2, "offset": 2},
+    )
+    user_logs = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"actor": "user", "limit": 20},
+    )
+    system_logs = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"actor": "system", "limit": 20},
+    )
+    high_logs = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"impact": "high", "limit": 20},
+    )
+    medium_logs = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"impact": "medium", "limit": 20},
+    )
+    low_logs = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"impact": "low", "limit": 20},
+    )
+    search_logs = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(token),
+        params={"search": "activation-test", "limit": 20},
+    )
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert user_logs.status_code == 200
+    assert system_logs.status_code == 200
+    assert high_logs.status_code == 200
+    assert medium_logs.status_code == 200
+    assert low_logs.status_code == 200
+    assert search_logs.status_code == 200
+    assert len(first_page.json()) == 2
+    assert len(second_page.json()) == 2
+    assert {item["id"] for item in first_page.json()}.isdisjoint(
+        {item["id"] for item in second_page.json()}
+    )
+    assert all(item["actor_user_id"] for item in user_logs.json())
+    assert all(item["actor_user_id"] is None for item in system_logs.json())
+    assert {item["action"] for item in high_logs.json()} == {"prompt_template.activated"}
+    assert {item["action"] for item in medium_logs.json()} == {
+        "agent.created",
+        "agent.updated",
+    }
+    assert {item["action"] for item in low_logs.json()} == {"system.heartbeat"}
+    assert [item["resource_id"] for item in search_logs.json()] == ["activation-test"]
 
 
 def test_audit_logs_are_workspace_scoped(client: TestClient) -> None:
