@@ -3,10 +3,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.model_config import ModelConfigResponse
+
 
 class AgentCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     token_budget: int = Field(default=4000, ge=500, le=32000)
+    model_config_id: UUID | None = None
 
     @field_validator("name")
     @classmethod
@@ -24,6 +27,7 @@ class AgentUpdateRequest(BaseModel):
     confidence_threshold: float | None = Field(default=None, ge=0.1, le=0.95)
     retrieval_top_k: int | None = Field(default=None, ge=1, le=8)
     retrieval_min_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    model_config_id: UUID | None = None
 
     @field_validator("name")
     @classmethod
@@ -43,6 +47,7 @@ class AgentResponse(BaseModel):
     workspace_id: UUID
     name: str
     active: bool
+    model_config_id: UUID | None
     token_budget: int
     settings_json: str
     archived_at: datetime | None
@@ -79,6 +84,7 @@ class GraphRunResponse(BaseModel):
 
 class AgentOperationalSummaryResponse(BaseModel):
     agent: AgentResponse
+    assigned_model_config: ModelConfigResponse | None
     recent_runs: list[GraphRunResponse]
     total_runs: int
     completed_runs: int

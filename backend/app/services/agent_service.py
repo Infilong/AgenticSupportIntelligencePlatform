@@ -9,10 +9,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
-from app.models.ai import AIRun
+from app.models.ai import AIRun, ModelConfig
 from app.models.user import User
 from app.services.guardrails import GuardrailService, has_blocking_guardrail
 from app.services.human_review_service import HumanReviewService
+from app.services.model_config_service import ModelConfigService
 from app.services.support_agent_graph import SupportAgentGraphRunner, complete_graph_run
 from app.services.support_agent_state import SupportAgentState
 
@@ -25,6 +26,10 @@ class AgentUnavailableError(ValueError):
     pass
 
 
+class AgentModelConfigNotFoundError(ValueError):
+    pass
+
+
 class GraphRunNotFoundError(ValueError):
     pass
 
@@ -33,8 +38,22 @@ class AgentService:
     def __init__(self, db: Session):
         self.db = db
 
-    def create_agent(self, *, workspace_id: UUID, name: str, token_budget: int) -> AgentConfig:
-        agent = AgentConfig(workspace_id=workspace_id, name=name.strip(), token_budget=token_budget)
+    def create_agent(
+        self,
+        *,
+        workspace_id: UUID,
+        name: str,
+        token_budget: int,
+        model_config_id: UUID | None = None,
+    ) -> AgentConfig:
+        if model_config_id is not None:
+            self._require_model_config(workspace_id=workspace_id, model_config_id=model_config_id)
+        agent = AgentConfig(
+            workspace_id=workspace_id,
+            name=name.strip(),
+            token_budget=token_budget,
+            model_config_id=model_config_id,
+        )
         self.db.add(agent)
         self.db.commit()
         self.db.refresh(agent)
@@ -63,6 +82,8 @@ class AgentService:
         active: bool | None = None,
         token_budget: int | None = None,
         settings: dict[str, Any] | None = None,
+        model_config_id: UUID | None = None,
+        update_model_config: bool = False,
     ) -> AgentConfig:
         agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
         if agent is None:
@@ -77,6 +98,12 @@ class AgentService:
             current_settings = _agent_settings(agent)
             current_settings.update(settings)
             agent.settings_json = json.dumps(current_settings, sort_keys=True)
+        if update_model_config:
+            if model_config_id is not None:
+                self._require_model_config(
+                    workspace_id=workspace_id, model_config_id=model_config_id
+                )
+            agent.model_config_id = model_config_id
         self.db.commit()
         self.db.refresh(agent)
         return agent
@@ -107,6 +134,7 @@ class AgentService:
         state: SupportAgentState = {
             "workspace_id": str(workspace_id),
             "agent_config_id": str(agent.id),
+            "agent_model_config_id": str(agent.model_config_id) if agent.model_config_id else None,
             "user_id": str(current_user.id),
             "graph_run_id": str(graph_run.id),
             "input_message": input_message.strip(),
@@ -236,8 +264,15 @@ class AgentService:
         )
         last_run_at = self.db.scalar(select(func.max(GraphRun.created_at)).where(*run_filter))
 
+        model_config = (
+            self._get_model_config(workspace_id=workspace_id, model_config_id=agent.model_config_id)
+            if agent.model_config_id
+            else None
+        )
+
         return {
             "agent": agent,
+            "model_config": model_config,
             "recent_runs": recent_runs,
             "total_runs": total_runs,
             "completed_runs": completed_runs,
@@ -250,6 +285,23 @@ class AgentService:
             ),
             "last_run_at": last_run_at,
         }
+
+    def _get_model_config(
+        self, *, workspace_id: UUID, model_config_id: UUID | None
+    ) -> ModelConfig | None:
+        if model_config_id is None:
+            return None
+        return ModelConfigService(self.db).get_config(
+            workspace_id=workspace_id, model_config_id=model_config_id
+        )
+
+    def _require_model_config(self, *, workspace_id: UUID, model_config_id: UUID) -> ModelConfig:
+        model_config = self._get_model_config(
+            workspace_id=workspace_id, model_config_id=model_config_id
+        )
+        if model_config is None:
+            raise AgentModelConfigNotFoundError("Model config was not found.")
+        return model_config
 
 
 def _agent_settings(agent: AgentConfig) -> dict[str, Any]:

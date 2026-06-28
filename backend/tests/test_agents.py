@@ -81,6 +81,33 @@ def create_agent(client: TestClient, token: str, workspace_id: str) -> dict:
     return response.json()
 
 
+def create_model_config(
+    client: TestClient,
+    token: str,
+    workspace_id: str,
+    *,
+    provider: str = "mock-agent",
+    model: str = "mock-agent-large",
+    purpose: str = "agent_default",
+    active: bool = False,
+) -> dict:
+    response = client.post(
+        f"/api/v1/workspaces/{workspace_id}/model-configs",
+        headers=auth_headers(token),
+        json={
+            "provider": provider,
+            "model": model,
+            "purpose": purpose,
+            "prompt_token_cost_per_1k": 0.0003,
+            "completion_token_cost_per_1k": 0.0006,
+            "max_context_tokens": 12000,
+            "active": active,
+        },
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
 def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     client: TestClient, db_session: Session
 ) -> None:
@@ -752,3 +779,102 @@ def safe_json(value: str):
     import json
 
     return json.loads(value)
+
+
+def test_agent_model_config_assignment_drives_ai_run_provider_and_summary(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "model-owner@example.com")
+    token = login(client, "model-owner@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"], "en")
+    model_config = create_model_config(client, token, workspace["id"])
+
+    create_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        json={
+            "name": "Routed Support Agent",
+            "token_budget": 4000,
+            "model_config_id": model_config["id"],
+        },
+    )
+
+    assert create_response.status_code == 201
+    agent = create_response.json()
+    assert agent["model_config_id"] == model_config["id"]
+
+    summary_response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/summary",
+        headers=auth_headers(token),
+    )
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["assigned_model_config"]["id"] == model_config["id"]
+    assert summary["assigned_model_config"]["provider"] == "mock-agent"
+
+    run_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+
+    assert run_response.status_code == 201
+    graph_run_id = UUID(run_response.json()["id"])
+    ai_runs = db_session.scalars(select(AIRun).where(AIRun.graph_run_id == graph_run_id)).all()
+    assert {ai_run.provider for ai_run in ai_runs} == {"mock-agent"}
+    assert {ai_run.model for ai_run in ai_runs} == {"mock-agent-large"}
+
+
+def test_agent_rejects_model_config_from_another_workspace(client: TestClient) -> None:
+    register(client, "first-owner@example.com")
+    first_token = login(client, "first-owner@example.com")
+    first_workspace = create_workspace(client, first_token, "First Workspace")
+    foreign_config = create_model_config(client, first_token, first_workspace["id"])
+
+    register(client, "second-owner@example.com")
+    second_token = login(client, "second-owner@example.com")
+    second_workspace = create_workspace(client, second_token, "Second Workspace")
+    agent = create_agent(client, second_token, second_workspace["id"])
+
+    response = client.patch(
+        f"/api/v1/workspaces/{second_workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(second_token),
+        json={"model_config_id": foreign_config["id"]},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "model_config_not_found"
+
+
+def test_agent_model_config_assignment_can_be_cleared(client: TestClient) -> None:
+    register(client, "clear-model@example.com")
+    token = login(client, "clear-model@example.com")
+    workspace = create_workspace(client, token)
+    model_config = create_model_config(client, token, workspace["id"])
+    create_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        json={
+            "name": "Clearable Agent",
+            "token_budget": 4000,
+            "model_config_id": model_config["id"],
+        },
+    )
+    assert create_response.status_code == 201
+    agent = create_response.json()
+
+    clear_response = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(token),
+        json={"model_config_id": None},
+    )
+
+    assert clear_response.status_code == 200
+    assert clear_response.json()["model_config_id"] is None
+    summary_response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/summary",
+        headers=auth_headers(token),
+    )
+    assert summary_response.status_code == 200
+    assert summary_response.json()["assigned_model_config"] is None

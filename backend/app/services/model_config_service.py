@@ -77,18 +77,35 @@ class ModelConfigService:
         self.db.refresh(config)
         return config
 
-    def resolve_pricing(
-        self, *, workspace_id: UUID, purpose: str, fallback_model: str
-    ) -> ModelPricing:
-        config = self.db.scalar(
-            select(ModelConfig)
-            .where(
+    def get_config(self, *, workspace_id: UUID, model_config_id: UUID) -> ModelConfig | None:
+        return self.db.scalar(
+            select(ModelConfig).where(
                 ModelConfig.workspace_id == workspace_id,
-                ModelConfig.purpose == purpose,
-                ModelConfig.active.is_(True),
+                ModelConfig.id == model_config_id,
             )
-            .order_by(ModelConfig.created_at.desc())
         )
+
+    def resolve_pricing(
+        self,
+        *,
+        workspace_id: UUID,
+        purpose: str,
+        fallback_model: str,
+        model_config_id: UUID | None = None,
+    ) -> ModelPricing:
+        config = None
+        if model_config_id is not None:
+            config = self.get_config(workspace_id=workspace_id, model_config_id=model_config_id)
+        if config is None:
+            config = self.db.scalar(
+                select(ModelConfig)
+                .where(
+                    ModelConfig.workspace_id == workspace_id,
+                    ModelConfig.purpose == purpose,
+                    ModelConfig.active.is_(True),
+                )
+                .order_by(ModelConfig.created_at.desc())
+            )
         if config is None:
             return pricing_for_model(fallback_model)
         return ModelPricing(

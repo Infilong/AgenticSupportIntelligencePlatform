@@ -123,6 +123,7 @@ type Agent = {
   id: string;
   name: string;
   active: boolean;
+  model_config_id: string | null;
   token_budget: number;
   settings_json: string;
   archived_at: string | null;
@@ -148,6 +149,7 @@ type AgentOperationalSummary = {
   completed_runs: number;
   human_review_runs: number;
   failed_runs: number;
+  assigned_model_config: ModelConfig | null;
   total_tokens: number;
   total_estimated_cost: number;
   average_ai_latency_ms: number | null;
@@ -769,6 +771,7 @@ export function App() {
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
   const [agentRetrievalTopK, setAgentRetrievalTopK] = useState(4);
   const [agentRetrievalMinScore, setAgentRetrievalMinScore] = useState(0.2);
+  const [agentModelConfigId, setAgentModelConfigId] = useState("");
   const [agentMessage, setAgentMessage] = useState("Can I get a refund within 30 days?");
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [agentSummary, setAgentSummary] = useState<AgentOperationalSummary | null>(null);
@@ -1390,7 +1393,11 @@ export function App() {
       const agent = await apiRequest<Agent>(workspacePath("/agents"), {
         method: "POST",
         token,
-        body: { name: agentName, token_budget: agentTokenBudget },
+        body: {
+          name: agentName,
+          token_budget: agentTokenBudget,
+          model_config_id: agentModelConfigId || null,
+        },
       });
       await loadAgents();
       setSelectedAgentId(agent.id);
@@ -1407,6 +1414,7 @@ export function App() {
     setAgentConfidenceThreshold(Number(record.confidence_threshold ?? 0.5));
     setAgentRetrievalTopK(Number(record.retrieval_top_k ?? 4));
     setAgentRetrievalMinScore(Number(record.retrieval_min_score ?? 0.2));
+    setAgentModelConfigId(agent.model_config_id ?? "");
   }
 
   async function archiveSelectedAgent() {
@@ -1437,6 +1445,7 @@ export function App() {
           confidence_threshold: agentConfidenceThreshold,
           retrieval_top_k: agentRetrievalTopK,
           retrieval_min_score: agentRetrievalMinScore,
+          model_config_id: agentModelConfigId || null,
         },
       });
       await loadAgents();
@@ -2547,6 +2556,17 @@ export function App() {
     const summary = agentSummary?.agent.id === selectedAgentId ? agentSummary : null;
     const selectedAgentSettings = selectedAgent ? safeJson(selectedAgent.settings_json) : null;
     const selectedAgentRecord = asRecord(selectedAgentSettings) ?? {};
+    const selectedAgentModelConfig = summary?.assigned_model_config
+      ?? modelConfigs.find((config) => config.id === selectedAgent?.model_config_id)
+      ?? null;
+    const fallbackModelConfig = modelConfigs.find((config) => config.active && config.purpose === "draft_response")
+      ?? modelConfigs.find((config) => config.active)
+      ?? null;
+    const modelRouteSummary = selectedAgentModelConfig
+      ? `${selectedAgentModelConfig.provider} / ${selectedAgentModelConfig.model}`
+      : fallbackModelConfig
+        ? `workspace fallback: ${fallbackModelConfig.provider} / ${fallbackModelConfig.model}`
+        : "mock fallback";
     const recentRuns = summary?.recent_runs ?? [];
     const failureRate = summary && summary.total_runs > 0
       ? Math.round((summary.failed_runs / summary.total_runs) * 100)
@@ -2569,6 +2589,11 @@ export function App() {
         label: "Review queue",
         value: `${pendingReviewCount} pending`,
         ready: pendingReviewCount === 0,
+      },
+      {
+        label: "Model route",
+        value: selectedAgentModelConfig ? selectedAgentModelConfig.model : fallbackModelConfig ? "workspace fallback" : "mock fallback",
+        ready: Boolean(selectedAgentModelConfig || fallbackModelConfig),
       },
       {
         label: "Runs",
@@ -2655,6 +2680,32 @@ export function App() {
                 <p className="permission-note">Agent archive and destructive lifecycle actions require workspace owner permission.</p>
               )}
               <small>Archiving preserves historical runs and traces for auditability.</small>
+            </div>
+          </article>
+
+          <article className="panel stack agent-model-panel">
+            <div className="row-head">
+              <div>
+                <p className="eyebrow">Model route</p>
+                <h3>{modelRouteSummary}</h3>
+              </div>
+              <Badge tone={selectedAgentModelConfig ? "good" : fallbackModelConfig ? "neutral" : "warn"}>
+                {selectedAgentModelConfig ? "agent override" : fallbackModelConfig ? "workspace fallback" : "mock"}
+              </Badge>
+            </div>
+            {selectedAgentModelConfig ? (
+              <div className="metric-grid compact">
+                <Metric label="Purpose" value={selectedAgentModelConfig.purpose} />
+                <Metric label="Context" value={formatNumber(selectedAgentModelConfig.max_context_tokens)} />
+                <Metric label="Prompt / 1K" value={formatCost(selectedAgentModelConfig.prompt_token_cost_per_1k)} />
+                <Metric label="Completion / 1K" value={formatCost(selectedAgentModelConfig.completion_token_cost_per_1k)} />
+              </div>
+            ) : (
+              <p className="muted">No agent-specific model is assigned. This agent uses active workspace purpose routing, then deterministic mock fallback when no workspace route exists.</p>
+            )}
+            <div className="run-next-actions">
+              <button type="button" onClick={() => setActiveTab("models")}>Open model settings</button>
+              <button type="button" onClick={() => setActiveTab("costs")}>Inspect model spend</button>
             </div>
           </article>
 
@@ -2786,6 +2837,16 @@ export function App() {
             <label>Confidence threshold<input type="number" min="0.1" max="0.95" step="0.05" value={agentConfidenceThreshold} onChange={(event) => setAgentConfidenceThreshold(Number(event.target.value))} /></label>
             <label>Retrieval top K<input type="number" min="1" max="8" step="1" value={agentRetrievalTopK} onChange={(event) => setAgentRetrievalTopK(Number(event.target.value))} /></label>
             <label>Retrieval min score<input type="number" min="0" max="1" step="0.05" value={agentRetrievalMinScore} onChange={(event) => setAgentRetrievalMinScore(Number(event.target.value))} /></label>
+            <label>Default model route
+              <select value={agentModelConfigId} onChange={(event) => setAgentModelConfigId(event.target.value)}>
+                <option value="">Workspace purpose routing</option>
+                {modelConfigs.map((config) => (
+                  <option key={config.id} value={config.id}>
+                    {config.provider} / {config.model} · {config.purpose}{config.active ? " · active" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button className="primary" disabled={loading || !selectedAgentId}>Save controls</button>
           </form>
           <div className="runtime-settings-readout">
@@ -2793,6 +2854,7 @@ export function App() {
             <Badge>top K {String(selectedAgentRecord.retrieval_top_k ?? 4)}</Badge>
             <Badge>min score {String(selectedAgentRecord.retrieval_min_score ?? 0.2)}</Badge>
             <Badge>budget {selectedAgent?.token_budget ?? agentTokenBudget}</Badge>
+            <Badge>model {selectedAgentModelConfig?.model ?? "workspace fallback"}</Badge>
           </div>
         </section>
       </div>

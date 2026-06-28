@@ -87,6 +87,7 @@ class SupportAgentGraphRunner:
             prompt_text=build_classification_prompt(state["input_message"]),
             completion_text=json.dumps(classification, ensure_ascii=False),
             language=language,
+            model_config_id=_agent_model_config_id(state),
         )
         if not budget_plan.allowed:
             output = _budget_failure_output(state, budget_plan, purpose="classification")
@@ -108,6 +109,7 @@ class SupportAgentGraphRunner:
                 graph_run_id=UUID(state["graph_run_id"]),
                 prompt_template=prompt_template,
                 completion_text=json.dumps(classification, ensure_ascii=False),
+                model_config_id=_agent_model_config_id(state),
             )
         except ModelProviderError as exc:
             output = _provider_failure_output(state, exc)
@@ -236,6 +238,7 @@ class SupportAgentGraphRunner:
             language=language,
             documents=documents,
             completion_text=completion,
+            model_config_id=_agent_model_config_id(state),
         )
         if not budget_plan.allowed:
             output = _budget_failure_output(state, budget_plan, purpose="draft_response")
@@ -262,6 +265,7 @@ class SupportAgentGraphRunner:
                 graph_run_id=UUID(state["graph_run_id"]),
                 prompt_template=prompt_template,
                 completion_text=completion,
+                model_config_id=_agent_model_config_id(state),
             )
         except ModelProviderError as exc:
             output = _provider_failure_output(state, exc)
@@ -410,9 +414,13 @@ def _plan_model_call(
     prompt_text: str,
     completion_text: str,
     language: SupportedLanguage,
+    model_config_id: UUID | None = None,
 ) -> ModelCallBudgetPlan:
     pricing = ModelConfigService(db).resolve_pricing(
-        workspace_id=workspace_id, purpose=purpose, fallback_model=fallback_model
+        workspace_id=workspace_id,
+        purpose=purpose,
+        fallback_model=fallback_model,
+        model_config_id=model_config_id,
     )
     return TokenBudgetPlanner().plan_model_call(
         prompt_text=prompt_text,
@@ -430,6 +438,7 @@ def _fit_draft_documents_to_budget(
     language: SupportedLanguage,
     documents: list,
     completion_text: str,
+    model_config_id: UUID | None = None,
 ) -> tuple[list, ModelCallBudgetPlan, int]:
     current_documents = list(documents)
     trimmed_count = 0
@@ -445,6 +454,7 @@ def _fit_draft_documents_to_budget(
             prompt_text=prompt_text,
             completion_text=completion_text,
             language=language,
+            model_config_id=model_config_id,
         )
         if plan.allowed or not current_documents:
             return current_documents, plan, trimmed_count
@@ -599,11 +609,19 @@ def _compact_state(state: SupportAgentState) -> dict:
         "trimmed_context_count",
         "confidence_threshold",
         "agent_token_budget",
+        "agent_model_config_id",
         "agent_settings",
         "langchain_tool",
         "errors",
     ]
     return {key: state.get(key) for key in allowed if key in state}
+
+
+def _agent_model_config_id(state: SupportAgentState) -> UUID | None:
+    raw_value = state.get("agent_model_config_id")
+    if not raw_value:
+        return None
+    return UUID(str(raw_value))
 
 
 def _route_reasons(state: SupportAgentState, confidence_threshold: float) -> list[str]:

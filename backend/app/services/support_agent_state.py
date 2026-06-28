@@ -5,6 +5,7 @@ class SupportAgentState(TypedDict, total=False):
     workspace_id: str
     user_id: str
     agent_config_id: str
+    agent_model_config_id: str | None
     graph_run_id: str
     input_message: str
     agent_token_budget: int

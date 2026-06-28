@@ -31,6 +31,7 @@ from app.schemas.agent import (
     ToolCallResponse,
 )
 from app.services.agent_service import (
+    AgentModelConfigNotFoundError,
     AgentNotFoundError,
     AgentService,
     AgentUnavailableError,
@@ -55,16 +56,32 @@ def create_agent(
     current_user: CurrentUser,
     db: DbSession,
 ) -> AgentResponse:
-    agent = AgentService(db).create_agent(
-        workspace_id=workspace.id, name=payload.name, token_budget=payload.token_budget
-    )
+    try:
+        agent = AgentService(db).create_agent(
+            workspace_id=workspace.id,
+            name=payload.name,
+            token_budget=payload.token_budget,
+            model_config_id=payload.model_config_id,
+        )
+    except AgentModelConfigNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "model_config_not_found",
+                "message": "Model config was not found in this workspace.",
+            },
+        ) from exc
     AuditLogService(db).record(
         workspace_id=workspace.id,
         actor_user_id=current_user.id,
         action="agent.created",
         resource_type="agent",
         resource_id=agent.id,
-        metadata={"name": agent.name, "token_budget": agent.token_budget},
+        metadata={
+            "name": agent.name,
+            "token_budget": agent.token_budget,
+            "model_config_id": str(agent.model_config_id) if agent.model_config_id else None,
+        },
     )
     return AgentResponse.model_validate(agent)
 
@@ -98,6 +115,7 @@ def get_agent_summary(
         ) from exc
     return AgentOperationalSummaryResponse(
         agent=AgentResponse.model_validate(summary["agent"]),
+        assigned_model_config=summary["model_config"],
         recent_runs=[GraphRunResponse.model_validate(run) for run in summary["recent_runs"]],
         total_runs=summary["total_runs"],
         completed_runs=summary["completed_runs"],
@@ -127,6 +145,7 @@ def update_agent(
         }.items()
         if value is not None
     }
+    update_model_config = "model_config_id" in payload.model_fields_set
     try:
         agent = AgentService(db).update_agent(
             workspace_id=workspace.id,
@@ -135,11 +154,21 @@ def update_agent(
             active=payload.active,
             token_budget=payload.token_budget,
             settings=settings or None,
+            model_config_id=payload.model_config_id,
+            update_model_config=update_model_config,
         )
     except AgentNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
+    except AgentModelConfigNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "model_config_not_found",
+                "message": "Model config was not found in this workspace.",
+            },
         ) from exc
     AuditLogService(db).record(
         workspace_id=workspace.id,
@@ -147,7 +176,11 @@ def update_agent(
         action="agent.updated",
         resource_type="agent",
         resource_id=agent.id,
-        metadata={"name": agent.name, "token_budget": agent.token_budget},
+        metadata={
+            "name": agent.name,
+            "token_budget": agent.token_budget,
+            "model_config_id": str(agent.model_config_id) if agent.model_config_id else None,
+        },
     )
     return AgentResponse.model_validate(agent)
 

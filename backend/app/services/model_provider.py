@@ -45,6 +45,7 @@ class ModelProvider(Protocol):
         language: SupportedLanguage,
         prompt: str,
         model: str = "mock-standard",
+        model_config_id: UUID | None = None,
         completion_text: str = "mock response",
         prompt_template: PromptTemplate | None = None,
         graph_run_id: UUID | None = None,
@@ -108,6 +109,7 @@ class ConfiguredModelProvider:
             workspace_id=kwargs["workspace_id"],
             purpose=kwargs["purpose"],
             fallback_model=kwargs.get("model", "mock-standard"),
+            model_config_id=kwargs.get("model_config_id"),
         )
         if pricing.provider.strip().lower() in {"openai", "openai-compatible"}:
             return self.openai_provider.complete_with_pricing(pricing=pricing, **kwargs)
@@ -141,6 +143,7 @@ class OpenAICompatibleModelProvider:
         language: SupportedLanguage,
         prompt: str,
         model: str = "mock-standard",
+        model_config_id: UUID | None = None,
         completion_text: str = "mock response",
         prompt_template: PromptTemplate | None = None,
         graph_run_id: UUID | None = None,
@@ -149,7 +152,10 @@ class OpenAICompatibleModelProvider:
         fail: bool = False,
     ) -> ModelProviderResponse:
         pricing = ModelConfigService(self.db).resolve_pricing(
-            workspace_id=workspace_id, purpose=purpose, fallback_model=model
+            workspace_id=workspace_id,
+            purpose=purpose,
+            fallback_model=model,
+            model_config_id=model_config_id,
         )
         return self.complete_with_pricing(
             pricing=pricing,
@@ -175,6 +181,7 @@ class OpenAICompatibleModelProvider:
         language: SupportedLanguage,
         prompt: str,
         model: str = "mock-standard",
+        model_config_id: UUID | None = None,
         completion_text: str = "mock response",
         prompt_template: PromptTemplate | None = None,
         graph_run_id: UUID | None = None,
@@ -307,6 +314,7 @@ class MockModelProvider:
         language: SupportedLanguage,
         prompt: str,
         model: str = "mock-standard",
+        model_config_id: UUID | None = None,
         completion_text: str = "mock response",
         prompt_template: PromptTemplate | None = None,
         graph_run_id: UUID | None = None,
@@ -316,7 +324,10 @@ class MockModelProvider:
     ) -> ModelProviderResponse:
         started = time.perf_counter()
         pricing = ModelConfigService(self.db).resolve_pricing(
-            workspace_id=workspace_id, purpose=purpose, fallback_model=model
+            workspace_id=workspace_id,
+            purpose=purpose,
+            fallback_model=model,
+            model_config_id=model_config_id,
         )
         prompt_tokens = estimate_tokens(prompt, language)
         requested_completion_tokens = 0 if fail else estimate_tokens(completion_text, language)

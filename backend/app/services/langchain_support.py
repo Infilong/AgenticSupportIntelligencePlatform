@@ -89,6 +89,7 @@ def run_classification_chain(
     prompt_template: PromptTemplate | None,
     completion_text: str,
     model: str = "mock-cheap",
+    model_config_id: UUID | None = None,
 ) -> LangChainModelCall:
     captured: dict[str, Any] = {}
 
@@ -100,6 +101,7 @@ def run_classification_chain(
             language=language,
             prompt=prompt_text,
             model=model,
+            model_config_id=model_config_id,
             graph_run_id=graph_run_id,
             prompt_template=prompt_template,
             completion_text=completion_text,
@@ -233,6 +235,7 @@ def run_draft_response_chain(
     prompt_template: PromptTemplate | None,
     completion_text: str,
     model: str = "mock-standard",
+    model_config_id: UUID | None = None,
 ) -> LangChainModelCall:
     captured: dict[str, Any] = {}
 
@@ -244,6 +247,7 @@ def run_draft_response_chain(
             language=language,
             prompt=prompt_text,
             model=model,
+            model_config_id=model_config_id,
             graph_run_id=graph_run_id,
             prompt_template=prompt_template,
             completion_text=completion_text,
