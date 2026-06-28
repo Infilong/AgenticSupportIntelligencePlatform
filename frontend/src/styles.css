@@ -608,6 +608,70 @@ small {
   align-items: start;
 }
 
+.overview-attention-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.attention-list {
+  display: grid;
+  gap: 10px;
+}
+
+.attention-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  min-height: 92px;
+  align-content: start;
+  text-align: left;
+}
+
+.attention-item div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.attention-item span {
+  color: var(--text-subtle);
+  font-size: 0.74rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.attention-item strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.attention-item p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.attention-item .badge {
+  justify-self: end;
+}
+
+.permission-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.permission-chip-row.expanded {
+  max-height: 150px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
 .compact-steps {
   margin-top: 0;
 }
@@ -1328,6 +1392,7 @@ th {
   .console-strip,
   .overview-admin-grid,
   .overview-health-grid,
+  .permission-summary-grid,
   .readiness-strip,
   .runtime-control-grid,
   .three {
@@ -1345,6 +1410,7 @@ th {
   .knowledge-meta-grid,
   .overview-hero,
   .overview-layout,
+  .overview-attention-grid,
   .app-shell,
   .two,
   .two-wide-left,
@@ -1352,6 +1418,7 @@ th {
   .console-strip,
   .overview-admin-grid,
   .overview-health-grid,
+  .permission-summary-grid,
   .readiness-strip,
   .review-controls,
   .runtime-control-grid {

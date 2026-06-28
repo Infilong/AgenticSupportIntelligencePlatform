@@ -1594,8 +1594,83 @@ export function App() {
 
   function OverviewPanel() {
     const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
+    const failedDocumentCount = documents.filter((document) => document.status === "failed").length;
     const activeModelCount = modelConfigs.filter((config) => config.active).length;
     const latestRoute = latestRun?.route_decision ?? latestRun?.status ?? "No run";
+    const evaluationFailureCount = evaluationDetail?.results.filter((result) => !result.passed).length ?? 0;
+    const topModelSpend = [...(costSummary?.by_model ?? [])].sort(
+      (left, right) => right.estimated_cost - left.estimated_cost,
+    )[0];
+    const attentionItems: Array<{
+      label: string;
+      detail: string;
+      count: string | number;
+      tone: "neutral" | "good" | "warn" | "bad";
+      tab: Tab;
+    }> = [];
+    if (pendingReviews > 0) {
+      attentionItems.push({
+        label: "Human review queue",
+        detail: "Reviewer action is needed before these agent outputs can be finalized.",
+        count: pendingReviews,
+        tone: "warn",
+        tab: "reviews",
+      });
+    }
+    if (failedDocumentCount > 0) {
+      attentionItems.push({
+        label: "Knowledge indexing failures",
+        detail: "Failed documents cannot be retrieved or cited by the agent.",
+        count: failedDocumentCount,
+        tone: "bad",
+        tab: "documents",
+      });
+    }
+    if (evaluationFailureCount > 0) {
+      attentionItems.push({
+        label: "Evaluation failures",
+        detail: "Latest loaded evaluation detail contains failing cases that need review.",
+        count: evaluationFailureCount,
+        tone: "warn",
+        tab: "evaluations",
+      });
+    }
+    if (!workspaceMembership) {
+      attentionItems.push({
+        label: "Permission state loading",
+        detail: "Workspace controls stay restricted until backend membership is loaded.",
+        count: "role",
+        tone: "neutral",
+        tab: "overview",
+      });
+    }
+    if (activeModelCount === 0) {
+      attentionItems.push({
+        label: "No active model config",
+        detail: "Create or activate a model purpose config before relying on live runs.",
+        count: 0,
+        tone: "warn",
+        tab: "models",
+      });
+    }
+    if (documents.length === 0) {
+      attentionItems.push({
+        label: "No retrieval knowledge",
+        detail: "Upload policies or FAQs so the agent can answer with citations.",
+        count: 0,
+        tone: "warn",
+        tab: "documents",
+      });
+    }
+    if (topModelSpend && topModelSpend.estimated_cost > 0) {
+      attentionItems.push({
+        label: "Highest model spend",
+        detail: `${topModelSpend.provider}/${topModelSpend.model} is currently the top cost source.`,
+        count: formatCost(topModelSpend.estimated_cost),
+        tone: "neutral",
+        tab: "costs",
+      });
+    }
     const primaryAction = pendingReviews > 0
       ? { label: "Resolve human review", tab: "reviews" as Tab, detail: "A routed case is waiting for a reviewer." }
       : nextStep
@@ -1660,6 +1735,51 @@ export function App() {
               <p>{card.detail}</p>
             </article>
           ))}
+        </section>
+
+        <section className="overview-attention-grid">
+          <section className="panel stack attention-panel">
+            <div className="row-head">
+              <div>
+                <h3>Needs attention</h3>
+                <p className="muted">Operational tasks from live workspace data.</p>
+              </div>
+              <Badge tone={attentionItems.length > 0 ? "warn" : "good"}>
+                {attentionItems.length > 0 ? `${attentionItems.length} items` : "clear"}
+              </Badge>
+            </div>
+            <div className="attention-list">
+              {attentionItems.length > 0 ? attentionItems.map((item) => (
+                <button key={item.label} className="attention-item" onClick={() => setActiveTab(item.tab)}>
+                  <div>
+                    <span>{item.label}</span>
+                    <strong>{item.count}</strong>
+                  </div>
+                  <p>{item.detail}</p>
+                  <Badge tone={item.tone}>{item.tone === "bad" ? "blocked" : item.tone === "warn" ? "action" : "inspect"}</Badge>
+                </button>
+              )) : <EmptyState title="No urgent workspace tasks" detail="Reviews, indexing, evaluations, and model usage do not currently require action." />}
+            </div>
+          </section>
+
+          <aside className="panel stack permission-panel">
+            <div className="row-head">
+              <div>
+                <h3>My permissions</h3>
+                <p className="muted">Loaded from the workspace membership API.</p>
+              </div>
+              <Badge>{workspaceRole}</Badge>
+            </div>
+            <div className="permission-summary-grid">
+              <Metric label="Role" value={workspaceRole} />
+              <Metric label="Resource cleanup" value={canManageResources ? "Allowed" : "Restricted"} />
+              <Metric label="Workspace admin" value={workspaceMembership?.can_manage_workspace ? "Allowed" : "Restricted"} />
+            </div>
+            <div className="permission-chip-row expanded">
+              {(workspaceMembership?.permissions ?? []).map((permission) => <span key={permission}>{permission}</span>)}
+              {!workspaceMembership && <span>loading</span>}
+            </div>
+          </aside>
         </section>
 
         <section className="overview-layout">
