@@ -11,6 +11,7 @@ class EvaluationRunRequest(BaseModel):
     jsonl_cases: str = Field(min_length=1)
     modes: list[EvaluationMode] = Field(default_factory=lambda: [EvaluationMode.system_v1])
     agent_id: UUID | None = None
+    folder_id: UUID | None = None
 
     @field_validator("name", "jsonl_cases")
     @classmethod
@@ -26,6 +27,10 @@ class EvaluationRunRequest(BaseModel):
         if not value:
             raise ValueError("modes cannot be empty")
         return value
+
+
+class EvaluationRunFolderUpdateRequest(BaseModel):
+    folder_id: UUID | None = None
 
 
 class EvaluationCaseResponse(BaseModel):
@@ -79,6 +84,7 @@ class EvaluationRunResponse(BaseModel):
     id: UUID
     workspace_id: UUID
     name: str
+    folder_id: UUID | None
     modes_json: str
     status: EvaluationRunStatus
     total_cases: int

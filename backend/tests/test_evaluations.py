@@ -53,10 +53,20 @@ def upload_refund_documents(client: TestClient, token: str, workspace_id: str) -
         assert response.status_code == 201
 
 
+def create_folder(
+    client: TestClient, token: str, workspace_id: str, resource_type: str, name: str
+) -> dict:
+    response = client.post(
+        f"/api/v1/workspaces/{workspace_id}/resource-folders",
+        headers=auth_headers(token),
+        json={"resource_type": resource_type, "name": name},
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
 def jsonl_content(*rows: dict) -> str:
     return "\n".join(json.dumps(row, ensure_ascii=False) for row in rows)
-
-
 
 
 def run_simple_evaluation(
@@ -309,3 +319,110 @@ def test_evaluation_archive_requires_owner_and_workspace_scope(client: TestClien
     assert member_archive.json()["detail"]["required_permission"] == "resources:delete"
     assert cross_workspace_archive.status_code == 404
     assert cross_workspace_archive.json()["detail"]["code"] == "evaluation_not_found"
+
+
+def test_evaluation_runs_can_be_foldered_filtered_and_moved(client: TestClient) -> None:
+    register(client, "eval-folder-owner@example.com")
+    token = login(client, "eval-folder-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "evaluation_run", "Regression packs")
+    other_folder = create_folder(client, token, workspace["id"], "evaluation_run", "Release checks")
+
+    response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        json={
+            "name": "Foldered Evaluation",
+            "folder_id": folder["id"],
+            "modes": ["direct_llm"],
+            "jsonl_cases": jsonl_content(
+                {
+                    "id": "en_foldered_eval_001",
+                    "language": "en",
+                    "input_message": "Can I get a refund within 30 days?",
+                    "expected_route": "finalize",
+                }
+            ),
+        },
+    )
+
+    assert response.status_code == 201
+    run = response.json()["run"]
+    assert run["folder_id"] == folder["id"]
+
+    filtered = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"]},
+    )
+    empty_other_folder = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": other_folder["id"]},
+    )
+    moved = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{run['id']}/folder",
+        headers=auth_headers(token),
+        json={"folder_id": other_folder["id"]},
+    )
+    filtered_after_move = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": other_folder["id"]},
+    )
+
+    assert filtered.status_code == 200
+    assert [item["id"] for item in filtered.json()] == [run["id"]]
+    assert empty_other_folder.status_code == 200
+    assert empty_other_folder.json() == []
+    assert moved.status_code == 200
+    assert moved.json()["folder_id"] == other_folder["id"]
+    assert [item["id"] for item in filtered_after_move.json()] == [run["id"]]
+
+
+def test_evaluation_folders_reject_wrong_type_and_foreign_workspace(client: TestClient) -> None:
+    register(client, "eval-folder-a@example.com")
+    token_a = login(client, "eval-folder-a@example.com")
+    workspace_a = create_workspace(client, token_a, "Workspace A")
+    dataset_folder = create_folder(client, token_a, workspace_a["id"], "dataset", "Datasets")
+    eval_folder = create_folder(client, token_a, workspace_a["id"], "evaluation_run", "Eval A")
+    run = run_simple_evaluation(client, token_a, workspace_a["id"])
+
+    wrong_type = client.patch(
+        f"/api/v1/workspaces/{workspace_a['id']}/evaluations/{run['id']}/folder",
+        headers=auth_headers(token_a),
+        json={"folder_id": dataset_folder["id"]},
+    )
+
+    register(client, "eval-folder-b@example.com")
+    token_b = login(client, "eval-folder-b@example.com")
+    workspace_b = create_workspace(client, token_b, "Workspace B")
+    foreign_folder_create = client.post(
+        f"/api/v1/workspaces/{workspace_b['id']}/evaluations",
+        headers=auth_headers(token_b),
+        json={
+            "name": "Foreign folder attempt",
+            "folder_id": eval_folder["id"],
+            "modes": ["direct_llm"],
+            "jsonl_cases": jsonl_content(
+                {
+                    "id": "en_foreign_folder_eval_001",
+                    "language": "en",
+                    "input_message": "Can I get a refund?",
+                    "expected_route": "finalize",
+                }
+            ),
+        },
+    )
+    foreign_folder_list = client.get(
+        f"/api/v1/workspaces/{workspace_b['id']}/evaluations",
+        headers=auth_headers(token_b),
+        params={"folder_id": eval_folder["id"]},
+    )
+
+    assert wrong_type.status_code == 404
+    assert wrong_type.json()["detail"]["code"] == "resource_folder_not_found"
+    assert foreign_folder_create.status_code == 404
+    assert foreign_folder_create.json()["detail"]["code"] == "resource_folder_not_found"
+    assert foreign_folder_list.status_code == 404
+    assert foreign_folder_list.json()["detail"]["code"] == "resource_folder_not_found"

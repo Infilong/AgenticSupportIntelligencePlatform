@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-ResourceFolderType = Literal["knowledge_document", "dataset"]
+ResourceFolderType = Literal["knowledge_document", "dataset", "evaluation_run"]
 
 
 class ResourceFolderCreateRequest(BaseModel):

@@ -2621,6 +2621,10 @@ th {
   align-items: start;
 }
 
+.evaluation-workbench {
+  grid-template-columns: minmax(220px, 0.34fr) minmax(360px, 0.72fr) minmax(320px, 0.62fr);
+}
+
 .evaluation-run-panel textarea {
   min-height: 360px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

@@ -61,7 +61,7 @@ type Dataset = {
   created_at: string;
 };
 
-type ResourceType = "knowledge_document" | "dataset";
+type ResourceType = "knowledge_document" | "dataset" | "evaluation_run";
 
 type ResourceFolder = {
   id: string;
@@ -428,6 +428,7 @@ type EvaluationRun = {
   id: string;
   name: string;
   modes_json: string;
+  folder_id: string | null;
   status: string;
   total_cases: number;
   created_at: string;
@@ -1048,7 +1049,7 @@ export function App() {
   const [chunkSearch, setChunkSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
-  const [folderSearches, setFolderSearches] = useState<Record<ResourceType, string>>({ dataset: "", knowledge_document: "" });
+  const [folderSearches, setFolderSearches] = useState<Record<ResourceType, string>>({ dataset: "", knowledge_document: "", evaluation_run: "" });
   const [editingFolderId, setEditingFolderId] = useState("");
   const [folderRenameDrafts, setFolderRenameDrafts] = useState<Record<string, string>>({});
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
@@ -1086,6 +1087,9 @@ export function App() {
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
   const [evaluationName, setEvaluationName] = useState("Smoke Evaluation");
+  const [evaluationFolderId, setEvaluationFolderId] = useState("");
+  const [selectedEvaluationFolderId, setSelectedEvaluationFolderId] = useState("all");
+  const [evaluationFolderName, setEvaluationFolderName] = useState("Regression packs");
   const [evaluationCases, setEvaluationCases] = useState(demoEvaluation);
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
   const [evaluationSearch, setEvaluationSearch] = useState("");
@@ -1416,6 +1420,15 @@ export function App() {
     }
   }
 
+  function selectEvaluationFolder(folderId: string) {
+    setSelectedEvaluationFolderId(folderId);
+    setEvaluationFolderId(folderSelectionToFormValue(folderId));
+    const scopedRuns = filterByFolder(evaluationRuns, folderId);
+    if (evaluationDetail && !scopedRuns.some((run) => run.id === evaluationDetail.run.id)) {
+      setEvaluationDetail(null);
+    }
+  }
+
   function matchesSearch(query: string, ...values: Array<string | null | undefined>) {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return true;
@@ -1424,15 +1437,16 @@ export function App() {
 
   async function loadResourceFolders() {
     if (!selectedWorkspaceId) return;
-    const [knowledgeFolders, datasetFolders] = await Promise.all([
+    const [knowledgeFolders, datasetFolders, evaluationFolders] = await Promise.all([
       apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=knowledge_document"), { token }),
       apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=dataset"), { token }),
+      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=evaluation_run"), { token }),
     ]);
-    setResourceFolders([...knowledgeFolders, ...datasetFolders]);
+    setResourceFolders([...knowledgeFolders, ...datasetFolders, ...evaluationFolders]);
   }
 
   async function createResourceFolder(resourceType: ResourceType) {
-    const name = resourceType === "dataset" ? dataFolderName : knowledgeFolderName;
+    const name = resourceType === "dataset" ? dataFolderName : resourceType === "evaluation_run" ? evaluationFolderName : knowledgeFolderName;
     await runAction("Folder created", async () => {
       await apiRequest<ResourceFolder>(workspacePath("/resource-folders"), {
         method: "POST",
@@ -1441,6 +1455,7 @@ export function App() {
       });
       if (resourceType === "dataset") setDataFolderName("Training data");
       if (resourceType === "knowledge_document") setKnowledgeFolderName("Policies");
+      if (resourceType === "evaluation_run") setEvaluationFolderName("Regression packs");
       await loadResourceFolders();
       await loadAuditLogs();
     });
@@ -1470,6 +1485,7 @@ export function App() {
       await apiRequest(workspacePath(`/resource-folders/${folder.id}`), { method: "DELETE", token });
       if (selectedDataFolderId === folder.id) setSelectedDataFolderId("all");
       if (selectedKnowledgeFolderId === folder.id) setSelectedKnowledgeFolderId("all");
+      if (selectedEvaluationFolderId === folder.id) setSelectedEvaluationFolderId("all");
       await loadResourceFolders();
       await loadAuditLogs();
     });
@@ -1724,6 +1740,12 @@ export function App() {
   }
 
 
+  function resourceItemCount(resourceType: ResourceType, folderId: string) {
+    if (resourceType === "dataset") return filterByFolder(datasets, folderId).length;
+    if (resourceType === "evaluation_run") return filterByFolder(evaluationRuns, folderId).length;
+    return filterByFolder(documents, folderId).length;
+  }
+
   function ResourceFolderPanel({
     resourceType,
     title,
@@ -1767,7 +1789,7 @@ export function App() {
             onClick={() => onSelectFolder("all")}
           >
             <span>All folders</span>
-            <Badge>{resourceType === "dataset" ? datasets.length : documents.length}</Badge>
+            <Badge>{resourceItemCount(resourceType, "all")}</Badge>
           </button>
           <button
             type="button"
@@ -1775,12 +1797,10 @@ export function App() {
             onClick={() => onSelectFolder("unfiled")}
           >
             <span>Unfiled</span>
-            <Badge>{resourceType === "dataset" ? datasets.filter((item) => !item.folder_id).length : documents.filter((item) => !item.folder_id).length}</Badge>
+            <Badge>{resourceItemCount(resourceType, "unfiled")}</Badge>
           </button>
           {displayedFolders.map((folder) => {
-            const count = resourceType === "dataset"
-              ? datasets.filter((item) => item.folder_id === folder.id).length
-              : documents.filter((item) => item.folder_id === folder.id).length;
+            const count = resourceItemCount(resourceType, folder.id);
             const isEditing = editingFolderId === folder.id;
             return (
               <div className={`folder-row ${isEditing ? "folder-row-editing" : ""}`} key={folder.id}>
@@ -2202,6 +2222,7 @@ export function App() {
         token,
         body: {
           name: evaluationName,
+          folder_id: evaluationFolderId || null,
           jsonl_cases: evaluationCases,
           modes: evaluationModes,
           agent_id: selectedAgentId || null,
@@ -2226,6 +2247,22 @@ export function App() {
         setEvaluationDetail(null);
       }
       await loadEvaluations(showArchivedEvaluations);
+      await loadAuditLogs();
+    });
+  }
+
+  async function moveEvaluationFolder(runId: string, folderId: string) {
+    await runAction("Evaluation moved", async () => {
+      const movedRun = await apiRequest<EvaluationRun>(workspacePath(`/evaluations/${runId}/folder`), {
+        method: "PATCH",
+        token,
+        body: { folder_id: folderId || null },
+      });
+      if (evaluationDetail?.run.id === runId) {
+        setEvaluationDetail({ ...evaluationDetail, run: movedRun });
+      }
+      await loadEvaluations(showArchivedEvaluations);
+      await loadResourceFolders();
       await loadAuditLogs();
     });
   }
@@ -4662,9 +4699,11 @@ export function App() {
   }
 
   function EvaluationsPanel() {
-    const activeEvaluationRuns = evaluationRuns.filter((run) => !run.archived_at);
+    const evaluationFolders = foldersFor("evaluation_run");
+    const folderEvaluationRuns = filterByFolder(evaluationRuns, selectedEvaluationFolderId);
+    const activeEvaluationRuns = folderEvaluationRuns.filter((run) => !run.archived_at);
     const selectedRunId = evaluationDetail?.run.id ?? "";
-    const filteredEvaluationRuns = evaluationRuns.filter((run) => {
+    const filteredEvaluationRuns = folderEvaluationRuns.filter((run) => {
       const matchesStatus = evaluationStatusFilter === "all" || run.status === evaluationStatusFilter;
       const matchesView = evaluationRunMatchesView(run, evaluationRunView, selectedRunId, showArchivedEvaluations);
       const modeText = parseEvaluationModes(run.modes_json).map(friendlyModeName).join(" ");
@@ -4672,13 +4711,18 @@ export function App() {
     });
     const displayedEvaluationRuns = filteredEvaluationRuns.slice(0, MAX_VISIBLE_EVALUATION_RUNS);
     const hiddenEvaluationRunCount = Math.max(filteredEvaluationRuns.length - displayedEvaluationRuns.length, 0);
-    const latestEvaluation = activeEvaluationRuns[0] ?? evaluationRuns[0] ?? null;
+    const latestEvaluation = activeEvaluationRuns[0] ?? folderEvaluationRuns[0] ?? evaluationRuns[0] ?? null;
     const selectedModes = evaluationModes.join(", ") || "none";
-    const runStatusCounts = evaluationRuns.reduce<Record<string, number>>((counts, run) => {
+    const runStatusCounts = folderEvaluationRuns.reduce<Record<string, number>>((counts, run) => {
       counts[run.status] = (counts[run.status] ?? 0) + 1;
       return counts;
     }, {});
-    const archivedEvaluationCount = evaluationRuns.filter((run) => run.archived_at).length;
+    const archivedEvaluationCount = folderEvaluationRuns.filter((run) => run.archived_at).length;
+    const selectedEvaluationFolderLabel = selectedEvaluationFolderId === "all"
+      ? "All evaluation folders"
+      : selectedEvaluationFolderId === "unfiled"
+        ? "Unfiled evaluations"
+        : folderLabel("evaluation_run", selectedEvaluationFolderId);
     const selectedFailureCount = evaluationDetail?.results.filter((result) => !result.passed).length ?? 0;
     const selectedLanguages = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.language))] : [];
     const selectedResultModes = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.mode))] : [];
@@ -4694,12 +4738,22 @@ export function App() {
           <div className="next-action-card">
             <span>Current experiment</span>
             <strong>{selectedModes}</strong>
-            <p>{latestEvaluation ? `Latest active run: ${latestEvaluation.name} · ${latestEvaluation.status}` : "Run the seeded multilingual cases to create a quality baseline."}</p>
+            <p>{latestEvaluation ? `${selectedEvaluationFolderLabel}: ${latestEvaluation.name} · ${latestEvaluation.status}` : "Run the seeded multilingual cases to create a quality baseline."}</p>
             <button type="button" onClick={() => void runAction("Evaluations refreshed", () => loadEvaluations(showArchivedEvaluations))}>Refresh runs</button>
           </div>
         </section>
 
         <section className="evaluation-workbench">
+          {ResourceFolderPanel({
+            resourceType: "evaluation_run",
+            title: "Evaluation folders",
+            detail: "Group regression packs, release checks, and archived experiments before run history becomes hard to scan.",
+            selectedFolderId: selectedEvaluationFolderId,
+            onSelectFolder: selectEvaluationFolder,
+            folderName: evaluationFolderName,
+            onFolderNameChange: setEvaluationFolderName,
+          })}
+
           <form className="panel stack evaluation-run-panel" onSubmit={runEvaluation}>
             <div className="row-head">
               <div>
@@ -4709,6 +4763,19 @@ export function App() {
               <Badge tone={evaluationModes.length ? "good" : "warn"}>{evaluationModes.length} modes</Badge>
             </div>
             <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} /></label>
+            <div className="folder-scope-banner">
+              <span>Current folder</span>
+              <strong>{selectedEvaluationFolderLabel}</strong>
+              <small>{filteredEvaluationRuns.length} runs match this folder scope from {folderEvaluationRuns.length} total.</small>
+            </div>
+            <FolderPicker
+              label="Evaluation target folder"
+              value={evaluationFolderId}
+              folders={evaluationFolders}
+              onChange={setEvaluationFolderId}
+              disabled={!canManageResourceFolders || loading}
+              resourceLabel="evaluation"
+            />
             <div className="mode-card-grid">
               {(["direct_llm", "vector_rag", "system_v1"] as Mode[]).map((mode) => (
                 <label className={evaluationModes.includes(mode) ? "mode-card selected" : "mode-card"} key={mode}>
@@ -4732,7 +4799,7 @@ export function App() {
             <div className="row-head">
               <div>
                 <h3>Evaluation operations board</h3>
-                <p className="muted">Filter run history before drilling into language-specific quality, routing, and cost evidence.</p>
+                <p className="muted">Filter folder-scoped run history before drilling into language-specific quality, routing, and cost evidence.</p>
               </div>
               <Badge>{displayedEvaluationRuns.length}/{filteredEvaluationRuns.length} shown</Badge>
             </div>
@@ -4775,7 +4842,7 @@ export function App() {
                 <option value="running">Running</option>
               </select></label>
               <label className="check-row"><input type="checkbox" checked={showArchivedEvaluations} onChange={(event) => toggleArchivedEvaluations(event.target.checked)} /> Include archived runs in All view</label>
-              <p className="permission-note">Owner controls: archive stale evaluation runs without deleting results, metrics, or audit evidence.</p>
+              <p className="permission-note">Folder managers organize runs; owners archive stale runs without deleting results, metrics, or audit evidence.</p>
             </div>
             <div className="evaluation-run-buttons bounded-evaluation-list">
               {displayedEvaluationRuns.map((run) => {
@@ -4786,19 +4853,28 @@ export function App() {
                       <strong>{run.name}</strong>
                       <Badge tone={run.archived_at ? "neutral" : toneForStatus(run.status)}>{run.archived_at ? "archived" : run.status}</Badge>
                     </button>
-                    <span>{run.total_cases} cases · {formatDate(run.created_at)}</span>
+                    <span>{run.total_cases} cases · {folderLabel("evaluation_run", run.folder_id)} · {formatDate(run.created_at)}</span>
                     <span>{modes.length ? modes.map(friendlyModeName).join(" · ") : "No modes recorded"}</span>
                     {run.archived_at && <span>Archived {formatDate(run.archived_at)}</span>}
                     <div className="resource-actions">
+                      <FolderPicker
+                        label={`Move ${run.name}`}
+                        value={run.folder_id ?? ""}
+                        folders={evaluationFolders}
+                        onChange={(folderId) => void moveEvaluationFolder(run.id, folderId)}
+                        disabled={!canManageResourceFolders || loading}
+                        resourceLabel="evaluation"
+                        compact
+                      />
                       <button type="button" onClick={() => void loadEvaluationDetail(run.id)}>Inspect</button>
                       {!run.archived_at && <button type="button" className="danger-button" onClick={() => void archiveEvaluation(run)} disabled={!canManageResources || loading}>Archive</button>}
                     </div>
                   </article>
                 );
               })}
-              {filteredEvaluationRuns.length === 0 && <EmptyState title="No evaluations match this view" detail={evaluationRuns.length === 0 ? "Run JSONL cases to compare baselines and system v1." : "Clear search, change status, or switch run filters."} />}
+              {filteredEvaluationRuns.length === 0 && <EmptyState title="No evaluations match this view" detail={evaluationRuns.length === 0 ? "Run JSONL cases to compare baselines and system v1." : "Clear search, change status, or switch folders/run filters."} />}
             </div>
-            {hiddenEvaluationRunCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_EVALUATION_RUNS} of {filteredEvaluationRuns.length} matching runs. Search by run name, mode, status, or id to narrow long histories.</p>}
+            {hiddenEvaluationRunCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_EVALUATION_RUNS} of {filteredEvaluationRuns.length} matching runs in this folder. Search by run name, mode, status, folder, or id to narrow long histories.</p>}
           </aside>
         </section>
 

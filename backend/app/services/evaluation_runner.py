@@ -22,6 +22,7 @@ from app.models.user import User
 from app.services.agent_service import AgentService
 from app.services.evaluation_loader import LoadedEvaluationCase, load_jsonl_cases
 from app.services.evaluation_metrics import calculate_metrics
+from app.services.folder_service import ResourceFolderService
 from app.services.model_provider import MockModelProvider
 from app.services.retrieval_service import RetrievalService
 from app.services.token_accounting import estimate_tokens
@@ -44,11 +45,16 @@ class EvaluationRunner:
         modes: list[EvaluationMode],
         current_user: User,
         agent_id: UUID | None,
+        folder_id: UUID | None = None,
     ) -> EvaluationRun:
         loaded_cases = load_jsonl_cases(jsonl_cases)
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="evaluation_run"
+        )
         run = EvaluationRun(
             workspace_id=workspace_id,
             name=name.strip(),
+            folder_id=folder_id,
             modes_json=json.dumps([mode.value for mode in modes]),
             status=EvaluationRunStatus.running,
             total_cases=len(loaded_cases),
@@ -92,18 +98,39 @@ class EvaluationRunner:
         return run
 
     def list_runs(
-        self, *, workspace_id: UUID, include_archived: bool = False
+        self, *, workspace_id: UUID, include_archived: bool = False, folder_id: UUID | None = None
     ) -> list[EvaluationRun]:
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="evaluation_run"
+        )
         filters = [EvaluationRun.workspace_id == workspace_id]
+        if folder_id is not None:
+            filters.append(EvaluationRun.folder_id == folder_id)
         if not include_archived:
             filters.append(EvaluationRun.archived_at.is_(None))
         return list(
             self.db.scalars(
-                select(EvaluationRun)
-                .where(*filters)
-                .order_by(EvaluationRun.created_at.desc())
+                select(EvaluationRun).where(*filters).order_by(EvaluationRun.created_at.desc())
             ).all()
         )
+
+    def move_run(
+        self, *, workspace_id: UUID, run_id: UUID, folder_id: UUID | None
+    ) -> EvaluationRun:
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="evaluation_run"
+        )
+        run = self.db.scalar(
+            select(EvaluationRun).where(
+                EvaluationRun.workspace_id == workspace_id, EvaluationRun.id == run_id
+            )
+        )
+        if run is None:
+            raise EvaluationRunNotFoundError("Evaluation run was not found.")
+        run.folder_id = folder_id
+        self.db.commit()
+        self.db.refresh(run)
+        return run
 
     def archive_run(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
         run = self.db.scalar(
@@ -271,11 +298,15 @@ def _score_case(
     )
     citation_accuracy = 1.0
     if loaded_case.expected_sources:
-        citation_accuracy = 1.0 if any(
-            expected in citation
-            for expected in loaded_case.expected_sources
-            for citation in citations
-        ) else 0.0
+        citation_accuracy = (
+            1.0
+            if any(
+                expected in citation
+                for expected in loaded_case.expected_sources
+                for citation in citations
+            )
+            else 0.0
+        )
     elif loaded_case.expected_route == "finalize":
         citation_accuracy = 1.0 if citations else 0.0
     groundedness = 1.0 if loaded_case.expected_route != "finalize" or bool(citations) else 0.0

@@ -6,11 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.dataset import Dataset
+from app.models.evaluation import EvaluationRun
 from app.models.folder import ResourceFolder
 from app.models.knowledge import KnowledgeDocument
 from app.models.user import User
 
-VALID_RESOURCE_TYPES = {"knowledge_document", "dataset"}
+VALID_RESOURCE_TYPES = {"knowledge_document", "dataset", "evaluation_run"}
 
 
 class ResourceFolderError(ValueError):
@@ -137,14 +138,17 @@ class ResourceFolderService:
         return folder
 
     def _has_children(self, *, workspace_id: UUID, folder_id: UUID) -> bool:
-        return self.db.scalar(
-            select(ResourceFolder.id)
-            .where(
-                ResourceFolder.workspace_id == workspace_id,
-                ResourceFolder.parent_folder_id == folder_id,
+        return (
+            self.db.scalar(
+                select(ResourceFolder.id)
+                .where(
+                    ResourceFolder.workspace_id == workspace_id,
+                    ResourceFolder.parent_folder_id == folder_id,
+                )
+                .limit(1)
             )
-            .limit(1)
-        ) is not None
+            is not None
+        )
 
     def _has_assigned_resources(self, *, workspace_id: UUID, folder: ResourceFolder) -> bool:
         if folder.resource_type == "knowledge_document":
@@ -156,6 +160,11 @@ class ResourceFolderService:
             statement = select(Dataset.id).where(
                 Dataset.workspace_id == workspace_id,
                 Dataset.folder_id == folder.id,
+            )
+        elif folder.resource_type == "evaluation_run":
+            statement = select(EvaluationRun.id).where(
+                EvaluationRun.workspace_id == workspace_id,
+                EvaluationRun.folder_id == folder.id,
             )
         else:
             self._validate_resource_type(folder.resource_type)

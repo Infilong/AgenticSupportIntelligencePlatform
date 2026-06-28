@@ -54,6 +54,9 @@ class EvaluationRun(Base):
         Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(180), nullable=False)
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("resource_folders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     modes_json: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[EvaluationRunStatus] = mapped_column(String(40), nullable=False)
     total_cases: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -66,6 +69,7 @@ class EvaluationRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    folder = relationship("ResourceFolder")
     results = relationship("EvaluationResult", back_populates="evaluation_run")
     metrics = relationship("EvaluationMetric", back_populates="evaluation_run")
 
