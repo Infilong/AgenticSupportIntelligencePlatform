@@ -3,10 +3,10 @@ ROOT_DIR := $(CURDIR)
 UV ?= uv
 NPM ?= npm
 
-.PHONY: help setup setup-backend setup-frontend run test lint backend-test backend-lint frontend-install frontend-build frontend-test backend-migrate
+.PHONY: help setup setup-backend setup-frontend run test lint backend-test backend-lint frontend-install frontend-build frontend-test frontend-e2e backend-migrate
 
 help:
-	@echo "Targets: setup, run, test, lint, backend-test, backend-lint, backend-migrate, frontend-build, frontend-test"
+	@echo "Targets: setup, run, test, lint, backend-test, backend-lint, backend-migrate, frontend-build, frontend-test, frontend-e2e"
 
 setup: setup-backend setup-frontend
 
@@ -40,3 +40,6 @@ frontend-build:
 
 frontend-test:
 	cd frontend && $(NPM) test
+
+frontend-e2e:
+	cd frontend && $(NPM) run test:e2e

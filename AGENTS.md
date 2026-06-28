@@ -67,6 +67,7 @@ make backend-test
 make backend-lint
 make frontend-test
 make frontend-build
+make frontend-e2e
 docker compose up --build
 ```
 

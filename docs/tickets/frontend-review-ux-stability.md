@@ -36,4 +36,4 @@ The document and dataset pages already use folder-scoped library panels, scoped 
 - Confirm resolved review history is visually separate from the active queue.
 
 ## Remaining Risk
-No browser automation dependency exists in the frontend package, so this ticket is validated by TypeScript/build plus manual review. A future ticket can add Playwright smoke tests for login, folder typing, review typing, and trace navigation.
+Browser automation coverage was added later in `docs/tickets/browser-smoke-test-harness.md`. This original ticket was validated by TypeScript/build plus manual review; the follow-up Playwright smoke now covers folder typing and review editor typing once WSL browser system dependencies are installed.

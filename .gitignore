@@ -17,3 +17,5 @@ frontend/.vite/
 .vscode/
 .idea/
 *.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
