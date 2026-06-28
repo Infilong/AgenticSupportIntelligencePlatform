@@ -687,6 +687,115 @@ small {
   background: #fffcf0;
 }
 
+.agent-console {
+  display: grid;
+  gap: 16px;
+}
+
+.agent-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.agent-hero-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.agent-hero-copy p {
+  margin: 0;
+}
+
+.agent-hero-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.readiness-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.readiness-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.readiness-card span {
+  color: #657386;
+  font-size: 0.76rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.readiness-card strong {
+  color: #17202a;
+  overflow-wrap: anywhere;
+}
+
+.agent-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.run-console textarea {
+  min-height: 180px;
+}
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.scenario-card {
+  display: grid;
+  gap: 8px;
+  min-height: 132px;
+  align-content: start;
+  text-align: left;
+}
+
+.scenario-card.selected {
+  border-color: #0f766e;
+  background: #f0fdfa;
+}
+
+.scenario-card span {
+  color: #526071;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.run-action-bar,
+.run-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.run-outcome-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.admin-runtime-panel {
+  background: #fbfdff;
+}
+
+.runtime-control-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
 .json-block {
   max-height: 340px;
   overflow: auto;
@@ -743,6 +852,8 @@ th {
 
 @media (max-width: 1120px) {
   .console-strip,
+  .readiness-strip,
+  .runtime-control-grid,
   .three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -750,12 +861,16 @@ th {
 
 @media (max-width: 900px) {
   .auth-page,
+  .agent-hero,
+  .agent-workbench,
   .app-shell,
   .two,
   .two-wide-left,
   .three,
   .console-strip,
-  .review-controls {
+  .readiness-strip,
+  .review-controls,
+  .runtime-control-grid {
     grid-template-columns: 1fr;
   }
 
