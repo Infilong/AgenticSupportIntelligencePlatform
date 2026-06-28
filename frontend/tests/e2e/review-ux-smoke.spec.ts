@@ -26,6 +26,19 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   });
   expect(workspace.status()).toBe(201);
   const workspaceBody = await workspace.json();
+  const datasetFolderName = `Dataset QA ${runId}`;
+  const datasetFolder = await api.post(`/api/v1/workspaces/${workspaceBody.id}/resource-folders`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { resource_type: "dataset", name: datasetFolderName },
+  });
+  expect(datasetFolder.status()).toBe(201);
+
+  const knowledgeFolderName = `Policy QA ${runId}`;
+  const knowledgeFolder = await api.post(`/api/v1/workspaces/${workspaceBody.id}/resource-folders`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { resource_type: "knowledge_document", name: knowledgeFolderName },
+  });
+  expect(knowledgeFolder.status()).toBe(201);
 
   const documentTitle = `E2E Refund Policy ${runId}`;
   const document = await api.post(`/api/v1/workspaces/${workspaceBody.id}/knowledge-documents`, {
@@ -94,6 +107,12 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
 
   await productNav.getByRole("button", { name: "Data", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Datasets" })).toBeVisible();
+  const dataFolderSearch = page.locator(".folder-panel").getByPlaceholder("Search folder name or id");
+  await dataFolderSearch.fill("");
+  await dataFolderSearch.type("Dataset QA");
+  await expect(dataFolderSearch).toHaveValue("Dataset QA");
+  await expect(dataFolderSearch).toBeFocused();
+  await expect(page.locator(".folder-row").filter({ hasText: datasetFolderName }).locator("button.folder-button")).toBeVisible();
   const datasetLibrary = page.locator(".dataset-library-panel");
   const datasetButton = datasetLibrary.getByRole("button", { name: new RegExp(datasetName) });
   await expect(datasetButton).toBeVisible();
@@ -109,6 +128,12 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
 
   await productNav.getByRole("button", { name: "Knowledge", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Manage retrieval evidence" })).toBeVisible();
+  const knowledgeFolderSearch = page.locator(".folder-panel").getByPlaceholder("Search folder name or id");
+  await knowledgeFolderSearch.fill("");
+  await knowledgeFolderSearch.type("Policy QA");
+  await expect(knowledgeFolderSearch).toHaveValue("Policy QA");
+  await expect(knowledgeFolderSearch).toBeFocused();
+  await expect(page.locator(".folder-row").filter({ hasText: knowledgeFolderName }).locator("button.folder-button")).toBeVisible();
   const documentButton = page.getByRole("button", { name: new RegExp(documentTitle) });
   await expect(documentButton).toBeVisible();
   await documentButton.click();

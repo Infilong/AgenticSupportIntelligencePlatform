@@ -8,6 +8,7 @@ type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin" | "Setti
 
 const MAX_VISIBLE_EXAMPLES = 50;
 const MAX_VISIBLE_CHUNKS = 80;
+const MAX_VISIBLE_FOLDERS = 24;
 
 type CurrentUser = {
   id: string;
@@ -915,6 +916,7 @@ export function App() {
   const [chunkSearch, setChunkSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
+  const [folderSearches, setFolderSearches] = useState<Record<ResourceType, string>>({ dataset: "", knowledge_document: "" });
   const [editingFolderId, setEditingFolderId] = useState("");
   const [folderRenameDrafts, setFolderRenameDrafts] = useState<Record<string, string>>({});
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
@@ -1588,12 +1590,24 @@ export function App() {
     onFolderNameChange: (value: string) => void;
   }) {
     const folders = foldersFor(resourceType);
+    const folderSearch = folderSearches[resourceType] ?? "";
+    const matchingFolders = folders.filter((folder) => matchesSearch(folderSearch, folder.name, folder.id));
+    const displayedFolders = matchingFolders.slice(0, MAX_VISIBLE_FOLDERS);
+    const hiddenFolderCount = Math.max(matchingFolders.length - displayedFolders.length, 0);
     return (
       <aside className="panel stack folder-panel">
         <div>
           <h3>{title}</h3>
           <p className="muted">{detail}</p>
         </div>
+        <label className="folder-search">
+          Search folders
+          <input
+            value={folderSearch}
+            onChange={(event) => setFolderSearches((current) => ({ ...current, [resourceType]: event.target.value }))}
+            placeholder="Search folder name or id"
+          />
+        </label>
         <div className="folder-list" role="list" aria-label={`${title} folders`}>
           <button
             type="button"
@@ -1611,7 +1625,7 @@ export function App() {
             <span>Unfiled</span>
             <Badge>{resourceType === "dataset" ? datasets.filter((item) => !item.folder_id).length : documents.filter((item) => !item.folder_id).length}</Badge>
           </button>
-          {folders.map((folder) => {
+          {displayedFolders.map((folder) => {
             const count = resourceType === "dataset"
               ? datasets.filter((item) => item.folder_id === folder.id).length
               : documents.filter((item) => item.folder_id === folder.id).length;
@@ -1679,7 +1693,9 @@ export function App() {
               </div>
             );
           })}
+          {folders.length > 0 && matchingFolders.length === 0 && <EmptyState title="No folders match this search" detail="Clear search to browse all folders." />}
         </div>
+        {hiddenFolderCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_FOLDERS} of {matchingFolders.length} matching folders. Search before moving resources in large workspaces.</p>}
         {canManageResources ? (
           <div className="folder-create">
             <input value={folderName} onChange={(event) => onFolderNameChange(event.target.value)} placeholder="New folder name" />

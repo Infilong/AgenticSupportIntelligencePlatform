@@ -936,6 +936,11 @@ small {
   min-width: 0;
 }
 
+.folder-search {
+  display: grid;
+  gap: 6px;
+}
+
 .folder-list,
 .resource-list {
   display: grid;
