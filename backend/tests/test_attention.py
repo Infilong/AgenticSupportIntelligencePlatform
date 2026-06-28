@@ -1,4 +1,20 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.core.language import SupportedLanguage
+from app.models.agent import (
+    AgentConfig,
+    GraphRun,
+    GraphRunStatus,
+    GraphStep,
+    GraphStepStatus,
+    ToolCall,
+)
+from app.models.ai import AIRun, AIRunStatus
+from app.models.user import User
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -115,6 +131,93 @@ def test_attention_summary_counts_assigned_reviews(client: TestClient) -> None:
     body = response.json()
     assert body["assigned_to_me_reviews"] == 1
     assert any(item["id"] == "assigned_reviews" for item in body["items"])
+
+
+def test_attention_traceable_failures_include_graph_run_targets(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "attention-trace-target@example.com")
+    token = login(client, "attention-trace-target@example.com")
+    workspace = create_workspace(client, token)
+    user = db_session.scalar(select(User).where(User.email == "attention-trace-target@example.com"))
+    assert user is not None
+    agent = AgentConfig(
+        workspace_id=UUID(workspace["id"]),
+        name="Trace Target Agent",
+        token_budget=4000,
+    )
+    db_session.add(agent)
+    db_session.flush()
+    run = GraphRun(
+        workspace_id=UUID(workspace["id"]),
+        agent_config_id=agent.id,
+        user_id=user.id,
+        input_message="force traceable failure",
+        language=SupportedLanguage.en,
+        status=GraphRunStatus.failed,
+        route_decision="failed",
+    )
+    db_session.add(run)
+    db_session.flush()
+    failed_step = GraphStep(
+        workspace_id=UUID(workspace["id"]),
+        graph_run_id=run.id,
+        step_name="retrieve_evidence",
+        input_json="{}",
+        output_json="{}",
+        status=GraphStepStatus.failed,
+        latency_ms=8,
+        error_message="tool failed",
+        retry_count=0,
+    )
+    db_session.add(failed_step)
+    db_session.flush()
+    db_session.add(
+        AIRun(
+            workspace_id=UUID(workspace["id"]),
+            graph_run_id=run.id,
+            graph_step_id=failed_step.id,
+            provider="mock",
+            model="mock-failed",
+            purpose="draft_response",
+            language=SupportedLanguage.en,
+            prompt_tokens=12,
+            completion_tokens=0,
+            total_tokens=12,
+            estimated_cost=0.0,
+            latency_ms=5,
+            cache_hit=False,
+            status=AIRunStatus.failed,
+            error_message="provider failed",
+        )
+    )
+    db_session.add(
+        ToolCall(
+            workspace_id=UUID(workspace["id"]),
+            graph_run_id=run.id,
+            graph_step_id=failed_step.id,
+            tool_name="search_documents",
+            input_json="{}",
+            output_json="{}",
+            status=GraphStepStatus.failed,
+            latency_ms=8,
+        )
+    )
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/attention",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    items = {item["id"]: item for item in response.json()["items"]}
+    assert items["failed_graph_runs"]["target_tab"] == "trace"
+    assert items["failed_graph_runs"]["target_id"] == str(run.id)
+    assert items["failed_model_calls"]["target_tab"] == "trace"
+    assert items["failed_model_calls"]["target_id"] == str(run.id)
+    assert items["tool_failures"]["target_tab"] == "trace"
+    assert items["tool_failures"]["target_id"] == str(run.id)
 
 
 def test_attention_summary_is_workspace_scoped(client: TestClient) -> None:

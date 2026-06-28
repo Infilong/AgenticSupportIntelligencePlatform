@@ -168,11 +168,13 @@ class AttentionService:
         )
         if count == 0:
             return None
-        latest = self.db.scalar(
-            select(func.max(GraphRun.created_at)).where(
+        latest_run = self.db.scalar(
+            select(GraphRun)
+            .where(
                 GraphRun.workspace_id == workspace_id,
                 GraphRun.status == GraphRunStatus.failed,
             )
+            .order_by(GraphRun.created_at.desc())
         )
         return AttentionItem(
             id="failed_graph_runs",
@@ -184,9 +186,10 @@ class AttentionService:
                 "and needs trace inspection."
             ),
             count=count,
-            action_label="Inspect traces",
+            action_label="Inspect trace",
             target_tab="trace",
-            created_at=latest,
+            target_id=str(latest_run.id) if latest_run else None,
+            created_at=latest_run.created_at if latest_run else None,
         )
 
     def _failed_ai_runs(self, *, workspace_id: UUID) -> AttentionItem | None:
@@ -198,12 +201,15 @@ class AttentionService:
         )
         if count == 0:
             return None
-        latest = self.db.scalar(
-            select(func.max(AIRun.created_at)).where(
+        latest_ai_run = self.db.scalar(
+            select(AIRun)
+            .where(
                 AIRun.workspace_id == workspace_id,
                 AIRun.status == AIRunStatus.failed,
             )
+            .order_by(AIRun.created_at.desc())
         )
+        has_trace = latest_ai_run is not None and latest_ai_run.graph_run_id is not None
         return AttentionItem(
             id="failed_model_calls",
             category="models",
@@ -211,9 +217,10 @@ class AttentionService:
             title="Failed model calls",
             detail="Model provider or budget failures are visible in traces and the AI run ledger.",
             count=count,
-            action_label="Open usage ledger",
-            target_tab="costs",
-            created_at=latest,
+            action_label="Inspect trace" if has_trace else "Open usage ledger",
+            target_tab="trace" if has_trace else "costs",
+            target_id=str(latest_ai_run.graph_run_id) if has_trace else None,
+            created_at=latest_ai_run.created_at if latest_ai_run else None,
         )
 
     def _tool_failures(self, *, workspace_id: UUID) -> AttentionItem | None:
@@ -225,11 +232,13 @@ class AttentionService:
         )
         if count == 0:
             return None
-        latest = self.db.scalar(
-            select(func.max(ToolCall.created_at)).where(
+        latest_tool_call = self.db.scalar(
+            select(ToolCall)
+            .where(
                 ToolCall.workspace_id == workspace_id,
                 ToolCall.status == GraphStepStatus.failed,
             )
+            .order_by(ToolCall.created_at.desc())
         )
         return AttentionItem(
             id="tool_failures",
@@ -241,9 +250,10 @@ class AttentionService:
                 "from tool history or trace steps."
             ),
             count=count,
-            action_label="Open tools",
-            target_tab="tools",
-            created_at=latest,
+            action_label="Inspect trace",
+            target_tab="trace",
+            target_id=str(latest_tool_call.graph_run_id) if latest_tool_call else None,
+            created_at=latest_tool_call.created_at if latest_tool_call else None,
         )
 
     def _guardrail_failures(self, *, workspace_id: UUID) -> AttentionItem | None:
