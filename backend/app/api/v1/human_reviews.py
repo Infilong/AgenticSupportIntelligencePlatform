@@ -1,8 +1,8 @@
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -30,19 +30,41 @@ from app.services.human_review_service import (
 router = APIRouter(prefix="/workspaces/{workspace_id}/human-reviews", tags=["human-reviews"])
 DbSession = Annotated[Session, Depends(get_db)]
 ReviewReadAccess = Annotated[Workspace, Depends(require_workspace_permission("reviews:read"))]
-ReviewResolveAccess = Annotated[
-    Workspace, Depends(require_workspace_permission("reviews:resolve"))
-]
+ReviewResolveAccess = Annotated[Workspace, Depends(require_workspace_permission("reviews:resolve"))]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 ReviewId = Annotated[UUID, Path()]
+ReviewDecisionFilter = Annotated[Literal["all", "pending", "resolved"], Query()]
+ReviewQueueFilter = Annotated[
+    Literal["all", "mine", "unassigned", "critical", "evidence", "model", "language"], Query()
+]
+ReviewSortFilter = Annotated[Literal["severity", "newest", "oldest"], Query()]
+ReviewSearch = Annotated[str | None, Query(max_length=240)]
+ListLimit = Annotated[int, Query(ge=1, le=100)]
+ListOffset = Annotated[int, Query(ge=0)]
 
 
 @router.get("", response_model=list[HumanReviewResponse])
 def list_human_reviews(
     workspace: ReviewReadAccess,
+    current_user: CurrentUser,
     db: DbSession,
+    decision: ReviewDecisionFilter = "all",
+    queue_filter: ReviewQueueFilter = "all",
+    search: ReviewSearch = None,
+    sort: ReviewSortFilter = "severity",
+    limit: ListLimit = 30,
+    offset: ListOffset = 0,
 ) -> list[HumanReviewResponse]:
-    reviews = HumanReviewService(db).list_reviews(workspace_id=workspace.id)
+    reviews = HumanReviewService(db).list_reviews(
+        workspace_id=workspace.id,
+        decision=decision,
+        queue_filter=queue_filter,
+        reviewer_id=current_user.id,
+        search=search,
+        sort=sort,
+        limit=limit,
+        offset=offset,
+    )
     return [_review_response(review, db) for review in reviews]
 
 

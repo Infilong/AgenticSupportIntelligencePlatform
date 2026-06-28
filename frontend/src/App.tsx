@@ -1119,6 +1119,8 @@ export function App() {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [reviewSort, setReviewSort] = useState<ReviewSort>("severity");
   const [reviewSearch, setReviewSearch] = useState("");
+  const [pendingReviewPage, setPendingReviewPage] = useState(0);
+  const [resolvedReviewPage, setResolvedReviewPage] = useState(0);
 
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
@@ -1368,6 +1370,12 @@ export function App() {
     if (evaluationRunView === "selected") return;
     void loadEvaluations();
   }, [token, selectedWorkspaceId, activeTab, selectedEvaluationFolderId, evaluationSearch, evaluationStatusFilter, evaluationRunView, showArchivedEvaluations, evaluationPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "reviews") return;
+    if (!permissionList.includes("reviews:read")) return;
+    void loadReviews();
+  }, [token, selectedWorkspaceId, activeTab, reviewFilter, reviewSort, reviewSearch, pendingReviewPage, resolvedReviewPage, permissionKey]);
 
   useEffect(() => {
     if (!token || !selectedWorkspaceId || activeTab !== "evaluations") return;
@@ -2387,12 +2395,49 @@ export function App() {
     setTraceRunId(runId);
   }
 
-  async function loadReviews() {
+  function reviewListParams(
+    decision: "pending" | "resolved",
+    page: number,
+    filter = reviewFilter,
+    sort = reviewSort,
+    search = reviewSearch,
+  ) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      decision,
+      limit: MAX_VISIBLE_REVIEWS,
+      offset: page * MAX_VISIBLE_REVIEWS,
+      sort: decision === "pending" ? sort : "newest",
+    };
+    if (decision === "pending" && filter !== "all") {
+      params.queue_filter = filter;
+    }
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    return params;
+  }
+
+  async function loadReviews(
+    pendingPage = pendingReviewPage,
+    resolvedPage = resolvedReviewPage,
+    filter = reviewFilter,
+    sort = reviewSort,
+    search = reviewSearch,
+  ) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<HumanReview[]>(workspacePath("/human-reviews"), { token });
+    const [pending, resolved] = await Promise.all([
+      apiRequest<HumanReview[]>(
+        workspaceListPath("/human-reviews", reviewListParams("pending", pendingPage, filter, sort, search)),
+        { token },
+      ),
+      apiRequest<HumanReview[]>(
+        workspaceListPath("/human-reviews", reviewListParams("resolved", resolvedPage, filter, sort, search)),
+        { token },
+      ),
+    ]);
+    const data = [...pending, ...resolved];
     setReviews(data);
     setSelectedReviewId((current) => {
-      const pending = data.filter((review) => review.reviewer_decision === "pending");
       if (current && pending.some((review) => review.id === current)) return current;
       return pending[0]?.id ?? "";
     });
@@ -5083,20 +5128,17 @@ export function App() {
 
   function ReviewsPanel() {
     const pendingReviewItems = reviews.filter((review) => review.reviewer_decision === "pending");
-    const filteredPendingReviewItems = sortReviews(
-      pendingReviewItems.filter((review) => reviewMatchesFilter(review, reviewFilter, currentUser)
-        && matchesSearch(reviewSearch, ...reviewSearchFields(review))),
-      reviewSort,
-    );
-    const displayedPendingReviewItems = filteredPendingReviewItems.slice(0, MAX_VISIBLE_REVIEWS);
-    const hiddenPendingReviewCount = Math.max(filteredPendingReviewItems.length - displayedPendingReviewItems.length, 0);
-    const resolvedReviewItems = sortReviews(
-      reviews.filter((review) => review.reviewer_decision !== "pending"
-        && matchesSearch(reviewSearch, ...reviewSearchFields(review))),
-      "newest",
-    );
-    const displayedResolvedReviewItems = resolvedReviewItems.slice(0, MAX_VISIBLE_REVIEWS);
-    const hiddenResolvedReviewCount = Math.max(resolvedReviewItems.length - displayedResolvedReviewItems.length, 0);
+    const displayedPendingReviewItems = pendingReviewItems;
+    const resolvedReviewItems = reviews.filter((review) => review.reviewer_decision !== "pending");
+    const displayedResolvedReviewItems = resolvedReviewItems;
+    const pendingReviewPageStart = pendingReviewPage * MAX_VISIBLE_REVIEWS + (displayedPendingReviewItems.length ? 1 : 0);
+    const pendingReviewPageEnd = pendingReviewPage * MAX_VISIBLE_REVIEWS + displayedPendingReviewItems.length;
+    const resolvedReviewPageStart = resolvedReviewPage * MAX_VISIBLE_REVIEWS + (displayedResolvedReviewItems.length ? 1 : 0);
+    const resolvedReviewPageEnd = resolvedReviewPage * MAX_VISIBLE_REVIEWS + displayedResolvedReviewItems.length;
+    const canGoToPreviousPendingReviewPage = pendingReviewPage > 0;
+    const canGoToNextPendingReviewPage = displayedPendingReviewItems.length === MAX_VISIBLE_REVIEWS;
+    const canGoToPreviousResolvedReviewPage = resolvedReviewPage > 0;
+    const canGoToNextResolvedReviewPage = displayedResolvedReviewItems.length === MAX_VISIBLE_REVIEWS;
     const criticalCount = pendingReviewItems.filter((review) => reviewSeverity(review.reason) === "critical").length;
     const mineCount = pendingReviewItems.filter((review) => review.reviewer_id === currentUser?.id).length;
     const unassignedCount = pendingReviewItems.filter((review) => review.reviewer_id === null).length;
@@ -5107,7 +5149,7 @@ export function App() {
       ?? null;
     const selectedBlockers = selectedPendingReview ? reviewReasonParts(selectedPendingReview.reason) : [];
     const nextAction = pendingReviewItems.length
-      ? `${filteredPendingReviewItems.length} matching case${filteredPendingReviewItems.length === 1 ? "" : "s"} need a decision`
+      ? `${pendingReviewItems.length} loaded case${pendingReviewItems.length === 1 ? "" : "s"} need a decision`
       : "Queue clear";
 
     return (
@@ -5127,12 +5169,12 @@ export function App() {
         </section>
 
         <section className="queue-summary-grid">
-          <Metric label="Needs decision" value={pendingReviewItems.length} />
-          <Metric label="Assigned to me" value={mineCount} />
-          <Metric label="Unassigned" value={unassignedCount} />
-          <Metric label="Critical" value={criticalCount} />
-          <Metric label="Evidence issues" value={evidenceCount} />
-          <Metric label="Model/budget" value={modelCount} />
+          <Metric label="Loaded pending" value={pendingReviewItems.length} />
+          <Metric label="Loaded mine" value={mineCount} />
+          <Metric label="Loaded unassigned" value={unassignedCount} />
+          <Metric label="Loaded critical" value={criticalCount} />
+          <Metric label="Loaded evidence" value={evidenceCount} />
+          <Metric label="Loaded model/budget" value={modelCount} />
         </section>
 
         <section className="review-workbench">
@@ -5150,7 +5192,7 @@ export function App() {
                 Search queue and history
                 <input
                   value={reviewSearch}
-                  onChange={(event) => setReviewSearch(event.target.value)}
+                  onChange={(event) => { setPendingReviewPage(0); setResolvedReviewPage(0); setReviewSearch(event.target.value); }}
                   placeholder="Reason, customer message, citation, reviewer, run id"
                 />
               </label>
@@ -5160,7 +5202,7 @@ export function App() {
                     type="button"
                     key={option.id}
                     className={reviewFilter === option.id ? "selected" : ""}
-                    onClick={() => setReviewFilter(option.id)}
+                    onClick={() => { setPendingReviewPage(0); setReviewFilter(option.id); }}
                   >
                     {option.label}
                   </button>
@@ -5168,7 +5210,7 @@ export function App() {
               </div>
               <label>
                 Sort
-                <select value={reviewSort} onChange={(event) => setReviewSort(event.target.value as ReviewSort)}>
+                <select value={reviewSort} onChange={(event) => { setPendingReviewPage(0); setReviewSort(event.target.value as ReviewSort); }}>
                   <option value="severity">Severity first</option>
                   <option value="newest">Newest first</option>
                   <option value="oldest">Oldest first</option>
@@ -5200,7 +5242,12 @@ export function App() {
                 );
               })}
             </div>
-            {hiddenPendingReviewCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_REVIEWS} of {filteredPendingReviewItems.length} matching pending reviews. Search by reason, customer message, citation, reviewer, or run id to narrow the queue before resolving cases.</p>}
+            <div className="pagination-bar">
+              <button type="button" onClick={() => setPendingReviewPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousPendingReviewPage || loading}>Previous</button>
+              <span>Page {pendingReviewPage + 1} · {displayedPendingReviewItems.length ? `${pendingReviewPageStart}-${pendingReviewPageEnd}` : "0"} pending shown</span>
+              <button type="button" onClick={() => setPendingReviewPage((page) => page + 1)} disabled={!canGoToNextPendingReviewPage || loading}>Next</button>
+            </div>
+            <p className="permission-note">Pending reviews are loaded from the backend by filter, search, sort, offset, and limit so the queue does not grow as one long browser list.</p>
 
             <div className="review-case-list selected-review-detail">
               {(selectedPendingReview ? [selectedPendingReview] : []).map((review) => {
@@ -5372,13 +5419,7 @@ export function App() {
                 detail="Run a privacy complaint, prompt injection, unsupported request, or low-confidence scenario to create a review item."
               />
             )}
-            {pendingReviewItems.length > 0 && filteredPendingReviewItems.length === 0 && (
-              <EmptyState
-                title="No cases match this filter"
-                detail="Change the filter, search text, or refresh the queue."
-              />
-            )}
-            {pendingReviewItems.length > 0 && filteredPendingReviewItems.length > 0 && !selectedPendingReview && (
+            {pendingReviewItems.length > 0 && !selectedPendingReview && (
               <EmptyState
                 title="Select a review case"
                 detail="Choose a pending case from the queue to inspect the customer request, blockers, evidence, and resolution editor."
@@ -5445,7 +5486,12 @@ export function App() {
               </article>
             );
           })}
-          {hiddenResolvedReviewCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_REVIEWS} of {resolvedReviewItems.length} matching resolved reviews. Search by decision, stored answer, reviewer, customer message, citation, or run id to narrow audit history.</p>}
+          <div className="pagination-bar">
+            <button type="button" onClick={() => setResolvedReviewPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousResolvedReviewPage || loading}>Previous</button>
+            <span>Page {resolvedReviewPage + 1} · {displayedResolvedReviewItems.length ? `${resolvedReviewPageStart}-${resolvedReviewPageEnd}` : "0"} resolved shown</span>
+            <button type="button" onClick={() => setResolvedReviewPage((page) => page + 1)} disabled={!canGoToNextResolvedReviewPage || loading}>Next</button>
+          </div>
+          <p className="permission-note">Resolved reviews are loaded from the backend by search, offset, and limit so audit history stays bounded.</p>
           {resolvedReviewItems.length === 0 && (
             <EmptyState title="No resolved reviews" detail="Completed decisions will appear here." />
           )}
