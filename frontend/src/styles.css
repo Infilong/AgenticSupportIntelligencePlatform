@@ -952,6 +952,10 @@ small {
   align-items: center;
 }
 
+.folder-row-editing {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .folder-button,
 .resource-main-button {
   display: flex;
@@ -975,6 +979,45 @@ small {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: end;
+}
+
+.folder-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.folder-rename-input {
+  width: 100%;
+}
+
+.folder-scope-banner {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 10px 12px;
+}
+
+.folder-scope-banner span {
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.folder-scope-banner strong,
+.folder-scope-banner small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.folder-scope-banner small {
+  color: var(--text-subtle);
+  line-height: 1.35;
 }
 
 .permission-note {
@@ -1036,6 +1079,7 @@ small {
   min-height: 42px;
 }
 
+.icon-button,
 .icon-danger-button {
   min-height: 34px;
   border-color: #9a9a9a;
@@ -1045,6 +1089,11 @@ small {
   padding-inline: 9px;
 }
 
+.icon-button:hover:not(:disabled) {
+  border-color: var(--surface-strong);
+}
+
+.icon-button:disabled,
 .icon-danger-button:disabled {
   opacity: 0.42;
   cursor: not-allowed;

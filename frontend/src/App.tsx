@@ -801,6 +801,8 @@ export function App() {
   const [documentSearch, setDocumentSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
+  const [editingFolderId, setEditingFolderId] = useState("");
+  const [folderRenameDrafts, setFolderRenameDrafts] = useState<Record<string, string>>({});
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
 
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -1070,6 +1072,24 @@ export function App() {
     });
   }
 
+  async function updateResourceFolder(folder: ResourceFolder) {
+    const nextName = (folderRenameDrafts[folder.id] ?? folder.name).trim();
+    if (!nextName || nextName === folder.name) {
+      setEditingFolderId("");
+      return;
+    }
+    await runAction("Folder renamed", async () => {
+      await apiRequest<ResourceFolder>(workspacePath(`/resource-folders/${folder.id}`), {
+        method: "PATCH",
+        token,
+        body: { name: nextName, parent_folder_id: folder.parent_folder_id },
+      });
+      setEditingFolderId("");
+      await loadResourceFolders();
+      await loadAuditLogs();
+    });
+  }
+
   async function deleteResourceFolder(folder: ResourceFolder) {
     if (!window.confirm(`Delete empty folder "${folder.name}"?`)) return;
     await runAction("Folder deleted", async () => {
@@ -1334,7 +1354,7 @@ export function App() {
             className={`folder-button ${selectedFolderId === "all" ? "selected-list-item" : ""}`}
             onClick={() => onSelectFolder("all")}
           >
-            <span>All</span>
+            <span>All folders</span>
             <Badge>{resourceType === "dataset" ? datasets.length : documents.length}</Badge>
           </button>
           <button
@@ -1349,27 +1369,66 @@ export function App() {
             const count = resourceType === "dataset"
               ? datasets.filter((item) => item.folder_id === folder.id).length
               : documents.filter((item) => item.folder_id === folder.id).length;
+            const isEditing = editingFolderId === folder.id;
             return (
-              <div className="folder-row" key={folder.id}>
-                <button
-                  type="button"
-                  className={`folder-button ${selectedFolderId === folder.id ? "selected-list-item" : ""}`}
-                  onClick={() => onSelectFolder(folder.id)}
-                >
-                  <span>{folder.name}</span>
-                  <Badge>{count}</Badge>
-                </button>
-                {canManageResources && (
+              <div className={`folder-row ${isEditing ? "folder-row-editing" : ""}`} key={folder.id}>
+                {isEditing ? (
+                  <input
+                    className="folder-rename-input"
+                    value={folderRenameDrafts[folder.id] ?? folder.name}
+                    onChange={(event) => setFolderRenameDrafts((current) => ({ ...current, [folder.id]: event.target.value }))}
+                    aria-label={`Rename ${folder.name}`}
+                    autoFocus
+                  />
+                ) : (
                   <button
                     type="button"
-                    className="icon-danger-button"
-                    title="Delete empty folder"
-                    aria-label={`Delete ${folder.name}`}
-                    onClick={() => void deleteResourceFolder(folder)}
-                    disabled={count > 0}
+                    className={`folder-button ${selectedFolderId === folder.id ? "selected-list-item" : ""}`}
+                    onClick={() => onSelectFolder(folder.id)}
                   >
-                    Delete
+                    <span>{folder.name}</span>
+                    <Badge>{count}</Badge>
                   </button>
+                )}
+                {canManageResources && (
+                  <div className="folder-actions">
+                    {isEditing ? (
+                      <>
+                        <button
+                          type="button"
+                          className="icon-button"
+                          onClick={() => void updateResourceFolder(folder)}
+                          disabled={loading}
+                        >
+                          Save
+                        </button>
+                        <button type="button" className="icon-button" onClick={() => setEditingFolderId("")} disabled={loading}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="icon-button"
+                          title="Rename folder"
+                          aria-label={`Rename ${folder.name}`}
+                          onClick={() => { setFolderRenameDrafts((current) => ({ ...current, [folder.id]: folder.name })); setEditingFolderId(folder.id); }}
+                          disabled={loading}
+                        >
+                          Rename
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-danger-button"
+                          title={count > 0 ? "Move or delete resources before deleting this folder" : "Delete empty folder"}
+                          aria-label={`Delete ${folder.name}`}
+                          onClick={() => void deleteResourceFolder(folder)}
+                          disabled={count > 0 || loading}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -2338,6 +2397,7 @@ export function App() {
       matchesSearch(datasetSearch, dataset.name, dataset.id, folderLabel("dataset", dataset.folder_id)),
     );
     const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
+    const selectedFolderLabel = selectedDataFolderId === "all" ? "All dataset folders" : selectedDataFolderId === "unfiled" ? "Unfiled datasets" : folderLabel("dataset", selectedDataFolderId);
 
     return (
       <div className="grid data-workbench-grid">
@@ -2375,6 +2435,11 @@ export function App() {
             <Badge>{visibleDatasets.length} shown</Badge>
           </div>
           <div className="library-toolbar">
+            <div className="folder-scope-banner">
+              <span>Current folder</span>
+              <strong>{selectedFolderLabel}</strong>
+              <small>{visibleDatasets.length} datasets shown from {folderDatasets.length} in this folder scope.</small>
+            </div>
             <label>
               Search current folder
               <input
@@ -2459,6 +2524,7 @@ export function App() {
         folderLabel("knowledge_document", document.folder_id),
       ),
     );
+    const selectedFolderLabel = selectedKnowledgeFolderId === "all" ? "All knowledge folders" : selectedKnowledgeFolderId === "unfiled" ? "Unfiled knowledge" : folderLabel("knowledge_document", selectedKnowledgeFolderId);
 
     return (
       <div className="knowledge-console">
@@ -2495,6 +2561,11 @@ export function App() {
               <button type="button" onClick={resetDocumentForm}>New</button>
             </div>
             <div className="library-toolbar">
+              <div className="folder-scope-banner">
+                <span>Current folder</span>
+                <strong>{selectedFolderLabel}</strong>
+                <small>{visibleDocuments.length} documents shown from {folderDocuments.length} in this folder scope.</small>
+              </div>
               <label>
                 Search current folder
                 <input

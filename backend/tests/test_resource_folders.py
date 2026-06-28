@@ -181,6 +181,40 @@ def test_owner_can_organize_filter_move_and_delete_data_resources(client: TestCl
     assert delete_dataset_folder.status_code == 204
 
 
+def test_owner_can_rename_folder_and_cannot_delete_non_empty_folder(client: TestClient) -> None:
+    register(client, "folder-rename-owner@example.com")
+    token = login(client, "folder-rename-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "knowledge_document", "Old Policies")
+    document = upload_document(client, token, workspace["id"], folder["id"])
+
+    renamed = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/{folder['id']}",
+        headers=auth_headers(token),
+        json={"name": "Regional Policies", "parent_folder_id": None},
+    )
+    delete_non_empty = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/{folder['id']}",
+        headers=auth_headers(token),
+    )
+    moved_document = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents/{document['id']}/folder",
+        headers=auth_headers(token),
+        json={"folder_id": None},
+    )
+    delete_empty = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/{folder['id']}",
+        headers=auth_headers(token),
+    )
+
+    assert renamed.status_code == 200
+    assert renamed.json()["name"] == "Regional Policies"
+    assert delete_non_empty.status_code == 409
+    assert delete_non_empty.json()["detail"]["code"] == "resource_folder_not_empty"
+    assert moved_document.status_code == 200
+    assert delete_empty.status_code == 204
+
+
 def test_folder_and_resource_destructive_actions_require_owner(
     client: TestClient, db_session: Session
 ) -> None:
