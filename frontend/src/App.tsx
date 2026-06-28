@@ -23,6 +23,7 @@ const MAX_VISIBLE_ADMIN_ASSETS = 30;
 const MAX_VISIBLE_AUDIT_EVENTS = 30;
 const MAX_VISIBLE_COST_ITEMS = 12;
 const MAX_VISIBLE_REVIEWS = 30;
+const MAX_VISIBLE_MODEL_ROUTE_OPTIONS = 12;
 
 type CurrentUser = {
   id: string;
@@ -1259,6 +1260,10 @@ export function App() {
   const [modelHistoryPage, setModelHistoryPage] = useState(0);
   const [modelHistoryTotal, setModelHistoryTotal] = useState(0);
   const [modelHistoryHasNext, setModelHistoryHasNext] = useState(false);
+  const [agentModelSearch, setAgentModelSearch] = useState("");
+  const [agentModelOptions, setAgentModelOptions] = useState<ModelConfig[]>([]);
+  const [agentModelOptionTotal, setAgentModelOptionTotal] = useState(0);
+  const [agentModelOptionHasNext, setAgentModelOptionHasNext] = useState(false);
   const [modelProvider, setModelProvider] = useState("mock");
   const [modelName, setModelName] = useState("mock-cheap");
   const [modelPurpose, setModelPurpose] = useState("classification");
@@ -1449,6 +1454,15 @@ export function App() {
     if (!permissionList.includes("agents:read")) return;
     void loadAgents();
   }, [token, selectedWorkspaceId, activeTab, selectedAgentFolderId, agentSearch, agentPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "agent") return;
+    if (!permissionList.includes("models:read")) {
+      clearAgentModelOptions();
+      return;
+    }
+    void loadAgentModelOptions();
+  }, [token, selectedWorkspaceId, activeTab, agentModelSearch, permissionKey]);
 
   useEffect(() => {
     if (!token || !selectedWorkspaceId || activeTab !== "evaluations") return;
@@ -1859,11 +1873,18 @@ export function App() {
     setPromptHistoryHasNext(false);
   }
 
+  function clearAgentModelOptions() {
+    setAgentModelOptions([]);
+    setAgentModelOptionTotal(0);
+    setAgentModelOptionHasNext(false);
+  }
+
   function clearModelState() {
     setModelConfigs([]);
     setModelConfigHistory([]);
     setModelHistoryTotal(0);
     setModelHistoryHasNext(false);
+    clearAgentModelOptions();
   }
 
   function clearGuardrailState() {
@@ -3180,6 +3201,25 @@ export function App() {
     setModelConfigs(data.items);
   }
 
+  async function loadAgentModelOptions(search = agentModelSearch) {
+    if (!selectedWorkspaceId) return;
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      status: "all",
+      limit: MAX_VISIBLE_MODEL_ROUTE_OPTIONS,
+      offset: 0,
+    };
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    const data = await apiRequest<ModelConfigListResponse>(
+      workspaceListPath("/model-configs", params),
+      { token },
+    );
+    setAgentModelOptions(data.items);
+    setAgentModelOptionTotal(data.total);
+    setAgentModelOptionHasNext(data.has_next);
+  }
+
   function modelConfigHistoryParams(
     page = modelHistoryPage,
     includeArchived = showArchivedModels,
@@ -4277,6 +4317,9 @@ export function App() {
     const fallbackModelConfig = modelConfigs.find((config) => config.active && !config.archived_at && config.purpose === "draft_response")
       ?? modelConfigs.find((config) => config.active)
       ?? null;
+    const routeModelOptions = selectedAgentModelConfig && !agentModelOptions.some((config) => config.id === selectedAgentModelConfig.id)
+      ? [selectedAgentModelConfig, ...agentModelOptions]
+      : agentModelOptions;
     const modelRouteSummary = selectedAgentModelConfig
       ? `${selectedAgentModelConfig.provider} / ${selectedAgentModelConfig.model}`
       : fallbackModelConfig
@@ -4503,16 +4546,50 @@ export function App() {
                   <strong>{selectedAgentModelConfig?.model ?? "Workspace purpose routing"}</strong>
                   <small>Agent override is optional; otherwise the workspace active route or mock fallback is used.</small>
                 </div>
-                <label>Default model route
-                  <select value={agentModelConfigId} onChange={(event) => setAgentModelConfigId(event.target.value)} disabled={!canConfigureAgent || loading}>
-                    <option value="">Workspace purpose routing</option>
-                    {modelConfigs.filter((config) => !config.archived_at).map((config) => (
-                      <option key={config.id} value={config.id}>
-                        {config.provider} / {config.model} · {config.purpose}{config.active ? " · active" : ""}
-                      </option>
+                <div className="model-route-picker">
+                  <label>
+                    Search model routes
+                    <input
+                      value={agentModelSearch}
+                      onChange={(event) => setAgentModelSearch(event.target.value)}
+                      disabled={!canConfigureAgent || loading}
+                      placeholder="Provider, model, purpose, or id"
+                    />
+                  </label>
+                  <div className="model-route-options" role="listbox" aria-label="Default model route">
+                    <button
+                      type="button"
+                      className={!agentModelConfigId ? "model-route-option selected-list-item" : "model-route-option"}
+                      onClick={() => setAgentModelConfigId("")}
+                      disabled={!canConfigureAgent || loading}
+                    >
+                      <span>
+                        <strong>Workspace purpose routing</strong>
+                        <small>{fallbackModelConfig ? `${fallbackModelConfig.provider} / ${fallbackModelConfig.model}` : "Use deterministic mock fallback if no active route exists"}</small>
+                      </span>
+                      <Badge tone="neutral">default</Badge>
+                    </button>
+                    {routeModelOptions.map((config) => (
+                      <button
+                        type="button"
+                        className={agentModelConfigId === config.id ? "model-route-option selected-list-item" : "model-route-option"}
+                        key={config.id}
+                        onClick={() => setAgentModelConfigId(config.id)}
+                        disabled={!canConfigureAgent || loading || Boolean(config.archived_at)}
+                      >
+                        <span>
+                          <strong>{config.provider} / {config.model}</strong>
+                          <small>{config.purpose} · context {config.max_context_tokens.toLocaleString()} · {shortId(config.id)}</small>
+                        </span>
+                        <span className="model-route-badges">
+                          {config.active && <Badge tone="good">active</Badge>}
+                          {config.archived_at && <Badge tone="warn">archived</Badge>}
+                        </span>
+                      </button>
                     ))}
-                  </select>
-                </label>
+                  </div>
+                  <small>{agentModelOptions.length} of {agentModelOptionTotal} matching routes loaded{agentModelOptionHasNext ? "; search to narrow before assigning" : ""}.</small>
+                </div>
                 <button type="submit" className="primary" disabled={!canConfigureAgent || loading || !selectedAgentId}>Save runtime controls</button>
               </section>
             </form>

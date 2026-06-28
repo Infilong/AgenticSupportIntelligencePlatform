@@ -1520,8 +1520,50 @@ small {
 
 .agent-config-section.wide {
   grid-column: 1 / -1;
-  grid-template-columns: minmax(220px, 0.52fr) minmax(260px, 0.68fr) auto;
+  grid-template-columns: minmax(220px, 0.52fr) minmax(300px, 0.78fr) auto;
   align-items: end;
+}
+
+.model-route-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.model-route-options {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.model-route-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.model-route-option span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.model-route-option strong,
+.model-route-option small {
+  overflow-wrap: anywhere;
+}
+
+.model-route-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .agent-config-section span,
