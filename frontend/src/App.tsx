@@ -758,8 +758,22 @@ const demoDataset = `{"external_id":"en_refund_001","messages":[{"role":"user","
 {"external_id":"ja_refund_001","messages":[{"role":"user","content":"30日以内なら返金できますか？"}],"labels":{"intent":"refund_request","product_area":"billing"}}
 {"external_id":"zh_privacy_001","messages":[{"role":"user","content":"我要投诉，你们泄露了我的个人信息。"}],"labels":{"intent":"complaint","safety_risk":"high"}}`;
 
-const demoDocument = `Refund Policy
-Refunds are available within 30 days after purchase when the account is in good standing. Privacy or security complaints must be escalated to human review.`;
+const demoDocumentTemplates: Record<Language, string> = {
+  en: `Refund and Account Security Policy
+Refunds are available within 30 days after purchase when the account is in good standing. Billing plan changes are handled from workspace settings and may affect the next invoice. Unknown login notifications require the user to reset their password, review active sessions, and enable two-factor authentication. Privacy or security complaints must be escalated to human review before a final response is sent.`,
+  ja: `返金とアカウントセキュリティ方針
+購入から30日以内で、アカウントが正常な状態であれば返金を申請できます。請求プランの変更はワークスペース設定から行い、次回請求に影響する場合があります。知らない端末からログイン通知が届いた場合は、パスワードを変更し、アクティブなセッションを確認し、二要素認証を有効にしてください。個人情報やセキュリティに関する苦情は、最終回答の前に人間のレビューへエスカレーションします。`,
+  zh: `退款与账号安全政策
+用户在购买后三十天内，且账号状态正常时，可以申请退款。计费方案变更应在工作区设置中处理，并可能影响下一期账单。如果用户收到陌生设备的登录通知，应立即重置密码、检查当前会话，并启用双重验证。涉及个人信息泄露、隐私投诉或安全事件的请求，必须先转交人工审核，不能自动给出最终处理结论。`,
+};
+
+const demoDocumentTitles: Record<Language, string> = {
+  en: "Refund and Security Policy EN",
+  ja: "返金とセキュリティ方針 JA",
+  zh: "退款与账号安全政策 ZH",
+};
+
+const demoDocument = demoDocumentTemplates.en;
 
 const demoEvaluation = `{"id":"en_refund_001","language":"en","input_message":"Can I get a refund within 30 days?","expected_route":"finalize","must_include":["30 days"]}
 {"id":"ja_no_source_001","language":"ja","input_message":"アカウントを完全に削除する方法を教えてください。","expected_route":"human_review","must_not_include":["できます"]}
@@ -1633,10 +1647,22 @@ export function App() {
   function resetDocumentForm(folderId = selectedKnowledgeFolderId) {
     setSelectedDocumentId("");
     setDocumentDetail(null);
-    setDocumentTitle("Refund Policy EN");
+    setDocumentTitle(demoDocumentTitles.en);
     setDocumentLanguage("en");
     setDocumentFolderId(folderSelectionToFormValue(folderId));
-    setDocumentContent(demoDocument);
+    setDocumentContent(demoDocumentTemplates.en);
+  }
+
+  function changeDocumentLanguage(language: Language) {
+    const currentContentIsTemplate = Object.values(demoDocumentTemplates).includes(documentContent);
+    const currentTitleIsTemplate = Object.values(demoDocumentTitles).includes(documentTitle);
+    setDocumentLanguage(language);
+    if (!selectedDocumentId && currentContentIsTemplate) {
+      setDocumentContent(demoDocumentTemplates[language]);
+    }
+    if (!selectedDocumentId && currentTitleIsTemplate) {
+      setDocumentTitle(demoDocumentTitles[language]);
+    }
   }
 
   async function deleteDocument(documentId: string) {
@@ -3202,7 +3228,17 @@ export function App() {
             </div>
             <div className="knowledge-meta-grid">
               <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
-              <label>Language<select value={documentLanguage} onChange={(event) => setDocumentLanguage(event.target.value as Language)}><option value="en">English</option><option value="ja">Japanese</option><option value="zh">Chinese</option></select></label>
+              <label>
+                Language
+                <select
+                  value={documentLanguage}
+                  onChange={(event) => changeDocumentLanguage(event.target.value as Language)}
+                >
+                  <option value="en">English</option>
+                  <option value="ja">Japanese</option>
+                  <option value="zh">Chinese</option>
+                </select>
+              </label>
               <FolderPicker
                 label="Knowledge target folder"
                 value={documentFolderId}
