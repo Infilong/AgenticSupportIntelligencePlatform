@@ -2405,7 +2405,7 @@ export function App() {
             Password
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
           </label>
-          <button className="primary" disabled={loading}>{authMode === "login" ? "Login" : "Register and login"}</button>
+          <button type="submit" className="primary" disabled={loading}>{authMode === "login" ? "Login" : "Register and login"}</button>
           <Status notice={notice} error={error} />
         </form>
       </main>
@@ -2464,7 +2464,7 @@ export function App() {
           )}
           <form className="workspace-create" onSubmit={createWorkspace}>
             <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} />
-            <button>Create</button>
+            <button type="submit">Create</button>
           </form>
         </section>
 
@@ -2482,7 +2482,7 @@ export function App() {
             <div className="nav-section" key={section.title}>
               <p>{section.title}</p>
               {section.items.map((tab) => (
-                <button
+                <button type="button"
                   key={tab.id}
                   className={activeTab === tab.id ? "active" : ""}
                   title={`${tab.label}: ${tab.purpose}`}
@@ -2496,7 +2496,7 @@ export function App() {
             </div>
           ))}
         </nav>
-        <button className="secondary logout-button" onClick={() => { localStorage.removeItem("asi_token"); setCurrentUser(null); setToken(""); }}>Logout</button>
+        <button type="button" className="secondary logout-button" onClick={() => { localStorage.removeItem("asi_token"); setCurrentUser(null); setToken(""); }}>Logout</button>
       </aside>
 
       <section className="workspace-main">
@@ -2509,7 +2509,7 @@ export function App() {
           <div className="topbar-actions">
             <Badge>{workspaceRole}</Badge>
             <Badge tone={latestRunTone}>{latestRun ? latestRun.status : "No run"}</Badge>
-            <button
+            <button type="button"
               className="secondary"
               disabled={!selectedWorkspaceId || loading}
               onClick={() => void runAction("Workspace data refreshed", refreshWorkspaceData)}
@@ -2799,7 +2799,7 @@ export function App() {
             <span>Recommended next action</span>
             <strong>{primaryAction.label}</strong>
             <p>{primaryAction.detail}</p>
-            <button className="primary" onClick={() => goToTab(primaryAction.tab)}>Open</button>
+            <button type="button" className="primary" onClick={() => goToTab(primaryAction.tab)}>Open</button>
           </div>
         </section>
 
@@ -2829,7 +2829,7 @@ export function App() {
             </div>
             <div className="attention-list">
               {attentionItems.length > 0 ? attentionItems.map((item) => (
-                <button key={item.label} className="attention-item" onClick={() => goToTab(item.tab)}>
+                <button type="button" key={item.label} className="attention-item" onClick={() => goToTab(item.tab)}>
                   <div>
                     <span>{item.label}</span>
                     <strong>{item.count}</strong>
@@ -2873,7 +2873,7 @@ export function App() {
             <div className="progress-track large"><span style={{ width: `${readinessPercent}%` }} /></div>
             <div className="step-grid compact-steps">
               {setupSteps.map((step) => (
-                <button
+                <button type="button"
                   key={step.label}
                   className={`step-card ${step.done ? "done" : ""}`}
                   onClick={() => goToTab(step.tab)}
@@ -2898,36 +2898,36 @@ export function App() {
             <Metric label="Evaluation runs" value={evaluationRuns.length} />
             <Metric label="Active models" value={activeModelCount} />
             <div className="overview-action-list">
-              <button onClick={() => goToTab("agent")}>Run agent</button>
-              <button onClick={() => goToTab("reviews")}>Human review</button>
-              <button onClick={() => goToTab("trace")} disabled={!traceRunId}>Runs & traces</button>
-              <button onClick={() => goToTab("costs")}>Usage & costs</button>
+              <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
+              <button type="button" onClick={() => goToTab("reviews")}>Human review</button>
+              <button type="button" onClick={() => goToTab("trace")} disabled={!traceRunId}>Runs & traces</button>
+              <button type="button" onClick={() => goToTab("costs")}>Usage & costs</button>
             </div>
           </aside>
         </section>
 
         <section className="overview-admin-grid">
-          <button className="overview-admin-card" onClick={() => goToTab("documents")}>
+          <button type="button" className="overview-admin-card" onClick={() => goToTab("documents")}>
             <span>Knowledge base</span>
             <strong>{documents.length} documents</strong>
             <small>Upload, edit, reindex, and inspect chunks.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => goToTab("prompts")}>
+          <button type="button" className="overview-admin-card" onClick={() => goToTab("prompts")}>
             <span>Prompt registry</span>
             <strong>{promptTemplates.length} templates</strong>
             <small>Version LangChain prompts by language.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => goToTab("models")}>
+          <button type="button" className="overview-admin-card" onClick={() => goToTab("models")}>
             <span>Model routing</span>
             <strong>{activeModelCount} active</strong>
             <small>Configure model purpose, cost, and context limits.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => goToTab("tools")}>
+          <button type="button" className="overview-admin-card" onClick={() => goToTab("tools")}>
             <span>Tool catalog</span>
             <strong>{tools.length} tools</strong>
             <small>Inspect tool schemas, permissions, usage, and trace links.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => goToTab("audit")}>
+          <button type="button" className="overview-admin-card" onClick={() => goToTab("audit")}>
             <span>Governance audit</span>
             <strong>{auditLogs.length} events</strong>
             <small>Review workspace and AI operations changes.</small>
@@ -2935,12 +2935,12 @@ export function App() {
         </section>
 
         <section className="overview-admin-grid platform-coverage-grid">
-          <button className="overview-admin-card" onClick={() => goToTab("tools")}>
+          <button type="button" className="overview-admin-card" onClick={() => goToTab("tools")}>
             <span>Tools</span>
             <strong>{tools.some((tool) => tool.usage.total_calls > 0) ? "Runtime measured" : "Catalog ready"}</strong>
             <small>Tool contracts and recent executions are now visible outside individual traces.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => goToTab("guardrails")}>
+          <button type="button" className="overview-admin-card" onClick={() => goToTab("guardrails")}>
             <span>Guardrails</span>
             <strong>{guardrails.some((item) => item.usage.failed_evaluations > 0) ? "Failures visible" : "Policy catalog"}</strong>
             <small>Runtime guardrail policies and failures are visible outside individual traces.</small>
@@ -3013,7 +3013,7 @@ export function App() {
             resourceLabel="dataset"
           />
           <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => setDatasetContent(event.target.value)} /></label>
-          <button className="primary" disabled={!canWriteData || loading}>Import JSONL</button>
+          <button type="submit" className="primary" disabled={!canWriteData || loading}>Import JSONL</button>
         </form>
         <section className="panel stack dataset-library-panel">
           <div className="row-head">
@@ -3289,7 +3289,7 @@ export function App() {
               <textarea rows={16} value={documentContent} onChange={(event) => setDocumentContent(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={!canWriteKnowledge || loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
+              <button type="submit" className="primary" disabled={!canWriteKnowledge || loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
               {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResourceFolders || loading}>Move only</button>}
               {selectedDocumentId && <button type="button" onClick={() => resetDocumentForm()}>Start new document</button>}
               <button type="button" onClick={() => goToTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
@@ -3430,7 +3430,7 @@ export function App() {
             </label>
             <form className="inline-form" onSubmit={createAgent}>
               <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} />
-              <button>Create agent</button>
+              <button type="submit">Create agent</button>
             </form>
           </div>
         </section>
@@ -3498,7 +3498,7 @@ export function App() {
                     ))}
                   </select>
                 </label>
-                <button className="primary" disabled={loading || !selectedAgentId}>Save runtime controls</button>
+                <button type="submit" className="primary" disabled={loading || !selectedAgentId}>Save runtime controls</button>
               </section>
             </form>
 
@@ -3719,7 +3719,7 @@ export function App() {
               <textarea rows={8} value={agentMessage} onChange={(event) => setAgentMessage(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={loading || !selectedAgentId}>Run agent</button>
+              <button type="submit" className="primary" disabled={loading || !selectedAgentId}>Run agent</button>
               <button type="button" onClick={() => goToTab("trace")} disabled={!traceRunId}>Open trace</button>
               <button type="button" onClick={() => goToTab("reviews")}>Review queue</button>
             </div>
@@ -4308,7 +4308,7 @@ export function App() {
             </div>
             <div className="inline-form">
               <input aria-label="Graph run id" placeholder="Graph run id" value={traceRunId} onChange={(event) => setTraceRunId(event.target.value)} />
-              <button onClick={() => void runAction("Trace loaded", () => loadTrace())}>Load trace</button>
+              <button type="button" onClick={() => void runAction("Trace loaded", () => loadTrace())}>Load trace</button>
             </div>
             <p className="permission-note">The backend returns a trace only if this run belongs to the selected workspace.</p>
           </section>
@@ -4738,7 +4738,7 @@ export function App() {
               <textarea rows={16} value={evaluationCases} onChange={(event) => setEvaluationCases(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={!canRunEvaluations || loading || evaluationModes.length === 0}>Run evaluation</button>
+              <button type="submit" className="primary" disabled={!canRunEvaluations || loading || evaluationModes.length === 0}>Run evaluation</button>
               <button type="button" onClick={() => goToTab("costs")}>Inspect cost ledger</button>
             </div>
           </form>
@@ -4892,7 +4892,7 @@ export function App() {
             </div>
             <div className="settings-note">Role presets are enforced by backend permissions. Legacy members keep operational build and review access for existing workspaces.</div>
             <div className="run-action-bar">
-              <button className="primary" disabled={!canManageWorkspace || !memberEmail.trim() || loading}>Add member</button>
+              <button type="submit" className="primary" disabled={!canManageWorkspace || !memberEmail.trim() || loading}>Add member</button>
               <button type="button" onClick={() => goToTab("audit")}>Open audit trail</button>
             </div>
           </form>
@@ -5152,7 +5152,7 @@ export function App() {
               <textarea rows={16} value={promptText} disabled={!canManagePrompts || loading} onChange={(event) => setPromptText(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={!canManagePrompts || loading}>Create version</button>
+              <button type="submit" className="primary" disabled={!canManagePrompts || loading}>Create version</button>
               <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
               <button type="button" onClick={() => goToTab("trace")}>Inspect trace</button>
             </div>
@@ -5202,8 +5202,8 @@ export function App() {
                   <div className="review-actions">
                     {template.active && <Badge tone="good">active</Badge>}
                     {template.archived_at && <Badge>archived</Badge>}
-                    <button disabled={template.active || Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void activatePromptTemplate(template.id)}>Activate</button>
-                    <button className="danger-button" disabled={Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void archivePromptTemplate(template)}>Archive</button>
+                    <button type="button" disabled={template.active || Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void activatePromptTemplate(template.id)}>Activate</button>
+                    <button type="button" className="danger-button" disabled={Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void archivePromptTemplate(template)}>Archive</button>
                   </div>
                 </div>
                 <JsonBlock value={template.template_text} />
@@ -5266,7 +5266,7 @@ export function App() {
             </label>
             <div className="settings-note">Workspace identity changes are written through the backend and recorded as `workspace.updated` audit events.</div>
             <div className="run-action-bar">
-              <button className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading}>Save workspace</button>
+              <button type="submit" className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading}>Save workspace</button>
               <button type="button" onClick={() => goToTab("audit")}>Open audit trail</button>
             </div>
           </form>
@@ -5517,7 +5517,7 @@ export function App() {
               Activate this config immediately
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={!canManageModels || loading}>Create config</button>
+              <button type="submit" className="primary" disabled={!canManageModels || loading}>Create config</button>
               <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
               <button type="button" onClick={() => goToTab("costs")}>Inspect costs</button>
             </div>
@@ -5567,8 +5567,8 @@ export function App() {
                   <div className="review-actions">
                     {config.active && <Badge tone="good">active</Badge>}
                     {config.archived_at && <Badge>archived</Badge>}
-                    <button disabled={config.active || Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void activateModelConfig(config.id)}>Activate</button>
-                    <button className="danger-button" disabled={Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void archiveModelConfig(config)}>Archive</button>
+                    <button type="button" disabled={config.active || Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void activateModelConfig(config.id)}>Activate</button>
+                    <button type="button" className="danger-button" disabled={Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void archiveModelConfig(config)}>Archive</button>
                   </div>
                 </div>
                 <div className="metric-grid compact">
@@ -5756,7 +5756,7 @@ export function App() {
                     Owners can edit this policy. Members can inspect budget posture and run-level spend.
                   </div>
                   <div className="run-action-bar">
-                    <button className="primary" disabled={!canManageBudgetPolicy || loading}>Save policy</button>
+                    <button type="submit" className="primary" disabled={!canManageBudgetPolicy || loading}>Save policy</button>
                     <button type="button" onClick={() => goToTab("models")}>Configure models</button>
                   </div>
                 </form>
@@ -6152,7 +6152,7 @@ function ActionGuide({
         <h3>{title}</h3>
         <p>{detail}</p>
       </div>
-      <button className="secondary" onClick={onAction}>{action}</button>
+      <button type="button" className="secondary" onClick={onAction}>{action}</button>
     </section>
   );
 }
