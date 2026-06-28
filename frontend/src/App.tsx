@@ -880,6 +880,7 @@ export function App() {
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
+  const [selectedReviewId, setSelectedReviewId] = useState("");
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [reviewSort, setReviewSort] = useState<ReviewSort>("severity");
 
@@ -1685,6 +1686,11 @@ export function App() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<HumanReview[]>(workspacePath("/human-reviews"), { token });
     setReviews(data);
+    setSelectedReviewId((current) => {
+      const pending = data.filter((review) => review.reviewer_decision === "pending");
+      if (current && pending.some((review) => review.id === current)) return current;
+      return pending[0]?.id ?? "";
+    });
   }
 
   async function loadTools() {
@@ -2585,15 +2591,15 @@ export function App() {
           action="Next after import: upload knowledge documents"
           onAction={() => setActiveTab("documents")}
         />
-        <ResourceFolderPanel
-          resourceType="dataset"
-          title="Dataset folders"
-          detail="Keep imports grouped by product, client, language, or test purpose as the workspace grows."
-          selectedFolderId={selectedDataFolderId}
-          onSelectFolder={setSelectedDataFolderId}
-          folderName={dataFolderName}
-          onFolderNameChange={setDataFolderName}
-        />
+        {ResourceFolderPanel({
+          resourceType: "dataset",
+          title: "Dataset folders",
+          detail: "Keep imports grouped by product, client, language, or test purpose as the workspace grows.",
+          selectedFolderId: selectedDataFolderId,
+          onSelectFolder: setSelectedDataFolderId,
+          folderName: dataFolderName,
+          onFolderNameChange: setDataFolderName,
+        })}
         <form className="panel stack" onSubmit={importDataset}>
           <h3>Import multilingual data</h3>
           <label>Dataset name<input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} /></label>
@@ -2721,15 +2727,15 @@ export function App() {
         </section>
 
         <section className="knowledge-workbench">
-          <ResourceFolderPanel
-            resourceType="knowledge_document"
-            title="Knowledge folders"
-            detail="Organize uploaded policies, FAQs, release notes, and manuals before the library becomes large."
-            selectedFolderId={selectedKnowledgeFolderId}
-            onSelectFolder={setSelectedKnowledgeFolderId}
-            folderName={knowledgeFolderName}
-            onFolderNameChange={setKnowledgeFolderName}
-          />
+          {ResourceFolderPanel({
+            resourceType: "knowledge_document",
+            title: "Knowledge folders",
+            detail: "Organize uploaded policies, FAQs, release notes, and manuals before the library becomes large.",
+            selectedFolderId: selectedKnowledgeFolderId,
+            onSelectFolder: setSelectedKnowledgeFolderId,
+            folderName: knowledgeFolderName,
+            onFolderNameChange: setKnowledgeFolderName,
+          })}
           <aside className="panel stack document-library-panel">
             <div className="row-head">
               <div>
@@ -3604,6 +3610,10 @@ export function App() {
     const unassignedCount = pendingReviewItems.filter((review) => review.reviewer_id === null).length;
     const evidenceCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "evidence", currentUser)).length;
     const modelCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "model", currentUser)).length;
+    const selectedPendingReview = filteredPendingReviewItems.find((review) => review.id === selectedReviewId)
+      ?? filteredPendingReviewItems[0]
+      ?? null;
+    const selectedBlockers = selectedPendingReview ? reviewReasonParts(selectedPendingReview.reason) : [];
     const nextAction = pendingReviewItems.length
       ? `${filteredPendingReviewItems.length} visible case${filteredPendingReviewItems.length === 1 ? "" : "s"} need a decision`
       : "Queue clear";
@@ -3625,8 +3635,8 @@ export function App() {
         </section>
 
         <section className="queue-summary-grid">
-          <Metric label="Pending" value={pendingReviewItems.length} />
-          <Metric label="Mine" value={mineCount} />
+          <Metric label="Needs decision" value={pendingReviewItems.length} />
+          <Metric label="Assigned to me" value={mineCount} />
           <Metric label="Unassigned" value={unassignedCount} />
           <Metric label="Critical" value={criticalCount} />
           <Metric label="Evidence issues" value={evidenceCount} />
@@ -3637,8 +3647,8 @@ export function App() {
           <div className="panel stack">
             <div className="row-head">
               <div>
-                <h3>Cases waiting for review</h3>
-                <p className="muted">Filter the queue, then resolve one case at a time. Pending items always show the customer request and the required human action.</p>
+                <h3>Review queue</h3>
+                <p className="muted">Select one pending case. The decision editor stays on the selected case so typing does not jump between cards.</p>
               </div>
               <Badge tone={pendingReviewItems.length ? "warn" : "good"}>{pendingReviewItems.length} pending</Badge>
             </div>
@@ -3666,8 +3676,33 @@ export function App() {
               </label>
             </div>
 
-            <div className="review-case-list">
+            <div className="review-queue-list" aria-label="Pending human review cases">
               {filteredPendingReviewItems.map((review) => {
+                const severity = reviewSeverity(review.reason);
+                const parts = reviewReasonParts(review.reason);
+                const selected = selectedPendingReview?.id === review.id;
+                return (
+                  <button
+                    type="button"
+                    className={`review-queue-item ${selected ? "selected-list-item" : ""}`}
+                    key={review.id}
+                    onClick={() => setSelectedReviewId(review.id)}
+                  >
+                    <span>
+                      <strong>{friendlyReviewReason(review.reason)}</strong>
+                      <small>{review.run?.input_message ?? "Run context unavailable"}</small>
+                    </span>
+                    <span className="recent-run-meta">
+                      <Badge tone={toneForReviewSeverity(severity)}>{severity}</Badge>
+                      <small>{parts.slice(0, 2).join(", ") || "review"}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="review-case-list selected-review-detail">
+              {(selectedPendingReview ? [selectedPendingReview] : []).map((review) => {
                 const draft = reviewDraft(review);
                 const guardrailParts = reviewReasonParts(review.reason);
                 const severity = reviewSeverity(review.reason);
@@ -3832,11 +3867,24 @@ export function App() {
                 detail="Change the filter or refresh the queue."
               />
             )}
+            {pendingReviewItems.length > 0 && filteredPendingReviewItems.length > 0 && !selectedPendingReview && (
+              <EmptyState
+                title="Select a review case"
+                detail="Choose a pending case from the queue to inspect the customer request, blockers, evidence, and resolution editor."
+              />
+            )}
           </div>
 
           <aside className="panel stack review-policy-panel">
             <h3>Review policy</h3>
             <p className="muted">The reviewer should approve only grounded, same-language, policy-safe answers. Otherwise write a human answer or reject the run.</p>
+            {selectedPendingReview && (
+              <div className="selected-review-summary">
+                <span>Selected case</span>
+                <strong>{friendlyReviewReason(selectedPendingReview.reason)}</strong>
+                <small>{selectedBlockers.join(", ") || "human_review_route"}</small>
+              </div>
+            )}
             <div className="policy-list">
               <span>Citations missing or weak</span>
               <span>Prompt injection attempt</span>
