@@ -4554,7 +4554,11 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
   return signals;
 }
 
+type TraceStepFilter = "all" | "problems" | "models" | "tools" | "langchain";
+
 function TraceViewer({ trace }: { trace: GraphTrace }) {
+  const [stepFilter, setStepFilter] = useState<TraceStepFilter>("all");
+  const [selectedStepId, setSelectedStepId] = useState(trace.steps[0]?.id ?? "");
   const totalTokens = trace.ai_runs.reduce((sum, run) => sum + run.total_tokens, 0);
   const totalCost = trace.ai_runs.reduce((sum, run) => sum + run.estimated_cost, 0);
   const totalLatency = trace.steps.reduce((sum, step) => sum + step.latency_ms, 0);
@@ -4564,6 +4568,26 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
   const latestCheckpoint = trace.checkpoints[trace.checkpoints.length - 1];
   const latestCheckpointState = latestCheckpoint ? asRecord(safeJson(latestCheckpoint.state_json)) : null;
   const latestCheckpointMeta = asRecord(latestCheckpointState?.checkpoint) ?? {};
+  const filteredSteps = trace.steps.filter((step) => traceStepMatchesFilter(step, stepFilter));
+  const selectedStep = filteredSteps.find((step) => step.id === selectedStepId)
+    ?? filteredSteps[0]
+    ?? trace.steps.find((step) => step.id === selectedStepId)
+    ?? trace.steps[0]
+    ?? null;
+  const selectedCheckpoint = selectedStep
+    ? trace.checkpoints.find((checkpoint) => checkpoint.checkpoint_key === `${selectedStep.step_name}:after`) ?? null
+    : null;
+  const runLevelGuardrails = trace.guardrails.filter((guardrail) => guardrail.graph_step_id === null);
+  const selectedStepGuardrails = selectedStep
+    ? trace.guardrails.filter((guardrail) => guardrail.graph_step_id === selectedStep.id)
+    : [];
+  const traceFilters: Array<{ id: TraceStepFilter; label: string; count: number }> = [
+    { id: "all", label: "All steps", count: trace.steps.length },
+    { id: "problems", label: "Problems", count: trace.steps.filter((step) => traceStepMatchesFilter(step, "problems")).length },
+    { id: "models", label: "Model calls", count: trace.steps.filter((step) => traceStepMatchesFilter(step, "models")).length },
+    { id: "tools", label: "Tool calls", count: trace.steps.filter((step) => traceStepMatchesFilter(step, "tools")).length },
+    { id: "langchain", label: "LangChain", count: trace.steps.filter((step) => traceStepMatchesFilter(step, "langchain")).length },
+  ];
 
   return (
     <section className="trace-workbench">
@@ -4672,19 +4696,176 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
         </div>
       </section>
 
-      <section className="panel stack full-width">
+      <section className="panel stack full-width trace-navigator-panel">
         <div className="row-head">
           <div>
-            <h3>LangGraph execution timeline</h3>
-            <p className="muted">Readable state is shown first; raw JSON remains available for debugging.</p>
+            <h3>Execution navigator</h3>
+            <p className="muted">Filter the LangGraph path, select a node, then drill into model, tool, state, and checkpoint evidence.</p>
           </div>
           <Badge tone={trace.run.route_decision === "human_review" ? "warn" : "good"}>{trace.run.route_decision ?? "running"}</Badge>
         </div>
+        <div className="trace-filter-bar">
+          {traceFilters.map((filter) => (
+            <button
+              type="button"
+              key={filter.id}
+              className={stepFilter === filter.id ? "trace-filter active" : "trace-filter"}
+              onClick={() => setStepFilter(filter.id)}
+            >
+              <span>{filter.label}</span>
+              <strong>{filter.count}</strong>
+            </button>
+          ))}
+        </div>
+        <div className="trace-navigator-grid">
+          <div className="trace-step-rail">
+            {filteredSteps.map((step, index) => (
+              <button
+                type="button"
+                className={selectedStep?.id === step.id ? "trace-step-pill active" : "trace-step-pill"}
+                key={step.id}
+                onClick={() => setSelectedStepId(step.id)}
+              >
+                <span>{index + 1}</span>
+                <strong>{formatStepName(step.step_name)}</strong>
+                <small>{step.ai_run ? step.ai_run.model : step.tool_calls.length ? `${step.tool_calls.length} tools` : `${step.latency_ms} ms`}</small>
+                <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
+              </button>
+            ))}
+            {filteredSteps.length === 0 && <EmptyState title="No matching steps" detail="Change the filter to inspect another part of the trace." />}
+          </div>
+          {selectedStep ? (
+            <TraceStepInspector
+              step={selectedStep}
+              checkpoint={selectedCheckpoint}
+              guardrails={selectedStepGuardrails.length ? selectedStepGuardrails : runLevelGuardrails}
+            />
+          ) : (
+            <EmptyState title="No step selected" detail="Load a trace with recorded LangGraph steps." />
+          )}
+        </div>
+      </section>
+
+      <section className="panel stack full-width">
+        <div className="row-head">
+          <div>
+            <h3>Detailed timeline</h3>
+            <p className="muted">Readable state is shown first; raw JSON remains available for debugging.</p>
+          </div>
+          <Badge>{filteredSteps.length}/{trace.steps.length} shown</Badge>
+        </div>
         <div className="timeline">
-          {trace.steps.map((step, index) => <TraceStepCard key={step.id} step={step} index={index} />)}
+          {filteredSteps.map((step, index) => <TraceStepCard key={step.id} step={step} index={index} />)}
         </div>
       </section>
     </section>
+  );
+}
+
+function traceStepMatchesFilter(step: GraphStep, filter: TraceStepFilter) {
+  if (filter === "all") return true;
+  if (filter === "problems") return step.status === "failed" || Boolean(step.error_message) || step.ai_run?.status === "failed";
+  if (filter === "models") return Boolean(step.ai_run);
+  if (filter === "tools") return step.tool_calls.length > 0;
+  return step.uses_langchain;
+}
+
+function TraceStepInspector({
+  step,
+  checkpoint,
+  guardrails,
+}: {
+  step: GraphStep;
+  checkpoint: CheckpointTrace | null;
+  guardrails: GuardrailTrace[];
+}) {
+  const output = safeJson(step.output_json);
+  const input = safeJson(step.input_json);
+  const outputSignals = traceStepSignals(output);
+  const inputRecord = asRecord(input) ?? {};
+  const checkpointState = checkpoint ? asRecord(safeJson(checkpoint.state_json)) : null;
+  const checkpointMeta = asRecord(checkpointState?.checkpoint) ?? {};
+  return (
+    <article className="trace-step-inspector">
+      <div className="row-head">
+        <div>
+          <p className="eyebrow">Selected node</p>
+          <h3>{formatStepName(step.step_name)}</h3>
+          {step.node_role && <p className="muted">{step.node_role}</p>}
+        </div>
+        <div className="review-actions">
+          {step.uses_langchain && <Badge>LangChain</Badge>}
+          {step.runtime_framework && <Badge>LangGraph</Badge>}
+          <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
+        </div>
+      </div>
+      <div className="trace-inspector-metrics">
+        <Metric label="Latency" value={formatLatency(step.latency_ms)} />
+        <Metric label="Tokens" value={step.ai_run?.total_tokens ?? step.token_count ?? 0} />
+        <Metric label="Cost" value={formatCost(step.ai_run?.estimated_cost ?? step.estimated_cost)} />
+        <Metric label="Retries" value={step.retry_count} />
+        <Metric label="State keys" value={step.state_keys.length} />
+        <Metric label="Created" value={formatDate(step.created_at)} />
+      </div>
+      {outputSignals.length > 0 && (
+        <div className="trace-signal-section">
+          <strong>Output signals</strong>
+          <div className="signal-grid">
+            {outputSignals.map((signal) => (
+              <div className="signal" key={signal.label}>
+                <span>{signal.label}</span>
+                <strong>{signal.value}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="trace-inspector-grid">
+        <div className="trace-evidence-box">
+          <span>Input state</span>
+          <strong>{Object.keys(inputRecord).length} keys</strong>
+          <p>{Object.keys(inputRecord).slice(0, 6).map(formatStepName).join(", ") || "No compact input keys"}</p>
+        </div>
+        <div className="trace-evidence-box">
+          <span>Checkpoint</span>
+          <strong>{checkpoint ? formatStepName(String(checkpointMeta.completed_step ?? checkpoint.checkpoint_key)) : "not stored"}</strong>
+          <p>{checkpoint ? `${String(checkpointMeta.retrieved_chunk_count ?? 0)} chunks, ${String(checkpointMeta.citation_count ?? 0)} citations` : "No checkpoint matched this node."}</p>
+        </div>
+      </div>
+      {step.ai_run && <AIRunPanel aiRun={step.ai_run} />}
+      {step.tool_calls.length > 0 && (
+        <div className="trace-inspector-tools">
+          <strong>Tool calls</strong>
+          {step.tool_calls.map((tool) => (
+            <div className="tool-call" key={tool.id}>
+              <div className="row-head">
+                <strong>{tool.tool_name}</strong>
+                <Badge tone={toneForStatus(tool.status)}>{tool.status} · {tool.latency_ms} ms</Badge>
+              </div>
+              <details><summary>Tool input/output</summary><JsonBlock value={{ input: safeJson(tool.input_json), output: safeJson(tool.output_json) }} /></details>
+            </div>
+          ))}
+        </div>
+      )}
+      {guardrails.length > 0 && (
+        <div className="trace-inspector-guardrails">
+          <strong>{guardrails.some((guardrail) => !guardrail.passed) ? "Guardrail attention" : "Guardrails"}</strong>
+          <div className="guardrail-result-grid compact-guardrails">
+            {guardrails.slice(0, 6).map((guardrail) => (
+              <article className={guardrail.passed ? "guardrail-result passed" : "guardrail-result failed"} key={guardrail.id}>
+                <div className="row-head">
+                  <strong>{formatStepName(guardrail.guardrail_type)}</strong>
+                  <Badge tone={guardrail.passed ? "good" : guardrail.severity === "high" ? "bad" : "warn"}>{guardrail.severity}</Badge>
+                </div>
+                <p>{guardrail.message}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+      {step.error_message && <div className="status error">{step.error_message}</div>}
+      <details><summary>Raw selected node state</summary><JsonBlock value={{ input, output }} /></details>
+    </article>
   );
 }
 
