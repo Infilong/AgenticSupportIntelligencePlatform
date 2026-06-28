@@ -35,3 +35,8 @@ Documentation-only ticket. Existing backend behavior is covered by `backend/test
 - Evaluation runs are archived instead of hard-deleted so result evidence, cost metrics, and audit history remain inspectable.
 - Prompt templates, model configs, tool configs, and guardrail policies are not file uploads, but they still need searchable/archivable operations boards if their lists continue to grow. Add folders only when these become user-managed libraries rather than small admin catalogs.
 - Future tickets must not add an upload/import field without a matching management path: inspect, edit or reindex where relevant, move/organize, and delete or archive with permission checks.
+
+## 2026-06-29 Agent Resource Follow-up
+- Agent configs are now managed as folder-bounded workspace resources through the `agent_config` folder type.
+- Agents use archive rather than hard delete, preserving run, trace, evaluation, and cost evidence.
+- The Agents page now follows the same folder rail, search, bounded list, and move-control pattern used for file/import-backed resources.

@@ -13,6 +13,7 @@ from app.models.ai import AIRun, ModelConfig
 from app.models.evaluation import EvaluationResult, EvaluationRun
 from app.models.user import User
 from app.services.budget_policy_service import BudgetPolicyService
+from app.services.folder_service import ResourceFolderService
 from app.services.guardrails import GuardrailService, has_blocking_guardrail
 from app.services.human_review_service import HumanReviewService
 from app.services.model_config_service import ModelConfigService
@@ -51,7 +52,11 @@ class AgentService:
         name: str,
         token_budget: int,
         model_config_id: UUID | None = None,
+        folder_id: UUID | None = None,
     ) -> AgentConfig:
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="agent_config"
+        )
         if model_config_id is not None:
             self._require_model_config(workspace_id=workspace_id, model_config_id=model_config_id)
         agent = AgentConfig(
@@ -59,6 +64,7 @@ class AgentService:
             name=name.strip(),
             token_budget=token_budget,
             model_config_id=model_config_id,
+            folder_id=folder_id,
         )
         self.db.add(agent)
         self.db.commit()
@@ -66,9 +72,14 @@ class AgentService:
         return agent
 
     def list_agents(
-        self, *, workspace_id: UUID, include_archived: bool = False
+        self, *, workspace_id: UUID, include_archived: bool = False, folder_id: UUID | None = None
     ) -> list[AgentConfig]:
         filters = [AgentConfig.workspace_id == workspace_id]
+        if folder_id is not None:
+            ResourceFolderService(self.db).validate_folder(
+                workspace_id=workspace_id, folder_id=folder_id, resource_type="agent_config"
+            )
+            filters.append(AgentConfig.folder_id == folder_id)
         if not include_archived:
             filters.append(AgentConfig.archived_at.is_(None))
         return list(
@@ -108,6 +119,20 @@ class AgentService:
                     workspace_id=workspace_id, model_config_id=model_config_id
                 )
             agent.model_config_id = model_config_id
+        self.db.commit()
+        self.db.refresh(agent)
+        return agent
+
+    def move_agent_folder(
+        self, *, workspace_id: UUID, agent_id: UUID, folder_id: UUID | None
+    ) -> AgentConfig:
+        agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
+        if agent is None:
+            raise AgentNotFoundError("Agent was not found.")
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="agent_config"
+        )
+        agent.folder_id = folder_id
         self.db.commit()
         self.db.refresh(agent)
         return agent

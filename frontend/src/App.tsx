@@ -61,7 +61,7 @@ type Dataset = {
   created_at: string;
 };
 
-type ResourceType = "knowledge_document" | "dataset" | "evaluation_run";
+type ResourceType = "knowledge_document" | "dataset" | "evaluation_run" | "agent_config";
 
 type ResourceFolder = {
   id: string;
@@ -152,6 +152,7 @@ type Agent = {
   name: string;
   active: boolean;
   model_config_id: string | null;
+  folder_id: string | null;
   token_budget: number;
   settings_json: string;
   archived_at: string | null;
@@ -1062,13 +1063,17 @@ export function App() {
   const [chunkSearch, setChunkSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
-  const [folderSearches, setFolderSearches] = useState<Record<ResourceType, string>>({ dataset: "", knowledge_document: "", evaluation_run: "" });
+  const [folderSearches, setFolderSearches] = useState<Record<ResourceType, string>>({ dataset: "", knowledge_document: "", evaluation_run: "", agent_config: "" });
   const [editingFolderId, setEditingFolderId] = useState("");
   const [folderRenameDrafts, setFolderRenameDrafts] = useState<Record<string, string>>({});
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [newAgentName, setNewAgentName] = useState("Support Workflow Agent");
+  const [newAgentFolderId, setNewAgentFolderId] = useState("");
+  const [selectedAgentFolderId, setSelectedAgentFolderId] = useState("all");
+  const [agentFolderName, setAgentFolderName] = useState("Production agents");
+  const [agentSearch, setAgentSearch] = useState("");
   const [agentName, setAgentName] = useState("Support Workflow Agent");
   const [agentTokenBudget, setAgentTokenBudget] = useState(4000);
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
@@ -1449,6 +1454,15 @@ export function App() {
     }
   }
 
+  function selectAgentFolder(folderId: string) {
+    setSelectedAgentFolderId(folderId);
+    setNewAgentFolderId(folderSelectionToFormValue(folderId));
+    const scopedAgents = filterByFolder(agents, folderId);
+    if (!scopedAgents.some((agent) => agent.id === selectedAgentId)) {
+      void selectAgent(scopedAgents[0]?.id ?? "");
+    }
+  }
+
   function matchesSearch(query: string, ...values: Array<string | null | undefined>) {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return true;
@@ -1457,16 +1471,23 @@ export function App() {
 
   async function loadResourceFolders() {
     if (!selectedWorkspaceId) return;
-    const [knowledgeFolders, datasetFolders, evaluationFolders] = await Promise.all([
+    const [knowledgeFolders, datasetFolders, evaluationFolders, agentFolders] = await Promise.all([
       apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=knowledge_document"), { token }),
       apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=dataset"), { token }),
       apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=evaluation_run"), { token }),
+      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=agent_config"), { token }),
     ]);
-    setResourceFolders([...knowledgeFolders, ...datasetFolders, ...evaluationFolders]);
+    setResourceFolders([...knowledgeFolders, ...datasetFolders, ...evaluationFolders, ...agentFolders]);
   }
 
   async function createResourceFolder(resourceType: ResourceType) {
-    const name = resourceType === "dataset" ? dataFolderName : resourceType === "evaluation_run" ? evaluationFolderName : knowledgeFolderName;
+    const name = resourceType === "dataset"
+      ? dataFolderName
+      : resourceType === "evaluation_run"
+        ? evaluationFolderName
+        : resourceType === "agent_config"
+          ? agentFolderName
+          : knowledgeFolderName;
     await runAction("Folder created", async () => {
       await apiRequest<ResourceFolder>(workspacePath("/resource-folders"), {
         method: "POST",
@@ -1476,6 +1497,7 @@ export function App() {
       if (resourceType === "dataset") setDataFolderName("Training data");
       if (resourceType === "knowledge_document") setKnowledgeFolderName("Policies");
       if (resourceType === "evaluation_run") setEvaluationFolderName("Regression packs");
+      if (resourceType === "agent_config") setAgentFolderName("Production agents");
       await loadResourceFolders();
       await loadAuditLogs();
     });
@@ -1506,6 +1528,7 @@ export function App() {
       if (selectedDataFolderId === folder.id) setSelectedDataFolderId("all");
       if (selectedKnowledgeFolderId === folder.id) setSelectedKnowledgeFolderId("all");
       if (selectedEvaluationFolderId === folder.id) setSelectedEvaluationFolderId("all");
+      if (selectedAgentFolderId === folder.id) setSelectedAgentFolderId("all");
       await loadResourceFolders();
       await loadAuditLogs();
     });
@@ -1763,6 +1786,7 @@ export function App() {
   function resourceItemCount(resourceType: ResourceType, folderId: string) {
     if (resourceType === "dataset") return filterByFolder(datasets, folderId).length;
     if (resourceType === "evaluation_run") return filterByFolder(evaluationRuns, folderId).length;
+    if (resourceType === "agent_config") return filterByFolder(agents, folderId).length;
     return filterByFolder(documents, folderId).length;
   }
 
@@ -1964,6 +1988,7 @@ export function App() {
           name: newAgentName,
           token_budget: agentTokenBudget,
           model_config_id: agentModelConfigId || null,
+          folder_id: newAgentFolderId || null,
         },
       });
       await loadAgents();
@@ -1994,6 +2019,23 @@ export function App() {
       setAgentSummary(null);
       setAgentWorkflowSummary(null);
       await loadAgents();
+      await loadAuditLogs();
+    });
+  }
+
+  async function moveAgentFolder(agentId: string, folderId: string) {
+    await runAction("Agent moved", async () => {
+      await apiRequest<Agent>(workspacePath(`/agents/${agentId}/folder`), {
+        method: "PATCH",
+        token,
+        body: { folder_id: folderId || null },
+      });
+      if (selectedAgentId === agentId) {
+        setSelectedAgentFolderId(folderId || "unfiled");
+        setNewAgentFolderId(folderId);
+      }
+      await loadAgents();
+      await loadResourceFolders();
       await loadAuditLogs();
     });
   }
@@ -3419,6 +3461,25 @@ export function App() {
     const workflowFailures = workflowNodes.reduce((sum, node) => sum + node.failure_count, 0);
     const workflowRuns = workflowNodes.reduce((sum, node) => sum + node.run_count, 0);
     const recentRuns = summary?.recent_runs ?? [];
+    const agentFolders = foldersFor("agent_config");
+    const folderAgents = filterByFolder(agents, selectedAgentFolderId);
+    const visibleAgents = folderAgents.filter((agent) =>
+      matchesSearch(
+        agentSearch,
+        agent.name,
+        agent.id,
+        agent.active ? "active" : "inactive",
+        agent.archived_at ? "archived" : "current",
+        folderLabel("agent_config", agent.folder_id),
+      ),
+    );
+    const displayedAgents = visibleAgents.slice(0, MAX_VISIBLE_RESOURCES);
+    const hiddenAgentCount = Math.max(visibleAgents.length - displayedAgents.length, 0);
+    const selectedAgentFolderLabel = selectedAgentFolderId === "all"
+      ? "All agent folders"
+      : selectedAgentFolderId === "unfiled"
+        ? "Unfiled agents"
+        : folderLabel("agent_config", selectedAgentFolderId);
     const failureRate = summary && summary.total_runs > 0
       ? Math.round((summary.failed_runs / summary.total_runs) * 100)
       : 0;
@@ -3473,14 +3534,93 @@ export function App() {
                 onChange={(event) => void selectAgent(event.target.value)}
               >
                 <option value="">Select agent</option>
-                {agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
+                {folderAgents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
               </select>
+              <small>{folderAgents.length} agents in {selectedAgentFolderLabel}</small>
             </label>
             <form className="inline-form" onSubmit={createAgent}>
               <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} />
               <button type="submit">Create agent</button>
             </form>
           </div>
+        </section>
+
+        <section className="evaluation-workbench agent-library-workbench">
+          {ResourceFolderPanel({
+            resourceType: "agent_config",
+            title: "Agent folders",
+            detail: "Group agents by product, client, environment, or experiment so the platform does not become a flat selector.",
+            selectedFolderId: selectedAgentFolderId,
+            onSelectFolder: selectAgentFolder,
+            folderName: agentFolderName,
+            onFolderNameChange: setAgentFolderName,
+          })}
+          <aside className="panel stack agent-library-panel">
+            <div className="row-head">
+              <div>
+                <h3>Agent library</h3>
+                <p className="muted">Folder-scoped agent configs available for LangGraph runs, evaluations, and cost attribution.</p>
+              </div>
+              <Badge>{displayedAgents.length}/{visibleAgents.length} shown</Badge>
+            </div>
+            <div className="library-toolbar">
+              <div className="folder-scope-banner">
+                <span>Current folder</span>
+                <strong>{selectedAgentFolderLabel}</strong>
+                <small>{visibleAgents.length} agents shown from {folderAgents.length} in this folder scope.</small>
+              </div>
+              <div className="folder-scope-banner">
+                <span>Create target</span>
+                <strong>{folderLabel("agent_config", newAgentFolderId || null)}</strong>
+                <small>New agents are saved into this folder unless you choose another target.</small>
+              </div>
+              <FolderPicker
+                label="New agent target folder"
+                value={newAgentFolderId}
+                folders={agentFolders}
+                onChange={setNewAgentFolderId}
+                disabled={!canManageResourceFolders || loading}
+                resourceLabel="agent"
+                compact
+              />
+              <label>
+                Search current folder
+                <input
+                  value={agentSearch}
+                  onChange={(event) => setAgentSearch(event.target.value)}
+                  placeholder="Agent name, status, folder, or id"
+                />
+              </label>
+            </div>
+            <div className="resource-list bounded-agent-list">
+              {displayedAgents.map((agent) => (
+                <article key={agent.id} className={`resource-row ${selectedAgentId === agent.id ? "selected-list-item" : ""}`}>
+                  <button type="button" className="resource-main-button" onClick={() => void selectAgent(agent.id)}>
+                    <strong>{agent.name}</strong>
+                    <span>{agent.active ? "active" : "inactive"} · budget {agent.token_budget}</span>
+                  </button>
+                  <div className="resource-meta">
+                    <Badge>{folderLabel("agent_config", agent.folder_id)}</Badge>
+                    {agent.archived_at && <Badge tone="warn">archived</Badge>}
+                  </div>
+                  <div className="resource-actions">
+                    <FolderPicker
+                      label={`Move ${agent.name}`}
+                      value={agent.folder_id ?? ""}
+                      folders={agentFolders}
+                      onChange={(folderId) => void moveAgentFolder(agent.id, folderId)}
+                      disabled={!canManageResourceFolders || loading}
+                      resourceLabel="agent"
+                      compact
+                    />
+                    <button type="button" onClick={() => void selectAgent(agent.id)}>Inspect</button>
+                  </div>
+                </article>
+              ))}
+              {visibleAgents.length === 0 && <EmptyState title="No agents match this folder" detail={folderAgents.length === 0 ? "Create an agent here or switch folders." : "Clear search or choose another folder."} />}
+            </div>
+            {hiddenAgentCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_RESOURCES} of {visibleAgents.length} matching agents. Search by name, status, folder, or id before moving or operating agents in large workspaces.</p>}
+          </aside>
         </section>
 
         <section className="readiness-strip">

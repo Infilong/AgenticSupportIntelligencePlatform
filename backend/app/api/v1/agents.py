@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.agent import (
     AgentCreateRequest,
+    AgentFolderUpdateRequest,
     AgentOperationalSummaryResponse,
     AgentResponse,
     AgentRunRequest,
@@ -43,6 +44,7 @@ from app.services.agent_service import (
     GraphRunNotFoundError,
 )
 from app.services.audit_log_service import AuditLogService
+from app.services.folder_service import ResourceFolderNotFoundError
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["agents"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -52,8 +54,12 @@ AgentConfigureAccess = Annotated[
 ]
 AgentRunAccess = Annotated[Workspace, Depends(require_workspace_permission("agents:run"))]
 AgentDeleteAccess = Annotated[Workspace, Depends(require_workspace_permission("agents:delete"))]
+ResourceFolderManageAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("resource_folders:manage"))
+]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 IncludeArchived = Annotated[bool, Query()]
+FolderFilter = Annotated[UUID | None, Query()]
 AgentId = Annotated[UUID, Path()]
 RunId = Annotated[UUID, Path()]
 
@@ -71,6 +77,7 @@ def create_agent(
             name=payload.name,
             token_budget=payload.token_budget,
             model_config_id=payload.model_config_id,
+            folder_id=payload.folder_id,
         )
     except AgentModelConfigNotFoundError as exc:
         raise HTTPException(
@@ -80,6 +87,8 @@ def create_agent(
                 "message": "Model config was not found in this workspace.",
             },
         ) from exc
+    except ResourceFolderNotFoundError as exc:
+        raise _folder_not_found(exc) from exc
     AuditLogService(db).record(
         workspace_id=workspace.id,
         actor_user_id=current_user.id,
@@ -90,6 +99,7 @@ def create_agent(
             "name": agent.name,
             "token_budget": agent.token_budget,
             "model_config_id": str(agent.model_config_id) if agent.model_config_id else None,
+            "folder_id": str(agent.folder_id) if agent.folder_id else None,
         },
     )
     return AgentResponse.model_validate(agent)
@@ -100,11 +110,45 @@ def list_agents(
     workspace: WorkspaceMemberAccess,
     db: DbSession,
     include_archived: IncludeArchived = False,
+    folder_id: FolderFilter = None,
 ) -> list[AgentResponse]:
-    agents = AgentService(db).list_agents(
-        workspace_id=workspace.id, include_archived=include_archived
-    )
+    try:
+        agents = AgentService(db).list_agents(
+            workspace_id=workspace.id, include_archived=include_archived, folder_id=folder_id
+        )
+    except ResourceFolderNotFoundError as exc:
+        raise _folder_not_found(exc) from exc
     return [AgentResponse.model_validate(agent) for agent in agents]
+
+
+@router.patch("/agents/{agent_id}/folder", response_model=AgentResponse)
+def move_agent_folder(
+    agent_id: AgentId,
+    payload: AgentFolderUpdateRequest,
+    workspace: ResourceFolderManageAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> AgentResponse:
+    try:
+        agent = AgentService(db).move_agent_folder(
+            workspace_id=workspace.id, agent_id=agent_id, folder_id=payload.folder_id
+        )
+    except AgentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
+    except ResourceFolderNotFoundError as exc:
+        raise _folder_not_found(exc) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="agent.moved",
+        resource_type="agent",
+        resource_id=agent.id,
+        metadata={"folder_id": str(agent.folder_id) if agent.folder_id else None},
+    )
+    return AgentResponse.model_validate(agent)
 
 
 @router.get("/agents/{agent_id}/summary", response_model=AgentOperationalSummaryResponse)
@@ -516,3 +560,10 @@ def _safe_json_object(raw: str) -> dict:
     except json.JSONDecodeError:
         return {}
     return value if isinstance(value, dict) else {}
+
+
+def _folder_not_found(exc: Exception) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={"code": "resource_folder_not_found", "message": "Resource folder was not found."},
+    )

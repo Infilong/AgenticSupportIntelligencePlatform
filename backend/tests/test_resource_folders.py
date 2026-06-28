@@ -87,6 +87,18 @@ def import_dataset(
     return response.json()["dataset"]
 
 
+def create_agent(
+    client: TestClient, token: str, workspace_id: str, folder_id: str | None = None
+) -> dict:
+    response = client.post(
+        f"/api/v1/workspaces/{workspace_id}/agents",
+        headers=auth_headers(token),
+        json={"name": "Support Agent", "token_budget": 4000, "folder_id": folder_id},
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
 def add_member(
     db_session: Session,
     *,
@@ -187,6 +199,54 @@ def test_owner_can_organize_filter_move_and_delete_data_resources(client: TestCl
     assert delete_dataset_folder.status_code == 204
 
 
+def test_owner_can_organize_filter_move_and_archive_agent_configs(client: TestClient) -> None:
+    register(client, "agent-folder-owner@example.com")
+    token = login(client, "agent-folder-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "agent_config", "Production agents")
+    agent = create_agent(client, token, workspace["id"], folder["id"])
+    unfiled_agent = create_agent(client, token, workspace["id"])
+
+    filtered_agents = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"]},
+    )
+    unfiled_agents = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+    )
+    delete_non_empty = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/{folder['id']}",
+        headers=auth_headers(token),
+    )
+    moved_agent = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/folder",
+        headers=auth_headers(token),
+        json={"folder_id": None},
+    )
+    archive_agent = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{unfiled_agent['id']}",
+        headers=auth_headers(token),
+    )
+    delete_empty = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/{folder['id']}",
+        headers=auth_headers(token),
+    )
+
+    assert filtered_agents.status_code == 200
+    assert [item["id"] for item in filtered_agents.json()] == [agent["id"]]
+    assert unfiled_agents.status_code == 200
+    assert {item["id"] for item in unfiled_agents.json()} == {agent["id"], unfiled_agent["id"]}
+    assert agent["folder_id"] == folder["id"]
+    assert delete_non_empty.status_code == 409
+    assert delete_non_empty.json()["detail"]["code"] == "resource_folder_not_empty"
+    assert moved_agent.status_code == 200
+    assert moved_agent.json()["folder_id"] is None
+    assert archive_agent.status_code == 204
+    assert delete_empty.status_code == 204
+
+
 def test_owner_can_rename_folder_and_cannot_delete_non_empty_folder(client: TestClient) -> None:
     register(client, "folder-rename-owner@example.com")
     token = login(client, "folder-rename-owner@example.com")
@@ -232,6 +292,8 @@ def test_folder_and_resource_destructive_actions_require_owner(
     )
     document = upload_document(client, owner_token, workspace["id"], knowledge_folder["id"])
     dataset = import_dataset(client, owner_token, workspace["id"])
+    agent_folder = create_folder(client, owner_token, workspace["id"], "agent_config", "Agents")
+    agent = create_agent(client, owner_token, workspace["id"], agent_folder["id"])
 
     register(client, "member-rbac@example.com")
     member_token = login(client, "member-rbac@example.com")
@@ -264,17 +326,24 @@ def test_folder_and_resource_destructive_actions_require_owner(
         f"/api/v1/workspaces/{workspace['id']}/datasets/{dataset['id']}",
         headers=auth_headers(member_token),
     )
+    agent_move = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/folder",
+        headers=auth_headers(member_token),
+        json={"folder_id": None},
+    )
 
     assert member_list.status_code == 200
     assert folder_delete.status_code == 403
     assert document_move.status_code == 403
     assert document_delete.status_code == 403
     assert dataset_delete.status_code == 403
+    assert agent_move.status_code == 403
     assert folder_delete.json()["detail"]["code"] == "workspace_permission_required"
     assert folder_delete.json()["detail"]["required_permission"] == "resource_folders:manage"
     assert document_move.json()["detail"]["required_permission"] == "resource_folders:manage"
     assert document_delete.json()["detail"]["required_permission"] == "resources:delete"
     assert dataset_delete.json()["detail"]["required_permission"] == "resources:delete"
+    assert agent_move.json()["detail"]["required_permission"] == "resource_folders:manage"
 
 
 def test_cross_workspace_folder_ids_are_rejected(client: TestClient) -> None:
@@ -282,6 +351,9 @@ def test_cross_workspace_folder_ids_are_rejected(client: TestClient) -> None:
     token_a = login(client, "folder-owner-a@example.com")
     workspace_a = create_workspace(client, token_a, "Workspace A")
     foreign_folder = create_folder(client, token_a, workspace_a["id"], "knowledge_document", "A")
+    foreign_agent_folder = create_folder(
+        client, token_a, workspace_a["id"], "agent_config", "Agents A"
+    )
 
     register(client, "folder-owner-b@example.com")
     token_b = login(client, "folder-owner-b@example.com")
@@ -311,7 +383,19 @@ def test_cross_workspace_folder_ids_are_rejected(client: TestClient) -> None:
         },
     )
 
+    agent_response = client.post(
+        f"/api/v1/workspaces/{workspace_b['id']}/agents",
+        headers=auth_headers(token_b),
+        json={
+            "name": "Foreign folder attempt",
+            "token_budget": 4000,
+            "folder_id": foreign_agent_folder["id"],
+        },
+    )
+
     assert document_response.status_code == 404
     assert document_response.json()["detail"]["code"] == "resource_folder_not_found"
     assert dataset_response.status_code == 404
     assert dataset_response.json()["detail"]["code"] == "resource_folder_not_found"
+    assert agent_response.status_code == 404
+    assert agent_response.json()["detail"]["code"] == "resource_folder_not_found"

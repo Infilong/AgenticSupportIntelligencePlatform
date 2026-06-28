@@ -35,6 +35,9 @@ class AgentConfig(Base):
     model_config_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("model_configs.id", ondelete="SET NULL"), nullable=True
     )
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("resource_folders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     token_budget: Mapped[int] = mapped_column(Integer, default=4000, nullable=False)
     settings_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -43,6 +46,7 @@ class AgentConfig(Base):
     )
 
     graph_runs = relationship("GraphRun", back_populates="agent_config")
+    folder = relationship("ResourceFolder")
 
 
 class GraphRun(Base):

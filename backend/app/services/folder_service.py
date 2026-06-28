@@ -5,13 +5,14 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.agent import AgentConfig
 from app.models.dataset import Dataset
 from app.models.evaluation import EvaluationRun
 from app.models.folder import ResourceFolder
 from app.models.knowledge import KnowledgeDocument
 from app.models.user import User
 
-VALID_RESOURCE_TYPES = {"knowledge_document", "dataset", "evaluation_run"}
+VALID_RESOURCE_TYPES = {"knowledge_document", "dataset", "evaluation_run", "agent_config"}
 
 
 class ResourceFolderError(ValueError):
@@ -165,6 +166,11 @@ class ResourceFolderService:
             statement = select(EvaluationRun.id).where(
                 EvaluationRun.workspace_id == workspace_id,
                 EvaluationRun.folder_id == folder.id,
+            )
+        elif folder.resource_type == "agent_config":
+            statement = select(AgentConfig.id).where(
+                AgentConfig.workspace_id == workspace_id,
+                AgentConfig.folder_id == folder.id,
             )
         else:
             self._validate_resource_type(folder.resource_type)

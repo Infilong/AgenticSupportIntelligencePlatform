@@ -12,6 +12,7 @@ class AgentCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     token_budget: int = Field(default=4000, ge=500, le=32000)
     model_config_id: UUID | None = None
+    folder_id: UUID | None = None
 
     @field_validator("name")
     @classmethod
@@ -20,6 +21,10 @@ class AgentCreateRequest(BaseModel):
         if not stripped:
             raise ValueError("name cannot be blank")
         return stripped
+
+
+class AgentFolderUpdateRequest(BaseModel):
+    folder_id: UUID | None = None
 
 
 class AgentUpdateRequest(BaseModel):
@@ -50,6 +55,7 @@ class AgentResponse(BaseModel):
     name: str
     active: bool
     model_config_id: UUID | None
+    folder_id: UUID | None
     token_budget: int
     settings_json: str
     archived_at: datetime | None
