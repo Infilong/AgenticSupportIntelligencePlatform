@@ -76,6 +76,19 @@ class GraphRunResponse(BaseModel):
     completed_at: datetime | None
 
 
+class AgentOperationalSummaryResponse(BaseModel):
+    agent: AgentResponse
+    recent_runs: list[GraphRunResponse]
+    total_runs: int
+    completed_runs: int
+    human_review_runs: int
+    failed_runs: int
+    total_tokens: int
+    total_estimated_cost: float
+    average_ai_latency_ms: float | None
+    last_run_at: datetime | None
+
+
 class RuntimeComponentResponse(BaseModel):
     name: str
     framework: str

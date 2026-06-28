@@ -128,6 +128,19 @@ type GraphRun = {
   completed_at: string | null;
 };
 
+type AgentOperationalSummary = {
+  agent: Agent;
+  recent_runs: GraphRun[];
+  total_runs: number;
+  completed_runs: number;
+  human_review_runs: number;
+  failed_runs: number;
+  total_tokens: number;
+  total_estimated_cost: number;
+  average_ai_latency_ms: number | null;
+  last_run_at: string | null;
+};
+
 type RuntimeComponent = {
   name: string;
   framework: string;
@@ -537,6 +550,11 @@ function formatCost(value: number | null | undefined) {
   return `$${value.toFixed(4)}`;
 }
 
+function formatLatency(value: number | null | undefined) {
+  if (value === null || value === undefined) return "-";
+  return `${Math.round(value)} ms`;
+}
+
 function formatPercent(value: number | null | undefined): string {
   if (typeof value !== "number" || Number.isNaN(value)) return "-";
   return `${Math.round(value * 100)}%`;
@@ -608,6 +626,7 @@ export function App() {
   const [agentRetrievalMinScore, setAgentRetrievalMinScore] = useState(0.2);
   const [agentMessage, setAgentMessage] = useState("Can I get a refund within 30 days?");
   const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [agentSummary, setAgentSummary] = useState<AgentOperationalSummary | null>(null);
   const [latestRun, setLatestRun] = useState<GraphRun | null>(null);
   const [trace, setTrace] = useState<GraphTrace | null>(null);
   const [traceRunId, setTraceRunId] = useState("");
@@ -1128,7 +1147,35 @@ export function App() {
     setAgents(data);
     const nextAgent = data.find((agent) => agent.id === selectedAgentId) ?? data[0];
     setSelectedAgentId(nextAgent?.id ?? "");
-    if (nextAgent) applyAgentControls(nextAgent);
+    if (nextAgent) {
+      applyAgentControls(nextAgent);
+      await loadAgentSummary(nextAgent.id);
+    } else {
+      setAgentSummary(null);
+    }
+  }
+
+  async function loadAgentSummary(agentId = selectedAgentId) {
+    if (!selectedWorkspaceId || !agentId) {
+      setAgentSummary(null);
+      return;
+    }
+    const data = await apiRequest<AgentOperationalSummary>(
+      workspacePath(`/agents/${agentId}/summary`),
+      { token },
+    );
+    setAgentSummary(data);
+  }
+
+  async function selectAgent(agentId: string) {
+    const nextAgent = agents.find((agent) => agent.id === agentId);
+    setSelectedAgentId(agentId);
+    if (nextAgent) {
+      applyAgentControls(nextAgent);
+      await loadAgentSummary(nextAgent.id);
+    } else {
+      setAgentSummary(null);
+    }
   }
 
   async function createAgent(event: FormEvent) {
@@ -1142,6 +1189,7 @@ export function App() {
       await loadAgents();
       setSelectedAgentId(agent.id);
       applyAgentControls(agent);
+      await loadAgentSummary(agent.id);
     });
   }
 
@@ -1176,6 +1224,7 @@ export function App() {
       await loadAgents();
       setSelectedAgentId(agent.id);
       applyAgentControls(agent);
+      await loadAgentSummary(agent.id);
     });
   }
 
@@ -1196,6 +1245,7 @@ export function App() {
       await loadTrace(run.id);
       await loadReviews();
       await loadCosts();
+      await loadAgentSummary(selectedAgentId);
       setActiveTab("trace");
     });
   }
@@ -2103,6 +2153,16 @@ export function App() {
     const selectedScenario = agentPrompts.find((prompt) => prompt.text === agentMessage) ?? null;
     const pendingReviewCount = reviews.filter((review) => review.reviewer_decision === "pending").length;
     const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
+    const summary = agentSummary?.agent.id === selectedAgentId ? agentSummary : null;
+    const selectedAgentSettings = selectedAgent ? safeJson(selectedAgent.settings_json) : null;
+    const selectedAgentRecord = asRecord(selectedAgentSettings) ?? {};
+    const recentRuns = summary?.recent_runs ?? [];
+    const failureRate = summary && summary.total_runs > 0
+      ? Math.round((summary.failed_runs / summary.total_runs) * 100)
+      : 0;
+    const reviewRate = summary && summary.total_runs > 0
+      ? Math.round((summary.human_review_runs / summary.total_runs) * 100)
+      : 0;
     const readinessItems = [
       {
         label: "Agent",
@@ -2120,32 +2180,40 @@ export function App() {
         ready: pendingReviewCount === 0,
       },
       {
-        label: "Trace",
-        value: latestRun ? "Available" : "No run yet",
-        ready: Boolean(latestRun),
+        label: "Runs",
+        value: summary ? `${summary.total_runs} recorded` : "No summary",
+        ready: Boolean(summary && summary.total_runs > 0),
       },
+    ];
+    const graphNodes = [
+      "detect_language",
+      "classify_intent",
+      "retrieve_evidence",
+      "draft_response",
+      "score_confidence",
+      "route_review_or_finalize",
+      "finalize_response",
     ];
 
     return (
       <div className="agent-console">
         <section className="panel agent-hero">
           <div className="agent-hero-copy">
-            <p className="eyebrow">Agent runtime</p>
-            <h2>Run a governed LangGraph workflow</h2>
-            <p className="muted">Select a scenario or paste a request. The workflow will finalize with citations or move into human review with a clear reason.</p>
+            <p className="eyebrow">Agent management</p>
+            <h2>Operate a governed LangGraph support agent</h2>
+            <p className="muted">Select an agent, inspect real run history, tune token and routing controls, then run a multilingual support workflow with traceable model calls, tools, citations, and review routing.</p>
           </div>
           <div className="agent-hero-actions">
-            <select
-              value={selectedAgentId}
-              onChange={(event) => {
-                const nextAgent = agents.find((agent) => agent.id === event.target.value);
-                setSelectedAgentId(event.target.value);
-                if (nextAgent) applyAgentControls(nextAgent);
-              }}
-            >
-              <option value="">Select agent</option>
-              {agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
-            </select>
+            <label>
+              Active agent
+              <select
+                value={selectedAgentId}
+                onChange={(event) => void selectAgent(event.target.value)}
+              >
+                <option value="">Select agent</option>
+                {agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
+              </select>
+            </label>
             <form className="inline-form" onSubmit={createAgent}>
               <input aria-label="Agent name" value={agentName} onChange={(event) => setAgentName(event.target.value)} />
               <button>Create</button>
@@ -2161,6 +2229,80 @@ export function App() {
               <Badge tone={item.ready ? "good" : "warn"}>{item.ready ? "ready" : "needs setup"}</Badge>
             </article>
           ))}
+        </section>
+
+        <section className="agent-management-grid">
+          <article className="panel stack agent-ops-panel">
+            <div className="row-head">
+              <div>
+                <p className="eyebrow">Operations</p>
+                <h3>{selectedAgent?.name ?? "No agent selected"}</h3>
+              </div>
+              <Badge tone={selectedAgent?.active ? "good" : "warn"}>{selectedAgent?.active ? "active" : "inactive"}</Badge>
+            </div>
+            <div className="metric-grid compact">
+              <Metric label="Total runs" value={summary?.total_runs ?? 0} />
+              <Metric label="Finalized" value={summary?.completed_runs ?? 0} />
+              <Metric label="Human review" value={`${reviewRate}%`} />
+              <Metric label="Failed" value={`${failureRate}%`} />
+              <Metric label="Tokens" value={summary?.total_tokens ?? 0} />
+              <Metric label="Cost" value={formatCost(summary?.total_estimated_cost)} />
+              <Metric label="Avg AI latency" value={formatLatency(summary?.average_ai_latency_ms)} />
+              <Metric label="Last run" value={formatDate(summary?.last_run_at ?? null)} />
+            </div>
+          </article>
+
+          <article className="panel stack recent-runs-panel">
+            <div className="row-head">
+              <div>
+                <p className="eyebrow">Recent runs</p>
+                <h3>Trace entry points</h3>
+              </div>
+              <Badge>{recentRuns.length}</Badge>
+            </div>
+            {recentRuns.length ? (
+              <div className="recent-run-list">
+                {recentRuns.map((run) => (
+                  <button
+                    type="button"
+                    className="recent-run-row"
+                    key={run.id}
+                    onClick={() => { setTraceRunId(run.id); void loadTrace(run.id); setActiveTab("trace"); }}
+                  >
+                    <span>
+                      <strong>{run.route_decision ?? run.status}</strong>
+                      <small>{run.input_message}</small>
+                    </span>
+                    <span className="recent-run-meta">
+                      <Badge tone={toneForStatus(run.status)}>{run.status}</Badge>
+                      <small>{formatDate(run.created_at)}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="No run history" detail="Run this agent to create traceable graph executions." />
+            )}
+          </article>
+
+          <article className="panel stack graph-harness-panel">
+            <div className="row-head">
+              <div>
+                <p className="eyebrow">Harness</p>
+                <h3>LangGraph path</h3>
+              </div>
+              <Badge>7 nodes</Badge>
+            </div>
+            <ol className="graph-node-list">
+              {graphNodes.map((node) => <li key={node}>{formatStepName(node)}</li>)}
+            </ol>
+            <div className="agent-harness-meta">
+              <Badge>LangChain prompts</Badge>
+              <Badge>retrieval tool</Badge>
+              <Badge>guardrails</Badge>
+              <Badge>AI run ledger</Badge>
+            </div>
+          </article>
         </section>
 
         <section className="agent-workbench">
@@ -2240,6 +2382,12 @@ export function App() {
             <label>Retrieval min score<input type="number" min="0" max="1" step="0.05" value={agentRetrievalMinScore} onChange={(event) => setAgentRetrievalMinScore(Number(event.target.value))} /></label>
             <button className="primary" disabled={loading || !selectedAgentId}>Save controls</button>
           </form>
+          <div className="runtime-settings-readout">
+            <Badge>threshold {String(selectedAgentRecord.confidence_threshold ?? 0.5)}</Badge>
+            <Badge>top K {String(selectedAgentRecord.retrieval_top_k ?? 4)}</Badge>
+            <Badge>min score {String(selectedAgentRecord.retrieval_min_score ?? 0.2)}</Badge>
+            <Badge>budget {selectedAgent?.token_budget ?? agentTokenBudget}</Badge>
+          </div>
         </section>
       </div>
     );

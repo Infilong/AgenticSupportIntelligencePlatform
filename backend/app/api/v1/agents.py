@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.agent import (
     AgentCreateRequest,
+    AgentOperationalSummaryResponse,
     AgentResponse,
     AgentRunRequest,
     AgentUpdateRequest,
@@ -65,6 +66,35 @@ def create_agent(
 def list_agents(workspace: WorkspaceMemberAccess, db: DbSession) -> list[AgentResponse]:
     agents = AgentService(db).list_agents(workspace_id=workspace.id)
     return [AgentResponse.model_validate(agent) for agent in agents]
+
+
+@router.get("/agents/{agent_id}/summary", response_model=AgentOperationalSummaryResponse)
+def get_agent_summary(
+    agent_id: AgentId,
+    workspace: WorkspaceMemberAccess,
+    db: DbSession,
+) -> AgentOperationalSummaryResponse:
+    try:
+        summary = AgentService(db).get_operational_summary(
+            workspace_id=workspace.id, agent_id=agent_id
+        )
+    except AgentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
+    return AgentOperationalSummaryResponse(
+        agent=AgentResponse.model_validate(summary["agent"]),
+        recent_runs=[GraphRunResponse.model_validate(run) for run in summary["recent_runs"]],
+        total_runs=summary["total_runs"],
+        completed_runs=summary["completed_runs"],
+        human_review_runs=summary["human_review_runs"],
+        failed_runs=summary["failed_runs"],
+        total_tokens=summary["total_tokens"],
+        total_estimated_cost=summary["total_estimated_cost"],
+        average_ai_latency_ms=summary["average_ai_latency_ms"],
+        last_run_at=summary["last_run_at"],
+    )
 
 
 @router.patch("/agents/{agent_id}", response_model=AgentResponse)

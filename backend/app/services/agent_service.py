@@ -4,10 +4,11 @@ import json
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
+from app.models.ai import AIRun
 from app.models.user import User
 from app.services.guardrails import GuardrailService, has_blocking_guardrail
 from app.services.human_review_service import HumanReviewService
@@ -153,6 +154,79 @@ class AgentService:
             raise GraphRunNotFoundError("Graph run was not found.")
         run.steps.sort(key=lambda step: step.created_at)
         return run
+
+    def get_operational_summary(self, *, workspace_id: UUID, agent_id: UUID) -> dict[str, Any]:
+        agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
+        if agent is None:
+            raise AgentNotFoundError("Agent was not found.")
+
+        run_filter = (
+            GraphRun.workspace_id == workspace_id,
+            GraphRun.agent_config_id == agent_id,
+        )
+        run_ids = select(GraphRun.id).where(*run_filter)
+        recent_runs = list(
+            self.db.scalars(
+                select(GraphRun)
+                .where(*run_filter)
+                .order_by(GraphRun.created_at.desc())
+                .limit(8)
+            ).all()
+        )
+
+        def scalar_int(statement) -> int:
+            return int(self.db.scalar(statement) or 0)
+
+        def scalar_float(statement) -> float:
+            return float(self.db.scalar(statement) or 0.0)
+
+        total_runs = scalar_int(select(func.count(GraphRun.id)).where(*run_filter))
+        completed_runs = scalar_int(
+            select(func.count(GraphRun.id)).where(
+                *run_filter, GraphRun.status == GraphRunStatus.completed
+            )
+        )
+        human_review_runs = scalar_int(
+            select(func.count(GraphRun.id)).where(
+                *run_filter, GraphRun.status == GraphRunStatus.needs_human_review
+            )
+        )
+        failed_runs = scalar_int(
+            select(func.count(GraphRun.id)).where(
+                *run_filter, GraphRun.status == GraphRunStatus.failed
+            )
+        )
+        total_tokens = scalar_int(
+            select(func.coalesce(func.sum(AIRun.total_tokens), 0)).where(
+                AIRun.workspace_id == workspace_id, AIRun.graph_run_id.in_(run_ids)
+            )
+        )
+        total_estimated_cost = scalar_float(
+            select(func.coalesce(func.sum(AIRun.estimated_cost), 0.0)).where(
+                AIRun.workspace_id == workspace_id, AIRun.graph_run_id.in_(run_ids)
+            )
+        )
+        average_latency = self.db.scalar(
+            select(func.avg(AIRun.latency_ms)).where(
+                AIRun.workspace_id == workspace_id, AIRun.graph_run_id.in_(run_ids)
+            )
+        )
+        last_run_at = self.db.scalar(select(func.max(GraphRun.created_at)).where(*run_filter))
+
+        return {
+            "agent": agent,
+            "recent_runs": recent_runs,
+            "total_runs": total_runs,
+            "completed_runs": completed_runs,
+            "human_review_runs": human_review_runs,
+            "failed_runs": failed_runs,
+            "total_tokens": total_tokens,
+            "total_estimated_cost": total_estimated_cost,
+            "average_ai_latency_ms": (
+                float(average_latency) if average_latency is not None else None
+            ),
+            "last_run_at": last_run_at,
+        }
 
 
 def _agent_settings(agent: AgentConfig) -> dict[str, Any]:

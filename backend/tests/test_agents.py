@@ -528,6 +528,78 @@ def test_agent_confidence_threshold_setting_changes_routing_and_trace(
     assert "confidence_threshold" in reviews[0].reason
 
 
+def test_agent_operational_summary_aggregates_runs_tokens_and_review_routes(
+    client: TestClient,
+) -> None:
+    register(client, "agent-summary@example.com")
+    token = login(client, "agent-summary@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"], "en")
+    agent = create_agent(client, token, workspace["id"])
+
+    first_run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+    assert first_run.status_code == 201
+    assert first_run.json()["status"] == "completed"
+
+    updated = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}",
+        headers=auth_headers(token),
+        json={"confidence_threshold": 0.9, "retrieval_top_k": 2, "retrieval_min_score": 0.1},
+    )
+    assert updated.status_code == 200
+    second_run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+    assert second_run.status_code == 201
+    assert second_run.json()["status"] == "needs_human_review"
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/summary",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agent"]["id"] == agent["id"]
+    assert body["total_runs"] == 2
+    assert body["completed_runs"] == 1
+    assert body["human_review_runs"] == 1
+    assert body["failed_runs"] == 0
+    assert body["total_tokens"] > 0
+    assert body["total_estimated_cost"] > 0
+    assert body["average_ai_latency_ms"] >= 0
+    assert body["last_run_at"] is not None
+    assert [run["id"] for run in body["recent_runs"]] == [
+        second_run.json()["id"],
+        first_run.json()["id"],
+    ]
+
+
+def test_agent_operational_summary_enforces_workspace_isolation(client: TestClient) -> None:
+    register(client, "agent-summary-owner@example.com")
+    owner_token = login(client, "agent-summary-owner@example.com")
+    owner_workspace = create_workspace(client, owner_token, "Owner Workspace")
+    agent = create_agent(client, owner_token, owner_workspace["id"])
+
+    register(client, "agent-summary-other@example.com")
+    other_token = login(client, "agent-summary-other@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Workspace")
+
+    forbidden = client.get(
+        f"/api/v1/workspaces/{other_workspace['id']}/agents/{agent['id']}/summary",
+        headers=auth_headers(other_token),
+    )
+
+    assert forbidden.status_code == 404
+    assert forbidden.json()["detail"]["code"] == "agent_not_found"
+
+
 def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:
     register(client, "owner@example.com")
     owner_token = login(client, "owner@example.com")
