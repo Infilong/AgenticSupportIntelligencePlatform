@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID
 
@@ -100,6 +102,44 @@ class RuntimeComponentResponse(BaseModel):
     name: str
     framework: str
     role: str
+
+
+class WorkflowEdgeResponse(BaseModel):
+    source: str
+    target: str
+    condition: str | None = None
+    label: str
+
+
+class WorkflowNodeFailureResponse(BaseModel):
+    graph_run_id: UUID
+    graph_step_id: UUID
+    error_message: str | None
+    latency_ms: int
+    created_at: datetime
+
+
+class WorkflowNodeResponse(BaseModel):
+    name: str
+    order: int
+    role: str
+    runtime_framework: str
+    uses_langchain: bool
+    expected_state_keys: list[str]
+    run_count: int
+    failure_count: int
+    average_latency_ms: float | None
+    total_tokens: int
+    estimated_cost: float
+    last_executed_at: datetime | None
+    recent_failures: list[WorkflowNodeFailureResponse]
+
+
+class AgentWorkflowSummaryResponse(BaseModel):
+    agent: AgentResponse
+    runtime: GraphRuntimeResponse
+    nodes: list[WorkflowNodeResponse]
+    edges: list[WorkflowEdgeResponse]
 
 
 class GraphRuntimeResponse(BaseModel):

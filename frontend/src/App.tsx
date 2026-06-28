@@ -162,6 +162,44 @@ type RuntimeComponent = {
   role: string;
 };
 
+type WorkflowEdge = {
+  source: string;
+  target: string;
+  condition: string | null;
+  label: string;
+};
+
+type WorkflowNodeFailure = {
+  graph_run_id: string;
+  graph_step_id: string;
+  error_message: string | null;
+  latency_ms: number;
+  created_at: string;
+};
+
+type WorkflowNode = {
+  name: string;
+  order: number;
+  role: string;
+  runtime_framework: string;
+  uses_langchain: boolean;
+  expected_state_keys: string[];
+  run_count: number;
+  failure_count: number;
+  average_latency_ms: number | null;
+  total_tokens: number;
+  estimated_cost: number;
+  last_executed_at: string | null;
+  recent_failures: WorkflowNodeFailure[];
+};
+
+type AgentWorkflowSummary = {
+  agent: Agent;
+  runtime: GraphRuntime;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+};
+
 type GraphRuntime = {
   orchestrator: string;
   state_schema: string;
@@ -775,6 +813,7 @@ export function App() {
   const [agentMessage, setAgentMessage] = useState("Can I get a refund within 30 days?");
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [agentSummary, setAgentSummary] = useState<AgentOperationalSummary | null>(null);
+  const [agentWorkflowSummary, setAgentWorkflowSummary] = useState<AgentWorkflowSummary | null>(null);
   const [latestRun, setLatestRun] = useState<GraphRun | null>(null);
   const [trace, setTrace] = useState<GraphTrace | null>(null);
   const [traceRunId, setTraceRunId] = useState("");
@@ -1358,9 +1397,10 @@ export function App() {
     setSelectedAgentId(nextAgent?.id ?? "");
     if (nextAgent) {
       applyAgentControls(nextAgent);
-      await loadAgentSummary(nextAgent.id);
+      await Promise.all([loadAgentSummary(nextAgent.id), loadAgentWorkflow(nextAgent.id)]);
     } else {
       setAgentSummary(null);
+      setAgentWorkflowSummary(null);
     }
   }
 
@@ -1376,14 +1416,27 @@ export function App() {
     setAgentSummary(data);
   }
 
+  async function loadAgentWorkflow(agentId = selectedAgentId) {
+    if (!selectedWorkspaceId || !agentId) {
+      setAgentWorkflowSummary(null);
+      return;
+    }
+    const data = await apiRequest<AgentWorkflowSummary>(
+      workspacePath(`/agents/${agentId}/workflow`),
+      { token },
+    );
+    setAgentWorkflowSummary(data);
+  }
+
   async function selectAgent(agentId: string) {
     const nextAgent = agents.find((agent) => agent.id === agentId);
     setSelectedAgentId(agentId);
     if (nextAgent) {
       applyAgentControls(nextAgent);
-      await loadAgentSummary(nextAgent.id);
+      await Promise.all([loadAgentSummary(nextAgent.id), loadAgentWorkflow(nextAgent.id)]);
     } else {
       setAgentSummary(null);
+      setAgentWorkflowSummary(null);
     }
   }
 
@@ -1402,7 +1455,7 @@ export function App() {
       await loadAgents();
       setSelectedAgentId(agent.id);
       applyAgentControls(agent);
-      await loadAgentSummary(agent.id);
+      await Promise.all([loadAgentSummary(agent.id), loadAgentWorkflow(agent.id)]);
     });
   }
 
@@ -1424,6 +1477,7 @@ export function App() {
       await apiRequest(workspacePath(`/agents/${selectedAgentId}`), { method: "DELETE", token });
       setSelectedAgentId("");
       setAgentSummary(null);
+      setAgentWorkflowSummary(null);
       await loadAgents();
       await loadAuditLogs();
     });
@@ -1451,7 +1505,7 @@ export function App() {
       await loadAgents();
       setSelectedAgentId(agent.id);
       applyAgentControls(agent);
-      await loadAgentSummary(agent.id);
+      await Promise.all([loadAgentSummary(agent.id), loadAgentWorkflow(agent.id)]);
     });
   }
 
@@ -1472,7 +1526,7 @@ export function App() {
       await loadTrace(run.id);
       await loadReviews();
       await loadCosts();
-      await loadAgentSummary(selectedAgentId);
+      await Promise.all([loadAgentSummary(selectedAgentId), loadAgentWorkflow(selectedAgentId)]);
       setActiveTab("trace");
     });
   }
@@ -2567,6 +2621,11 @@ export function App() {
       : fallbackModelConfig
         ? `workspace fallback: ${fallbackModelConfig.provider} / ${fallbackModelConfig.model}`
         : "mock fallback";
+    const workflow = agentWorkflowSummary?.agent.id === selectedAgentId ? agentWorkflowSummary : null;
+    const workflowNodes = workflow?.nodes ?? [];
+    const workflowEdges = workflow?.edges ?? [];
+    const workflowFailures = workflowNodes.reduce((sum, node) => sum + node.failure_count, 0);
+    const workflowRuns = workflowNodes.reduce((sum, node) => sum + node.run_count, 0);
     const recentRuns = summary?.recent_runs ?? [];
     const failureRate = summary && summary.total_runs > 0
       ? Math.round((summary.failed_runs / summary.total_runs) * 100)
@@ -2601,16 +2660,6 @@ export function App() {
         ready: Boolean(summary && summary.total_runs > 0),
       },
     ];
-    const graphNodes = [
-      "detect_language",
-      "classify_intent",
-      "retrieve_evidence",
-      "draft_response",
-      "score_confidence",
-      "route_review_or_finalize",
-      "finalize_response",
-    ];
-
     return (
       <div className="agent-console">
         <section className="panel agent-hero">
@@ -2746,18 +2795,63 @@ export function App() {
             <div className="row-head">
               <div>
                 <p className="eyebrow">Harness</p>
-                <h3>LangGraph path</h3>
+                <h3>{workflow?.runtime.orchestrator ?? "LangGraph path"}</h3>
               </div>
-              <Badge>7 nodes</Badge>
+              <Badge tone={workflowFailures ? "warn" : "good"}>{workflowNodes.length || 0} nodes</Badge>
             </div>
-            <ol className="graph-node-list">
-              {graphNodes.map((node) => <li key={node}>{formatStepName(node)}</li>)}
-            </ol>
+            <div className="workflow-graph-summary">
+              <Metric label="Node executions" value={workflowRuns} />
+              <Metric label="Node failures" value={workflowFailures} />
+              <Metric label="Edges" value={workflowEdges.length} />
+              <Metric label="Persistence" value={workflow?.runtime.persistence.length ?? 0} />
+            </div>
+            {workflowNodes.length ? (
+              <div className="workflow-node-board">
+                {workflowNodes.map((node) => (
+                  <article className={node.failure_count ? "workflow-node-card failed" : "workflow-node-card"} key={node.name}>
+                    <div className="row-head">
+                      <span className="node-order">{node.order}</span>
+                      <Badge tone={node.failure_count ? "warn" : node.run_count ? "good" : "neutral"}>
+                        {node.failure_count ? `${node.failure_count} failed` : node.run_count ? "observed" : "not run"}
+                      </Badge>
+                    </div>
+                    <h4>{formatStepName(node.name)}</h4>
+                    <p>{node.role}</p>
+                    <div className="node-stat-grid">
+                      <span><strong>{node.run_count}</strong><small>runs</small></span>
+                      <span><strong>{formatLatency(node.average_latency_ms)}</strong><small>avg</small></span>
+                      <span><strong>{formatCost(node.estimated_cost)}</strong><small>cost</small></span>
+                    </div>
+                    <div className="tool-chip-row">
+                      {node.uses_langchain && <Badge>LangChain</Badge>}
+                      {node.expected_state_keys.slice(0, 3).map((key) => <Badge key={key}>{key}</Badge>)}
+                    </div>
+                    {node.recent_failures[0] && (
+                      <button
+                        type="button"
+                        className="node-failure-link"
+                        onClick={() => { setTraceRunId(node.recent_failures[0].graph_run_id); void loadTrace(node.recent_failures[0].graph_run_id); setActiveTab("trace"); }}
+                      >
+                        Latest failure: {node.recent_failures[0].error_message ?? "unknown error"}
+                      </button>
+                    )}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="No workflow summary" detail="Select an agent to load the backend-defined LangGraph harness." />
+            )}
+            <div className="workflow-edge-list">
+              {workflowEdges.map((edge) => (
+                <Badge key={`${edge.source}:${edge.target}:${edge.label}`}>
+                  {`${formatStepName(edge.source)} -> ${formatStepName(edge.target)}${edge.condition ? ` · ${edge.label}` : ""}`}
+                </Badge>
+              ))}
+            </div>
             <div className="agent-harness-meta">
-              <Badge>LangChain prompts</Badge>
-              <Badge>retrieval tool</Badge>
-              <Badge>guardrails</Badge>
-              <Badge>AI run ledger</Badge>
+              {(workflow?.runtime.langchain_components ?? []).map((component) => (
+                <Badge key={component.name}>{component.name}</Badge>
+              ))}
             </div>
           </article>
         </section>

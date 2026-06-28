@@ -4,7 +4,14 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.agent import Checkpoint, GraphStep, ToolCall
+from app.models.agent import (
+    Checkpoint,
+    GraphRun,
+    GraphRunStatus,
+    GraphStep,
+    GraphStepStatus,
+    ToolCall,
+)
 from app.models.ai import AIRun, PromptTemplate
 from app.models.review import HumanReview
 from app.models.user import User
@@ -637,6 +644,119 @@ def test_agent_operational_summary_enforces_workspace_isolation(client: TestClie
 
     forbidden = client.get(
         f"/api/v1/workspaces/{other_workspace['id']}/agents/{agent['id']}/summary",
+        headers=auth_headers(other_token),
+    )
+
+    assert forbidden.status_code == 404
+    assert forbidden.json()["detail"]["code"] == "agent_not_found"
+
+
+def test_agent_workflow_summary_returns_runtime_graph_and_node_stats(
+    client: TestClient,
+) -> None:
+    register(client, "workflow-owner@example.com")
+    token = login(client, "workflow-owner@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"], "en")
+    agent = create_agent(client, token, workspace["id"])
+
+    run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+    assert run.status_code == 201
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/workflow",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["agent"]["id"] == agent["id"]
+    assert body["runtime"]["orchestrator"] == "LangGraph StateGraph"
+    assert body["runtime"]["node_count"] == 7
+    assert len(body["nodes"]) == 7
+    assert len(body["edges"]) == 9
+    node_names = [node["name"] for node in body["nodes"]]
+    assert node_names == [
+        "detect_language",
+        "classify_intent",
+        "retrieve_evidence",
+        "draft_response",
+        "score_confidence",
+        "route_review_or_finalize",
+        "finalize_response",
+    ]
+    classification = next(node for node in body["nodes"] if node["name"] == "classify_intent")
+    retrieval = next(node for node in body["nodes"] if node["name"] == "retrieve_evidence")
+    assert classification["uses_langchain"] is True
+    assert classification["run_count"] == 1
+    assert classification["total_tokens"] > 0
+    assert retrieval["uses_langchain"] is True
+    assert retrieval["run_count"] == 1
+    assert any(edge["condition"] == "route_decision == human_review" for edge in body["edges"])
+
+
+def test_agent_workflow_summary_exposes_recent_node_failures(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "workflow-failure@example.com")
+    token = login(client, "workflow-failure@example.com")
+    workspace = create_workspace(client, token)
+    agent = create_agent(client, token, workspace["id"])
+    user = db_session.scalar(select(User).where(User.email == "workflow-failure@example.com"))
+    assert user is not None
+    graph_run = GraphRun(
+        workspace_id=UUID(workspace["id"]),
+        agent_config_id=UUID(agent["id"]),
+        user_id=user.id,
+        input_message="force workflow failure",
+        status=GraphRunStatus.failed,
+    )
+    db_session.add(graph_run)
+    db_session.commit()
+    db_session.refresh(graph_run)
+    failed_step = GraphStep(
+        workspace_id=UUID(workspace["id"]),
+        graph_run_id=graph_run.id,
+        step_name="draft_response",
+        input_json="{}",
+        output_json="{}",
+        status=GraphStepStatus.failed,
+        latency_ms=42,
+        error_message="model_context_exceeded",
+        retry_count=0,
+    )
+    db_session.add(failed_step)
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/workflow",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    draft = next(node for node in response.json()["nodes"] if node["name"] == "draft_response")
+    assert draft["run_count"] == 1
+    assert draft["failure_count"] == 1
+    assert draft["recent_failures"][0]["error_message"] == "model_context_exceeded"
+    assert draft["recent_failures"][0]["graph_run_id"] == str(graph_run.id)
+
+
+def test_agent_workflow_summary_enforces_workspace_isolation(client: TestClient) -> None:
+    register(client, "workflow-owner-isolation@example.com")
+    owner_token = login(client, "workflow-owner-isolation@example.com")
+    owner_workspace = create_workspace(client, owner_token, "Owner Workflow Workspace")
+    agent = create_agent(client, owner_token, owner_workspace["id"])
+
+    register(client, "workflow-other-isolation@example.com")
+    other_token = login(client, "workflow-other-isolation@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Workflow Workspace")
+
+    forbidden = client.get(
+        f"/api/v1/workspaces/{other_workspace['id']}/agents/{agent['id']}/workflow",
         headers=auth_headers(other_token),
     )
 

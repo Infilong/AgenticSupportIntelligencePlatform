@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
@@ -286,6 +286,76 @@ class AgentService:
             "last_run_at": last_run_at,
         }
 
+    def get_workflow_summary(self, *, workspace_id: UUID, agent_id: UUID) -> dict[str, Any]:
+        agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
+        if agent is None:
+            raise AgentNotFoundError("Agent was not found.")
+
+        stats_rows = self.db.execute(
+            select(
+                GraphStep.step_name,
+                func.count(GraphStep.id),
+                func.coalesce(
+                    func.sum(case((GraphStep.status == "failed", 1), else_=0)), 0
+                ),
+                func.avg(GraphStep.latency_ms),
+                func.coalesce(func.sum(GraphStep.token_count), 0),
+                func.coalesce(func.sum(GraphStep.estimated_cost), 0.0),
+                func.max(GraphStep.created_at),
+            )
+            .join(GraphRun, GraphRun.id == GraphStep.graph_run_id)
+            .where(
+                GraphStep.workspace_id == workspace_id,
+                GraphRun.workspace_id == workspace_id,
+                GraphRun.agent_config_id == agent_id,
+            )
+            .group_by(GraphStep.step_name)
+        ).all()
+        stats_by_node = {row[0]: row for row in stats_rows}
+
+        failure_rows = self.db.execute(
+            select(GraphStep, GraphRun.id)
+            .join(GraphRun, GraphRun.id == GraphStep.graph_run_id)
+            .where(
+                GraphStep.workspace_id == workspace_id,
+                GraphRun.workspace_id == workspace_id,
+                GraphRun.agent_config_id == agent_id,
+                GraphStep.status == "failed",
+            )
+            .order_by(GraphStep.created_at.desc())
+            .limit(20)
+        ).all()
+        failures_by_node: dict[str, list[dict[str, Any]]] = {}
+        for step, graph_run_id in failure_rows:
+            failures_by_node.setdefault(step.step_name, []).append(
+                {
+                    "graph_run_id": graph_run_id,
+                    "graph_step_id": step.id,
+                    "error_message": step.error_message,
+                    "latency_ms": step.latency_ms,
+                    "created_at": step.created_at,
+                }
+            )
+
+        nodes = []
+        for index, node in enumerate(_workflow_nodes(), start=1):
+            row = stats_by_node.get(node["name"])
+            nodes.append(
+                {
+                    **node,
+                    "order": index,
+                    "run_count": int(row[1]) if row else 0,
+                    "failure_count": int(row[2]) if row else 0,
+                    "average_latency_ms": float(row[3]) if row and row[3] is not None else None,
+                    "total_tokens": int(row[4]) if row else 0,
+                    "estimated_cost": float(row[5]) if row else 0.0,
+                    "last_executed_at": row[6] if row else None,
+                    "recent_failures": failures_by_node.get(node["name"], []),
+                }
+            )
+
+        return {"agent": agent, "nodes": nodes, "edges": _workflow_edges()}
+
     def _get_model_config(
         self, *, workspace_id: UUID, model_config_id: UUID | None
     ) -> ModelConfig | None:
@@ -302,6 +372,120 @@ class AgentService:
         if model_config is None:
             raise AgentModelConfigNotFoundError("Model config was not found.")
         return model_config
+
+
+def _workflow_nodes() -> list[dict[str, Any]]:
+    return [
+        {
+            "name": "detect_language",
+            "role": "deterministic language detection",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": False,
+            "expected_state_keys": ["input_message", "detected_language"],
+        },
+        {
+            "name": "classify_intent",
+            "role": "LangChain classification chain with cheap model config",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": True,
+            "expected_state_keys": [
+                "intent",
+                "sentiment",
+                "product_area",
+                "safety_risk",
+                "classification_confidence",
+            ],
+        },
+        {
+            "name": "retrieve_evidence",
+            "role": "LangChain retrieval tool plus persisted retrieval trace",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": True,
+            "expected_state_keys": ["retrieved_chunks", "retrieval_trace_id", "citations"],
+        },
+        {
+            "name": "draft_response",
+            "role": "LangChain grounded drafting chain with cited documents",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": True,
+            "expected_state_keys": ["draft_answer", "token_budget_action"],
+        },
+        {
+            "name": "score_confidence",
+            "role": "deterministic confidence scoring",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": False,
+            "expected_state_keys": ["confidence_score"],
+        },
+        {
+            "name": "route_review_or_finalize",
+            "role": "conditional LangGraph routing gate",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": False,
+            "expected_state_keys": ["route_decision", "route_reasons", "confidence_threshold"],
+        },
+        {
+            "name": "finalize_response",
+            "role": "final response commit",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": False,
+            "expected_state_keys": ["final_answer"],
+        },
+    ]
+
+
+def _workflow_edges() -> list[dict[str, str | None]]:
+    return [
+        {
+            "source": "START",
+            "target": "detect_language",
+            "condition": None,
+            "label": "start",
+        },
+        {
+            "source": "detect_language",
+            "target": "classify_intent",
+            "condition": None,
+            "label": "next",
+        },
+        {
+            "source": "classify_intent",
+            "target": "retrieve_evidence",
+            "condition": None,
+            "label": "next",
+        },
+        {
+            "source": "retrieve_evidence",
+            "target": "draft_response",
+            "condition": None,
+            "label": "next",
+        },
+        {
+            "source": "draft_response",
+            "target": "score_confidence",
+            "condition": None,
+            "label": "next",
+        },
+        {
+            "source": "score_confidence",
+            "target": "route_review_or_finalize",
+            "condition": None,
+            "label": "next",
+        },
+        {
+            "source": "route_review_or_finalize",
+            "target": "finalize_response",
+            "condition": "route_decision == finalize",
+            "label": "finalize",
+        },
+        {
+            "source": "route_review_or_finalize",
+            "target": "END",
+            "condition": "route_decision == human_review",
+            "label": "human review",
+        },
+        {"source": "finalize_response", "target": "END", "condition": None, "label": "end"},
+    ]
 
 
 def _agent_settings(agent: AgentConfig) -> dict[str, Any]:

@@ -1446,6 +1446,99 @@ small {
   font-weight: 720;
 }
 
+.workflow-graph-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workflow-node-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.workflow-node-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  padding: 12px;
+}
+
+.workflow-node-card.failed {
+  border-color: #8a6a00;
+  background: #fffdf4;
+}
+
+.workflow-node-card h4 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.workflow-node-card p {
+  min-height: 36px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.node-order {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 860;
+}
+
+.node-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.node-stat-grid span {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--border);
+  padding: 7px;
+}
+
+.node-stat-grid strong {
+  color: var(--text);
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.node-stat-grid small {
+  color: var(--text-subtle);
+  font-size: 0.68rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.node-failure-link {
+  justify-content: start;
+  width: 100%;
+  border-color: #8a6a00;
+  color: #5f4700;
+  text-align: left;
+}
+
+.workflow-edge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .agent-harness-meta,
 .runtime-settings-readout,
 .agent-lifecycle-actions {

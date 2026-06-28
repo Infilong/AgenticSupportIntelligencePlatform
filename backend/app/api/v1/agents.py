@@ -20,6 +20,7 @@ from app.schemas.agent import (
     AgentResponse,
     AgentRunRequest,
     AgentUpdateRequest,
+    AgentWorkflowSummaryResponse,
     AIRunTraceResponse,
     CheckpointTraceResponse,
     GraphRunResponse,
@@ -29,6 +30,9 @@ from app.schemas.agent import (
     GuardrailTraceResponse,
     RuntimeComponentResponse,
     ToolCallResponse,
+    WorkflowEdgeResponse,
+    WorkflowNodeFailureResponse,
+    WorkflowNodeResponse,
 )
 from app.services.agent_service import (
     AgentModelConfigNotFoundError,
@@ -125,6 +129,49 @@ def get_agent_summary(
         total_estimated_cost=summary["total_estimated_cost"],
         average_ai_latency_ms=summary["average_ai_latency_ms"],
         last_run_at=summary["last_run_at"],
+    )
+
+
+@router.get("/agents/{agent_id}/workflow", response_model=AgentWorkflowSummaryResponse)
+def get_agent_workflow(
+    agent_id: AgentId,
+    workspace: WorkspaceMemberAccess,
+    db: DbSession,
+) -> AgentWorkflowSummaryResponse:
+    try:
+        workflow = AgentService(db).get_workflow_summary(
+            workspace_id=workspace.id, agent_id=agent_id
+        )
+    except AgentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "agent_not_found", "message": "Agent was not found."},
+        ) from exc
+    return AgentWorkflowSummaryResponse(
+        agent=AgentResponse.model_validate(workflow["agent"]),
+        runtime=_static_graph_runtime_response(),
+        nodes=[
+            WorkflowNodeResponse(
+                name=node["name"],
+                order=node["order"],
+                role=node["role"],
+                runtime_framework=node["runtime_framework"],
+                uses_langchain=node["uses_langchain"],
+                expected_state_keys=node["expected_state_keys"],
+                run_count=node["run_count"],
+                failure_count=node["failure_count"],
+                average_latency_ms=node["average_latency_ms"],
+                total_tokens=node["total_tokens"],
+                estimated_cost=node["estimated_cost"],
+                last_executed_at=node["last_executed_at"],
+                recent_failures=[
+                    WorkflowNodeFailureResponse(**failure)
+                    for failure in node["recent_failures"]
+                ],
+            )
+            for node in workflow["nodes"]
+        ],
+        edges=[WorkflowEdgeResponse(**edge) for edge in workflow["edges"]],
     )
 
 
@@ -385,12 +432,17 @@ def _step_runtime_metadata(
 
 
 def _graph_runtime_response(steps) -> GraphRuntimeResponse:
+    runtime = _static_graph_runtime_response()
+    return runtime.model_copy(update={"node_count": len(steps)})
+
+
+def _static_graph_runtime_response() -> GraphRuntimeResponse:
     return GraphRuntimeResponse(
         orchestrator="LangGraph StateGraph",
         state_schema="SupportAgentState TypedDict",
         graph_builder="app.services.support_agent_graph.SupportAgentGraphRunner",
         execution_mode="deterministic graph with conditional human-review routing",
-        node_count=len(steps),
+        node_count=7,
         conditional_routes=[
             "route_review_or_finalize -> finalize_response",
             "route_review_or_finalize -> human_review",
