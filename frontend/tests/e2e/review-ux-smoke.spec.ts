@@ -353,5 +353,12 @@ test("reviewer dashboard hides restricted shortcuts", async ({ page }) => {
     await expect(overview.getByText(restrictedCard, { exact: true })).toHaveCount(0);
   }
 
+  await productNav.getByRole("button", { name: "Settings", exact: true }).click();
+  const settingsMap = page.locator(".settings-map-list");
+  await expect(settingsMap.getByText("Budgets and rate limits", { exact: true })).toBeVisible();
+  for (const restrictedSetting of ["Members and permissions", "Provider and model routing", "System health", "Tool defaults", "Guardrail policies", "Prompt versions"]) {
+    await expect(settingsMap.getByText(restrictedSetting, { exact: true })).toHaveCount(0);
+  }
+
   await api.dispose();
 });

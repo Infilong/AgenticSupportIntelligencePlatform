@@ -1278,6 +1278,25 @@ export function App() {
     setActiveTab(tabId);
   }
 
+  function TabShortcut({
+    tab,
+    children,
+    className,
+    disabled,
+  }: {
+    tab: Tab;
+    children: ReactNode;
+    className?: string;
+    disabled?: boolean;
+  }) {
+    if (!canOpenTab(tab)) return null;
+    return (
+      <button type="button" className={className} onClick={() => goToTab(tab)} disabled={disabled}>
+        {children}
+      </button>
+    );
+  }
+
   useEffect(() => {
     if (!selectedWorkspaceId || !workspaceMembership || availableTabIds.has(activeTab)) return;
     setActiveTab("overview");
@@ -3828,9 +3847,9 @@ export function App() {
                 <strong>{selectedAgent?.active ? "Active" : selectedAgent ? "Inactive" : "No agent"}</strong>
                 <small>{selectedAgent ? `Created ${formatDate(selectedAgent.created_at)} · ${shortId(selectedAgent.id)}` : "Create or select an agent to operate the workflow."}</small>
                 <div className="run-next-actions">
-                  <button type="button" onClick={() => goToTab("models")}>Models</button>
-                  <button type="button" onClick={() => goToTab("costs")}>Costs</button>
-                  <button type="button" onClick={() => goToTab("trace")} disabled={!recentRuns.length && !latestRun}>Traces</button>
+                  <TabShortcut tab="models">Models</TabShortcut>
+                  <TabShortcut tab="costs">Costs</TabShortcut>
+                  <TabShortcut tab="trace" disabled={!recentRuns.length && !latestRun}>Traces</TabShortcut>
                 </div>
               </div>
               <p className="permission-note">Developers can tune and run agents. Archiving requires agents:delete permission and preserves historical runs for audit.</p>
@@ -3865,7 +3884,7 @@ export function App() {
                 <strong>{summary?.evaluation_runs ? `${summary.failed_evaluation_results} failed of ${summary.evaluation_result_count} results` : "No linked evaluations"}</strong>
                 <small>{summary?.last_evaluation_at ? `Latest evaluation ${formatDate(summary.last_evaluation_at)}` : "Run a system-v1 evaluation for this agent to prove regression quality."}</small>
               </div>
-              <button type="button" onClick={() => goToTab("evaluations")}>Open evaluations</button>
+              <TabShortcut tab="evaluations">Open evaluations</TabShortcut>
             </div>
             <div className="agent-lifecycle-actions">
               {canDeleteAgent ? (
@@ -3905,8 +3924,8 @@ export function App() {
               <p className="muted">No agent-specific model is assigned. This agent uses active workspace purpose routing, then deterministic mock fallback when no workspace route exists.</p>
             )}
             <div className="run-next-actions">
-              <button type="button" onClick={() => goToTab("models")}>Open model settings</button>
-              <button type="button" onClick={() => goToTab("costs")}>Inspect model spend</button>
+              <TabShortcut tab="models">Open model settings</TabShortcut>
+              <TabShortcut tab="costs">Inspect model spend</TabShortcut>
             </div>
           </article>
 
@@ -4040,8 +4059,8 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button type="submit" className="primary" disabled={loading || !selectedAgentId}>Run agent</button>
-              <button type="button" onClick={() => goToTab("trace")} disabled={!traceRunId}>Open trace</button>
-              <button type="button" onClick={() => goToTab("reviews")}>Review queue</button>
+              <TabShortcut tab="trace" disabled={!traceRunId}>Open trace</TabShortcut>
+              <TabShortcut tab="reviews">Review queue</TabShortcut>
             </div>
           </form>
 
@@ -4062,7 +4081,7 @@ export function App() {
               <div className="run-next-actions">
                 <button type="button" onClick={() => { setTraceRunId(latestRun.id); void loadTrace(latestRun.id); goToTab("trace"); }}>Inspect trace</button>
                 {latestRun.route_decision === "human_review" && <button type="button" onClick={() => goToTab("reviews")}>Resolve review</button>}
-                <button type="button" onClick={() => goToTab("costs")}>Usage & costs</button>
+                <TabShortcut tab="costs">Usage & costs</TabShortcut>
               </div>
             )}
           </aside>
@@ -4591,7 +4610,7 @@ export function App() {
             <span>Trace status</span>
             <strong>{trace ? "Trace loaded" : traceEntries.length ? "Select a trace" : "No runs yet"}</strong>
             <p>{trace ? `${formatStepName(trace.run.route_decision ?? trace.run.status)} · ${trace.steps.length} graph nodes` : traceEntries.length ? "Start from a recent run instead of pasting an ID." : "Run an agent to create traceable execution records."}</p>
-            <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
+            <TabShortcut tab="agent">Run agent</TabShortcut>
           </div>
         </section>
 
@@ -5312,7 +5331,7 @@ export function App() {
             <div className="settings-note">Role presets are enforced by backend permissions. Legacy members keep operational build and review access for existing workspaces.</div>
             <div className="run-action-bar">
               <button type="submit" className="primary" disabled={!canManageWorkspace || !memberEmail.trim() || loading}>Add member</button>
-              <button type="button" onClick={() => goToTab("audit")}>Open audit trail</button>
+              <TabShortcut tab="audit">Open audit trail</TabShortcut>
             </div>
           </form>
 
@@ -5637,8 +5656,8 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button type="submit" className="primary" disabled={!canManagePrompts || loading}>Create version</button>
-              <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
-              <button type="button" onClick={() => goToTab("trace")}>Inspect trace</button>
+              <TabShortcut tab="agent">Run agent</TabShortcut>
+              <TabShortcut tab="trace">Inspect trace</TabShortcut>
             </div>
           </form>
 
@@ -5776,7 +5795,7 @@ export function App() {
             <div className="settings-note">Workspace identity changes are written through the backend and recorded as `workspace.updated` audit events.</div>
             <div className="run-action-bar">
               <button type="submit" className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading}>Save workspace</button>
-              <button type="button" onClick={() => goToTab("audit")}>Open audit trail</button>
+              <TabShortcut tab="audit">Open audit trail</TabShortcut>
             </div>
           </form>
 
@@ -5784,34 +5803,37 @@ export function App() {
             <h3>Settings map</h3>
             <p className="muted">Advanced controls live on dedicated pages so this does not become one giant settings form.</p>
             <div className="settings-map-list">
-              <button type="button" onClick={() => goToTab("members")}>
+              <TabShortcut tab="members">
                 <strong>Members and permissions</strong>
                 <span>{workspaceMembers.length} users · {workspaceRole}</span>
-              </button>
-              <button type="button" onClick={() => goToTab("models")}>
+              </TabShortcut>
+              <TabShortcut tab="models">
                 <strong>Provider and model routing</strong>
                 <span>{activeModelCount} active configs · {liveProviderCount} live routes</span>
-              </button>
-              <button type="button" onClick={() => goToTab("costs")}>
+              </TabShortcut>
+              <TabShortcut tab="costs">
                 <strong>Budgets and rate limits</strong>
                 <span>{costSummary ? `${formatPercent(costSummary.budget_policy.cost_budget_used_percent)} cost used · ${costSummary.budget_policy.rate_limit_requests_per_hour}/hour` : "load usage policy"}</span>
-              </button>
-              <button type="button" onClick={() => goToTab("system")}>
+              </TabShortcut>
+              <TabShortcut tab="system">
                 <strong>System health</strong>
                 <span>{systemHealth ? `${systemHealth.overall_status} · ${pendingHealthSignals} signals` : "load system health"}</span>
-              </button>
-              <button type="button" onClick={() => goToTab("tools")}>
+              </TabShortcut>
+              <TabShortcut tab="tools">
                 <strong>Tool defaults</strong>
                 <span>{tools.length} tools · {canConfigureTools ? "owner editable" : "read only"}</span>
-              </button>
-              <button type="button" onClick={() => goToTab("guardrails")}>
+              </TabShortcut>
+              <TabShortcut tab="guardrails">
                 <strong>Guardrail policies</strong>
                 <span>{guardrails.filter((item) => item.configurable).length} configurable · {canConfigureGuardrails ? "owner editable" : "read only"}</span>
-              </button>
-              <button type="button" onClick={() => goToTab("prompts")}>
+              </TabShortcut>
+              <TabShortcut tab="prompts">
                 <strong>Prompt versions</strong>
                 <span>{promptTemplates.length} versions · LangChain templates</span>
-              </button>
+              </TabShortcut>
+              {!availableTabs.some((tab) => tab.group === "Admin" || tab.id === "costs" || tab.id === "system") && (
+                <p className="permission-note">No advanced administration shortcuts are available for this role.</p>
+              )}
             </div>
           </aside>
         </section>
@@ -5918,26 +5940,26 @@ export function App() {
             <Badge>{systemHealth.overall_status}</Badge>
           </div>
           <div className="overview-admin-grid">
-            <button className="overview-admin-card" type="button" onClick={() => goToTab("models")}>
+            <TabShortcut className="overview-admin-card" tab="models">
               <span>Provider routes</span>
               <strong>Models</strong>
               <small>Configure active provider, model, context, and pricing.</small>
-            </button>
-            <button className="overview-admin-card" type="button" onClick={() => goToTab("tasks")}>
+            </TabShortcut>
+            <TabShortcut className="overview-admin-card" tab="tasks">
               <span>Failures and queues</span>
               <strong>My Tasks</strong>
               <small>Review backend-ranked operational work.</small>
-            </button>
-            <button className="overview-admin-card" type="button" onClick={() => goToTab("costs")}>
+            </TabShortcut>
+            <TabShortcut className="overview-admin-card" tab="costs">
               <span>Token spend</span>
               <strong>Usage & costs</strong>
               <small>Inspect ledger cost, latency, and cache behavior.</small>
-            </button>
-            <button className="overview-admin-card" type="button" onClick={() => goToTab("audit")}>
+            </TabShortcut>
+            <TabShortcut className="overview-admin-card" tab="audit">
               <span>Accountability</span>
               <strong>Audit</strong>
               <small>Inspect workspace changes and AI operations events.</small>
-            </button>
+            </TabShortcut>
           </div>
         </section>
       </div>
@@ -6043,8 +6065,8 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button type="submit" className="primary" disabled={!canManageModels || loading}>Create config</button>
-              <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
-              <button type="button" onClick={() => goToTab("costs")}>Inspect costs</button>
+              <TabShortcut tab="agent">Run agent</TabShortcut>
+              <TabShortcut tab="costs">Inspect costs</TabShortcut>
             </div>
           </form>
 
@@ -6386,7 +6408,7 @@ export function App() {
                   </div>
                   <div className="run-action-bar">
                     <button type="submit" className="primary" disabled={!canManageBudgetPolicy || loading}>Save policy</button>
-                    <button type="button" onClick={() => goToTab("models")}>Configure models</button>
+                    <TabShortcut tab="models">Configure models</TabShortcut>
                   </div>
                 </form>
 
