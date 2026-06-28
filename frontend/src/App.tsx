@@ -3961,7 +3961,7 @@ export function App() {
                     </span>
                     <span className="recent-run-meta">
                       <Badge tone={toneForReviewSeverity(severity)}>{severity}</Badge>
-                      <small>{parts.slice(0, 2).join(", ") || "review"}</small>
+                      <small>{friendlyReviewReasonSummary(parts)}</small>
                     </span>
                   </button>
                 );
@@ -4036,9 +4036,9 @@ export function App() {
                       <div className="case-section">
                         <span>3. Classification</span>
                         <div className="signal-grid review-signals">
-                          <div className="signal"><span>Intent</span><strong>{classification?.intent ?? "unknown"}</strong></div>
-                          <div className="signal"><span>Area</span><strong>{classification?.product_area ?? "unknown"}</strong></div>
-                          <div className="signal"><span>Risk</span><strong>{classification?.safety_risk ?? "unknown"}</strong></div>
+                          <div className="signal"><span>Intent</span><strong>{friendlySignalValue(classification?.intent)}</strong></div>
+                          <div className="signal"><span>Area</span><strong>{friendlySignalValue(classification?.product_area)}</strong></div>
+                          <div className="signal"><span>Risk</span><strong>{friendlySignalValue(classification?.safety_risk)}</strong></div>
                           <div className="signal"><span>Confidence</span><strong>{formatPercent(classification?.confidence)}</strong></div>
                         </div>
                         {classification?.rationale && <p>{classification.rationale}</p>}
@@ -4149,7 +4149,7 @@ export function App() {
               <div className="selected-review-summary">
                 <span>Selected case</span>
                 <strong>{friendlyReviewReason(selectedPendingReview.reason)}</strong>
-                <small>{selectedBlockers.join(", ") || "human_review_route"}</small>
+                <small>{friendlyReviewReasonSummary(selectedBlockers)}</small>
               </div>
             )}
             <div className="policy-list">
@@ -5527,6 +5527,20 @@ function friendlyGuardrailName(reason: string) {
     escalation_needed: "Escalation needed",
   };
   return labels[reason] ?? reason;
+}
+
+function friendlyReviewReasonSummary(parts: string[]) {
+  const labels = parts.slice(0, 2).map((part) => friendlyGuardrailName(part));
+  return labels.length ? labels.join(", ") : "Review route";
+}
+
+function friendlySignalValue(value: string | null | undefined) {
+  if (!value) return "unknown";
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
 
 function ActionGuide({
