@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import AgentConfig
@@ -13,6 +14,14 @@ from app.models.knowledge import KnowledgeDocument
 from app.models.user import User
 
 VALID_RESOURCE_TYPES = {"knowledge_document", "dataset", "evaluation_run", "agent_config"}
+
+
+@dataclass(frozen=True)
+class ResourceFolderCountSummary:
+    resource_type: str
+    total_count: int
+    unfiled_count: int
+    folder_counts: dict[UUID, int]
 
 
 class ResourceFolderError(ValueError):
@@ -46,6 +55,39 @@ class ResourceFolderService:
                 )
                 .order_by(ResourceFolder.name.asc(), ResourceFolder.created_at.asc())
             ).all()
+        )
+
+    def count_resources(
+        self, *, workspace_id: UUID, resource_type: str
+    ) -> ResourceFolderCountSummary:
+        model = self._model_for_resource_type(resource_type)
+        total_count = int(
+            self.db.scalar(
+                select(func.count(model.id)).where(model.workspace_id == workspace_id)
+            )
+            or 0
+        )
+        unfiled_count = int(
+            self.db.scalar(
+                select(func.count(model.id)).where(
+                    model.workspace_id == workspace_id,
+                    model.folder_id.is_(None),
+                )
+            )
+            or 0
+        )
+        rows = self.db.execute(
+            select(model.folder_id, func.count(model.id))
+            .where(model.workspace_id == workspace_id, model.folder_id.is_not(None))
+            .group_by(model.folder_id)
+        ).all()
+        return ResourceFolderCountSummary(
+            resource_type=resource_type,
+            total_count=total_count,
+            unfiled_count=unfiled_count,
+            folder_counts={
+                folder_id: int(count) for folder_id, count in rows if folder_id is not None
+            },
         )
 
     def create_folder(
@@ -176,6 +218,19 @@ class ResourceFolderService:
             self._validate_resource_type(folder.resource_type)
             return False
         return self.db.scalar(statement.limit(1)) is not None
+
+    def _model_for_resource_type(self, resource_type: str):
+        self._validate_resource_type(resource_type)
+        if resource_type == "knowledge_document":
+            return KnowledgeDocument
+        if resource_type == "dataset":
+            return Dataset
+        if resource_type == "evaluation_run":
+            return EvaluationRun
+        if resource_type == "agent_config":
+            return AgentConfig
+        self._validate_resource_type(resource_type)
+        raise ResourceFolderInvalidTypeError("Unsupported resource folder type.")
 
     def _validate_resource_type(self, resource_type: str) -> None:
         if resource_type not in VALID_RESOURCE_TYPES:

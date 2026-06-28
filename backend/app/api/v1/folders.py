@@ -10,6 +10,8 @@ from app.dependencies.workspace import require_workspace_member, require_workspa
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.folder import (
+    ResourceFolderCountResponse,
+    ResourceFolderCountSummaryResponse,
     ResourceFolderCreateRequest,
     ResourceFolderResponse,
     ResourceFolderUpdateRequest,
@@ -64,6 +66,41 @@ def list_resource_folders(
             detail={"code": "resource_folder_invalid_type", "message": str(exc)},
         ) from exc
     return [ResourceFolderResponse.model_validate(folder) for folder in folders]
+
+
+@router.get("/counts", response_model=ResourceFolderCountSummaryResponse)
+def get_resource_folder_counts(
+    resource_type: Annotated[str, Query(min_length=1, max_length=40)],
+    workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> ResourceFolderCountSummaryResponse:
+    _require_resource_folder_read(
+        resource_type=resource_type,
+        workspace=workspace,
+        current_user=current_user,
+        db=db,
+    )
+    try:
+        summary = ResourceFolderService(db).count_resources(
+            workspace_id=workspace.id, resource_type=resource_type
+        )
+    except ResourceFolderInvalidTypeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "resource_folder_invalid_type", "message": str(exc)},
+        ) from exc
+    return ResourceFolderCountSummaryResponse(
+        resource_type=summary.resource_type,
+        total_count=summary.total_count,
+        unfiled_count=summary.unfiled_count,
+        folder_counts=[
+            ResourceFolderCountResponse(folder_id=folder_id, resource_count=count)
+            for folder_id, count in sorted(
+                summary.folder_counts.items(), key=lambda item: str(item[0])
+            )
+        ],
+    )
 
 
 @router.post("", response_model=ResourceFolderResponse, status_code=status.HTTP_201_CREATED)

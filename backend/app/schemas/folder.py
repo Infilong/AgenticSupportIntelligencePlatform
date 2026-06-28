@@ -47,3 +47,15 @@ class ResourceFolderResponse(BaseModel):
     created_by_user_id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class ResourceFolderCountResponse(BaseModel):
+    folder_id: UUID
+    resource_count: int
+
+
+class ResourceFolderCountSummaryResponse(BaseModel):
+    resource_type: str
+    total_count: int
+    unfiled_count: int
+    folder_counts: list[ResourceFolderCountResponse]

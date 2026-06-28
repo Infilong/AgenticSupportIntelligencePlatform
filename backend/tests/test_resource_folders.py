@@ -583,3 +583,83 @@ def test_resource_list_filters_are_backend_bounded_and_searchable(client: TestCl
     assert evaluation_limit.status_code == 200
     assert len(evaluation_limit.json()) == 1
     assert triage_agent["folder_id"] == agent_folder["id"]
+
+
+def test_resource_folder_counts_are_backend_authoritative_beyond_list_limit(
+    client: TestClient,
+) -> None:
+    register(client, "folder-count-owner@example.com")
+    token = login(client, "folder-count-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "knowledge_document", "Many policies")
+
+    created_ids: list[str] = []
+    for index in range(3):
+        response = client.post(
+            f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+            headers=auth_headers(token),
+            json={
+                "title": f"Policy {index}",
+                "content_type": "text/plain",
+                "language": "en",
+                "folder_id": folder["id"] if index < 2 else None,
+                "content": f"Policy {index} applies to managed support operations. " * 40,
+            },
+        )
+        assert response.status_code == 201
+        created_ids.append(response.json()["document"]["id"])
+
+    limited_list = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        params={"limit": 1},
+    )
+    counts = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/counts",
+        headers=auth_headers(token),
+        params={"resource_type": "knowledge_document"},
+    )
+
+    assert limited_list.status_code == 200
+    assert len(limited_list.json()) == 1
+    assert counts.status_code == 200
+    body = counts.json()
+    assert body["resource_type"] == "knowledge_document"
+    assert body["total_count"] == 3
+    assert body["unfiled_count"] == 1
+    assert body["folder_counts"] == [{"folder_id": folder["id"], "resource_count": 2}]
+    assert len(created_ids) == 3
+
+
+def test_resource_folder_counts_require_matching_read_permission(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "count-owner@example.com")
+    owner_token = login(client, "count-owner@example.com")
+    workspace = create_workspace(client, owner_token)
+    create_folder(client, owner_token, workspace["id"], "dataset", "Private datasets")
+
+    register(client, "count-reviewer@example.com")
+    reviewer_token = login(client, "count-reviewer@example.com")
+    add_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="count-reviewer@example.com",
+        role=WorkspaceRole.reviewer,
+    )
+
+    reviewer_counts = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/counts",
+        headers=auth_headers(reviewer_token),
+        params={"resource_type": "dataset"},
+    )
+    owner_counts = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders/counts",
+        headers=auth_headers(owner_token),
+        params={"resource_type": "dataset"},
+    )
+
+    assert reviewer_counts.status_code == 403
+    assert reviewer_counts.json()["detail"]["required_permission"] == "data:read"
+    assert owner_counts.status_code == 200
+    assert owner_counts.json()["total_count"] == 0

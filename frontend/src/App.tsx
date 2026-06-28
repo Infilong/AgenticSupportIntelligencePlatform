@@ -79,6 +79,13 @@ type ResourceFolder = {
   updated_at: string;
 };
 
+type ResourceFolderCountSummary = {
+  resource_type: ResourceType;
+  total_count: number;
+  unfiled_count: number;
+  folder_counts: Array<{ folder_id: string; resource_count: number }>;
+};
+
 type Message = {
   id: string;
   role: string;
@@ -1068,6 +1075,9 @@ export function App() {
   const [chunkSearch, setChunkSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
+  const [resourceFolderCounts, setResourceFolderCounts] = useState<Partial<Record<ResourceType, ResourceFolderCountSummary>>>(
+    {},
+  );
   const [folderSearches, setFolderSearches] = useState<Record<ResourceType, string>>({ dataset: "", knowledge_document: "", evaluation_run: "", agent_config: "" });
   const [editingFolderId, setEditingFolderId] = useState("");
   const [folderRenameDrafts, setFolderRenameDrafts] = useState<Record<string, string>>({});
@@ -1433,7 +1443,7 @@ export function App() {
       can("audit:read") ? loadAuditLogs() : Promise.resolve(setAuditLogs([])),
       can("prompts:read") ? loadPromptTemplates() : Promise.resolve(setPromptTemplates([])),
       can("models:read") ? loadModelConfigs() : Promise.resolve(setModelConfigs([])),
-      canUseFolders ? loadResourceFolders(permissions) : Promise.resolve(setResourceFolders([])),
+      canUseFolders ? loadResourceFolders(permissions) : Promise.resolve(clearResourceFolderState()),
     ]);
   }
 
@@ -1522,29 +1532,44 @@ export function App() {
     return values.some((value) => value?.toLowerCase().includes(normalizedQuery));
   }
 
+  function clearResourceFolderState() {
+    setResourceFolders([]);
+    setResourceFolderCounts({});
+  }
+
   async function loadResourceFolders(permissions = permissionList) {
     if (!selectedWorkspaceId) return;
     const canManageFolders = permissions.includes("resource_folders:manage");
     const canLoadFolderType = (permission: string) => canManageFolders || permissions.includes(permission);
-    const folderRequests: Array<Promise<ResourceFolder[]>> = [];
-    if (canLoadFolderType("knowledge:read")) {
-      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=knowledge_document"), { token }));
-    }
-    if (canLoadFolderType("data:read")) {
-      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=dataset"), { token }));
-    }
-    if (canLoadFolderType("evaluations:read")) {
-      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=evaluation_run"), { token }));
-    }
-    if (canLoadFolderType("agents:read")) {
-      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=agent_config"), { token }));
-    }
-    if (folderRequests.length === 0) {
+    const allowedTypes: ResourceType[] = [];
+    if (canLoadFolderType("knowledge:read")) allowedTypes.push("knowledge_document");
+    if (canLoadFolderType("data:read")) allowedTypes.push("dataset");
+    if (canLoadFolderType("evaluations:read")) allowedTypes.push("evaluation_run");
+    if (canLoadFolderType("agents:read")) allowedTypes.push("agent_config");
+    if (allowedTypes.length === 0) {
       setResourceFolders([]);
+      setResourceFolderCounts({});
       return;
     }
-    const folderGroups = await Promise.all(folderRequests);
+    const [folderGroups, countSummaries] = await Promise.all([
+      Promise.all(
+        allowedTypes.map((resourceType) =>
+          apiRequest<ResourceFolder[]>(workspacePath(`/resource-folders?resource_type=${resourceType}`), { token }),
+        ),
+      ),
+      Promise.all(
+        allowedTypes.map((resourceType) =>
+          apiRequest<ResourceFolderCountSummary>(workspacePath(`/resource-folders/counts?resource_type=${resourceType}`), { token }),
+        ),
+      ),
+    ]);
     setResourceFolders(folderGroups.flat());
+    setResourceFolderCounts(
+      countSummaries.reduce<Partial<Record<ResourceType, ResourceFolderCountSummary>>>((counts, summary) => {
+        counts[summary.resource_type] = summary;
+        return counts;
+      }, {}),
+    );
   }
 
   async function createResourceFolder(resourceType: ResourceType) {
@@ -1711,6 +1736,7 @@ export function App() {
         },
       });
       await loadDatasets();
+      await loadResourceFolders();
       setSelectedDatasetId(response.dataset.id);
       await loadExamples(response.dataset.id);
     });
@@ -1724,6 +1750,7 @@ export function App() {
         body: { folder_id: folderId || null },
       });
       await loadDatasets();
+      await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
   }
@@ -1737,6 +1764,7 @@ export function App() {
         setExamples([]);
       }
       await loadDatasets();
+      await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
   }
@@ -1782,6 +1810,7 @@ export function App() {
         },
       });
       await loadDocuments();
+      await loadResourceFolders();
       await loadDocumentDetail(response.document.id);
     });
   }
@@ -1820,6 +1849,7 @@ export function App() {
         },
       );
       await loadDocuments();
+      await loadResourceFolders();
       await loadDocumentDetail(response.document.id);
     });
   }
@@ -1858,6 +1888,7 @@ export function App() {
         resetDocumentForm();
       }
       await loadDocuments();
+      await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
   }
@@ -1875,6 +1906,7 @@ export function App() {
         body: { folder_id: folderId || null },
       });
       await loadDocuments();
+      await loadResourceFolders();
       if (selectedDocumentId === documentId) {
         await loadDocumentDetail(documentId);
       }
@@ -1889,6 +1921,12 @@ export function App() {
 
 
   function resourceItemCount(resourceType: ResourceType, folderId: string) {
+    const summary = resourceFolderCounts[resourceType];
+    if (summary) {
+      if (folderId === "all") return summary.total_count;
+      if (folderId === "unfiled") return summary.unfiled_count;
+      return summary.folder_counts.find((item) => item.folder_id === folderId)?.resource_count ?? 0;
+    }
     if (resourceType === "dataset") return filterByFolder(datasets, folderId).length;
     if (resourceType === "evaluation_run") return filterByFolder(evaluationRuns, folderId).length;
     if (resourceType === "agent_config") return filterByFolder(agents, folderId).length;
@@ -2097,6 +2135,7 @@ export function App() {
         },
       });
       await loadAgents();
+      await loadResourceFolders();
       setSelectedAgentId(agent.id);
       setNewAgentName("Support Workflow Agent");
       applyAgentControls(agent);
@@ -2124,6 +2163,7 @@ export function App() {
       setAgentSummary(null);
       setAgentWorkflowSummary(null);
       await loadAgents();
+      await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
   }
@@ -2165,6 +2205,7 @@ export function App() {
         },
       });
       await loadAgents();
+      await loadResourceFolders();
       setSelectedAgentId(agent.id);
       applyAgentControls(agent);
       await Promise.all([loadAgentSummary(agent.id), loadAgentWorkflow(agent.id)]);
@@ -2403,6 +2444,7 @@ export function App() {
       });
       setEvaluationDetail(detail);
       await loadEvaluations();
+      await loadResourceFolders();
       await loadCosts();
     });
   }
@@ -2420,6 +2462,7 @@ export function App() {
         setEvaluationDetail(null);
       }
       await loadEvaluations(showArchivedEvaluations);
+      await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
   }
@@ -2433,6 +2476,7 @@ export function App() {
         setEvaluationDetail(null);
       }
       await loadEvaluations(showArchivedEvaluations);
+      await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
   }
