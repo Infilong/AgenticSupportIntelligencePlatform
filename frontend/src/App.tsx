@@ -664,6 +664,7 @@ export function App() {
   const [datasetFolderId, setDatasetFolderId] = useState("");
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
   const [selectedDataFolderId, setSelectedDataFolderId] = useState("all");
+  const [datasetSearch, setDatasetSearch] = useState("");
   const [dataFolderName, setDataFolderName] = useState("Training data");
   const [examples, setExamples] = useState<ConversationExample[]>([]);
   const [labelDrafts, setLabelDrafts] = useState<Record<string, { label_type: string; value: string }>>({});
@@ -675,6 +676,7 @@ export function App() {
   const [documentFolderId, setDocumentFolderId] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [selectedKnowledgeFolderId, setSelectedKnowledgeFolderId] = useState("all");
+  const [documentSearch, setDocumentSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
@@ -907,6 +909,12 @@ export function App() {
     if (selectedFolderId === "all") return items;
     if (selectedFolderId === "unfiled") return items.filter((item) => !item.folder_id);
     return items.filter((item) => item.folder_id === selectedFolderId);
+  }
+
+  function matchesSearch(query: string, ...values: Array<string | null | undefined>) {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return true;
+    return values.some((value) => value?.toLowerCase().includes(normalizedQuery));
   }
 
   async function loadResourceFolders() {
@@ -2028,7 +2036,10 @@ export function App() {
 
   function DatasetsPanel() {
     const datasetFolders = foldersFor("dataset");
-    const visibleDatasets = filterByFolder(datasets, selectedDataFolderId);
+    const folderDatasets = filterByFolder(datasets, selectedDataFolderId);
+    const visibleDatasets = folderDatasets.filter((dataset) =>
+      matchesSearch(datasetSearch, dataset.name, dataset.id, folderLabel("dataset", dataset.folder_id)),
+    );
     const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
 
     return (
@@ -2066,6 +2077,19 @@ export function App() {
             </div>
             <Badge>{visibleDatasets.length} shown</Badge>
           </div>
+          <div className="library-toolbar">
+            <label>
+              Search current folder
+              <input
+                value={datasetSearch}
+                onChange={(event) => setDatasetSearch(event.target.value)}
+                placeholder="Dataset name, folder, or id"
+              />
+            </label>
+            <p className="permission-note">
+              Owner controls: move imports between folders or delete obsolete datasets.
+            </p>
+          </div>
           <div className="resource-list">
             {visibleDatasets.map((dataset) => (
               <article key={dataset.id} className={`resource-row ${selectedDatasetId === dataset.id ? "selected-list-item" : ""}`}>
@@ -2091,7 +2115,12 @@ export function App() {
               </article>
             ))}
           </div>
-          {visibleDatasets.length === 0 && <EmptyState title="No datasets in this folder" detail="Import data here or switch to another folder." />}
+          {visibleDatasets.length === 0 && (
+            <EmptyState
+              title="No datasets match this view"
+              detail={folderDatasets.length === 0 ? "Import data here or switch folders." : "Clear search or try another folder."}
+            />
+          )}
         </section>
         <section className="panel full-width">
           <h3>Examples</h3>
@@ -2122,7 +2151,17 @@ export function App() {
     const totalChunkTokens = documentDetail?.chunks.reduce((sum, chunk) => sum + chunk.token_count, 0) ?? 0;
     const selectedDocument = documentDetail?.document ?? documents.find((document) => document.id === selectedDocumentId) ?? null;
     const knowledgeFolders = foldersFor("knowledge_document");
-    const visibleDocuments = filterByFolder(documents, selectedKnowledgeFolderId);
+    const folderDocuments = filterByFolder(documents, selectedKnowledgeFolderId);
+    const visibleDocuments = folderDocuments.filter((document) =>
+      matchesSearch(
+        documentSearch,
+        document.title,
+        document.id,
+        document.language,
+        document.status,
+        folderLabel("knowledge_document", document.folder_id),
+      ),
+    );
 
     return (
       <div className="knowledge-console">
@@ -2158,6 +2197,19 @@ export function App() {
               </div>
               <button type="button" onClick={resetDocumentForm}>New</button>
             </div>
+            <div className="library-toolbar">
+              <label>
+                Search current folder
+                <input
+                  value={documentSearch}
+                  onChange={(event) => setDocumentSearch(event.target.value)}
+                  placeholder="Document title, language, status, or id"
+                />
+              </label>
+              <p className="permission-note">
+                Owner controls: upload, edit, move, reindex, or delete knowledge files.
+              </p>
+            </div>
             <div className="document-list">
               {visibleDocuments.map((document) => (
                 <button
@@ -2173,7 +2225,12 @@ export function App() {
                   {document.error_message && <small>{document.error_message}</small>}
                 </button>
               ))}
-              {visibleDocuments.length === 0 && <EmptyState title="No documents in this folder" detail="Upload a policy or FAQ here, or switch folders." />}
+              {visibleDocuments.length === 0 && (
+                <EmptyState
+                  title="No documents match this view"
+                  detail={folderDocuments.length === 0 ? "Upload a policy or FAQ here, or switch folders." : "Clear search or try another folder."}
+                />
+              )}
             </div>
           </aside>
 

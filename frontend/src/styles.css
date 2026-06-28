@@ -938,6 +938,23 @@ small {
   line-height: 1.45;
 }
 
+.library-toolbar {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.library-toolbar label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .icon-danger-button {
   min-height: 34px;
   border-color: #9a9a9a;
