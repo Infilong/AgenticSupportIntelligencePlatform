@@ -988,7 +988,7 @@ function FolderPicker({
 
   if (compact) {
     return (
-      <details className="folder-picker folder-picker-compact">
+      <details className="folder-picker folder-picker-compact" aria-label={`${label} to folder`}>
         <summary>
           <span>{label}</span>
           <strong>{selectedFolder?.name ?? "Unfiled"}</strong>
