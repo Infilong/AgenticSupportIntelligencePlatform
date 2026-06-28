@@ -1158,6 +1158,8 @@ export function App() {
   const [auditActorFilter, setAuditActorFilter] = useState("all");
   const [auditPage, setAuditPage] = useState(0);
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
+  const [promptTemplateHistory, setPromptTemplateHistory] = useState<PromptTemplate[]>([]);
+  const [promptHistoryPage, setPromptHistoryPage] = useState(0);
   const [promptName, setPromptName] = useState("support_response_drafter");
   const [promptLanguage, setPromptLanguage] = useState<Language>("en");
   const [promptText, setPromptText] = useState(defaultPromptTemplateText);
@@ -1167,6 +1169,8 @@ export function App() {
   const [promptHistoryView, setPromptHistoryView] = useState("all");
 
   const [modelConfigs, setModelConfigs] = useState<ModelConfig[]>([]);
+  const [modelConfigHistory, setModelConfigHistory] = useState<ModelConfig[]>([]);
+  const [modelHistoryPage, setModelHistoryPage] = useState(0);
   const [modelProvider, setModelProvider] = useState("mock");
   const [modelName, setModelName] = useState("mock-cheap");
   const [modelPurpose, setModelPurpose] = useState("classification");
@@ -1379,6 +1383,18 @@ export function App() {
     if (!permissionList.includes("audit:read")) return;
     void loadAuditLogs();
   }, [token, selectedWorkspaceId, activeTab, auditSearch, auditImpactFilter, auditActorFilter, auditPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "prompts") return;
+    if (!permissionList.includes("prompts:read")) return;
+    void loadPromptTemplateHistory();
+  }, [token, selectedWorkspaceId, activeTab, promptSearch, promptHistoryView, showArchivedPrompts, promptHistoryPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "models") return;
+    if (!permissionList.includes("models:read")) return;
+    void loadModelConfigHistory();
+  }, [token, selectedWorkspaceId, activeTab, modelSearch, modelHistoryView, showArchivedModels, modelHistoryPage, permissionKey]);
 
   function setSessionToken(value: string) {
     setToken(value);
@@ -2771,11 +2787,51 @@ export function App() {
     setAuditLogs(data);
   }
 
-  async function loadPromptTemplates(includeArchived = showArchivedPrompts) {
+  async function loadPromptTemplates() {
     if (!selectedWorkspaceId) return;
-    const suffix = includeArchived ? "?include_archived=true" : "";
-    const data = await apiRequest<PromptTemplate[]>(workspacePath(`/prompt-templates${suffix}`), { token });
+    const data = await apiRequest<PromptTemplate[]>(
+      workspaceListPath("/prompt-templates", { status: "all", limit: 500 }),
+      { token },
+    );
     setPromptTemplates(data);
+  }
+
+  function promptTemplateHistoryParams(
+    page = promptHistoryPage,
+    includeArchived = showArchivedPrompts,
+    status = promptHistoryView,
+    search = promptSearch,
+  ) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_ADMIN_ASSETS,
+      offset: page * MAX_VISIBLE_ADMIN_ASSETS,
+    };
+    if (status !== "all") {
+      params.status = status;
+    } else if (includeArchived) {
+      params.include_archived = true;
+    }
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    return params;
+  }
+
+  async function loadPromptTemplateHistory(
+    includeArchived = showArchivedPrompts,
+    page = promptHistoryPage,
+    status = promptHistoryView,
+    search = promptSearch,
+  ) {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<PromptTemplate[]>(
+      workspaceListPath(
+        "/prompt-templates",
+        promptTemplateHistoryParams(page, includeArchived, status, search),
+      ),
+      { token },
+    );
+    setPromptTemplateHistory(data);
   }
 
   async function createPromptTemplateVersion(event: FormEvent) {
@@ -2791,7 +2847,9 @@ export function App() {
           active: promptActive,
         },
       });
+      setPromptHistoryPage(0);
       await loadPromptTemplates();
+      await loadPromptTemplateHistory(showArchivedPrompts, 0);
       await loadAuditLogsIfAllowed();
       await loadSystemHealthIfAllowed();
     });
@@ -2803,7 +2861,9 @@ export function App() {
         method: "POST",
         token,
       });
+      setPromptHistoryPage(0);
       await loadPromptTemplates();
+      await loadPromptTemplateHistory(showArchivedPrompts, 0);
       await loadAuditLogsIfAllowed();
       await loadSystemHealthIfAllowed();
     });
@@ -2813,7 +2873,9 @@ export function App() {
     if (!window.confirm(`Archive prompt template ${template.name} v${template.version}?`)) return;
     await runAction("Prompt template archived", async () => {
       await apiRequest(workspacePath(`/prompt-templates/${template.id}`), { method: "DELETE", token });
+      setPromptHistoryPage(0);
       await loadPromptTemplates();
+      await loadPromptTemplateHistory(showArchivedPrompts, 0);
       await loadAuditLogsIfAllowed();
       await loadSystemHealthIfAllowed();
     });
@@ -2821,14 +2883,52 @@ export function App() {
 
   function toggleArchivedPrompts(value: boolean) {
     setShowArchivedPrompts(value);
-    void loadPromptTemplates(value);
+    setPromptHistoryPage(0);
+    void loadPromptTemplateHistory(value, 0);
   }
 
-  async function loadModelConfigs(includeArchived = showArchivedModels) {
+  async function loadModelConfigs() {
     if (!selectedWorkspaceId) return;
-    const suffix = includeArchived ? "?include_archived=true" : "";
-    const data = await apiRequest<ModelConfig[]>(workspacePath(`/model-configs${suffix}`), { token });
+    const data = await apiRequest<ModelConfig[]>(
+      workspaceListPath("/model-configs", { status: "all", limit: 500 }),
+      { token },
+    );
     setModelConfigs(data);
+  }
+
+  function modelConfigHistoryParams(
+    page = modelHistoryPage,
+    includeArchived = showArchivedModels,
+    status = modelHistoryView,
+    search = modelSearch,
+  ) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_ADMIN_ASSETS,
+      offset: page * MAX_VISIBLE_ADMIN_ASSETS,
+    };
+    if (status !== "all") {
+      params.status = status;
+    } else if (includeArchived) {
+      params.include_archived = true;
+    }
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    return params;
+  }
+
+  async function loadModelConfigHistory(
+    includeArchived = showArchivedModels,
+    page = modelHistoryPage,
+    status = modelHistoryView,
+    search = modelSearch,
+  ) {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<ModelConfig[]>(
+      workspaceListPath("/model-configs", modelConfigHistoryParams(page, includeArchived, status, search)),
+      { token },
+    );
+    setModelConfigHistory(data);
   }
 
   async function createModelConfig(event: FormEvent) {
@@ -2847,7 +2947,9 @@ export function App() {
           active: modelActive,
         },
       });
+      setModelHistoryPage(0);
       await loadModelConfigs();
+      await loadModelConfigHistory(showArchivedModels, 0);
       await loadCosts();
       await loadAuditLogsIfAllowed();
       await loadSystemHealthIfAllowed();
@@ -2860,7 +2962,9 @@ export function App() {
         method: "POST",
         token,
       });
+      setModelHistoryPage(0);
       await loadModelConfigs();
+      await loadModelConfigHistory(showArchivedModels, 0);
       await loadAgents();
       await loadCosts();
       await loadAuditLogsIfAllowed();
@@ -2872,7 +2976,9 @@ export function App() {
     if (!window.confirm(`Archive model config ${config.provider}/${config.model}?`)) return;
     await runAction("Model config archived", async () => {
       await apiRequest(workspacePath(`/model-configs/${config.id}`), { method: "DELETE", token });
+      setModelHistoryPage(0);
       await loadModelConfigs();
+      await loadModelConfigHistory(showArchivedModels, 0);
       await loadAgents();
       await loadCosts();
       await loadAuditLogsIfAllowed();
@@ -2882,7 +2988,8 @@ export function App() {
 
   function toggleArchivedModels(value: boolean) {
     setShowArchivedModels(value);
-    void loadModelConfigs(value);
+    setModelHistoryPage(0);
+    void loadModelConfigHistory(value, 0);
   }
 
   function toggleMode(mode: Mode) {
@@ -5882,7 +5989,7 @@ export function App() {
 
   function PromptsPanel() {
     const activeTemplates = promptTemplates.filter((template) => template.active && !template.archived_at);
-    const archivedPromptCount = promptTemplates.filter((template) => template.archived_at).length;
+    const loadedArchivedPromptCount = promptTemplateHistory.filter((template) => template.archived_at).length;
     const classifierActive = activeTemplates.find((template) => template.name === "support_intent_classifier");
     const drafterActive = activeTemplates.find((template) => template.name === "support_response_drafter");
     const activeLanguages = [...new Set(activeTemplates.map((template) => template.language))];
@@ -5891,22 +5998,11 @@ export function App() {
       const active = versions.find((template) => template.active);
       return { name, versions, active };
     });
-    const filteredPromptTemplates = promptTemplates.filter((template) => {
-      const matchesView = promptHistoryView === "all"
-        || (promptHistoryView === "active" && template.active && !template.archived_at)
-        || (promptHistoryView === "draft" && !template.active && !template.archived_at)
-        || (promptHistoryView === "archived" && Boolean(template.archived_at));
-      return matchesView && matchesSearch(
-        promptSearch,
-        template.name,
-        template.language,
-        String(template.version),
-        template.id,
-        template.template_text,
-      );
-    });
-    const displayedPromptTemplates = filteredPromptTemplates.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
-    const hiddenPromptCount = Math.max(filteredPromptTemplates.length - displayedPromptTemplates.length, 0);
+    const displayedPromptTemplates = promptTemplateHistory;
+    const promptHistoryPageStart = promptHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedPromptTemplates.length ? 1 : 0);
+    const promptHistoryPageEnd = promptHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + displayedPromptTemplates.length;
+    const canGoToPreviousPromptHistoryPage = promptHistoryPage > 0;
+    const canGoToNextPromptHistoryPage = displayedPromptTemplates.length === MAX_VISIBLE_ADMIN_ASSETS;
 
     return (
       <div className="settings-console prompt-console">
@@ -5920,14 +6016,14 @@ export function App() {
             <span>Prompt readiness</span>
             <strong>{activeTemplates.length ? `${activeTemplates.length} active versions` : "No active versions"}</strong>
             <p>{activeTemplates.length ? `Languages covered: ${activeLanguages.join(", ") || "none"}.` : "Run an agent to create defaults or publish an active version."}</p>
-            <button type="button" onClick={() => void runAction("Prompt templates refreshed", loadPromptTemplates)}>Refresh prompts</button>
+            <button type="button" onClick={() => void runAction("Prompt templates refreshed", async () => { await loadPromptTemplates(); await loadPromptTemplateHistory(showArchivedPrompts, promptHistoryPage); })}>Refresh prompts</button>
           </div>
         </section>
 
         <section className="settings-summary-grid">
           <Metric label="Active prompts" value={activeTemplates.length} />
-          <Metric label="Visible versions" value={promptTemplates.length} />
-          <Metric label="Archived" value={archivedPromptCount} />
+          <Metric label="Summary versions" value={promptTemplates.length} />
+          <Metric label="Loaded archived" value={loadedArchivedPromptCount} />
           <Metric label="Classifier" value={classifierActive ? `v${classifierActive.version}` : "missing"} />
           <Metric label="Drafter" value={drafterActive ? `v${drafterActive.version}` : "missing"} />
         </section>
@@ -6003,7 +6099,7 @@ export function App() {
                 />
                 Show archived
               </label>
-              <Badge>{displayedPromptTemplates.length}/{filteredPromptTemplates.length} shown</Badge>
+              <Badge>{displayedPromptTemplates.length} shown</Badge>
             </div>
           </div>
           <div className="library-toolbar settings-history-toolbar">
@@ -6011,20 +6107,20 @@ export function App() {
               Search prompt history
               <input
                 value={promptSearch}
-                onChange={(event) => setPromptSearch(event.target.value)}
+                onChange={(event) => { setPromptHistoryPage(0); setPromptSearch(event.target.value); }}
                 placeholder="Name, language, version, source, or id"
               />
             </label>
             <label>
               Status
-              <select value={promptHistoryView} onChange={(event) => setPromptHistoryView(event.target.value)}>
-                <option value="all">All loaded</option>
+              <select value={promptHistoryView} onChange={(event) => { setPromptHistoryPage(0); setPromptHistoryView(event.target.value); }}>
+                <option value="all">All history</option>
                 <option value="active">Active</option>
                 <option value="draft">Draft/inactive</option>
                 <option value="archived">Archived</option>
               </select>
             </label>
-            <p className="permission-note">Prompt source is collapsed by default so version history stays scannable. Enable archived versions above when auditing older changes.</p>
+            <p className="permission-note">Prompt history is loaded from the backend by status, archived visibility, search, offset, and limit. Source stays collapsed so long version history remains scannable.</p>
           </div>
           <div className="prompt-template-list settings-card-grid">
             {displayedPromptTemplates.map((template) => (
@@ -6048,9 +6144,18 @@ export function App() {
               </article>
             ))}
           </div>
-          {hiddenPromptCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {filteredPromptTemplates.length} matching prompt versions. Search by name, language, version, source, or id to narrow history.</p>}
-          {promptTemplates.length === 0 && <EmptyState title="No prompt templates" detail="Defaults are created on first agent run, or create a version manually." />}
-          {promptTemplates.length > 0 && filteredPromptTemplates.length === 0 && <EmptyState title="No prompt versions match this view" detail="Clear search, change status, or load archived versions." />}
+          {displayedPromptTemplates.length === 0 && (
+            <EmptyState
+              title="No prompt versions match this view"
+              detail={promptHistoryPage > 0 ? "Move to the previous page or clear filters." : "Defaults are created on first agent run, or create a version manually. Clear search or change status if prompts already exist."}
+            />
+          )}
+          <div className="pagination-bar">
+            <button type="button" onClick={() => setPromptHistoryPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousPromptHistoryPage || loading}>Previous</button>
+            <span>Page {promptHistoryPage + 1} · {displayedPromptTemplates.length ? `${promptHistoryPageStart}-${promptHistoryPageEnd}` : "0"} shown</span>
+            <button type="button" onClick={() => setPromptHistoryPage((page) => page + 1)} disabled={!canGoToNextPromptHistoryPage || loading}>Next</button>
+          </div>
+          <p className="permission-note">A full prompt-history page enables Next; empty next pages mean the current backend filter has no more matches.</p>
         </section>
       </div>
     );
@@ -6280,7 +6385,7 @@ export function App() {
 
   function ModelsPanel() {
     const activeConfigs = modelConfigs.filter((config) => config.active && !config.archived_at);
-    const archivedModelCount = modelConfigs.filter((config) => config.archived_at).length;
+    const loadedArchivedModelCount = modelConfigHistory.filter((config) => config.archived_at).length;
     const purposeSummary = modelPurposes.map((purpose) => {
       const active = modelConfigs.find((config) => config.purpose === purpose && config.active && !config.archived_at);
       return { purpose, active };
@@ -6288,22 +6393,11 @@ export function App() {
     const configuredPurposeCount = purposeSummary.filter(({ active }) => Boolean(active)).length;
     const liveProviderCount = activeConfigs.filter((config) => config.provider !== "mock").length;
     const maxContext = activeConfigs.length ? Math.max(...activeConfigs.map((config) => config.max_context_tokens)) : 0;
-    const filteredModelConfigs = modelConfigs.filter((config) => {
-      const matchesView = modelHistoryView === "all"
-        || (modelHistoryView === "active" && config.active && !config.archived_at)
-        || (modelHistoryView === "draft" && !config.active && !config.archived_at)
-        || (modelHistoryView === "archived" && Boolean(config.archived_at));
-      return matchesView && matchesSearch(
-        modelSearch,
-        config.provider,
-        config.model,
-        config.purpose,
-        config.id,
-        String(config.max_context_tokens),
-      );
-    });
-    const displayedModelConfigs = filteredModelConfigs.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
-    const hiddenModelConfigCount = Math.max(filteredModelConfigs.length - displayedModelConfigs.length, 0);
+    const displayedModelConfigs = modelConfigHistory;
+    const modelHistoryPageStart = modelHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedModelConfigs.length ? 1 : 0);
+    const modelHistoryPageEnd = modelHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + displayedModelConfigs.length;
+    const canGoToPreviousModelHistoryPage = modelHistoryPage > 0;
+    const canGoToNextModelHistoryPage = displayedModelConfigs.length === MAX_VISIBLE_ADMIN_ASSETS;
 
     return (
       <div className="settings-console model-console">
@@ -6317,13 +6411,13 @@ export function App() {
             <span>Routing readiness</span>
             <strong>{configuredPurposeCount}/{modelPurposes.length} purposes configured</strong>
             <p>{liveProviderCount ? `${liveProviderCount} live provider routes active.` : "Mock routing is active for deterministic local testing."}</p>
-            <button type="button" onClick={() => void runAction("Model configs refreshed", loadModelConfigs)}>Refresh models</button>
+            <button type="button" onClick={() => void runAction("Model configs refreshed", async () => { await loadModelConfigs(); await loadModelConfigHistory(showArchivedModels, modelHistoryPage); })}>Refresh models</button>
           </div>
         </section>
 
         <section className="settings-summary-grid">
           <Metric label="Active configs" value={activeConfigs.length} />
-          <Metric label="Archived" value={archivedModelCount} />
+          <Metric label="Loaded archived" value={loadedArchivedModelCount} />
           <Metric label="Configured purposes" value={`${configuredPurposeCount}/${modelPurposes.length}`} />
           <Metric label="Live providers" value={liveProviderCount} />
           <Metric label="Max context" value={maxContext ? formatNumber(maxContext) : "mock default"} />
@@ -6412,7 +6506,7 @@ export function App() {
                 />
                 Show archived
               </label>
-              <Badge>{displayedModelConfigs.length}/{filteredModelConfigs.length} shown</Badge>
+              <Badge>{displayedModelConfigs.length} shown</Badge>
             </div>
           </div>
           <div className="library-toolbar settings-history-toolbar">
@@ -6420,20 +6514,20 @@ export function App() {
               Search model configs
               <input
                 value={modelSearch}
-                onChange={(event) => setModelSearch(event.target.value)}
+                onChange={(event) => { setModelHistoryPage(0); setModelSearch(event.target.value); }}
                 placeholder="Provider, model, purpose, context, or id"
               />
             </label>
             <label>
               Status
-              <select value={modelHistoryView} onChange={(event) => setModelHistoryView(event.target.value)}>
-                <option value="all">All loaded</option>
+              <select value={modelHistoryView} onChange={(event) => { setModelHistoryPage(0); setModelHistoryView(event.target.value); }}>
+                <option value="all">All history</option>
                 <option value="active">Active</option>
                 <option value="draft">Draft/inactive</option>
                 <option value="archived">Archived</option>
               </select>
             </label>
-            <p className="permission-note">Model configs stay searchable by provider, purpose, context, and id so routing history remains operable as experiments grow.</p>
+            <p className="permission-note">Model history is loaded from the backend by status, archived visibility, search, offset, and limit so routing experiments stay operable as they grow.</p>
           </div>
           <div className="model-config-list settings-card-grid">
             {displayedModelConfigs.map((config) => (
@@ -6459,9 +6553,18 @@ export function App() {
               </article>
             ))}
           </div>
-          {hiddenModelConfigCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {filteredModelConfigs.length} matching model configs. Search by provider, model, purpose, context, or id to narrow history.</p>}
-          {modelConfigs.length === 0 && <EmptyState title="No model configs" detail="The backend falls back to deterministic mock mode until you activate a workspace model config." />}
-          {modelConfigs.length > 0 && filteredModelConfigs.length === 0 && <EmptyState title="No model configs match this view" detail="Clear search, change status, or load archived configs." />}
+          {displayedModelConfigs.length === 0 && (
+            <EmptyState
+              title="No model configs match this view"
+              detail={modelHistoryPage > 0 ? "Move to the previous page or clear filters." : "The backend falls back to deterministic mock mode until you activate a workspace model config. Clear search or change status if configs already exist."}
+            />
+          )}
+          <div className="pagination-bar">
+            <button type="button" onClick={() => setModelHistoryPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousModelHistoryPage || loading}>Previous</button>
+            <span>Page {modelHistoryPage + 1} · {displayedModelConfigs.length ? `${modelHistoryPageStart}-${modelHistoryPageEnd}` : "0"} shown</span>
+            <button type="button" onClick={() => setModelHistoryPage((page) => page + 1)} disabled={!canGoToNextModelHistoryPage || loading}>Next</button>
+          </div>
+          <p className="permission-note">A full model-history page enables Next; empty next pages mean the current backend filter has no more matches.</p>
           {activeConfigs.length > 0 && <p className="muted">Active OpenAI/OpenAI-compatible configs perform live calls when the backend has an API key; otherwise the failed attempt is visible in trace, review, and cost records.</p>}
         </section>
       </div>
