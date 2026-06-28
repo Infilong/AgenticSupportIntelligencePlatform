@@ -276,3 +276,82 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
 
   await api.dispose();
 });
+
+
+test("reviewer dashboard hides restricted shortcuts", async ({ page }) => {
+  const api = await request.newContext({ baseURL: apiUrl });
+  const runId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const ownerEmail = `owner-${runId}@example.com`;
+  const reviewerEmail = `reviewer-${runId}@example.com`;
+  const password = "strong-password";
+
+  const ownerRegister = await api.post("/api/v1/auth/register", {
+    data: { email: ownerEmail, password, display_name: "E2E Owner" },
+  });
+  expect(ownerRegister.status()).toBe(201);
+  const reviewerRegister = await api.post("/api/v1/auth/register", {
+    data: { email: reviewerEmail, password, display_name: "E2E Reviewer" },
+  });
+  expect(reviewerRegister.status()).toBe(201);
+
+  const ownerLogin = await api.post("/api/v1/auth/login", {
+    data: { email: ownerEmail, password },
+  });
+  expect(ownerLogin.status()).toBe(200);
+  const { access_token: ownerToken } = await ownerLogin.json();
+
+  const workspaceName = `Reviewer Scope ${runId}`;
+  const workspace = await api.post("/api/v1/workspaces", {
+    headers: { Authorization: `Bearer ${ownerToken}` },
+    data: { name: workspaceName },
+  });
+  expect(workspace.status()).toBe(201);
+  const workspaceBody = await workspace.json();
+
+  const addReviewer = await api.post(`/api/v1/workspaces/${workspaceBody.id}/members`, {
+    headers: { Authorization: `Bearer ${ownerToken}` },
+    data: { email: reviewerEmail, role: "reviewer" },
+  });
+  expect(addReviewer.status()).toBe(201);
+
+  const reviewerLogin = await api.post("/api/v1/auth/login", {
+    data: { email: reviewerEmail, password },
+  });
+  expect(reviewerLogin.status()).toBe(200);
+  const { access_token: reviewerToken } = await reviewerLogin.json();
+
+  await page.addInitScript((sessionToken) => {
+    window.localStorage.setItem("asi_token", sessionToken);
+    window.localStorage.setItem("asi_sidebar_collapsed", "false");
+  }, reviewerToken);
+
+  await page.goto("/");
+  await page.getByLabel("Active workspace").selectOption({ label: workspaceName });
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page.getByText("Reviewer").first()).toBeVisible();
+
+  const productNav = page.getByRole("navigation", { name: "Product navigation" });
+  await expect(productNav.getByRole("button", { name: "Dashboard", exact: true })).toBeVisible();
+  await expect(productNav.getByRole("button", { name: "My Tasks", exact: true })).toBeVisible();
+  await expect(productNav.getByRole("button", { name: "Knowledge", exact: true })).toBeVisible();
+  await expect(productNav.getByRole("button", { name: "Agents", exact: true })).toBeVisible();
+  await expect(productNav.getByRole("button", { name: "Runs & traces", exact: true })).toBeVisible();
+  await expect(productNav.getByRole("button", { name: "Human review", exact: true })).toBeVisible();
+  await expect(productNav.getByRole("button", { name: "Usage & costs", exact: true })).toBeVisible();
+  await expect(productNav.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
+
+  for (const label of ["Data", "Tools", "Guardrails", "Evaluations", "Members", "Prompts", "Models", "System health", "Audit"]) {
+    await expect(productNav.getByRole("button", { name: label, exact: true })).toHaveCount(0);
+  }
+
+  const overview = page.locator(".overview-console");
+  await expect(overview.getByText("Knowledge base", { exact: true })).toBeVisible();
+  await expect(overview.getByRole("button", { name: "View agents" })).toBeVisible();
+  await expect(overview.getByRole("button", { name: "Run agent" })).toHaveCount(0);
+
+  for (const restrictedCard of ["Data library", "Tool catalog", "Tools", "Guardrails", "Prompt registry", "Model routing", "Governance audit"]) {
+    await expect(overview.getByText(restrictedCard, { exact: true })).toHaveCount(0);
+  }
+
+  await api.dispose();
+});

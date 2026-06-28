@@ -1207,6 +1207,7 @@ export function App() {
   const canManageResourceFolders = Boolean(workspaceMembership?.permissions.includes("resource_folders:manage"));
   const canWriteData = Boolean(workspaceMembership?.permissions.includes("data:write"));
   const canWriteKnowledge = Boolean(workspaceMembership?.permissions.includes("knowledge:write"));
+  const canRunAgent = Boolean(workspaceMembership?.permissions.includes("agents:run"));
   const canRunEvaluations = Boolean(workspaceMembership?.permissions.includes("evaluations:run"));
   const canDeleteAgent = Boolean(workspaceMembership?.permissions.includes("agents:delete"));
   const canManageBudgetPolicy = Boolean(
@@ -2933,6 +2934,67 @@ export function App() {
         detail: `${formatCost(costSummary?.total_estimated_cost)} estimated`,
       },
     ];
+    const operationActionOptions: Array<{ tab: Tab; label: string; disabled?: boolean }> = [
+      { tab: "agent", label: canRunAgent ? "Run agent" : "View agents" },
+      { tab: "reviews", label: "Human review" },
+      { tab: "trace", label: "Runs & traces", disabled: !traceRunId },
+      { tab: "costs", label: "Usage & costs" },
+    ];
+    const operationActions = operationActionOptions.filter((action) => canOpenTab(action.tab));
+    const overviewShortcutCardOptions: Array<{ tab: Tab; label: string; value: string; detail: string }> = [
+      {
+        tab: "documents",
+        label: "Knowledge base",
+        value: `${documents.length} documents`,
+        detail: "Upload, edit, reindex, and inspect chunks.",
+      },
+      {
+        tab: "datasets",
+        label: "Data library",
+        value: `${datasets.length} datasets`,
+        detail: "Import and label multilingual examples in foldered collections.",
+      },
+      {
+        tab: "prompts",
+        label: "Prompt registry",
+        value: `${promptTemplates.length} templates`,
+        detail: "Version LangChain prompts by language.",
+      },
+      {
+        tab: "models",
+        label: "Model routing",
+        value: `${activeModelCount} active`,
+        detail: "Configure model purpose, cost, and context limits.",
+      },
+      {
+        tab: "tools",
+        label: "Tool catalog",
+        value: `${tools.length} tools`,
+        detail: "Inspect tool schemas, permissions, usage, and trace links.",
+      },
+      {
+        tab: "audit",
+        label: "Governance audit",
+        value: `${auditLogs.length} events`,
+        detail: "Review workspace and AI operations changes.",
+      },
+    ];
+    const overviewShortcutCards = overviewShortcutCardOptions.filter((card) => canOpenTab(card.tab));
+    const platformCoverageCardOptions: Array<{ tab: Tab; label: string; value: string; detail: string }> = [
+      {
+        tab: "tools",
+        label: "Tools",
+        value: tools.some((tool) => tool.usage.total_calls > 0) ? "Runtime measured" : "Catalog ready",
+        detail: "Tool contracts and recent executions are visible outside individual traces.",
+      },
+      {
+        tab: "guardrails",
+        label: "Guardrails",
+        value: guardrails.some((item) => item.usage.failed_evaluations > 0) ? "Failures visible" : "Policy catalog",
+        detail: "Runtime guardrail policies and failures are visible outside individual traces.",
+      },
+    ];
+    const platformCoverageCards = platformCoverageCardOptions.filter((card) => canOpenTab(card.tab));
 
     return (
       <div className="overview-console">
@@ -3045,53 +3107,41 @@ export function App() {
             <Metric label="Evaluation runs" value={evaluationRuns.length} />
             <Metric label="Active models" value={activeModelCount} />
             <div className="overview-action-list">
-              <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
-              <button type="button" onClick={() => goToTab("reviews")}>Human review</button>
-              <button type="button" onClick={() => goToTab("trace")} disabled={!traceRunId}>Runs & traces</button>
-              <button type="button" onClick={() => goToTab("costs")}>Usage & costs</button>
+              {operationActions.map((action) => (
+                <button
+                  type="button"
+                  key={action.tab}
+                  onClick={() => goToTab(action.tab)}
+                  disabled={Boolean(action.disabled)}
+                >
+                  {action.label}
+                </button>
+              ))}
+              {operationActions.length === 0 && <p className="permission-note">No operational shortcuts are available for this role.</p>}
             </div>
           </aside>
         </section>
 
-        <section className="overview-admin-grid">
-          <button type="button" className="overview-admin-card" onClick={() => goToTab("documents")}>
-            <span>Knowledge base</span>
-            <strong>{documents.length} documents</strong>
-            <small>Upload, edit, reindex, and inspect chunks.</small>
-          </button>
-          <button type="button" className="overview-admin-card" onClick={() => goToTab("prompts")}>
-            <span>Prompt registry</span>
-            <strong>{promptTemplates.length} templates</strong>
-            <small>Version LangChain prompts by language.</small>
-          </button>
-          <button type="button" className="overview-admin-card" onClick={() => goToTab("models")}>
-            <span>Model routing</span>
-            <strong>{activeModelCount} active</strong>
-            <small>Configure model purpose, cost, and context limits.</small>
-          </button>
-          <button type="button" className="overview-admin-card" onClick={() => goToTab("tools")}>
-            <span>Tool catalog</span>
-            <strong>{tools.length} tools</strong>
-            <small>Inspect tool schemas, permissions, usage, and trace links.</small>
-          </button>
-          <button type="button" className="overview-admin-card" onClick={() => goToTab("audit")}>
-            <span>Governance audit</span>
-            <strong>{auditLogs.length} events</strong>
-            <small>Review workspace and AI operations changes.</small>
-          </button>
-        </section>
+        {overviewShortcutCards.length > 0 && (
+          <section className="overview-admin-grid">
+            {overviewShortcutCards.map((card) => (
+              <button type="button" className="overview-admin-card" key={card.tab} onClick={() => goToTab(card.tab)}>
+                <span>{card.label}</span>
+                <strong>{card.value}</strong>
+                <small>{card.detail}</small>
+              </button>
+            ))}
+          </section>
+        )}
 
         <section className="overview-admin-grid platform-coverage-grid">
-          <button type="button" className="overview-admin-card" onClick={() => goToTab("tools")}>
-            <span>Tools</span>
-            <strong>{tools.some((tool) => tool.usage.total_calls > 0) ? "Runtime measured" : "Catalog ready"}</strong>
-            <small>Tool contracts and recent executions are now visible outside individual traces.</small>
-          </button>
-          <button type="button" className="overview-admin-card" onClick={() => goToTab("guardrails")}>
-            <span>Guardrails</span>
-            <strong>{guardrails.some((item) => item.usage.failed_evaluations > 0) ? "Failures visible" : "Policy catalog"}</strong>
-            <small>Runtime guardrail policies and failures are visible outside individual traces.</small>
-          </button>
+          {platformCoverageCards.map((card) => (
+            <button type="button" className="overview-admin-card" key={card.tab} onClick={() => goToTab(card.tab)}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </button>
+          ))}
           <article className="overview-admin-card">
             <span>Permissions</span>
             <strong>Workspace scoped</strong>
