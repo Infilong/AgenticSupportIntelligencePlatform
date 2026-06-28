@@ -2227,75 +2227,109 @@ export function App() {
 
   function PromptsPanel() {
     const activeTemplates = promptTemplates.filter((template) => template.active);
+    const classifierActive = activeTemplates.find((template) => template.name === "support_intent_classifier");
+    const drafterActive = activeTemplates.find((template) => template.name === "support_response_drafter");
+    const activeLanguages = [...new Set(activeTemplates.map((template) => template.language))];
+    const promptGroups = ["support_intent_classifier", "support_response_drafter"].map((name) => {
+      const versions = promptTemplates.filter((template) => template.name === name);
+      const active = versions.find((template) => template.active);
+      return { name, versions, active };
+    });
+
     return (
-      <div className="grid two-wide-left">
-        <ActionGuide
-          title="Prompt settings control model behavior"
-          detail="Create prompt versions, activate the version a workflow should use, then inspect the exact prompt version in Trace after the next agent run."
-          action="Run agent after activation"
-          onAction={() => setActiveTab("agent")}
-        />
-        <form className="panel stack" onSubmit={createPromptTemplateVersion}>
-          <div className="row-head">
-            <div>
-              <h3>Create prompt version</h3>
-              <p className="muted">New versions are workspace-scoped and can be activated immediately.</p>
-            </div>
-            <Badge tone={promptActive ? "good" : "neutral"}>{promptActive ? "activate" : "draft"}</Badge>
+      <div className="settings-console prompt-console">
+        <section className="panel settings-hero">
+          <div>
+            <p className="eyebrow">Prompt operations</p>
+            <h2>Version, activate, and audit workflow prompts</h2>
+            <p className="muted">Prompt versions are workspace-scoped. The next LangGraph run records the active prompt template name and version in every AI run ledger entry.</p>
           </div>
-          <label>
-            Template name
-            <select value={promptName} onChange={(event) => setPromptName(event.target.value)}>
-              <option value="support_intent_classifier">support_intent_classifier</option>
-              <option value="support_response_drafter">support_response_drafter</option>
-            </select>
-          </label>
-          <label>
-            Language
-            <select value={promptLanguage} onChange={(event) => setPromptLanguage(event.target.value as Language)}>
-              <option value="en">English</option>
-              <option value="ja">Japanese</option>
-              <option value="zh">Chinese</option>
-            </select>
-          </label>
-          <label>
-            Template source
-            <textarea rows={12} value={promptText} onChange={(event) => setPromptText(event.target.value)} />
-          </label>
-          <label className="check-row single-check">
-            <input type="checkbox" checked={promptActive} onChange={(event) => setPromptActive(event.target.checked)} />
-            Activate this version immediately
-          </label>
-          <button className="primary" disabled={loading}>Create version</button>
-        </form>
-        <section className="panel stack">
-          <h3>Active prompts</h3>
-          {activeTemplates.map((template) => (
-            <article className="prompt-card active-prompt" key={template.id}>
-              <div className="row-head">
-                <strong>{template.name}</strong>
-                <Badge tone="good">v{template.version}</Badge>
-              </div>
-              <small>{template.language} · {formatDate(template.created_at)}</small>
-            </article>
-          ))}
-          {activeTemplates.length === 0 && <EmptyState title="No active prompts" detail="Run an agent to create defaults or create an active version here." />}
+          <div className="next-action-card">
+            <span>Prompt readiness</span>
+            <strong>{activeTemplates.length ? `${activeTemplates.length} active versions` : "No active versions"}</strong>
+            <p>{activeTemplates.length ? `Languages covered: ${activeLanguages.join(", ") || "none"}.` : "Run an agent to create defaults or publish an active version."}</p>
+            <button type="button" onClick={() => void runAction("Prompt templates refreshed", loadPromptTemplates)}>Refresh prompts</button>
+          </div>
         </section>
-        <section className="panel full-width stack">
+
+        <section className="settings-summary-grid">
+          <Metric label="Active prompts" value={activeTemplates.length} />
+          <Metric label="Total versions" value={promptTemplates.length} />
+          <Metric label="Classifier" value={classifierActive ? `v${classifierActive.version}` : "missing"} />
+          <Metric label="Drafter" value={drafterActive ? `v${drafterActive.version}` : "missing"} />
+        </section>
+
+        <section className="settings-workbench">
+          <form className="panel stack settings-editor-panel" onSubmit={createPromptTemplateVersion}>
+            <div className="row-head">
+              <div>
+                <h3>Create prompt version</h3>
+                <p className="muted">Publish a controlled prompt change, then validate it through Trace and Evaluation.</p>
+              </div>
+              <Badge tone={promptActive ? "good" : "neutral"}>{promptActive ? "activate" : "draft"}</Badge>
+            </div>
+            <div className="settings-meta-grid">
+              <label>
+                Template name
+                <select value={promptName} onChange={(event) => setPromptName(event.target.value)}>
+                  <option value="support_intent_classifier">support_intent_classifier</option>
+                  <option value="support_response_drafter">support_response_drafter</option>
+                </select>
+              </label>
+              <label>
+                Language
+                <select value={promptLanguage} onChange={(event) => setPromptLanguage(event.target.value as Language)}>
+                  <option value="en">English</option>
+                  <option value="ja">Japanese</option>
+                  <option value="zh">Chinese</option>
+                </select>
+              </label>
+              <label className="check-row single-check settings-toggle">
+                <input type="checkbox" checked={promptActive} onChange={(event) => setPromptActive(event.target.checked)} />
+                Activate immediately
+              </label>
+            </div>
+            <label>
+              Template source
+              <textarea rows={16} value={promptText} onChange={(event) => setPromptText(event.target.value)} />
+            </label>
+            <div className="run-action-bar">
+              <button className="primary" disabled={loading}>Create version</button>
+              <button type="button" onClick={() => setActiveTab("agent")}>Run agent</button>
+              <button type="button" onClick={() => setActiveTab("trace")}>Inspect trace</button>
+            </div>
+          </form>
+
+          <aside className="panel stack settings-side-panel">
+            <h3>Active workflow prompts</h3>
+            {promptGroups.map(({ name, active, versions }) => (
+              <article className={active ? "settings-route-card active" : "settings-route-card"} key={name}>
+                <div className="row-head">
+                  <strong>{name}</strong>
+                  {active ? <Badge tone="good">v{active.version}</Badge> : <Badge tone="warn">missing</Badge>}
+                </div>
+                <small>{active ? `${active.language.toUpperCase()} · ${formatDate(active.created_at)}` : "No active workspace version"}</small>
+                <small>{versions.length} total versions</small>
+              </article>
+            ))}
+          </aside>
+        </section>
+
+        <section className="panel full-width stack settings-history-panel">
           <div className="row-head">
             <div>
-              <h3>Prompt versions</h3>
-              <p className="muted">Activate a version to make the next graph run use it.</p>
+              <h3>Prompt version history</h3>
+              <p className="muted">Activate a version to make future graph runs use it. Existing traces keep the prompt version they used.</p>
             </div>
-            <button onClick={() => void runAction("Prompt templates refreshed", loadPromptTemplates)}>Refresh</button>
+            <Badge>{promptTemplates.length} versions</Badge>
           </div>
-          <div className="prompt-template-list">
+          <div className="prompt-template-list settings-card-grid">
             {promptTemplates.map((template) => (
               <article className={template.active ? "prompt-card active-prompt" : "prompt-card"} key={template.id}>
                 <div className="row-head">
                   <div>
                     <strong>{template.name}</strong>
-                    <p className="muted">{template.language} · version {template.version}</p>
+                    <p className="muted">{template.language.toUpperCase()} · version {template.version} · {formatDate(template.created_at)}</p>
                   </div>
                   <div className="review-actions">
                     {template.active && <Badge tone="good">active</Badge>}
@@ -2318,81 +2352,110 @@ export function App() {
       const active = modelConfigs.find((config) => config.purpose === purpose && config.active);
       return { purpose, active };
     });
+    const configuredPurposeCount = purposeSummary.filter(({ active }) => Boolean(active)).length;
+    const liveProviderCount = activeConfigs.filter((config) => config.provider !== "mock").length;
+    const maxContext = activeConfigs.length ? Math.max(...activeConfigs.map((config) => config.max_context_tokens)) : 0;
+
     return (
-      <div className="grid two-wide-left">
-        <ActionGuide
-          title="Model settings make token economy operational"
-          detail="Assign a model and price profile to each AI purpose. The provider records the active provider, model, context limit, and estimated cost in the next AI run ledger entry."
-          action="Run agent after activation"
-          onAction={() => setActiveTab("agent")}
-        />
-        <form className="panel stack" onSubmit={createModelConfig}>
-          <div className="row-head">
-            <div>
-              <h3>Create model config</h3>
-              <p className="muted">Use mock for deterministic local testing, or activate OpenAI/OpenAI-compatible configs for real model calls with ledger tracking.</p>
-            </div>
-            <Badge tone={modelActive ? "good" : "neutral"}>{modelActive ? "active" : "draft"}</Badge>
+      <div className="settings-console model-console">
+        <section className="panel settings-hero">
+          <div>
+            <p className="eyebrow">Model routing</p>
+            <h2>Control provider, model, price, and context by AI purpose</h2>
+            <p className="muted">Each purpose can use a different active model config. The provider records model, price profile, context limit, token usage, latency, and failures in the AI run ledger.</p>
           </div>
-          <label>
-            Purpose
-            <select value={modelPurpose} onChange={(event) => setModelPurpose(event.target.value)}>
-              {modelPurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
-            </select>
-          </label>
-          <label>
-            Provider
-            <select value={modelProvider} onChange={(event) => applyModelProvider(event.target.value)}>
-              {modelProviderOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-            </select>
-          </label>
-          {selectedModelProvider && <p className="muted">{selectedModelProvider.note}</p>}
-          <label>
-            Model
-            <input value={modelName} onChange={(event) => setModelName(event.target.value)} />
-          </label>
-          <div className="grid two">
-            <label>
-              Prompt cost / 1K
-              <input type="number" min="0" step="0.0001" value={modelPromptCost} onChange={(event) => setModelPromptCost(Number(event.target.value))} />
-            </label>
-            <label>
-              Completion cost / 1K
-              <input type="number" min="0" step="0.0001" value={modelCompletionCost} onChange={(event) => setModelCompletionCost(Number(event.target.value))} />
-            </label>
+          <div className="next-action-card">
+            <span>Routing readiness</span>
+            <strong>{configuredPurposeCount}/{modelPurposes.length} purposes configured</strong>
+            <p>{liveProviderCount ? `${liveProviderCount} live provider routes active.` : "Mock routing is active for deterministic local testing."}</p>
+            <button type="button" onClick={() => void runAction("Model configs refreshed", loadModelConfigs)}>Refresh models</button>
           </div>
-          <label>
-            Max context tokens
-            <input type="number" min="256" step="256" value={modelMaxContext} onChange={(event) => setModelMaxContext(Number(event.target.value))} />
-          </label>
-          <label className="check-row single-check">
-            <input type="checkbox" checked={modelActive} onChange={(event) => setModelActive(event.target.checked)} />
-            Activate this config immediately
-          </label>
-          <button className="primary" disabled={loading}>Create config</button>
-        </form>
-        <section className="panel stack">
-          <h3>Active routing</h3>
-          {purposeSummary.map(({ purpose, active }) => (
-            <article className={active ? "model-card active-model" : "model-card"} key={purpose}>
-              <div className="row-head">
-                <strong>{purpose}</strong>
-                {active ? <Badge tone="good">active</Badge> : <Badge tone="warn">default</Badge>}
-              </div>
-              <small>{active ? `${active.provider} / ${active.model}` : "Fallback mock pricing"}</small>
-              <small>{active ? `${formatNumber(active.max_context_tokens)} context tokens` : "No workspace override"}</small>
-            </article>
-          ))}
         </section>
-        <section className="panel full-width stack">
+
+        <section className="settings-summary-grid">
+          <Metric label="Active configs" value={activeConfigs.length} />
+          <Metric label="Configured purposes" value={`${configuredPurposeCount}/${modelPurposes.length}`} />
+          <Metric label="Live providers" value={liveProviderCount} />
+          <Metric label="Max context" value={maxContext ? formatNumber(maxContext) : "mock default"} />
+        </section>
+
+        <section className="settings-workbench">
+          <form className="panel stack settings-editor-panel" onSubmit={createModelConfig}>
+            <div className="row-head">
+              <div>
+                <h3>Create model config</h3>
+                <p className="muted">Use mock for deterministic local testing, or activate OpenAI/OpenAI-compatible configs for real model calls with ledger tracking.</p>
+              </div>
+              <Badge tone={modelActive ? "good" : "neutral"}>{modelActive ? "active" : "draft"}</Badge>
+            </div>
+            <div className="settings-meta-grid">
+              <label>
+                Purpose
+                <select value={modelPurpose} onChange={(event) => setModelPurpose(event.target.value)}>
+                  {modelPurposes.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
+                </select>
+              </label>
+              <label>
+                Provider
+                <select value={modelProvider} onChange={(event) => applyModelProvider(event.target.value)}>
+                  {modelProviderOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+                </select>
+              </label>
+              <label>
+                Model
+                <input value={modelName} onChange={(event) => setModelName(event.target.value)} />
+              </label>
+            </div>
+            {selectedModelProvider && <div className="settings-note">{selectedModelProvider.note}</div>}
+            <div className="settings-meta-grid">
+              <label>
+                Prompt cost / 1K
+                <input type="number" min="0" step="0.0001" value={modelPromptCost} onChange={(event) => setModelPromptCost(Number(event.target.value))} />
+              </label>
+              <label>
+                Completion cost / 1K
+                <input type="number" min="0" step="0.0001" value={modelCompletionCost} onChange={(event) => setModelCompletionCost(Number(event.target.value))} />
+              </label>
+              <label>
+                Max context tokens
+                <input type="number" min="256" step="256" value={modelMaxContext} onChange={(event) => setModelMaxContext(Number(event.target.value))} />
+              </label>
+            </div>
+            <label className="check-row single-check settings-toggle">
+              <input type="checkbox" checked={modelActive} onChange={(event) => setModelActive(event.target.checked)} />
+              Activate this config immediately
+            </label>
+            <div className="run-action-bar">
+              <button className="primary" disabled={loading}>Create config</button>
+              <button type="button" onClick={() => setActiveTab("agent")}>Run agent</button>
+              <button type="button" onClick={() => setActiveTab("costs")}>Inspect costs</button>
+            </div>
+          </form>
+
+          <aside className="panel stack settings-side-panel">
+            <h3>Active purpose routing</h3>
+            {purposeSummary.map(({ purpose, active }) => (
+              <article className={active ? "settings-route-card active" : "settings-route-card"} key={purpose}>
+                <div className="row-head">
+                  <strong>{purpose}</strong>
+                  {active ? <Badge tone="good">active</Badge> : <Badge tone="warn">default</Badge>}
+                </div>
+                <small>{active ? `${active.provider} / ${active.model}` : "Fallback mock pricing"}</small>
+                <small>{active ? `${formatNumber(active.max_context_tokens)} context tokens` : "No workspace override"}</small>
+              </article>
+            ))}
+          </aside>
+        </section>
+
+        <section className="panel full-width stack settings-history-panel">
           <div className="row-head">
             <div>
-              <h3>Model configurations</h3>
+              <h3>Model configuration history</h3>
               <p className="muted">Activating a config deactivates other configs for the same purpose in this workspace.</p>
             </div>
-            <button onClick={() => void runAction("Model configs refreshed", loadModelConfigs)}>Refresh</button>
+            <Badge>{modelConfigs.length} configs</Badge>
           </div>
-          <div className="model-config-list">
+          <div className="model-config-list settings-card-grid">
             {modelConfigs.map((config) => (
               <article className={config.active ? "model-card active-model" : "model-card"} key={config.id}>
                 <div className="row-head">

@@ -1427,17 +1427,22 @@ th {
   .evaluation-workbench,
   .cost-hero,
   .cost-workbench,
+  .settings-hero,
+  .settings-workbench,
+  .settings-meta-grid,
   .review-context-grid,
   .review-editor {
     grid-template-columns: 1fr;
   }
 
-  .queue-summary-grid {
+  .queue-summary-grid,
+  .settings-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .evaluation-run-list,
   .cost-policy-panel,
+  .settings-side-panel,
   .review-policy-panel {
     position: static;
   }
@@ -1627,6 +1632,104 @@ th {
 .cost-card,
 .model-spend-card {
   background: #fbfdff;
+}
+
+
+.settings-console {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 18px;
+  align-items: stretch;
+  border-color: #b9d7d3;
+  background: #fbfefd;
+}
+
+.settings-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.settings-editor-panel textarea {
+  min-height: 380px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.settings-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.settings-toggle {
+  min-height: 58px;
+  align-content: center;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+.settings-toggle input {
+  width: auto;
+}
+
+.settings-note {
+  border: 1px solid #cfe1df;
+  border-radius: 8px;
+  background: #f8fbfb;
+  padding: 11px 12px;
+  color: #526071;
+  line-height: 1.5;
+}
+
+.settings-side-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.settings-route-card {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.settings-route-card.active {
+  border-color: #9bd4c7;
+  background: #f0fdfa;
+}
+
+.settings-route-card small {
+  line-height: 1.35;
+}
+
+.settings-history-panel {
+  background: #fbfdff;
+}
+
+.settings-card-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.settings-card-grid .json-block {
+  max-height: 260px;
 }
 
 .prompt-template-list,
