@@ -562,6 +562,9 @@ export function App() {
   const [workspaceName, setWorkspaceName] = useState("Agentic Platform Demo");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("asi_sidebar_collapsed") === "true",
+  );
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -650,6 +653,20 @@ export function App() {
   const canManageResources = Boolean(
     selectedWorkspace && currentUser && selectedWorkspace.created_by_user_id === currentUser.id,
   );
+  const workspaceRole = !selectedWorkspaceId
+    ? "No workspace"
+    : !currentUser
+      ? "Checking role"
+      : canManageResources
+        ? "Owner"
+        : "Member";
+  const permissionSummary = !selectedWorkspaceId
+    ? "Create or select a workspace to unlock platform controls."
+    : !currentUser
+      ? "Loading workspace permissions from the backend session."
+      : canManageResources
+        ? "Can manage resources, settings, and destructive cleanup in this workspace."
+        : "Can inspect workspace data; owner-only cleanup and folder management are restricted.";
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
   const setupSteps = [
     { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
@@ -696,6 +713,14 @@ export function App() {
   function resetMessages() {
     setNotice("");
     setError("");
+  }
+
+  function toggleSidebar() {
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      localStorage.setItem("asi_sidebar_collapsed", String(next));
+      return next;
+    });
   }
 
   async function runAction(label: string, action: () => Promise<void>) {
@@ -1401,14 +1426,23 @@ export function App() {
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar">
+    <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <aside className="sidebar" aria-label="Workspace navigation">
         <div className="brand-block">
           <div className="brand-mark">AI</div>
-          <div>
+          <div className="brand-copy">
             <p className="eyebrow">Agentic platform</p>
             <h1>Agentic Intelligence</h1>
           </div>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            aria-label={sidebarCollapsed ? "Show navigation" : "Hide navigation"}
+            aria-expanded={!sidebarCollapsed}
+            onClick={toggleSidebar}
+          >
+            {sidebarCollapsed ? "Show" : "Hide"}
+          </button>
         </div>
 
         <section className="workspace-card">
@@ -1428,6 +1462,11 @@ export function App() {
               ))}
             </select>
           </label>
+          <div className="role-line">
+            <span>Role</span>
+            <strong>{workspaceRole}</strong>
+          </div>
+          <p className="permission-summary">{permissionSummary}</p>
           <form className="workspace-create" onSubmit={createWorkspace}>
             <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} />
             <button>Create</button>
@@ -1451,6 +1490,8 @@ export function App() {
                 <button
                   key={tab.id}
                   className={activeTab === tab.id ? "active" : ""}
+                  title={`${tab.label}: ${tab.purpose}`}
+                  aria-label={tab.label}
                   onClick={() => setActiveTab(tab.id)}
                 >
                   <span className="nav-token">{tab.token}</span>
@@ -1471,6 +1512,7 @@ export function App() {
             <p className="page-purpose">{activeTabInfo.purpose}</p>
           </div>
           <div className="topbar-actions">
+            <Badge>{workspaceRole}</Badge>
             <Badge tone={latestRunTone}>{latestRun ? latestRun.status : "No run"}</Badge>
             <button
               className="secondary"
