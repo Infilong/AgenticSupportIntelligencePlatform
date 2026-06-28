@@ -105,9 +105,17 @@ class ToolService:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_tools(self, *, workspace_id: UUID) -> list[ToolCatalogItem]:
+    def list_tools(
+        self,
+        *,
+        workspace_id: UUID,
+        search: str | None = None,
+        view: str = "all",
+        limit: int = 30,
+        offset: int = 0,
+    ) -> list[ToolCatalogItem]:
         definitions_by_name = self._definitions_for_workspace(workspace_id=workspace_id)
-        return [
+        items = [
             ToolCatalogItem(
                 definition=definition,
                 usage=self._usage(workspace_id=workspace_id, tool_name=definition.name),
@@ -117,6 +125,13 @@ class ToolService:
             )
             for definition in sorted(definitions_by_name.values(), key=lambda item: item.name)
         ]
+        filtered = [
+            item
+            for item in items
+            if _tool_matches_view(item, view) and _tool_matches_search(item, search)
+        ]
+        start = max(offset, 0)
+        return filtered[start : start + _bounded_limit(limit)]
 
     def get_tool_definition(self, *, workspace_id: UUID, tool_name: str) -> ToolDefinition:
         definition = self._definitions_for_workspace(workspace_id=workspace_id).get(tool_name)
@@ -316,3 +331,44 @@ def _discovered_tool_definition(name: str) -> ToolDefinition:
         output_schema={},
         related_workflow_nodes=[],
     )
+
+
+def _bounded_limit(limit: int) -> int:
+    return max(min(limit, 100), 1)
+
+
+def _tool_matches_view(item: ToolCatalogItem, view: str) -> bool:
+    definition = item.definition
+    if view == "enabled":
+        return definition.enabled
+    if view == "disabled":
+        return not definition.enabled
+    if view == "failed":
+        return item.usage.failed_calls > 0
+    if view == "configured":
+        return bool(definition.timeout_ms or definition.max_retries or not definition.enabled)
+    return True
+
+
+def _tool_matches_search(item: ToolCatalogItem, search: str | None) -> bool:
+    query = (search or "").strip().lower()
+    if not query:
+        return True
+    definition = item.definition
+    haystack = " ".join(
+        [
+            definition.name,
+            definition.description,
+            definition.framework,
+            definition.retry_policy,
+            *definition.permissions,
+            *definition.related_workflow_nodes,
+            json.dumps(definition.input_schema, sort_keys=True),
+            json.dumps(definition.output_schema, sort_keys=True),
+            *[call.step_name for call in item.recent_calls],
+            *[call.graph_run_input_message for call in item.recent_calls],
+            *[call.status for call in item.recent_calls],
+            *[call.result_summary for call in item.recent_calls],
+        ]
+    ).lower()
+    return query in haystack

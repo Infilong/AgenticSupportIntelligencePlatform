@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -30,13 +30,26 @@ GuardrailConfigureAccess = Annotated[
     Workspace, Depends(require_workspace_permission("guardrails:configure"))
 ]
 GuardrailType = Annotated[str, Path(min_length=1, max_length=120)]
+GuardrailSearch = Annotated[str | None, Query(max_length=240)]
+GuardrailViewFilter = Annotated[
+    Literal["all", "failed", "configurable", "fixed", "routing"], Query()
+]
+ListLimit = Annotated[int, Query(ge=1, le=100)]
+ListOffset = Annotated[int, Query(ge=0)]
 
 
 @router.get("/guardrails", response_model=list[GuardrailCatalogItemResponse])
 def list_guardrails(
-    workspace: GuardrailReadAccess, db: DbSession
+    workspace: GuardrailReadAccess,
+    db: DbSession,
+    search: GuardrailSearch = None,
+    view: GuardrailViewFilter = "all",
+    limit: ListLimit = 30,
+    offset: ListOffset = 0,
 ) -> list[GuardrailCatalogItemResponse]:
-    guardrails = GuardrailCatalogService(db).list_guardrails(workspace_id=workspace.id)
+    guardrails = GuardrailCatalogService(db).list_guardrails(
+        workspace_id=workspace.id, search=search, view=view, limit=limit, offset=offset
+    )
     return [_guardrail_response(guardrail) for guardrail in guardrails]
 
 

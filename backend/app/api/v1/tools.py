@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -23,11 +23,24 @@ ToolReadAccess = Annotated[Workspace, Depends(require_workspace_permission("tool
 ToolConfigureAccess = Annotated[Workspace, Depends(require_workspace_permission("tools:configure"))]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 ToolName = Annotated[str, Path(min_length=1, max_length=120)]
+ToolSearch = Annotated[str | None, Query(max_length=240)]
+ToolViewFilter = Annotated[Literal["all", "enabled", "disabled", "failed", "configured"], Query()]
+ListLimit = Annotated[int, Query(ge=1, le=100)]
+ListOffset = Annotated[int, Query(ge=0)]
 
 
 @router.get("/tools", response_model=list[ToolCatalogItemResponse])
-def list_tools(workspace: ToolReadAccess, db: DbSession) -> list[ToolCatalogItemResponse]:
-    tools = ToolService(db).list_tools(workspace_id=workspace.id)
+def list_tools(
+    workspace: ToolReadAccess,
+    db: DbSession,
+    search: ToolSearch = None,
+    view: ToolViewFilter = "all",
+    limit: ListLimit = 30,
+    offset: ListOffset = 0,
+) -> list[ToolCatalogItemResponse]:
+    tools = ToolService(db).list_tools(
+        workspace_id=workspace.id, search=search, view=view, limit=limit, offset=offset
+    )
     return [_tool_response(tool) for tool in tools]
 
 

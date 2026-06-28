@@ -1108,10 +1108,12 @@ export function App() {
   const [toolConfigDrafts, setToolConfigDrafts] = useState<Record<string, { enabled: boolean; timeout_ms: string; max_retries: string }>>({});
   const [toolSearch, setToolSearch] = useState("");
   const [toolView, setToolView] = useState<ToolView>("all");
+  const [toolPage, setToolPage] = useState(0);
   const [guardrails, setGuardrails] = useState<GuardrailCatalogItem[]>([]);
   const [guardrailPolicyDrafts, setGuardrailPolicyDrafts] = useState<Record<string, GuardrailPolicyDraft>>({});
   const [guardrailSearch, setGuardrailSearch] = useState("");
   const [guardrailView, setGuardrailView] = useState<GuardrailView>("all");
+  const [guardrailPage, setGuardrailPage] = useState(0);
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
@@ -1384,6 +1386,18 @@ export function App() {
     if (!permissionList.includes("costs:read")) return;
     void loadCosts();
   }, [token, selectedWorkspaceId, activeTab, costSearch, costRunStatusFilter, aiLedgerStatusFilter, costRunPage, aiLedgerPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "tools") return;
+    if (!permissionList.includes("tools:read")) return;
+    void loadTools();
+  }, [token, selectedWorkspaceId, activeTab, toolSearch, toolView, toolPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "guardrails") return;
+    if (!permissionList.includes("guardrails:read")) return;
+    void loadGuardrails();
+  }, [token, selectedWorkspaceId, activeTab, guardrailSearch, guardrailView, guardrailPage, permissionKey]);
 
   useEffect(() => {
     if (!token || !selectedWorkspaceId || activeTab !== "evaluations") return;
@@ -2451,9 +2465,26 @@ export function App() {
     });
   }
 
-  async function loadTools() {
+  function toolListParams(page = toolPage, view = toolView, search = toolSearch) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_ADMIN_ASSETS,
+      offset: page * MAX_VISIBLE_ADMIN_ASSETS,
+    };
+    if (view !== "all") {
+      params.view = view;
+    }
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    return params;
+  }
+
+  async function loadTools(page = toolPage, view = toolView, search = toolSearch) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<ToolCatalogItem[]>(workspacePath("/tools"), { token });
+    const data = await apiRequest<ToolCatalogItem[]>(
+      workspaceListPath("/tools", toolListParams(page, view, search)),
+      { token },
+    );
     setTools(data);
     setToolConfigDrafts((current) => {
       const next = { ...current };
@@ -2491,15 +2522,32 @@ export function App() {
         delete next[tool.name];
         return next;
       });
-      await loadTools();
+      await loadTools(toolPage, toolView, toolSearch);
       await loadAuditLogsIfAllowed();
       await loadSystemHealthIfAllowed();
     });
   }
 
-  async function loadGuardrails() {
+  function guardrailListParams(page = guardrailPage, view = guardrailView, search = guardrailSearch) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_ADMIN_ASSETS,
+      offset: page * MAX_VISIBLE_ADMIN_ASSETS,
+    };
+    if (view !== "all") {
+      params.view = view;
+    }
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    return params;
+  }
+
+  async function loadGuardrails(page = guardrailPage, view = guardrailView, search = guardrailSearch) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<GuardrailCatalogItem[]>(workspacePath("/guardrails"), { token });
+    const data = await apiRequest<GuardrailCatalogItem[]>(
+      workspaceListPath("/guardrails", guardrailListParams(page, view, search)),
+      { token },
+    );
     setGuardrails(data);
     setGuardrailPolicyDrafts((current) => {
       const next = { ...current };
@@ -2540,7 +2588,7 @@ export function App() {
         delete next[guardrail.guardrail_type];
         return next;
       });
-      await loadGuardrails();
+      await loadGuardrails(guardrailPage, guardrailView, guardrailSearch);
       await loadAuditLogsIfAllowed();
       await loadSystemHealthIfAllowed();
     });
@@ -4590,22 +4638,11 @@ export function App() {
     const failedCalls = tools.reduce((sum, tool) => sum + tool.usage.failed_calls, 0);
     const activeTools = tools.filter((tool) => tool.enabled).length;
     const configuredTools = tools.filter((tool) => toolHasWorkspaceConfig(tool)).length;
-    const visibleTools = tools.filter((tool) => {
-      const matchesView = toolMatchesView(tool, toolView);
-      return matchesView && matchesSearch(
-        toolSearch,
-        tool.name,
-        friendlyToolName(tool.name),
-        tool.description,
-        tool.framework,
-        friendlyToolFramework(tool.framework),
-        tool.retry_policy,
-        ...tool.permissions,
-        ...tool.related_workflow_nodes.map(formatStepName),
-      );
-    });
-    const displayedTools = visibleTools.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
-    const hiddenToolCount = Math.max(visibleTools.length - displayedTools.length, 0);
+    const displayedTools = tools;
+    const toolPageStart = toolPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedTools.length ? 1 : 0);
+    const toolPageEnd = toolPage * MAX_VISIBLE_ADMIN_ASSETS + displayedTools.length;
+    const canGoToPreviousToolPage = toolPage > 0;
+    const canGoToNextToolPage = displayedTools.length === MAX_VISIBLE_ADMIN_ASSETS;
     const lastUsedAt = tools
       .map((tool) => tool.usage.last_used_at)
       .filter((value): value is string => Boolean(value))
@@ -4643,7 +4680,7 @@ export function App() {
               <h3>Tool operations board</h3>
               <p className="muted">Filter backend-supported runtime tools by enabled state, failures, and workspace configuration before drilling into schemas or trace-linked executions.</p>
             </div>
-            <Badge>{visibleTools.length}/{tools.length} shown</Badge>
+            <Badge>{displayedTools.length} shown</Badge>
           </div>
           <div className="tool-filter-row">
             <div className="segmented tool-filter" aria-label="Tool catalog filter">
@@ -4652,7 +4689,7 @@ export function App() {
                   type="button"
                   key={option.id}
                   className={toolView === option.id ? "selected" : ""}
-                  onClick={() => setToolView(option.id)}
+                  onClick={() => { setToolPage(0); setToolView(option.id); }}
                 >
                   {option.label}
                 </button>
@@ -4662,7 +4699,7 @@ export function App() {
               Search tools
               <input
                 value={toolSearch}
-                onChange={(event) => setToolSearch(event.target.value)}
+                onChange={(event) => { setToolPage(0); setToolSearch(event.target.value); }}
                 placeholder="Tool, permission, workflow node, schema, or runtime"
               />
             </label>
@@ -4805,9 +4842,13 @@ export function App() {
               </article>
             );
           })}
-          {hiddenToolCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {visibleTools.length} matching tools. Search by tool, permission, workflow node, schema, or runtime before changing workspace defaults.</p>}
-          {tools.length === 0 && <EmptyState title="No tools loaded" detail="Refresh the workspace or run an agent to load runtime tool definitions." />}
-          {tools.length > 0 && visibleTools.length === 0 && <EmptyState title="No tools match this view" detail="Clear search or choose another tool filter." />}
+          {displayedTools.length === 0 && <EmptyState title="No tools match this view" detail={toolPage > 0 ? "Move to the previous page or clear filters." : "Refresh the workspace, clear search, or choose another tool filter."} />}
+          <div className="pagination-bar">
+            <button type="button" onClick={() => setToolPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousToolPage || loading}>Previous</button>
+            <span>Page {toolPage + 1} · {displayedTools.length ? `${toolPageStart}-${toolPageEnd}` : "0"} tools shown</span>
+            <button type="button" onClick={() => setToolPage((page) => page + 1)} disabled={!canGoToNextToolPage || loading}>Next</button>
+          </div>
+          <p className="permission-note">Tool catalog rows are loaded from the backend by search, view, offset, and limit. Recent executions stay attached to each loaded tool.</p>
         </section>
       </div>
     );
@@ -4821,21 +4862,11 @@ export function App() {
     const configurableGuardrails = guardrails.filter((item) => item.configurable).length;
     const fixedGuardrails = guardrails.length - configurableGuardrails;
     const routingGuardrails = guardrails.filter((item) => item.action_on_fail !== "record_only").length;
-    const visibleGuardrails = guardrails.filter((guardrail) => {
-      const matchesView = guardrailMatchesView(guardrail, guardrailView);
-      return matchesView && matchesSearch(
-        guardrailSearch,
-        guardrail.label,
-        guardrail.description,
-        guardrail.guardrail_type,
-        friendlyGuardrailStage(guardrail.stage),
-        friendlyGuardrailAction(guardrail.action_on_fail),
-        guardrail.severity,
-        ...guardrail.related_workflow_nodes.map(formatStepName),
-      );
-    });
-    const displayedGuardrails = visibleGuardrails.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
-    const hiddenGuardrailCount = Math.max(visibleGuardrails.length - displayedGuardrails.length, 0);
+    const displayedGuardrails = guardrails;
+    const guardrailPageStart = guardrailPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedGuardrails.length ? 1 : 0);
+    const guardrailPageEnd = guardrailPage * MAX_VISIBLE_ADMIN_ASSETS + displayedGuardrails.length;
+    const canGoToPreviousGuardrailPage = guardrailPage > 0;
+    const canGoToNextGuardrailPage = displayedGuardrails.length === MAX_VISIBLE_ADMIN_ASSETS;
     const recentFailures = guardrails.flatMap((item) =>
       item.recent_failures.map((failure) => ({ ...failure, label: item.label, guardrail_type: item.guardrail_type })),
     ).sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 8);
@@ -4873,7 +4904,7 @@ export function App() {
               <h3>Governance policy board</h3>
               <p className="muted">Filter implemented runtime policies without losing the backend truth: fixed safety checks, owner-configurable routing checks, and failed evaluations are all shown from the same catalog.</p>
             </div>
-            <Badge>{visibleGuardrails.length}/{guardrails.length} shown</Badge>
+            <Badge>{displayedGuardrails.length} shown</Badge>
           </div>
           <div className="guardrail-filter-row">
             <div className="segmented guardrail-filter" aria-label="Guardrail policy filter">
@@ -4882,7 +4913,7 @@ export function App() {
                   type="button"
                   key={option.id}
                   className={guardrailView === option.id ? "selected" : ""}
-                  onClick={() => setGuardrailView(option.id)}
+                  onClick={() => { setGuardrailPage(0); setGuardrailView(option.id); }}
                 >
                   {option.label}
                 </button>
@@ -4892,7 +4923,7 @@ export function App() {
               Search policies
               <input
                 value={guardrailSearch}
-                onChange={(event) => setGuardrailSearch(event.target.value)}
+                onChange={(event) => { setGuardrailPage(0); setGuardrailSearch(event.target.value); }}
                 placeholder="Policy, stage, action, workflow node, or severity"
               />
             </label>
@@ -5041,9 +5072,13 @@ export function App() {
               </article>
               );
             })}
-            {hiddenGuardrailCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {visibleGuardrails.length} matching guardrail policies. Search by policy, stage, action, workflow node, or severity before changing governance settings.</p>}
-            {guardrails.length === 0 && <EmptyState title="No guardrails loaded" detail="Refresh the workspace or run an agent to load runtime guardrail policies." />}
-            {guardrails.length > 0 && visibleGuardrails.length === 0 && <EmptyState title="No guardrails match this view" detail="Clear search or choose another policy filter." />}
+            {displayedGuardrails.length === 0 && <EmptyState title="No guardrails match this view" detail={guardrailPage > 0 ? "Move to the previous page or clear filters." : "Refresh the workspace, clear search, or choose another guardrail filter."} />}
+            <div className="pagination-bar">
+              <button type="button" onClick={() => setGuardrailPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousGuardrailPage || loading}>Previous</button>
+              <span>Page {guardrailPage + 1} · {displayedGuardrails.length ? `${guardrailPageStart}-${guardrailPageEnd}` : "0"} guardrails shown</span>
+              <button type="button" onClick={() => setGuardrailPage((page) => page + 1)} disabled={!canGoToNextGuardrailPage || loading}>Next</button>
+            </div>
+            <p className="permission-note">Guardrail catalog rows are loaded from the backend by search, view, offset, and limit. Recent failures stay attached to each loaded policy.</p>
           </div>
 
           <aside className="panel stack guardrail-failure-panel">

@@ -4,6 +4,8 @@ from uuid import UUID
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.language import SupportedLanguage
+from app.models.agent import AgentConfig, GraphRun, GraphStep, GraphStepStatus, ToolCall
 from app.models.user import User
 from app.models.workspace import WorkspaceMember, WorkspaceRole
 
@@ -254,3 +256,68 @@ def test_disabled_retrieval_tool_routes_agent_to_review_and_records_failed_tool_
     assert retrieve_step["status"] == "failed"
     assert retrieve_step["tool_calls"][0]["status"] == "failed"
     assert "disabled" in retrieve_step["error_message"]
+
+
+def test_tools_catalog_supports_backend_search_view_and_pagination(
+    client: TestClient, db_session: Session
+) -> None:
+    owner = register(client, "tools-filter-owner@example.com")
+    token = login(client, "tools-filter-owner@example.com")
+    workspace = create_workspace(client, token)
+    workspace_id = UUID(workspace["id"])
+    agent = AgentConfig(workspace_id=workspace_id, name="Tool Filter Agent")
+    db_session.add(agent)
+    db_session.flush()
+    run = GraphRun(
+        workspace_id=workspace_id,
+        agent_config_id=agent.id,
+        user_id=UUID(owner["id"]),
+        input_message="custom tool failed during retrieval",
+        language=SupportedLanguage.en,
+        status="failed",
+    )
+    db_session.add(run)
+    db_session.flush()
+    step = GraphStep(
+        workspace_id=workspace_id,
+        graph_run_id=run.id,
+        step_name="custom_node",
+        input_json="{}",
+        output_json="{}",
+        status=GraphStepStatus.failed,
+        latency_ms=42,
+        error_message="custom tool timeout",
+    )
+    db_session.add(step)
+    db_session.flush()
+    db_session.add(
+        ToolCall(
+            workspace_id=workspace_id,
+            graph_run_id=run.id,
+            graph_step_id=step.id,
+            tool_name="custom_search_tool",
+            input_json='{"query": "custom"}',
+            output_json='{"error": "timeout"}',
+            status=GraphStepStatus.failed,
+            latency_ms=42,
+        )
+    )
+    db_session.commit()
+
+    failed = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/tools",
+        headers=auth_headers(token),
+        params={"view": "failed", "search": "custom", "limit": 1},
+    )
+    next_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/tools",
+        headers=auth_headers(token),
+        params={"view": "failed", "search": "custom", "limit": 1, "offset": 1},
+    )
+
+    assert failed.status_code == 200
+    assert [tool["name"] for tool in failed.json()] == ["custom_search_tool"]
+    assert failed.json()[0]["usage"]["failed_calls"] == 1
+    assert failed.json()[0]["recent_calls"][0]["error_message"] == "custom tool timeout"
+    assert next_page.status_code == 200
+    assert next_page.json() == []

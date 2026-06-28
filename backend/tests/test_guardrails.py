@@ -126,7 +126,6 @@ def test_guardrail_catalog_is_workspace_scoped(client: TestClient) -> None:
     assert citation["recent_failures"] == []
 
 
-
 def test_owner_can_update_guardrail_policy_and_catalog_shows_effective_values(
     client: TestClient,
 ) -> None:
@@ -244,3 +243,43 @@ def test_disabled_citation_guardrail_is_removed_from_route_trace(
     assert "citation_required" not in guardrail_types
     assert "unsupported_answer" in guardrail_types
     assert all(item["graph_step_id"] == route_step["id"] for item in guardrails)
+
+
+def test_guardrail_catalog_supports_backend_search_view_and_pagination(
+    client: TestClient,
+) -> None:
+    register(client, "guardrails-filter-owner@example.com")
+    token = login(client, "guardrails-filter-owner@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"])
+    agent = create_agent(client, token, workspace["id"])
+    run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "How do I permanently delete my account?"},
+    )
+    assert run.status_code == 201
+
+    failed = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails",
+        headers=auth_headers(token),
+        params={"view": "failed", "search": "unsupported", "limit": 1},
+    )
+    next_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails",
+        headers=auth_headers(token),
+        params={"view": "failed", "search": "unsupported", "limit": 1, "offset": 1},
+    )
+    fixed = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails",
+        headers=auth_headers(token),
+        params={"view": "fixed", "search": "prompt injection"},
+    )
+
+    assert failed.status_code == 200
+    assert [item["guardrail_type"] for item in failed.json()] == ["unsupported_answer"]
+    assert failed.json()[0]["recent_failures"]
+    assert next_page.status_code == 200
+    assert next_page.json() == []
+    assert fixed.status_code == 200
+    assert [item["guardrail_type"] for item in fixed.json()] == ["prompt_injection"]

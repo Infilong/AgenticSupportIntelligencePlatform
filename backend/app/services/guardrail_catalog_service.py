@@ -188,7 +188,15 @@ class GuardrailCatalogService:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_guardrails(self, *, workspace_id: UUID) -> list[GuardrailCatalogItem]:
+    def list_guardrails(
+        self,
+        *,
+        workspace_id: UUID,
+        search: str | None = None,
+        view: str = "all",
+        limit: int = 30,
+        offset: int = 0,
+    ) -> list[GuardrailCatalogItem]:
         definitions_by_type = {
             definition.guardrail_type: definition for definition in RUNTIME_GUARDRAIL_DEFINITIONS
         }
@@ -204,7 +212,7 @@ class GuardrailCatalogService:
             definitions_by_type[guardrail_type] = _discovered_guardrail_definition(guardrail_type)
 
         policies = self.effective_policies(workspace_id=workspace_id)
-        return [
+        items = [
             GuardrailCatalogItem(
                 definition=definition,
                 policy=policies.get(definition.guardrail_type)
@@ -220,11 +228,17 @@ class GuardrailCatalogService:
             )
             for definition in sorted(definitions_by_type.values(), key=lambda item: item.label)
         ]
+        filtered = [
+            item
+            for item in items
+            if _guardrail_matches_view(item, view) and _guardrail_matches_search(item, search)
+        ]
+        start = max(offset, 0)
+        return filtered[start : start + _bounded_limit(limit)]
 
     def effective_policies(self, *, workspace_id: UUID) -> dict[str, GuardrailEffectivePolicy]:
         definitions = {
-            definition.guardrail_type: definition
-            for definition in RUNTIME_GUARDRAIL_DEFINITIONS
+            definition.guardrail_type: definition for definition in RUNTIME_GUARDRAIL_DEFINITIONS
         }
         stored = {
             policy.guardrail_type: policy
@@ -291,11 +305,14 @@ class GuardrailCatalogService:
             GuardrailResult.guardrail_type == guardrail_type,
         )
         total = self.db.scalar(select(func.count(GuardrailResult.id)).where(*filters)) or 0
-        failed = self.db.scalar(
-            select(func.count(GuardrailResult.id)).where(
-                *filters, GuardrailResult.passed.is_(False)
+        failed = (
+            self.db.scalar(
+                select(func.count(GuardrailResult.id)).where(
+                    *filters, GuardrailResult.passed.is_(False)
+                )
             )
-        ) or 0
+            or 0
+        )
         last_failed_at = self.db.scalar(
             select(func.max(GuardrailResult.created_at)).where(
                 *filters, GuardrailResult.passed.is_(False)
@@ -372,3 +389,44 @@ def _discovered_guardrail_definition(guardrail_type: str) -> GuardrailDefinition
         action_on_fail="inspect_trace",
         related_workflow_nodes=[],
     )
+
+
+def _bounded_limit(limit: int) -> int:
+    return max(min(limit, 100), 1)
+
+
+def _guardrail_matches_view(item: GuardrailCatalogItem, view: str) -> bool:
+    definition = item.definition
+    policy = item.policy
+    if view == "failed":
+        return item.usage.failed_evaluations > 0
+    if view == "configurable":
+        return definition.configurable
+    if view == "fixed":
+        return not definition.configurable
+    if view == "routing":
+        return policy.action_on_fail != "record_only"
+    return True
+
+
+def _guardrail_matches_search(item: GuardrailCatalogItem, search: str | None) -> bool:
+    query = (search or "").strip().lower()
+    if not query:
+        return True
+    definition = item.definition
+    policy = item.policy
+    haystack = " ".join(
+        [
+            definition.guardrail_type,
+            definition.label,
+            definition.description,
+            definition.stage,
+            definition.default_severity,
+            policy.severity,
+            policy.action_on_fail,
+            *definition.related_workflow_nodes,
+            *[failure.severity for failure in item.recent_failures],
+            *[failure.message for failure in item.recent_failures],
+        ]
+    ).lower()
+    return query in haystack
