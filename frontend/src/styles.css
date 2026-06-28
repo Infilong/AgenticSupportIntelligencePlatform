@@ -1485,6 +1485,66 @@ small {
   overflow-wrap: anywhere;
 }
 
+.agent-control-center {
+  background: var(--surface-muted);
+}
+
+.agent-control-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.agent-config-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.agent-config-section,
+.control-readout-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.agent-config-section.wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(220px, 0.52fr) minmax(260px, 0.68fr) auto;
+  align-items: end;
+}
+
+.agent-config-section span,
+.control-readout-card span {
+  color: var(--text-subtle);
+  font-size: 0.74rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.agent-config-section strong,
+.control-readout-card strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.agent-config-section small,
+.control-readout-card small {
+  color: var(--text-subtle);
+  line-height: 1.4;
+}
+
+.agent-control-readout {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
 .agent-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
@@ -1791,6 +1851,9 @@ th {
 @media (max-width: 900px) {
   .auth-page,
   .agent-hero,
+  .agent-control-layout,
+  .agent-config-form,
+  .agent-config-section.wide,
   .agent-management-grid,
   .agent-workbench,
   .knowledge-hero,

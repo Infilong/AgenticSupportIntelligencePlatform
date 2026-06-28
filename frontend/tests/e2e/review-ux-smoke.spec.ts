@@ -78,6 +78,20 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByText(workspaceName).first()).toBeVisible();
 
   const productNav = page.getByRole("navigation", { name: "Product navigation" });
+
+  await productNav.getByRole("button", { name: "Agents", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Operate a governed LangGraph support agent" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Agent configuration control center" })).toBeVisible();
+  const agentControlCenter = page.locator(".agent-control-center");
+  const selectedAgentName = agentControlCenter.getByLabel("Agent name");
+  await expect(selectedAgentName).toHaveValue("E2E Support Agent");
+  await selectedAgentName.fill("");
+  await selectedAgentName.type("E2E Support Agent Updated");
+  await expect(selectedAgentName).toHaveValue("E2E Support Agent Updated");
+  await expect(selectedAgentName).toBeFocused();
+  await agentControlCenter.getByRole("button", { name: "Save runtime controls" }).click();
+  await expect(agentControlCenter.getByText("E2E Support Agent Updated").first()).toBeVisible();
+
   await productNav.getByRole("button", { name: "Data", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Datasets" })).toBeVisible();
   const datasetLibrary = page.locator(".dataset-library-panel");

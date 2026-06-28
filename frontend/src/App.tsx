@@ -918,6 +918,7 @@ export function App() {
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
 
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [newAgentName, setNewAgentName] = useState("Support Workflow Agent");
   const [agentName, setAgentName] = useState("Support Workflow Agent");
   const [agentTokenBudget, setAgentTokenBudget] = useState(4000);
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
@@ -1745,13 +1746,14 @@ export function App() {
         method: "POST",
         token,
         body: {
-          name: agentName,
+          name: newAgentName,
           token_budget: agentTokenBudget,
           model_config_id: agentModelConfigId || null,
         },
       });
       await loadAgents();
       setSelectedAgentId(agent.id);
+      setNewAgentName("Support Workflow Agent");
       applyAgentControls(agent);
       await Promise.all([loadAgentSummary(agent.id), loadAgentWorkflow(agent.id)]);
     });
@@ -3280,8 +3282,8 @@ export function App() {
               </select>
             </label>
             <form className="inline-form" onSubmit={createAgent}>
-              <input aria-label="Agent name" value={agentName} onChange={(event) => setAgentName(event.target.value)} />
-              <button>Create</button>
+              <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} />
+              <button>Create agent</button>
             </form>
           </div>
         </section>
@@ -3294,6 +3296,89 @@ export function App() {
               <Badge tone={item.ready ? "good" : "warn"}>{item.ready ? "ready" : "needs setup"}</Badge>
             </article>
           ))}
+        </section>
+
+        <section className="panel stack agent-control-center">
+          <div className="row-head">
+            <div>
+              <p className="eyebrow">Configuration control center</p>
+              <h3>Agent configuration control center</h3>
+              <p className="muted">Tune the selected agent before running it. These controls save through the workspace-scoped agent API and are reflected in traces, cost attribution, and audit logs.</p>
+            </div>
+            <Badge tone={selectedAgent ? "good" : "warn"}>{selectedAgent ? "selected" : "select agent"}</Badge>
+          </div>
+          <div className="agent-control-layout">
+            <form className="agent-config-form" onSubmit={updateAgentRuntime}>
+              <section className="agent-config-section">
+                <div>
+                  <span>Identity</span>
+                  <strong>{selectedAgent?.name ?? "No agent selected"}</strong>
+                  <small>{selectedWorkspace?.name ?? "No workspace"} · {workspaceMembership?.role ?? "unknown role"}</small>
+                </div>
+                <label>Agent name<input value={agentName} onChange={(event) => setAgentName(event.target.value)} /></label>
+              </section>
+              <section className="agent-config-section">
+                <div>
+                  <span>Token economy</span>
+                  <strong>{agentTokenBudget.toLocaleString()} token budget</strong>
+                  <small>Lower budgets route expensive or unsupported cases to review instead of silently overspending.</small>
+                </div>
+                <label>Token budget<input type="number" min="500" max="32000" step="100" value={agentTokenBudget} onChange={(event) => setAgentTokenBudget(Number(event.target.value))} /></label>
+                <label>Confidence threshold<input type="number" min="0.1" max="0.95" step="0.05" value={agentConfidenceThreshold} onChange={(event) => setAgentConfidenceThreshold(Number(event.target.value))} /></label>
+              </section>
+              <section className="agent-config-section">
+                <div>
+                  <span>Retrieval</span>
+                  <strong>Top {agentRetrievalTopK} · min score {agentRetrievalMinScore}</strong>
+                  <small>Controls how much evidence reaches the LangChain retriever/context packer before drafting.</small>
+                </div>
+                <label>Retrieval top K<input type="number" min="1" max="8" step="1" value={agentRetrievalTopK} onChange={(event) => setAgentRetrievalTopK(Number(event.target.value))} /></label>
+                <label>Retrieval min score<input type="number" min="0" max="1" step="0.05" value={agentRetrievalMinScore} onChange={(event) => setAgentRetrievalMinScore(Number(event.target.value))} /></label>
+              </section>
+              <section className="agent-config-section wide">
+                <div>
+                  <span>Model route</span>
+                  <strong>{selectedAgentModelConfig?.model ?? "Workspace purpose routing"}</strong>
+                  <small>Agent override is optional; otherwise the workspace active route or mock fallback is used.</small>
+                </div>
+                <label>Default model route
+                  <select value={agentModelConfigId} onChange={(event) => setAgentModelConfigId(event.target.value)}>
+                    <option value="">Workspace purpose routing</option>
+                    {modelConfigs.filter((config) => !config.archived_at).map((config) => (
+                      <option key={config.id} value={config.id}>
+                        {config.provider} / {config.model} · {config.purpose}{config.active ? " · active" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button className="primary" disabled={loading || !selectedAgentId}>Save runtime controls</button>
+              </section>
+            </form>
+
+            <aside className="agent-control-readout">
+              <div className="control-readout-card">
+                <span>Persisted settings</span>
+                <div className="runtime-settings-readout">
+                  <Badge>threshold {String(selectedAgentRecord.confidence_threshold ?? 0.5)}</Badge>
+                  <Badge>top K {String(selectedAgentRecord.retrieval_top_k ?? 4)}</Badge>
+                  <Badge>min score {String(selectedAgentRecord.retrieval_min_score ?? 0.2)}</Badge>
+                  <Badge>budget {selectedAgent?.token_budget ?? agentTokenBudget}</Badge>
+                  <Badge>model {selectedAgentModelConfig?.model ?? "workspace fallback"}</Badge>
+                </div>
+              </div>
+              <div className="control-readout-card">
+                <span>Lifecycle</span>
+                <strong>{selectedAgent?.active ? "Active" : selectedAgent ? "Inactive" : "No agent"}</strong>
+                <small>{selectedAgent ? `Created ${formatDate(selectedAgent.created_at)} · ${shortId(selectedAgent.id)}` : "Create or select an agent to operate the workflow."}</small>
+                <div className="run-next-actions">
+                  <button type="button" onClick={() => goToTab("models")}>Models</button>
+                  <button type="button" onClick={() => goToTab("costs")}>Costs</button>
+                  <button type="button" onClick={() => goToTab("trace")} disabled={!recentRuns.length && !latestRun}>Traces</button>
+                </div>
+              </div>
+              <p className="permission-note">Workspace members can tune and run agents. Archiving remains owner-gated and preserves historical runs for audit.</p>
+            </aside>
+          </div>
         </section>
 
         <section className="agent-management-grid">
@@ -3514,42 +3599,6 @@ export function App() {
               </div>
             )}
           </aside>
-        </section>
-
-        <section className="panel stack full-width admin-runtime-panel">
-          <div className="row-head">
-            <div>
-              <p className="eyebrow">Developer controls</p>
-              <h3>Runtime harness</h3>
-              <p className="muted">Tune graph routing, retrieval, and token budget for this workspace agent.</p>
-            </div>
-            <Badge tone={selectedAgent ? "good" : "warn"}>{selectedAgent ? "editable" : "select agent"}</Badge>
-          </div>
-          <form className="runtime-control-grid" onSubmit={updateAgentRuntime}>
-            <label>Agent name<input value={agentName} onChange={(event) => setAgentName(event.target.value)} /></label>
-            <label>Token budget<input type="number" min="500" max="32000" step="100" value={agentTokenBudget} onChange={(event) => setAgentTokenBudget(Number(event.target.value))} /></label>
-            <label>Confidence threshold<input type="number" min="0.1" max="0.95" step="0.05" value={agentConfidenceThreshold} onChange={(event) => setAgentConfidenceThreshold(Number(event.target.value))} /></label>
-            <label>Retrieval top K<input type="number" min="1" max="8" step="1" value={agentRetrievalTopK} onChange={(event) => setAgentRetrievalTopK(Number(event.target.value))} /></label>
-            <label>Retrieval min score<input type="number" min="0" max="1" step="0.05" value={agentRetrievalMinScore} onChange={(event) => setAgentRetrievalMinScore(Number(event.target.value))} /></label>
-            <label>Default model route
-              <select value={agentModelConfigId} onChange={(event) => setAgentModelConfigId(event.target.value)}>
-                <option value="">Workspace purpose routing</option>
-                {modelConfigs.filter((config) => !config.archived_at).map((config) => (
-                  <option key={config.id} value={config.id}>
-                    {config.provider} / {config.model} · {config.purpose}{config.active ? " · active" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="primary" disabled={loading || !selectedAgentId}>Save controls</button>
-          </form>
-          <div className="runtime-settings-readout">
-            <Badge>threshold {String(selectedAgentRecord.confidence_threshold ?? 0.5)}</Badge>
-            <Badge>top K {String(selectedAgentRecord.retrieval_top_k ?? 4)}</Badge>
-            <Badge>min score {String(selectedAgentRecord.retrieval_min_score ?? 0.2)}</Badge>
-            <Badge>budget {selectedAgent?.token_budget ?? agentTokenBudget}</Badge>
-            <Badge>model {selectedAgentModelConfig?.model ?? "workspace fallback"}</Badge>
-          </div>
         </section>
       </div>
     );
