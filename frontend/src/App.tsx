@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "datasets" | "documents" | "agent" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
+type Tab = "overview" | "datasets" | "documents" | "agent" | "tools" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin";
 
 type CurrentUser = {
@@ -168,6 +168,36 @@ type ToolCall = {
   latency_ms: number;
   created_at: string;
   framework: string | null;
+};
+
+type ToolCatalogCall = {
+  id: string;
+  graph_run_id: string;
+  graph_step_id: string;
+  status: string;
+  latency_ms: number;
+  result_summary: string;
+  created_at: string;
+};
+
+type ToolCatalogItem = {
+  name: string;
+  description: string;
+  framework: string;
+  enabled: boolean;
+  permissions: string[];
+  timeout_ms: number | null;
+  retry_policy: string;
+  input_schema: Record<string, unknown>;
+  output_schema: Record<string, unknown>;
+  related_workflow_nodes: string[];
+  usage: {
+    total_calls: number;
+    failed_calls: number;
+    average_latency_ms: number;
+    last_used_at: string | null;
+  };
+  recent_calls: ToolCatalogCall[];
 };
 
 type AIRunTrace = {
@@ -406,6 +436,7 @@ const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purp
   { id: "datasets", label: "Data", token: "DT", group: "Build", purpose: "Import and label multilingual examples for evaluation and routing." },
   { id: "documents", label: "Knowledge", token: "KB", group: "Build", purpose: "Manage RAG policies, FAQs, versions, chunks, and citations." },
   { id: "agent", label: "Agents", token: "AG", group: "Build", purpose: "Configure and run governed LangGraph agent workflows." },
+  { id: "tools", label: "Tools", token: "TL", group: "Build", purpose: "Inspect agent tools, schemas, permissions, usage, and errors." },
   { id: "trace", label: "Runs & traces", token: "TR", group: "Operate", purpose: "Inspect graph state, tools, guardrails, evidence, and model calls." },
   { id: "reviews", label: "Human review", token: "RV", group: "Operate", purpose: "Resolve blocked, risky, low-confidence, or unsupported runs." },
   { id: "evaluations", label: "Evaluations", token: "EV", group: "Evaluate", purpose: "Compare quality, routing, language preservation, and baselines." },
@@ -631,6 +662,7 @@ export function App() {
   const [latestRun, setLatestRun] = useState<GraphRun | null>(null);
   const [trace, setTrace] = useState<GraphTrace | null>(null);
   const [traceRunId, setTraceRunId] = useState("");
+  const [tools, setTools] = useState<ToolCatalogItem[]>([]);
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
@@ -702,6 +734,7 @@ export function App() {
     { label: "Data", done: datasets.length > 0, tab: "datasets" as Tab },
     { label: "Knowledge", done: documents.length > 0, tab: "documents" as Tab },
     { label: "Agents", done: agents.length > 0, tab: "agent" as Tab },
+    { label: "Tools", done: tools.some((tool) => tool.usage.total_calls > 0), tab: "tools" as Tab },
     { label: "Runs & traces", done: Boolean(trace), tab: "trace" as Tab },
     { label: "Human review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
     { label: "Evaluations", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
@@ -815,6 +848,7 @@ export function App() {
       loadDocuments(),
       loadAgents(),
       loadReviews(),
+      loadTools(),
       loadEvaluations(),
       loadCosts(),
       loadAuditLogs(),
@@ -1276,6 +1310,12 @@ export function App() {
     setReviews(data);
   }
 
+  async function loadTools() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<ToolCatalogItem[]>(workspacePath("/tools"), { token });
+    setTools(data);
+  }
+
   async function claimReview(review: HumanReview) {
     await runAction("Review claimed", async () => {
       await apiRequest(workspacePath(`/human-reviews/${review.id}/claim`), {
@@ -1636,6 +1676,8 @@ export function App() {
         return DocumentsPanel();
       case "agent":
         return AgentPanel();
+      case "tools":
+        return ToolsPanel();
       case "trace":
         return TracePanel();
       case "reviews":
@@ -1906,6 +1948,11 @@ export function App() {
             <strong>{activeModelCount} active</strong>
             <small>Configure model purpose, cost, and context limits.</small>
           </button>
+          <button className="overview-admin-card" onClick={() => setActiveTab("tools")}>
+            <span>Tool catalog</span>
+            <strong>{tools.length} tools</strong>
+            <small>Inspect tool schemas, permissions, usage, and trace links.</small>
+          </button>
           <button className="overview-admin-card" onClick={() => setActiveTab("audit")}>
             <span>Governance audit</span>
             <strong>{auditLogs.length} events</strong>
@@ -1914,11 +1961,11 @@ export function App() {
         </section>
 
         <section className="overview-admin-grid platform-coverage-grid">
-          <article className="overview-admin-card">
+          <button className="overview-admin-card" onClick={() => setActiveTab("tools")}>
             <span>Tools</span>
-            <strong>Trace-backed</strong>
-            <small>Tool executions are visible inside runs today; a first-class tool registry is a future ticket.</small>
-          </article>
+            <strong>{tools.some((tool) => tool.usage.total_calls > 0) ? "Runtime measured" : "Catalog ready"}</strong>
+            <small>Tool contracts and recent executions are now visible outside individual traces.</small>
+          </button>
           <article className="overview-admin-card">
             <span>Guardrails</span>
             <strong>Runtime visible</strong>
@@ -2416,6 +2463,105 @@ export function App() {
             <Badge>min score {String(selectedAgentRecord.retrieval_min_score ?? 0.2)}</Badge>
             <Badge>budget {selectedAgent?.token_budget ?? agentTokenBudget}</Badge>
           </div>
+        </section>
+      </div>
+    );
+  }
+
+
+  function ToolsPanel() {
+    const totalCalls = tools.reduce((sum, tool) => sum + tool.usage.total_calls, 0);
+    const failedCalls = tools.reduce((sum, tool) => sum + tool.usage.failed_calls, 0);
+    const activeTools = tools.filter((tool) => tool.enabled).length;
+    const lastUsedAt = tools
+      .map((tool) => tool.usage.last_used_at)
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .at(-1) ?? null;
+
+    return (
+      <div className="tool-console">
+        <section className="panel tool-hero">
+          <div>
+            <p className="eyebrow">Tool operations</p>
+            <h2>Inspect agent tools outside individual traces</h2>
+            <p className="muted">This catalog is generated from the backend runtime and persisted tool calls. It shows what tools exist, what schemas they accept, which permissions they require, and how they behave during LangGraph runs.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Tool posture</span>
+            <strong>{totalCalls ? `${totalCalls} calls recorded` : "Ready for first run"}</strong>
+            <p>{failedCalls ? `${failedCalls} tool failures need trace review.` : "No tool failures recorded in this workspace."}</p>
+            <button type="button" onClick={() => void runAction("Tools refreshed", loadTools)}>Refresh tools</button>
+          </div>
+        </section>
+
+        <section className="queue-summary-grid">
+          <Metric label="Tools" value={tools.length} />
+          <Metric label="Enabled" value={activeTools} />
+          <Metric label="Calls" value={totalCalls} />
+          <Metric label="Failures" value={failedCalls} />
+          <Metric label="Last used" value={formatDate(lastUsedAt)} />
+        </section>
+
+        <section className="tool-grid">
+          {tools.map((tool) => (
+            <article className="panel stack tool-card" key={tool.name}>
+              <div className="row-head">
+                <div>
+                  <p className="eyebrow">{tool.framework}</p>
+                  <h3>{tool.name}</h3>
+                </div>
+                <Badge tone={tool.enabled ? "good" : "warn"}>{tool.enabled ? "enabled" : "disabled"}</Badge>
+              </div>
+              <p className="muted">{tool.description}</p>
+              <div className="metric-grid compact">
+                <Metric label="Calls" value={tool.usage.total_calls} />
+                <Metric label="Failures" value={tool.usage.failed_calls} />
+                <Metric label="Avg latency" value={formatLatency(tool.usage.average_latency_ms)} />
+                <Metric label="Last used" value={formatDate(tool.usage.last_used_at)} />
+              </div>
+              <div className="tool-chip-row">
+                {tool.permissions.map((permission) => <Badge key={permission}>{permission}</Badge>)}
+                {tool.related_workflow_nodes.map((node) => <Badge key={node}>{formatStepName(node)}</Badge>)}
+              </div>
+              <div className="tool-policy-list">
+                <span>Retry: {tool.retry_policy}</span>
+                <span>Timeout: {tool.timeout_ms ? `${tool.timeout_ms} ms` : "runtime default"}</span>
+              </div>
+              <details>
+                <summary>Input and output schemas</summary>
+                <div className="two">
+                  <JsonBlock value={tool.input_schema} />
+                  <JsonBlock value={tool.output_schema} />
+                </div>
+              </details>
+              <div className="tool-call-list">
+                <div className="row-head">
+                  <strong>Recent executions</strong>
+                  <Badge>{tool.recent_calls.length}</Badge>
+                </div>
+                {tool.recent_calls.map((call) => (
+                  <button
+                    type="button"
+                    className="recent-run-row"
+                    key={call.id}
+                    onClick={() => { setTraceRunId(call.graph_run_id); void loadTrace(call.graph_run_id); setActiveTab("trace"); }}
+                  >
+                    <span>
+                      <strong>{call.result_summary}</strong>
+                      <small>{call.graph_run_id}</small>
+                    </span>
+                    <span className="recent-run-meta">
+                      <Badge tone={toneForStatus(call.status)}>{call.status}</Badge>
+                      <small>{call.latency_ms} ms</small>
+                    </span>
+                  </button>
+                ))}
+                {tool.recent_calls.length === 0 && <EmptyState title="No executions" detail="Run an agent to create tool usage history." />}
+              </div>
+            </article>
+          ))}
+          {tools.length === 0 && <EmptyState title="No tools loaded" detail="Refresh the workspace or run an agent to load runtime tool definitions." />}
         </section>
       </div>
     );

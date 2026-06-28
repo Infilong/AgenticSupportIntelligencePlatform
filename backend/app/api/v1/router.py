@@ -13,6 +13,7 @@ from app.api.v1 import (
     model_configs,
     prompt_templates,
     retrieval,
+    tools,
     workspaces,
 )
 
@@ -29,4 +30,5 @@ api_router.include_router(knowledge.router)
 api_router.include_router(model_configs.router)
 api_router.include_router(prompt_templates.router)
 api_router.include_router(retrieval.router)
+api_router.include_router(tools.router)
 api_router.include_router(costs.router)
