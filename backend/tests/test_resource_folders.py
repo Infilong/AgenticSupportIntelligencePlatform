@@ -346,6 +346,55 @@ def test_folder_and_resource_destructive_actions_require_owner(
     assert agent_move.json()["detail"]["required_permission"] == "resource_folders:manage"
 
 
+def test_folder_listing_requires_matching_resource_read_permission(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "folder-read-owner@example.com")
+    owner_token = login(client, "folder-read-owner@example.com")
+    workspace = create_workspace(client, owner_token)
+    create_folder(client, owner_token, workspace["id"], "knowledge_document", "Policies")
+    create_folder(client, owner_token, workspace["id"], "dataset", "Training data")
+    create_folder(client, owner_token, workspace["id"], "evaluation_run", "Regression runs")
+    create_folder(client, owner_token, workspace["id"], "agent_config", "Agents")
+
+    register(client, "folder-read-reviewer@example.com")
+    reviewer_token = login(client, "folder-read-reviewer@example.com")
+    add_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="folder-read-reviewer@example.com",
+        role=WorkspaceRole.reviewer,
+    )
+
+    reviewer_knowledge = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(reviewer_token),
+        params={"resource_type": "knowledge_document"},
+    )
+    reviewer_agents = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(reviewer_token),
+        params={"resource_type": "agent_config"},
+    )
+    reviewer_datasets = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(reviewer_token),
+        params={"resource_type": "dataset"},
+    )
+    reviewer_evaluations = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/resource-folders",
+        headers=auth_headers(reviewer_token),
+        params={"resource_type": "evaluation_run"},
+    )
+
+    assert reviewer_knowledge.status_code == 200
+    assert reviewer_agents.status_code == 200
+    assert reviewer_datasets.status_code == 403
+    assert reviewer_datasets.json()["detail"]["required_permission"] == "data:read"
+    assert reviewer_evaluations.status_code == 403
+    assert reviewer_evaluations.json()["detail"]["required_permission"] == "evaluations:read"
+
+
 def test_cross_workspace_folder_ids_are_rejected(client: TestClient) -> None:
     register(client, "folder-owner-a@example.com")
     token_a = login(client, "folder-owner-a@example.com")

@@ -197,7 +197,8 @@ def test_tool_configuration_requires_owner_and_is_workspace_scoped(
     )
 
     assert member_update.status_code == 403
-    assert member_update.json()["detail"]["code"] == "workspace_owner_required"
+    assert member_update.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_update.json()["detail"]["required_permission"] == "tools:configure"
     assert other_update.status_code == 404
     assert other_update.json()["detail"]["code"] == "workspace_not_found"
     assert unknown_tool.status_code == 404

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.tool import (
@@ -19,14 +19,14 @@ from app.services.tool_service import ToolCatalogItem, ToolConfigNotFoundError, 
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["tools"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+ToolReadAccess = Annotated[Workspace, Depends(require_workspace_permission("tools:read"))]
+ToolConfigureAccess = Annotated[Workspace, Depends(require_workspace_permission("tools:configure"))]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 ToolName = Annotated[str, Path(min_length=1, max_length=120)]
 
 
 @router.get("/tools", response_model=list[ToolCatalogItemResponse])
-def list_tools(workspace: WorkspaceMemberAccess, db: DbSession) -> list[ToolCatalogItemResponse]:
+def list_tools(workspace: ToolReadAccess, db: DbSession) -> list[ToolCatalogItemResponse]:
     tools = ToolService(db).list_tools(workspace_id=workspace.id)
     return [_tool_response(tool) for tool in tools]
 
@@ -35,7 +35,7 @@ def list_tools(workspace: WorkspaceMemberAccess, db: DbSession) -> list[ToolCata
 def update_tool_config(
     tool_name: ToolName,
     payload: ToolConfigUpdateRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ToolConfigureAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> ToolCatalogItemResponse:

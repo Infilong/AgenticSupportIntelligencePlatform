@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_permission
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.evaluation import (
@@ -25,7 +25,9 @@ from app.services.folder_service import ResourceFolderNotFoundError
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/evaluations", tags=["evaluations"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+EvaluationReadAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("evaluations:read"))
+]
 EvaluationRunAccess = Annotated[Workspace, Depends(require_workspace_permission("evaluations:run"))]
 ResourceDeleteAccess = Annotated[
     Workspace, Depends(require_workspace_permission("resources:delete"))
@@ -74,7 +76,7 @@ def run_evaluation(
 
 @router.get("", response_model=list[EvaluationRunResponse])
 def list_evaluations(
-    workspace: WorkspaceMemberAccess,
+    workspace: EvaluationReadAccess,
     db: DbSession,
     include_archived: IncludeArchived = False,
     folder_id: FolderFilter = None,
@@ -91,7 +93,7 @@ def list_evaluations(
 @router.get("/{evaluation_id}", response_model=EvaluationDetailResponse)
 def get_evaluation(
     evaluation_id: EvaluationId,
-    workspace: WorkspaceMemberAccess,
+    workspace: EvaluationReadAccess,
     db: DbSession,
 ) -> EvaluationDetailResponse:
     try:

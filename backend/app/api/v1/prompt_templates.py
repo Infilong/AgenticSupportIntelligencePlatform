@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.prompt_template import (
@@ -21,8 +21,8 @@ from app.services.prompt_template_service import (
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/prompt-templates", tags=["prompt-templates"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+PromptReadAccess = Annotated[Workspace, Depends(require_workspace_permission("prompts:read"))]
+PromptWriteAccess = Annotated[Workspace, Depends(require_workspace_permission("prompts:write"))]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 TemplateId = Annotated[UUID, Path()]
 IncludeArchived = Annotated[bool, Query()]
@@ -30,7 +30,7 @@ IncludeArchived = Annotated[bool, Query()]
 
 @router.get("", response_model=list[PromptTemplateResponse])
 def list_prompt_templates(
-    workspace: WorkspaceMemberAccess,
+    workspace: PromptReadAccess,
     db: DbSession,
     include_archived: IncludeArchived = False,
 ) -> list[PromptTemplateResponse]:
@@ -43,7 +43,7 @@ def list_prompt_templates(
 @router.post("", response_model=PromptTemplateResponse, status_code=status.HTTP_201_CREATED)
 def create_prompt_template_version(
     payload: PromptTemplateCreateVersionRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: PromptWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> PromptTemplateResponse:
@@ -72,7 +72,7 @@ def create_prompt_template_version(
 @router.post("/{template_id}/activate", response_model=PromptTemplateResponse)
 def activate_prompt_template(
     template_id: TemplateId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: PromptWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> PromptTemplateResponse:
@@ -106,7 +106,7 @@ def activate_prompt_template(
 @router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
 def archive_prompt_template(
     template_id: TemplateId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: PromptWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:

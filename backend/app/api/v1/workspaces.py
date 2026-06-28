@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import (
+    require_workspace_member,
+    require_workspace_owner,
+    require_workspace_permission,
+)
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 from app.schemas.workspace import (
@@ -33,6 +37,7 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
 WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+MemberReadAccess = Annotated[Workspace, Depends(require_workspace_permission("members:read"))]
 MemberUserId = Annotated[UUID, Path()]
 
 
@@ -102,7 +107,7 @@ def get_workspace_membership(
 
 @router.get("/{workspace_id}/members", response_model=list[WorkspaceMemberResponse])
 def list_workspace_members(
-    workspace: WorkspaceMemberAccess, db: DbSession
+    workspace: MemberReadAccess, db: DbSession
 ) -> list[WorkspaceMemberResponse]:
     members = WorkspaceService(db).list_members(workspace_id=workspace.id)
     return [_member_response(member) for member in members]

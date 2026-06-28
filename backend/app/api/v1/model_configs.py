@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.model_config import ModelConfigCreateRequest, ModelConfigResponse
@@ -15,8 +15,8 @@ from app.services.model_config_service import ModelConfigNotFoundError, ModelCon
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/model-configs", tags=["model-configs"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+ModelReadAccess = Annotated[Workspace, Depends(require_workspace_permission("models:read"))]
+ModelWriteAccess = Annotated[Workspace, Depends(require_workspace_permission("models:write"))]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 ModelConfigId = Annotated[UUID, Path()]
 IncludeArchived = Annotated[bool, Query()]
@@ -24,7 +24,7 @@ IncludeArchived = Annotated[bool, Query()]
 
 @router.get("", response_model=list[ModelConfigResponse])
 def list_model_configs(
-    workspace: WorkspaceMemberAccess,
+    workspace: ModelReadAccess,
     db: DbSession,
     include_archived: IncludeArchived = False,
 ) -> list[ModelConfigResponse]:
@@ -37,7 +37,7 @@ def list_model_configs(
 @router.post("", response_model=ModelConfigResponse, status_code=status.HTTP_201_CREATED)
 def create_model_config(
     payload: ModelConfigCreateRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ModelWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> ModelConfigResponse:
@@ -70,7 +70,7 @@ def create_model_config(
 @router.post("/{model_config_id}/activate", response_model=ModelConfigResponse)
 def activate_model_config(
     model_config_id: ModelConfigId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ModelWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> ModelConfigResponse:
@@ -100,7 +100,7 @@ def activate_model_config(
 @router.delete("/{model_config_id}", status_code=status.HTTP_204_NO_CONTENT)
 def archive_model_config(
     model_config_id: ModelConfigId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ModelWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:

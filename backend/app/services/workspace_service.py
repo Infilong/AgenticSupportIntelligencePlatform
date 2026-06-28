@@ -7,34 +7,40 @@ from app.core.security import normalize_email
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 
-READ_PERMISSIONS = [
+BASE_PERMISSIONS = [
     "workspace:read",
     "tasks:read",
+    "settings:read",
+]
+
+VIEWER_PERMISSIONS = [
+    *BASE_PERMISSIONS,
     "data:read",
     "knowledge:read",
     "agents:read",
-    "tools:read",
-    "guardrails:read",
     "traces:read",
     "reviews:read",
     "evaluations:read",
     "costs:read",
-    "budget_policy:read",
-    "members:read",
-    "prompts:read",
-    "models:read",
-    "system:read",
-    "audit:read",
-    "settings:read",
 ]
 
 REVIEWER_PERMISSIONS = [
-    *READ_PERMISSIONS,
+    *BASE_PERMISSIONS,
+    "knowledge:read",
+    "agents:read",
+    "traces:read",
+    "reviews:read",
+    "costs:read",
     "reviews:resolve",
 ]
 
 DEVELOPER_PERMISSIONS = [
-    *READ_PERMISSIONS,
+    *VIEWER_PERMISSIONS,
+    "tools:read",
+    "guardrails:read",
+    "prompts:read",
+    "models:read",
+    "system:read",
     "data:write",
     "knowledge:write",
     "agents:run",
@@ -46,7 +52,9 @@ DEVELOPER_PERMISSIONS = [
 ]
 
 MEMBER_PERMISSIONS = [
-    *READ_PERMISSIONS,
+    *VIEWER_PERMISSIONS,
+    "tools:read",
+    "guardrails:read",
     "data:write",
     "knowledge:write",
     "agents:run",
@@ -58,6 +66,9 @@ MEMBER_PERMISSIONS = [
 OWNER_PERMISSIONS = [
     *DEVELOPER_PERMISSIONS,
     "reviews:resolve",
+    "members:read",
+    "audit:read",
+    "budget_policy:read",
     "workspace:manage",
     "resources:delete",
     "agents:delete",
@@ -71,7 +82,7 @@ ROLE_PERMISSIONS = {
     WorkspaceRole.developer: DEVELOPER_PERMISSIONS,
     WorkspaceRole.member: MEMBER_PERMISSIONS,
     WorkspaceRole.reviewer: REVIEWER_PERMISSIONS,
-    WorkspaceRole.viewer: READ_PERMISSIONS,
+    WorkspaceRole.viewer: VIEWER_PERMISSIONS,
 }
 
 
@@ -96,7 +107,7 @@ class WorkspaceMemberOwnerError(WorkspaceMemberError):
 
 
 def permissions_for_role(role: WorkspaceRole) -> list[str]:
-    return ROLE_PERMISSIONS.get(role, READ_PERMISSIONS).copy()
+    return ROLE_PERMISSIONS.get(role, VIEWER_PERMISSIONS).copy()
 
 
 class WorkspaceService:

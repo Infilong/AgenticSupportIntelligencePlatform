@@ -194,7 +194,8 @@ def test_guardrail_policy_updates_require_owner_and_configurable_policy(
     )
 
     assert member_response.status_code == 403
-    assert member_response.json()["detail"]["code"] == "workspace_owner_required"
+    assert member_response.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_response.json()["detail"]["required_permission"] == "guardrails:configure"
     assert fixed_response.status_code == 400
     assert fixed_response.json()["detail"]["code"] == "guardrail_policy_not_configurable"
     assert missing_response.status_code == 404

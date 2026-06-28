@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_permission
+from app.dependencies.workspace import require_workspace_permission
 from app.models.agent import GraphRun, GraphStep
 from app.models.review import HumanReview
 from app.models.user import User
@@ -29,7 +29,7 @@ from app.services.human_review_service import (
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/human-reviews", tags=["human-reviews"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+ReviewReadAccess = Annotated[Workspace, Depends(require_workspace_permission("reviews:read"))]
 ReviewResolveAccess = Annotated[
     Workspace, Depends(require_workspace_permission("reviews:resolve"))
 ]
@@ -39,7 +39,7 @@ ReviewId = Annotated[UUID, Path()]
 
 @router.get("", response_model=list[HumanReviewResponse])
 def list_human_reviews(
-    workspace: WorkspaceMemberAccess,
+    workspace: ReviewReadAccess,
     db: DbSession,
 ) -> list[HumanReviewResponse]:
     reviews = HumanReviewService(db).list_reviews(workspace_id=workspace.id)
@@ -49,7 +49,7 @@ def list_human_reviews(
 @router.get("/{review_id}", response_model=HumanReviewResponse)
 def get_human_review(
     review_id: ReviewId,
-    workspace: WorkspaceMemberAccess,
+    workspace: ReviewReadAccess,
     db: DbSession,
 ) -> HumanReviewResponse:
     try:

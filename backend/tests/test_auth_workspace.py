@@ -222,11 +222,15 @@ def test_workspace_membership_endpoint_returns_viewer_permissions(
     assert "workspace:read" in body["permissions"]
     assert "tasks:read" in body["permissions"]
     assert "knowledge:read" in body["permissions"]
-    assert "tools:read" in body["permissions"]
+    assert "agents:read" in body["permissions"]
+    assert "traces:read" in body["permissions"]
     assert "reviews:read" in body["permissions"]
-    assert "prompts:read" in body["permissions"]
-    assert "models:read" in body["permissions"]
+    assert "evaluations:read" in body["permissions"]
+    assert "costs:read" in body["permissions"]
     assert "settings:read" in body["permissions"]
+    assert "tools:read" not in body["permissions"]
+    assert "prompts:read" not in body["permissions"]
+    assert "models:read" not in body["permissions"]
     assert "data:write" not in body["permissions"]
     assert "agents:run" not in body["permissions"]
     assert "reviews:resolve" not in body["permissions"]
@@ -551,6 +555,94 @@ def test_workspace_role_presets_expose_distinct_permissions(
     assert "reviews:resolve" not in viewer["permissions"]
     assert "data:write" not in viewer["permissions"]
 
+
+
+def test_role_scoped_read_permissions_hide_admin_surfaces(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "role-read-owner@example.com")
+    owner_token = login(client, "role-read-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Role Read Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+
+    register(client, "role-read-developer@example.com")
+    developer_token = login(client, "role-read-developer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="role-read-developer@example.com",
+        role=WorkspaceRole.developer,
+    )
+
+    register(client, "role-read-reviewer@example.com")
+    reviewer_token = login(client, "role-read-reviewer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="role-read-reviewer@example.com",
+        role=WorkspaceRole.reviewer,
+    )
+
+    register(client, "role-read-viewer@example.com")
+    viewer_token = login(client, "role-read-viewer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="role-read-viewer@example.com",
+        role=WorkspaceRole.viewer,
+    )
+
+    developer_members = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(developer_token),
+    )
+    developer_audit = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/audit-logs",
+        headers=auth_headers(developer_token),
+    )
+    developer_prompts = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/prompt-templates",
+        headers=auth_headers(developer_token),
+    )
+    reviewer_tools = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/tools",
+        headers=auth_headers(reviewer_token),
+    )
+    reviewer_reviews = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/human-reviews",
+        headers=auth_headers(reviewer_token),
+    )
+    viewer_models = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/model-configs",
+        headers=auth_headers(viewer_token),
+    )
+    viewer_datasets = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(viewer_token),
+    )
+    owner_members = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+    )
+
+    assert developer_members.status_code == 403
+    assert developer_members.json()["detail"]["required_permission"] == "members:read"
+    assert developer_audit.status_code == 403
+    assert developer_audit.json()["detail"]["required_permission"] == "audit:read"
+    assert developer_prompts.status_code == 200
+
+    assert reviewer_tools.status_code == 403
+    assert reviewer_tools.json()["detail"]["required_permission"] == "tools:read"
+    assert reviewer_reviews.status_code == 200
+
+    assert viewer_models.status_code == 403
+    assert viewer_models.json()["detail"]["required_permission"] == "models:read"
+    assert viewer_datasets.status_code == 200
+
+    assert owner_members.status_code == 200
 
 def test_workspace_permission_dependency_blocks_disallowed_role_actions(
     client: TestClient, db_session: Session

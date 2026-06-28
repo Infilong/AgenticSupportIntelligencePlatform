@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_permission
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.dataset import (
@@ -29,7 +29,7 @@ from app.services.folder_service import ResourceFolderNotFoundError
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["datasets"])
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+DatasetReadAccess = Annotated[Workspace, Depends(require_workspace_permission("data:read"))]
 DatasetWriteAccess = Annotated[
     Workspace, Depends(require_workspace_permission("data:write"))
 ]
@@ -81,7 +81,7 @@ def import_dataset(
 
 @router.get("/datasets", response_model=list[DatasetResponse])
 def list_datasets(
-    workspace: WorkspaceMemberAccess,
+    workspace: DatasetReadAccess,
     db: DbSession,
     folder_id: FolderFilter = None,
 ) -> list[DatasetResponse]:
@@ -95,7 +95,7 @@ def list_datasets(
 @router.get("/datasets/{dataset_id}/examples", response_model=list[ConversationExampleResponse])
 def list_examples(
     dataset_id: DatasetId,
-    workspace: WorkspaceMemberAccess,
+    workspace: DatasetReadAccess,
     db: DbSession,
 ) -> list[ConversationExampleResponse]:
     try:

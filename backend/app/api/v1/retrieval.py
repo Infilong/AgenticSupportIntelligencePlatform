@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.workspace import require_workspace_permission
 from app.models.workspace import Workspace
 from app.schemas.retrieval import (
     RetrievalResultResponse,
@@ -15,13 +15,13 @@ from app.services.retrieval_service import RetrievalError, RetrievalService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/retrieval", tags=["retrieval"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+KnowledgeReadAccess = Annotated[Workspace, Depends(require_workspace_permission("knowledge:read"))]
 
 
 @router.post("/search", response_model=RetrievalSearchResponse)
 def search_retrieval(
     payload: RetrievalSearchRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: KnowledgeReadAccess,
     db: DbSession,
 ) -> RetrievalSearchResponse:
     try:

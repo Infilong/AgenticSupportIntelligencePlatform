@@ -91,7 +91,8 @@ def test_budget_policy_defaults_update_permissions_and_workspace_scope(
         },
     )
     assert member_update.status_code == 403
-    assert member_update.json()["detail"]["code"] == "workspace_owner_required"
+    assert member_update.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_update.json()["detail"]["required_permission"] == "budget_policy:manage"
 
     register(client, "budget-other@example.com")
     other_token = login(client, "budget-other@example.com")

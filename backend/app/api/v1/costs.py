@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.workspace import require_workspace_permission
 from app.models.workspace import Workspace
 from app.schemas.costs import (
     BudgetPolicySummaryResponse,
@@ -19,11 +19,11 @@ from app.services.cost_service import CostService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/costs", tags=["costs"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+CostReadAccess = Annotated[Workspace, Depends(require_workspace_permission("costs:read"))]
 
 
 @router.get("/summary", response_model=CostSummaryResponse)
-def get_cost_summary(workspace: WorkspaceMemberAccess, db: DbSession) -> CostSummaryResponse:
+def get_cost_summary(workspace: CostReadAccess, db: DbSession) -> CostSummaryResponse:
     summary = CostService(db).summarize_workspace(workspace_id=workspace.id)
     return CostSummaryResponse(
         workspace_id=summary.workspace_id,

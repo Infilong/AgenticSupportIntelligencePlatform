@@ -452,7 +452,8 @@ def test_model_config_archive_owner_only_and_clears_agent_assignment(
         },
     )
     assert member_create.status_code == 403
-    assert member_create.json()["detail"]["code"] == "workspace_owner_required"
+    assert member_create.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_create.json()["detail"]["required_permission"] == "models:write"
 
     created = client.post(
         path,

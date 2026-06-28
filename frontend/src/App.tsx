@@ -1382,30 +1382,35 @@ export function App() {
       await loadWorkspaces();
       setSelectedWorkspaceId(updated.id);
       setWorkspaceSettingsName(updated.name);
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
   async function refreshWorkspaceData() {
+    const membership = await loadWorkspaceMembership();
+    const permissions = membership?.permissions ?? [];
+    const can = (permission: string) => permissions.includes(permission);
+    const canUseFolders = ["data:read", "knowledge:read", "agents:read", "evaluations:read", "resource_folders:manage"]
+      .some((permission) => can(permission));
+
     await Promise.all([
-      loadWorkspaceMembership(),
-      loadWorkspaceMembers(),
-      loadAttentionSummary(),
-      loadDatasets(),
-      loadDocuments(),
-      loadAgents(),
-      loadReviews(),
-      loadTools(),
-      loadGuardrails(),
-      loadEvaluations(),
-      loadCosts(),
-      loadBudgetPolicy(),
-      loadSystemHealth(),
-      loadAuditLogs(),
-      loadPromptTemplates(),
-      loadModelConfigs(),
-      loadResourceFolders(),
+      can("members:read") ? loadWorkspaceMembers() : Promise.resolve(setWorkspaceMembers([])),
+      can("tasks:read") ? loadAttentionSummary() : Promise.resolve(setAttentionSummary(null)),
+      can("data:read") ? loadDatasets() : Promise.resolve(clearDatasetState()),
+      can("knowledge:read") ? loadDocuments() : Promise.resolve(clearKnowledgeState()),
+      can("agents:read") ? loadAgents() : Promise.resolve(clearAgentState()),
+      can("reviews:read") ? loadReviews() : Promise.resolve(clearReviewState()),
+      can("tools:read") ? loadTools() : Promise.resolve(setTools([])),
+      can("guardrails:read") ? loadGuardrails() : Promise.resolve(setGuardrails([])),
+      can("evaluations:read") ? loadEvaluations() : Promise.resolve(clearEvaluationState()),
+      can("costs:read") ? loadCosts() : Promise.resolve(setCostSummary(null)),
+      can("budget_policy:read") ? loadBudgetPolicy() : Promise.resolve(setBudgetPolicy(null)),
+      can("system:read") ? loadSystemHealth() : Promise.resolve(setSystemHealth(null)),
+      can("audit:read") ? loadAuditLogs() : Promise.resolve(setAuditLogs([])),
+      can("prompts:read") ? loadPromptTemplates() : Promise.resolve(setPromptTemplates([])),
+      can("models:read") ? loadModelConfigs() : Promise.resolve(setModelConfigs([])),
+      canUseFolders ? loadResourceFolders(permissions) : Promise.resolve(setResourceFolders([])),
     ]);
   }
 
@@ -1484,15 +1489,29 @@ export function App() {
     return values.some((value) => value?.toLowerCase().includes(normalizedQuery));
   }
 
-  async function loadResourceFolders() {
+  async function loadResourceFolders(permissions = permissionList) {
     if (!selectedWorkspaceId) return;
-    const [knowledgeFolders, datasetFolders, evaluationFolders, agentFolders] = await Promise.all([
-      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=knowledge_document"), { token }),
-      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=dataset"), { token }),
-      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=evaluation_run"), { token }),
-      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=agent_config"), { token }),
-    ]);
-    setResourceFolders([...knowledgeFolders, ...datasetFolders, ...evaluationFolders, ...agentFolders]);
+    const canManageFolders = permissions.includes("resource_folders:manage");
+    const canLoadFolderType = (permission: string) => canManageFolders || permissions.includes(permission);
+    const folderRequests: Array<Promise<ResourceFolder[]>> = [];
+    if (canLoadFolderType("knowledge:read")) {
+      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=knowledge_document"), { token }));
+    }
+    if (canLoadFolderType("data:read")) {
+      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=dataset"), { token }));
+    }
+    if (canLoadFolderType("evaluations:read")) {
+      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=evaluation_run"), { token }));
+    }
+    if (canLoadFolderType("agents:read")) {
+      folderRequests.push(apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=agent_config"), { token }));
+    }
+    if (folderRequests.length === 0) {
+      setResourceFolders([]);
+      return;
+    }
+    const folderGroups = await Promise.all(folderRequests);
+    setResourceFolders(folderGroups.flat());
   }
 
   async function createResourceFolder(resourceType: ResourceType) {
@@ -1514,7 +1533,7 @@ export function App() {
       if (resourceType === "evaluation_run") setEvaluationFolderName("Regression packs");
       if (resourceType === "agent_config") setAgentFolderName("Production agents");
       await loadResourceFolders();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1532,7 +1551,7 @@ export function App() {
       });
       setEditingFolderId("");
       await loadResourceFolders();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1545,14 +1564,52 @@ export function App() {
       if (selectedEvaluationFolderId === folder.id) setSelectedEvaluationFolderId("all");
       if (selectedAgentFolderId === folder.id) setSelectedAgentFolderId("all");
       await loadResourceFolders();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
-  async function loadWorkspaceMembership() {
-    if (!selectedWorkspaceId) return;
+  async function loadWorkspaceMembership(): Promise<WorkspaceMembership | null> {
+    if (!selectedWorkspaceId) return null;
     const data = await apiRequest<WorkspaceMembership>(workspacePath("/membership"), { token });
     setWorkspaceMembership(data);
+    return data;
+  }
+
+  function clearDatasetState() {
+    setDatasets([]);
+    setSelectedDatasetId("");
+    setExamples([]);
+  }
+
+  function clearKnowledgeState() {
+    setDocuments([]);
+    setSelectedDocumentId("");
+    setDocumentDetail(null);
+  }
+
+  function clearAgentState() {
+    setAgents([]);
+    setSelectedAgentId("");
+    setAgentSummary(null);
+    setAgentWorkflowSummary(null);
+  }
+
+  function clearReviewState() {
+    setReviews([]);
+    setSelectedReviewId("");
+  }
+
+  function clearEvaluationState() {
+    setEvaluationRuns([]);
+    setEvaluationDetail(null);
+  }
+
+  async function loadAuditLogsIfAllowed() {
+    if (permissionList.includes("audit:read")) await loadAuditLogs();
+  }
+
+  async function loadSystemHealthIfAllowed() {
+    if (permissionList.includes("system:read")) await loadSystemHealth();
   }
 
   async function loadWorkspaceMembers() {
@@ -1572,7 +1629,7 @@ export function App() {
       setMemberEmail("");
       setMemberRole("member");
       await loadWorkspaceMembers();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1586,7 +1643,7 @@ export function App() {
       });
       await loadWorkspaceMembers();
       await loadWorkspaceMembership();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1595,7 +1652,7 @@ export function App() {
     await runAction("Workspace member removed", async () => {
       await apiRequest(workspacePath(`/members/${member.user_id}`), { method: "DELETE", token });
       await loadWorkspaceMembers();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1634,7 +1691,7 @@ export function App() {
         body: { folder_id: folderId || null },
       });
       await loadDatasets();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1647,7 +1704,7 @@ export function App() {
         setExamples([]);
       }
       await loadDatasets();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1768,7 +1825,7 @@ export function App() {
         resetDocumentForm();
       }
       await loadDocuments();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -1788,7 +1845,7 @@ export function App() {
       if (selectedDocumentId === documentId) {
         await loadDocumentDetail(documentId);
       }
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2034,7 +2091,7 @@ export function App() {
       setAgentSummary(null);
       setAgentWorkflowSummary(null);
       await loadAgents();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2051,7 +2108,7 @@ export function App() {
       }
       await loadAgents();
       await loadResourceFolders();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2162,8 +2219,8 @@ export function App() {
         return next;
       });
       await loadTools();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
@@ -2211,8 +2268,8 @@ export function App() {
         return next;
       });
       await loadGuardrails();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
@@ -2223,7 +2280,7 @@ export function App() {
         token,
       });
       await loadReviews();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2234,7 +2291,7 @@ export function App() {
         token,
       });
       await loadReviews();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2325,7 +2382,7 @@ export function App() {
         setEvaluationDetail(null);
       }
       await loadEvaluations(showArchivedEvaluations);
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2341,7 +2398,7 @@ export function App() {
       }
       await loadEvaluations(showArchivedEvaluations);
       await loadResourceFolders();
-      await loadAuditLogs();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2382,8 +2439,8 @@ export function App() {
       setBudgetPolicy(updated);
       setBudgetDraft(policyToDraft(updated));
       await loadCosts();
-      await loadSystemHealth();
-      await loadAuditLogs();
+      await loadSystemHealthIfAllowed();
+      await loadAuditLogsIfAllowed();
     });
   }
 
@@ -2426,8 +2483,8 @@ export function App() {
         },
       });
       await loadPromptTemplates();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
@@ -2438,8 +2495,8 @@ export function App() {
         token,
       });
       await loadPromptTemplates();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
@@ -2448,8 +2505,8 @@ export function App() {
     await runAction("Prompt template archived", async () => {
       await apiRequest(workspacePath(`/prompt-templates/${template.id}`), { method: "DELETE", token });
       await loadPromptTemplates();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
@@ -2483,8 +2540,8 @@ export function App() {
       });
       await loadModelConfigs();
       await loadCosts();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
@@ -2497,8 +2554,8 @@ export function App() {
       await loadModelConfigs();
       await loadAgents();
       await loadCosts();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 
@@ -2509,8 +2566,8 @@ export function App() {
       await loadModelConfigs();
       await loadAgents();
       await loadCosts();
-      await loadAuditLogs();
-      await loadSystemHealth();
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
     });
   }
 

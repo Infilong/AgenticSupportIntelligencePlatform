@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.attention import AttentionItemResponse, AttentionSummaryResponse
@@ -13,13 +13,13 @@ from app.services.attention_service import AttentionService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/attention", tags=["attention"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+TaskReadAccess = Annotated[Workspace, Depends(require_workspace_permission("tasks:read"))]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.get("", response_model=AttentionSummaryResponse)
 def get_attention_summary(
-    workspace: WorkspaceMemberAccess, current_user: CurrentUser, db: DbSession
+    workspace: TaskReadAccess, current_user: CurrentUser, db: DbSession
 ) -> AttentionSummaryResponse:
     summary = AttentionService(db).summarize_workspace(
         workspace_id=workspace.id, user_id=current_user.id

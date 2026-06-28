@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.guardrail import (
@@ -25,14 +25,16 @@ from app.services.guardrail_catalog_service import (
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["guardrails"])
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+GuardrailReadAccess = Annotated[Workspace, Depends(require_workspace_permission("guardrails:read"))]
+GuardrailConfigureAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("guardrails:configure"))
+]
 GuardrailType = Annotated[str, Path(min_length=1, max_length=120)]
 
 
 @router.get("/guardrails", response_model=list[GuardrailCatalogItemResponse])
 def list_guardrails(
-    workspace: WorkspaceMemberAccess, db: DbSession
+    workspace: GuardrailReadAccess, db: DbSession
 ) -> list[GuardrailCatalogItemResponse]:
     guardrails = GuardrailCatalogService(db).list_guardrails(workspace_id=workspace.id)
     return [_guardrail_response(guardrail) for guardrail in guardrails]
@@ -42,7 +44,7 @@ def list_guardrails(
 def update_guardrail_policy(
     guardrail_type: GuardrailType,
     payload: GuardrailPolicyUpdateRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: GuardrailConfigureAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> GuardrailCatalogItemResponse:

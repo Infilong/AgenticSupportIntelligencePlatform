@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_permission
+from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.knowledge import (
@@ -30,7 +30,7 @@ from app.services.knowledge_service import (
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["knowledge-documents"])
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+KnowledgeReadAccess = Annotated[Workspace, Depends(require_workspace_permission("knowledge:read"))]
 KnowledgeWriteAccess = Annotated[
     Workspace, Depends(require_workspace_permission("knowledge:write"))
 ]
@@ -89,7 +89,7 @@ def upload_knowledge_document(
 
 @router.get("/knowledge-documents", response_model=list[KnowledgeDocumentResponse])
 def list_knowledge_documents(
-    workspace: WorkspaceMemberAccess,
+    workspace: KnowledgeReadAccess,
     db: DbSession,
     folder_id: FolderFilter = None,
 ) -> list[KnowledgeDocumentResponse]:
@@ -107,7 +107,7 @@ def list_knowledge_documents(
 )
 def get_knowledge_document(
     document_id: DocumentId,
-    workspace: WorkspaceMemberAccess,
+    workspace: KnowledgeReadAccess,
     db: DbSession,
 ) -> KnowledgeDocumentDetailResponse:
     try:

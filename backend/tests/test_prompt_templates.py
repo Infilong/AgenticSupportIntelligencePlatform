@@ -213,7 +213,8 @@ def test_prompt_template_archive_and_owner_only_mutation(
         },
     )
     assert member_create.status_code == 403
-    assert member_create.json()["detail"]["code"] == "workspace_owner_required"
+    assert member_create.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_create.json()["detail"]["required_permission"] == "prompts:write"
 
     created = client.post(
         path,

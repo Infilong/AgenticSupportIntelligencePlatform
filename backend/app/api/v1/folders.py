@@ -22,6 +22,7 @@ from app.services.folder_service import (
     ResourceFolderNotFoundError,
     ResourceFolderService,
 )
+from app.services.workspace_service import WorkspaceService, permissions_for_role
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/resource-folders", tags=["resource-folders"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -32,13 +33,27 @@ ResourceFolderManageAccess = Annotated[
 ]
 FolderId = Annotated[UUID, Path()]
 
+FOLDER_READ_PERMISSIONS = {
+    "knowledge_document": "knowledge:read",
+    "dataset": "data:read",
+    "evaluation_run": "evaluations:read",
+    "agent_config": "agents:read",
+}
+
 
 @router.get("", response_model=list[ResourceFolderResponse])
 def list_resource_folders(
     resource_type: Annotated[str, Query(min_length=1, max_length=40)],
     workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
     db: DbSession,
 ) -> list[ResourceFolderResponse]:
+    _require_resource_folder_read(
+        resource_type=resource_type,
+        workspace=workspace,
+        current_user=current_user,
+        db=db,
+    )
     try:
         folders = ResourceFolderService(db).list_folders(
             workspace_id=workspace.id, resource_type=resource_type
@@ -133,6 +148,30 @@ def delete_resource_folder(
         action="resource_folder.deleted",
         resource_type="resource_folder",
         resource_id=folder_id,
+    )
+
+
+def _require_resource_folder_read(
+    *,
+    resource_type: str,
+    workspace: Workspace,
+    current_user: User,
+    db: Session,
+) -> None:
+    required_permission = FOLDER_READ_PERMISSIONS.get(resource_type)
+    if required_permission is None:
+        return
+    membership = WorkspaceService(db).get_membership(workspace.id, current_user.id)
+    permissions = permissions_for_role(membership.role) if membership else []
+    if required_permission in permissions or "resource_folders:manage" in permissions:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "code": "workspace_permission_required",
+            "message": f"This action requires {required_permission} permission.",
+            "required_permission": required_permission,
+        },
     )
 
 

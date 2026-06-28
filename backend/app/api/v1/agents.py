@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_permission
+from app.dependencies.workspace import require_workspace_permission
 from app.models.agent import Checkpoint
 from app.models.ai import AIRun
 from app.models.review import GuardrailResult
@@ -48,7 +48,8 @@ from app.services.folder_service import ResourceFolderNotFoundError
 
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["agents"])
 DbSession = Annotated[Session, Depends(get_db)]
-WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+AgentReadAccess = Annotated[Workspace, Depends(require_workspace_permission("agents:read"))]
+TraceReadAccess = Annotated[Workspace, Depends(require_workspace_permission("traces:read"))]
 AgentConfigureAccess = Annotated[
     Workspace, Depends(require_workspace_permission("agents:configure"))
 ]
@@ -107,7 +108,7 @@ def create_agent(
 
 @router.get("/agents", response_model=list[AgentResponse])
 def list_agents(
-    workspace: WorkspaceMemberAccess,
+    workspace: AgentReadAccess,
     db: DbSession,
     include_archived: IncludeArchived = False,
     folder_id: FolderFilter = None,
@@ -154,7 +155,7 @@ def move_agent_folder(
 @router.get("/agents/{agent_id}/summary", response_model=AgentOperationalSummaryResponse)
 def get_agent_summary(
     agent_id: AgentId,
-    workspace: WorkspaceMemberAccess,
+    workspace: AgentReadAccess,
     db: DbSession,
 ) -> AgentOperationalSummaryResponse:
     try:
@@ -189,7 +190,7 @@ def get_agent_summary(
 @router.get("/agents/{agent_id}/workflow", response_model=AgentWorkflowSummaryResponse)
 def get_agent_workflow(
     agent_id: AgentId,
-    workspace: WorkspaceMemberAccess,
+    workspace: AgentReadAccess,
     db: DbSession,
 ) -> AgentWorkflowSummaryResponse:
     try:
@@ -362,7 +363,7 @@ def run_agent(
 @router.get("/agent-runs/{run_id}", response_model=GraphRunResponse)
 def get_agent_run(
     run_id: RunId,
-    workspace: WorkspaceMemberAccess,
+    workspace: TraceReadAccess,
     db: DbSession,
 ) -> GraphRunResponse:
     try:
@@ -378,7 +379,7 @@ def get_agent_run(
 @router.get("/agent-runs/{run_id}/trace", response_model=GraphTraceResponse)
 def get_agent_trace(
     run_id: RunId,
-    workspace: WorkspaceMemberAccess,
+    workspace: TraceReadAccess,
     db: DbSession,
 ) -> GraphTraceResponse:
     try:
