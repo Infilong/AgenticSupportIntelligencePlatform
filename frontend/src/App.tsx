@@ -1124,6 +1124,8 @@ export function App() {
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
   const [evaluationName, setEvaluationName] = useState("Smoke Evaluation");
   const [evaluationAgentId, setEvaluationAgentId] = useState("");
+  const [evaluationAgentOptions, setEvaluationAgentOptions] = useState<Agent[]>([]);
+  const [evaluationAgentSearch, setEvaluationAgentSearch] = useState("");
   const [evaluationFolderId, setEvaluationFolderId] = useState("");
   const [selectedEvaluationFolderId, setSelectedEvaluationFolderId] = useState("all");
   const [evaluationFolderName, setEvaluationFolderName] = useState("Regression packs");
@@ -1203,7 +1205,9 @@ export function App() {
   const effectiveEvaluationAgentId = evaluationAgentId;
   const evaluationAgentLabel = (agentId: string | null | undefined) => {
     if (!agentId) return "Default evaluation agent";
-    const agent = agents.find((item) => item.id === agentId);
+    const agent = agents.find((item) => item.id === agentId)
+      ?? evaluationAgentOptions.find((item) => item.id === agentId)
+      ?? (agentSummary?.agent.id === agentId ? agentSummary.agent : null);
     return agent ? agent.name : `Unknown agent ${shortId(agentId)}`;
   };
   const permissionList = workspaceMembership?.permissions ?? [];
@@ -1359,6 +1363,15 @@ export function App() {
     if (evaluationRunView === "selected") return;
     void loadEvaluations();
   }, [token, selectedWorkspaceId, activeTab, selectedEvaluationFolderId, evaluationSearch, evaluationStatusFilter, evaluationRunView, showArchivedEvaluations, evaluationPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "evaluations") return;
+    if (!permissionList.includes("agents:read")) {
+      setEvaluationAgentOptions([]);
+      return;
+    }
+    void loadEvaluationAgentOptions();
+  }, [token, selectedWorkspaceId, activeTab, evaluationAgentSearch, permissionKey]);
 
   function setSessionToken(value: string) {
     setToken(value);
@@ -1682,6 +1695,7 @@ export function App() {
 
   function clearAgentState() {
     setAgents([]);
+    setEvaluationAgentOptions([]);
     setSelectedAgentId("");
     setAgentSummary(null);
     setAgentWorkflowSummary(null);
@@ -2601,6 +2615,22 @@ export function App() {
     const detail = await apiRequest<EvaluationDetail>(workspacePath(`/evaluations/${runId}`), { token });
     setEvaluationDetail(detail);
   }
+
+  async function loadEvaluationAgentOptions(search = evaluationAgentSearch) {
+    if (!selectedWorkspaceId || !permissionList.includes("agents:read")) {
+      setEvaluationAgentOptions([]);
+      return;
+    }
+    const data = await apiRequest<Agent[]>(
+      workspaceListPath("/agents", {
+        limit: MAX_VISIBLE_EVALUATION_RUNS,
+        search: search.trim() || null,
+      }),
+      { token },
+    );
+    setEvaluationAgentOptions(data);
+  }
+
 
   async function archiveEvaluation(run: EvaluationRun) {
     if (!window.confirm(`Archive evaluation run "${run.name}"? Results remain available when archived runs are shown.`)) return;
@@ -5321,6 +5351,11 @@ export function App() {
     const selectedLanguages = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.language))] : [];
     const selectedResultModes = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.mode))] : [];
     const selectedEvaluationAgentName = evaluationDetail ? evaluationAgentLabel(evaluationDetail.run.agent_config_id) : "No run selected";
+    const selectedEvaluationAgentOption = effectiveEvaluationAgentId
+      ? evaluationAgentOptions.find((agent) => agent.id === effectiveEvaluationAgentId)
+        ?? agents.find((agent) => agent.id === effectiveEvaluationAgentId)
+        ?? (agentSummary?.agent.id === effectiveEvaluationAgentId ? agentSummary.agent : null)
+      : null;
 
     return (
       <div className="evaluation-console">
@@ -5358,16 +5393,32 @@ export function App() {
               <Badge tone={evaluationModes.length ? "good" : "warn"}>{evaluationModes.length} modes</Badge>
             </div>
             <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} /></label>
-            <label>
-              Evaluation target agent
-              <select value={effectiveEvaluationAgentId} onChange={(event) => setEvaluationAgentId(event.target.value)}>
-                <option value="">Default evaluation agent</option>
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>{agent.name}{agent.archived_at ? " (archived)" : ""}</option>
-                ))}
-              </select>
-              <small>Choose a target agent to link results to its quality posture, or leave blank to use the system-v1 default evaluation agent.</small>
-            </label>
+            <div className="stack compact-stack">
+              <label>
+                Search target agents
+                <input
+                  value={evaluationAgentSearch}
+                  onChange={(event) => setEvaluationAgentSearch(event.target.value)}
+                  placeholder="Agent name or runtime settings"
+                />
+              </label>
+              <label>
+                Evaluation target agent
+                <select value={effectiveEvaluationAgentId} onChange={(event) => setEvaluationAgentId(event.target.value)}>
+                  <option value="">Default evaluation agent</option>
+                  {selectedEvaluationAgentOption && !evaluationAgentOptions.some((agent) => agent.id === selectedEvaluationAgentOption.id) && (
+                    <option value={selectedEvaluationAgentOption.id}>{selectedEvaluationAgentOption.name}{selectedEvaluationAgentOption.archived_at ? " (archived)" : ""}</option>
+                  )}
+                  {evaluationAgentOptions.map((agent) => (
+                    <option key={agent.id} value={agent.id}>{agent.name}{agent.archived_at ? " (archived)" : ""}</option>
+                  ))}
+                </select>
+                <small>{evaluationAgentOptions.length} agent options loaded from backend search. Leave blank to use the system-v1 default evaluation agent.</small>
+              </label>
+              {selectedAgentId && (
+                <button type="button" onClick={() => setEvaluationAgentId(selectedAgentId)} disabled={!selectedAgent || loading}>Use selected operational agent</button>
+              )}
+            </div>
             <div className="folder-scope-banner">
               <span>Current folder</span>
               <strong>{selectedEvaluationFolderLabel}</strong>
