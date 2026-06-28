@@ -38,3 +38,10 @@ class WorkspaceService:
             .where(Workspace.id == workspace_id, WorkspaceMember.user_id == user_id)
         )
         return self.db.scalar(statement)
+
+    def get_membership(self, workspace_id: UUID, user_id: UUID) -> WorkspaceMember | None:
+        statement = select(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id == user_id,
+        )
+        return self.db.scalar(statement)

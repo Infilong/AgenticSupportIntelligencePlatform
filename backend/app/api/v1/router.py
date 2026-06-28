@@ -7,6 +7,7 @@ from app.api.v1 import (
     costs,
     datasets,
     evaluations,
+    folders,
     human_reviews,
     knowledge,
     model_configs,
@@ -23,6 +24,7 @@ api_router.include_router(agents.router)
 api_router.include_router(human_reviews.router)
 api_router.include_router(datasets.router)
 api_router.include_router(evaluations.router)
+api_router.include_router(folders.router)
 api_router.include_router(knowledge.router)
 api_router.include_router(model_configs.router)
 api_router.include_router(prompt_templates.router)

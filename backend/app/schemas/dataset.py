@@ -11,6 +11,7 @@ class DatasetImportRequest(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     source_type: ImportSourceType
     content: str = Field(min_length=1)
+    folder_id: UUID | None = None
 
     @field_validator("dataset_name")
     @classmethod
@@ -29,6 +30,10 @@ class DatasetImportRequest(BaseModel):
         return stripped or None
 
 
+class DatasetFolderUpdateRequest(BaseModel):
+    folder_id: UUID | None = None
+
+
 class DatasetResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,6 +41,7 @@ class DatasetResponse(BaseModel):
     workspace_id: UUID
     name: str
     description: str | None
+    folder_id: UUID | None
     created_at: datetime
 
 

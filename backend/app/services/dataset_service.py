@@ -18,6 +18,7 @@ from app.models.dataset import (
     Message,
 )
 from app.models.user import User
+from app.services.folder_service import ResourceFolderService
 from app.services.import_parser import ImportParseError, parse_import_content
 
 
@@ -52,11 +53,16 @@ class DatasetService:
         description: str | None,
         source_type: ImportSourceType,
         content: str,
+        folder_id: UUID | None = None,
     ) -> DatasetImportResult:
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="dataset"
+        )
         dataset = Dataset(
             workspace_id=workspace_id,
             name=dataset_name.strip(),
             description=description,
+            folder_id=folder_id,
         )
         self.db.add(dataset)
         self.db.flush()
@@ -126,10 +132,14 @@ class DatasetService:
             imported_examples=len(parsed_examples),
         )
 
-    def list_datasets(self, *, workspace_id: UUID) -> list[Dataset]:
-        statement = select(Dataset).where(Dataset.workspace_id == workspace_id).order_by(
-            Dataset.created_at.desc()
-        )
+    def list_datasets(self, *, workspace_id: UUID, folder_id: UUID | None = None) -> list[Dataset]:
+        conditions = [Dataset.workspace_id == workspace_id]
+        if folder_id is not None:
+            ResourceFolderService(self.db).validate_folder(
+                workspace_id=workspace_id, folder_id=folder_id, resource_type="dataset"
+            )
+            conditions.append(Dataset.folder_id == folder_id)
+        statement = select(Dataset).where(*conditions).order_by(Dataset.created_at.desc())
         return list(self.db.scalars(statement).all())
 
     def list_examples(self, *, workspace_id: UUID, dataset_id: UUID) -> list[ConversationExample]:
@@ -186,6 +196,27 @@ class DatasetService:
         self.db.commit()
         self.db.refresh(label)
         return label
+
+    def move_dataset(
+        self, *, workspace_id: UUID, dataset_id: UUID, folder_id: UUID | None
+    ) -> Dataset:
+        dataset = self.get_dataset(workspace_id=workspace_id, dataset_id=dataset_id)
+        if dataset is None:
+            raise DatasetNotFoundError("Dataset was not found.")
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="dataset"
+        )
+        dataset.folder_id = folder_id
+        self.db.commit()
+        self.db.refresh(dataset)
+        return dataset
+
+    def delete_dataset(self, *, workspace_id: UUID, dataset_id: UUID) -> None:
+        dataset = self.get_dataset(workspace_id=workspace_id, dataset_id=dataset_id)
+        if dataset is None:
+            raise DatasetNotFoundError("Dataset was not found.")
+        self.db.delete(dataset)
+        self.db.commit()
 
     def get_dataset(self, *, workspace_id: UUID, dataset_id: UUID) -> Dataset | None:
         statement = select(Dataset).where(

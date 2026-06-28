@@ -12,6 +12,7 @@ class KnowledgeDocumentUploadRequest(BaseModel):
     content_type: str = Field(min_length=1, max_length=80)
     content: str = Field(min_length=1)
     language: SupportedLanguage | None = None
+    folder_id: UUID | None = None
 
     @field_validator("title", "content_type", "content")
     @classmethod
@@ -27,6 +28,7 @@ class KnowledgeDocumentReindexRequest(BaseModel):
     content_type: str | None = Field(default=None, max_length=80)
     content: str | None = Field(default=None, min_length=1)
     language: SupportedLanguage | None = None
+    folder_id: UUID | None = None
 
     @field_validator("title", "content_type", "content")
     @classmethod
@@ -37,6 +39,10 @@ class KnowledgeDocumentReindexRequest(BaseModel):
         if not stripped:
             raise ValueError("value cannot be blank")
         return stripped
+
+
+class KnowledgeDocumentFolderUpdateRequest(BaseModel):
+    folder_id: UUID | None = None
 
 
 class DocumentVersionResponse(BaseModel):
@@ -76,6 +82,7 @@ class KnowledgeDocumentResponse(BaseModel):
     status: DocumentStatus
     error_message: str | None
     created_by_user_id: UUID
+    folder_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

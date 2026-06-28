@@ -1,24 +1,26 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.workspace import require_workspace_member, require_workspace_owner
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.knowledge import (
     DocumentChunkResponse,
     DocumentVersionResponse,
     KnowledgeDocumentDetailResponse,
+    KnowledgeDocumentFolderUpdateRequest,
     KnowledgeDocumentIndexResponse,
     KnowledgeDocumentReindexRequest,
     KnowledgeDocumentResponse,
     KnowledgeDocumentUploadRequest,
 )
 from app.services.audit_log_service import AuditLogService
+from app.services.folder_service import ResourceFolderNotFoundError
 from app.services.knowledge_service import (
     KnowledgeDocumentIndexError,
     KnowledgeDocumentNotFoundError,
@@ -29,6 +31,8 @@ router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["knowledge-documen
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+FolderFilter = Annotated[UUID | None, Query()]
 DocumentId = Annotated[UUID, Path()]
 
 
@@ -51,7 +55,10 @@ def upload_knowledge_document(
             content=payload.content,
             language=payload.language,
             current_user=current_user,
+            folder_id=payload.folder_id,
         )
+    except ResourceFolderNotFoundError as exc:
+        raise _folder_not_found(exc) from exc
     except KnowledgeDocumentIndexError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -76,8 +83,14 @@ def upload_knowledge_document(
 def list_knowledge_documents(
     workspace: WorkspaceMemberAccess,
     db: DbSession,
+    folder_id: FolderFilter = None,
 ) -> list[KnowledgeDocumentResponse]:
-    documents = KnowledgeService(db).list_documents(workspace_id=workspace.id)
+    try:
+        documents = KnowledgeService(db).list_documents(
+            workspace_id=workspace.id, folder_id=folder_id
+        )
+    except ResourceFolderNotFoundError as exc:
+        raise _folder_not_found(exc) from exc
     return [KnowledgeDocumentResponse.model_validate(document) for document in documents]
 
 
@@ -129,12 +142,16 @@ def reindex_knowledge_document(
             content_type=payload.content_type,
             content=payload.content,
             language=payload.language,
+            folder_id=payload.folder_id,
+            update_folder="folder_id" in payload.model_fields_set,
         )
     except KnowledgeDocumentNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "knowledge_document_not_found", "message": "Document was not found."},
         ) from exc
+    except ResourceFolderNotFoundError as exc:
+        raise _folder_not_found(exc) from exc
     except KnowledgeDocumentIndexError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -156,10 +173,40 @@ def reindex_knowledge_document(
     return _index_response(result)
 
 
+@router.patch("/knowledge-documents/{document_id}/folder", response_model=KnowledgeDocumentResponse)
+def move_knowledge_document_folder(
+    document_id: DocumentId,
+    payload: KnowledgeDocumentFolderUpdateRequest,
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> KnowledgeDocumentResponse:
+    try:
+        document = KnowledgeService(db).move_document(
+            workspace_id=workspace.id, document_id=document_id, folder_id=payload.folder_id
+        )
+    except KnowledgeDocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "knowledge_document_not_found", "message": "Document was not found."},
+        ) from exc
+    except ResourceFolderNotFoundError as exc:
+        raise _folder_not_found(exc) from exc
+    AuditLogService(db).record(
+        workspace_id=workspace.id,
+        actor_user_id=current_user.id,
+        action="knowledge_document.moved",
+        resource_type="knowledge_document",
+        resource_id=document.id,
+        metadata={"folder_id": str(document.folder_id) if document.folder_id else None},
+    )
+    return KnowledgeDocumentResponse.model_validate(document)
+
+
 @router.delete("/knowledge-documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_knowledge_document(
     document_id: DocumentId,
-    workspace: WorkspaceMemberAccess,
+    workspace: WorkspaceOwnerAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:
@@ -185,4 +232,11 @@ def _index_response(result) -> KnowledgeDocumentIndexResponse:
         latest_version=DocumentVersionResponse.model_validate(result.latest_version),
         chunk_count=result.chunk_count,
         embedding_count=result.embedding_count,
+    )
+
+
+def _folder_not_found(exc: Exception) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={"code": "resource_folder_not_found", "message": "Resource folder was not found."},
     )

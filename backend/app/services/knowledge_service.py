@@ -24,6 +24,7 @@ from app.models.user import User
 from app.services.chunking import chunk_text
 from app.services.document_parser import DocumentParseError, parse_text_document
 from app.services.embedding_provider import EmbeddingProvider, MockEmbeddingProvider
+from app.services.folder_service import ResourceFolderService
 
 
 class KnowledgeDocumentError(ValueError):
@@ -68,7 +69,11 @@ class KnowledgeService:
         content: str,
         language: SupportedLanguage | None,
         current_user: User,
+        folder_id: UUID | None = None,
     ) -> KnowledgeDocumentIndexResult:
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="knowledge_document"
+        )
         raw_text = self._parse_or_raise(content=content, content_type=content_type)
         resolved_language = language or self._detect_or_raise(raw_text)
         document = KnowledgeDocument(
@@ -77,6 +82,7 @@ class KnowledgeService:
             language=resolved_language,
             status=DocumentStatus.pending,
             created_by_user_id=current_user.id,
+            folder_id=folder_id,
         )
         self.db.add(document)
         self.db.flush()
@@ -89,10 +95,18 @@ class KnowledgeService:
             version_number=1,
         )
 
-    def list_documents(self, *, workspace_id: UUID) -> list[KnowledgeDocument]:
+    def list_documents(
+        self, *, workspace_id: UUID, folder_id: UUID | None = None
+    ) -> list[KnowledgeDocument]:
+        conditions = [KnowledgeDocument.workspace_id == workspace_id]
+        if folder_id is not None:
+            ResourceFolderService(self.db).validate_folder(
+                workspace_id=workspace_id, folder_id=folder_id, resource_type="knowledge_document"
+            )
+            conditions.append(KnowledgeDocument.folder_id == folder_id)
         statement = (
             select(KnowledgeDocument)
-            .where(KnowledgeDocument.workspace_id == workspace_id)
+            .where(*conditions)
             .order_by(KnowledgeDocument.created_at.desc())
         )
         return list(self.db.scalars(statement).all())
@@ -134,6 +148,8 @@ class KnowledgeService:
         content_type: str | None = None,
         content: str | None = None,
         language: SupportedLanguage | None = None,
+        folder_id: UUID | None = None,
+        update_folder: bool = False,
     ) -> KnowledgeDocumentIndexResult:
         document = self.get_document(workspace_id=workspace_id, document_id=document_id)
         if document is None:
@@ -147,6 +163,11 @@ class KnowledgeService:
             content=content if content is not None else latest_version.raw_text,
             content_type=content_type if content_type is not None else latest_version.content_type,
         )
+        if update_folder:
+            ResourceFolderService(self.db).validate_folder(
+                workspace_id=workspace_id, folder_id=folder_id, resource_type="knowledge_document"
+            )
+            document.folder_id = folder_id
         resolved_language = language or document.language or self._detect_or_raise(raw_text)
         if title is not None:
             document.title = title.strip()
@@ -160,6 +181,20 @@ class KnowledgeService:
             language=resolved_language,
             version_number=next_version,
         )
+
+    def move_document(
+        self, *, workspace_id: UUID, document_id: UUID, folder_id: UUID | None
+    ) -> KnowledgeDocument:
+        document = self.get_document(workspace_id=workspace_id, document_id=document_id)
+        if document is None:
+            raise KnowledgeDocumentNotFoundError("Knowledge document was not found.")
+        ResourceFolderService(self.db).validate_folder(
+            workspace_id=workspace_id, folder_id=folder_id, resource_type="knowledge_document"
+        )
+        document.folder_id = folder_id
+        self.db.commit()
+        self.db.refresh(document)
+        return document
 
     def delete_document(self, *, workspace_id: UUID, document_id: UUID) -> None:
         document = self.get_document(workspace_id=workspace_id, document_id=document_id)

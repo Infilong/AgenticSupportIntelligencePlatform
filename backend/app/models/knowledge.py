@@ -67,6 +67,9 @@ class KnowledgeDocument(Base):
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True
     )
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("resource_folders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
@@ -79,6 +82,7 @@ class KnowledgeDocument(Base):
 
     workspace = relationship("Workspace")
     created_by_user = relationship("User")
+    folder = relationship("ResourceFolder")
     versions = relationship(
         "DocumentVersion", back_populates="document", cascade="all, delete-orphan"
     )

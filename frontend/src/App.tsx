@@ -22,7 +22,21 @@ type Dataset = {
   id: string;
   name: string;
   description: string | null;
+  folder_id: string | null;
   created_at: string;
+};
+
+type ResourceType = "knowledge_document" | "dataset";
+
+type ResourceFolder = {
+  id: string;
+  workspace_id: string;
+  resource_type: ResourceType;
+  name: string;
+  parent_folder_id: string | null;
+  created_by_user_id: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type Message = {
@@ -56,6 +70,7 @@ type KnowledgeDocument = {
   language: Language;
   status: string;
   error_message: string | null;
+  folder_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -554,7 +569,10 @@ export function App() {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetName, setDatasetName] = useState("Demo Support Conversations");
   const [datasetContent, setDatasetContent] = useState(demoDataset);
+  const [datasetFolderId, setDatasetFolderId] = useState("");
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
+  const [selectedDataFolderId, setSelectedDataFolderId] = useState("all");
+  const [dataFolderName, setDataFolderName] = useState("Training data");
   const [examples, setExamples] = useState<ConversationExample[]>([]);
   const [labelDrafts, setLabelDrafts] = useState<Record<string, { label_type: string; value: string }>>({});
 
@@ -562,7 +580,11 @@ export function App() {
   const [documentTitle, setDocumentTitle] = useState("Refund Policy EN");
   const [documentLanguage, setDocumentLanguage] = useState<Language>("en");
   const [documentContent, setDocumentContent] = useState(demoDocument);
+  const [documentFolderId, setDocumentFolderId] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [selectedKnowledgeFolderId, setSelectedKnowledgeFolderId] = useState("all");
+  const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
+  const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
 
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -625,6 +647,9 @@ export function App() {
     [agents, selectedAgentId],
   );
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const canManageResources = Boolean(
+    selectedWorkspace && currentUser && selectedWorkspace.created_by_user_id === currentUser.id,
+  );
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
   const setupSteps = [
     { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
@@ -738,11 +763,62 @@ export function App() {
       loadAuditLogs(),
       loadPromptTemplates(),
       loadModelConfigs(),
+      loadResourceFolders(),
     ]);
   }
 
   function workspacePath(path: string) {
     return `/api/v1/workspaces/${selectedWorkspaceId}${path}`;
+  }
+
+  function foldersFor(resourceType: ResourceType) {
+    return resourceFolders.filter((folder) => folder.resource_type === resourceType);
+  }
+
+  function folderLabel(resourceType: ResourceType, folderId: string | null) {
+    if (!folderId) return "Unfiled";
+    return foldersFor(resourceType).find((folder) => folder.id === folderId)?.name ?? "Unknown folder";
+  }
+
+  function filterByFolder<T extends { folder_id: string | null }>(items: T[], selectedFolderId: string) {
+    if (selectedFolderId === "all") return items;
+    if (selectedFolderId === "unfiled") return items.filter((item) => !item.folder_id);
+    return items.filter((item) => item.folder_id === selectedFolderId);
+  }
+
+  async function loadResourceFolders() {
+    if (!selectedWorkspaceId) return;
+    const [knowledgeFolders, datasetFolders] = await Promise.all([
+      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=knowledge_document"), { token }),
+      apiRequest<ResourceFolder[]>(workspacePath("/resource-folders?resource_type=dataset"), { token }),
+    ]);
+    setResourceFolders([...knowledgeFolders, ...datasetFolders]);
+  }
+
+  async function createResourceFolder(resourceType: ResourceType) {
+    const name = resourceType === "dataset" ? dataFolderName : knowledgeFolderName;
+    await runAction("Folder created", async () => {
+      await apiRequest<ResourceFolder>(workspacePath("/resource-folders"), {
+        method: "POST",
+        token,
+        body: { resource_type: resourceType, name },
+      });
+      if (resourceType === "dataset") setDataFolderName("Training data");
+      if (resourceType === "knowledge_document") setKnowledgeFolderName("Policies");
+      await loadResourceFolders();
+      await loadAuditLogs();
+    });
+  }
+
+  async function deleteResourceFolder(folder: ResourceFolder) {
+    if (!window.confirm(`Delete empty folder "${folder.name}"?`)) return;
+    await runAction("Folder deleted", async () => {
+      await apiRequest(workspacePath(`/resource-folders/${folder.id}`), { method: "DELETE", token });
+      if (selectedDataFolderId === folder.id) setSelectedDataFolderId("all");
+      if (selectedKnowledgeFolderId === folder.id) setSelectedKnowledgeFolderId("all");
+      await loadResourceFolders();
+      await loadAuditLogs();
+    });
   }
 
   async function loadDatasets() {
@@ -762,12 +838,38 @@ export function App() {
           dataset_name: datasetName,
           description: "Imported from the browser demo UI.",
           source_type: "jsonl",
+          folder_id: datasetFolderId || null,
           content: datasetContent,
         },
       });
       await loadDatasets();
       setSelectedDatasetId(response.dataset.id);
       await loadExamples(response.dataset.id);
+    });
+  }
+
+  async function moveDatasetFolder(datasetId: string, folderId: string) {
+    await runAction("Dataset moved", async () => {
+      await apiRequest<Dataset>(workspacePath(`/datasets/${datasetId}/folder`), {
+        method: "PATCH",
+        token,
+        body: { folder_id: folderId || null },
+      });
+      await loadDatasets();
+      await loadAuditLogs();
+    });
+  }
+
+  async function deleteDataset(datasetId: string) {
+    if (!window.confirm("Delete this dataset and its imported examples?")) return;
+    await runAction("Dataset deleted", async () => {
+      await apiRequest(workspacePath(`/datasets/${datasetId}`), { method: "DELETE", token });
+      if (selectedDatasetId === datasetId) {
+        setSelectedDatasetId("");
+        setExamples([]);
+      }
+      await loadDatasets();
+      await loadAuditLogs();
     });
   }
 
@@ -807,6 +909,7 @@ export function App() {
           title: documentTitle,
           content_type: "text/plain",
           language: documentLanguage,
+          folder_id: documentFolderId || null,
           content: documentContent,
         },
       });
@@ -823,6 +926,7 @@ export function App() {
     setDocumentDetail(detail);
     setDocumentTitle(detail.document.title);
     setDocumentLanguage(detail.document.language);
+    setDocumentFolderId(detail.document.folder_id ?? "");
     setDocumentContent(detail.latest_version?.raw_text ?? "");
   }
 
@@ -842,6 +946,7 @@ export function App() {
             title: documentTitle,
             content_type: "text/plain",
             language: documentLanguage,
+            folder_id: documentFolderId || null,
             content: documentContent,
           },
         },
@@ -856,11 +961,13 @@ export function App() {
     setDocumentDetail(null);
     setDocumentTitle("Refund Policy EN");
     setDocumentLanguage("en");
+    setDocumentFolderId("");
     setDocumentContent(demoDocument);
   }
 
   async function deleteSelectedDocument() {
     if (!selectedDocumentId) return;
+    if (!window.confirm("Delete this knowledge document and its indexed chunks?")) return;
     await runAction("Document deleted", async () => {
       await apiRequest(workspacePath(`/knowledge-documents/${selectedDocumentId}`), {
         method: "DELETE",
@@ -868,7 +975,108 @@ export function App() {
       });
       resetDocumentForm();
       await loadDocuments();
+      await loadAuditLogs();
     });
+  }
+
+  async function moveSelectedDocumentFolder() {
+    if (!selectedDocumentId) return;
+    await runAction("Document moved", async () => {
+      await apiRequest<KnowledgeDocument>(workspacePath(`/knowledge-documents/${selectedDocumentId}/folder`), {
+        method: "PATCH",
+        token,
+        body: { folder_id: documentFolderId || null },
+      });
+      await loadDocuments();
+      await loadDocumentDetail(selectedDocumentId);
+      await loadAuditLogs();
+    });
+  }
+
+
+  function ResourceFolderPanel({
+    resourceType,
+    title,
+    detail,
+    selectedFolderId,
+    onSelectFolder,
+    folderName,
+    onFolderNameChange,
+  }: {
+    resourceType: ResourceType;
+    title: string;
+    detail: string;
+    selectedFolderId: string;
+    onSelectFolder: (folderId: string) => void;
+    folderName: string;
+    onFolderNameChange: (value: string) => void;
+  }) {
+    const folders = foldersFor(resourceType);
+    return (
+      <aside className="panel stack folder-panel">
+        <div>
+          <h3>{title}</h3>
+          <p className="muted">{detail}</p>
+        </div>
+        <div className="folder-list" role="list" aria-label={`${title} folders`}>
+          <button
+            type="button"
+            className={`folder-button ${selectedFolderId === "all" ? "selected-list-item" : ""}`}
+            onClick={() => onSelectFolder("all")}
+          >
+            <span>All</span>
+            <Badge>{resourceType === "dataset" ? datasets.length : documents.length}</Badge>
+          </button>
+          <button
+            type="button"
+            className={`folder-button ${selectedFolderId === "unfiled" ? "selected-list-item" : ""}`}
+            onClick={() => onSelectFolder("unfiled")}
+          >
+            <span>Unfiled</span>
+            <Badge>{resourceType === "dataset" ? datasets.filter((item) => !item.folder_id).length : documents.filter((item) => !item.folder_id).length}</Badge>
+          </button>
+          {folders.map((folder) => {
+            const count = resourceType === "dataset"
+              ? datasets.filter((item) => item.folder_id === folder.id).length
+              : documents.filter((item) => item.folder_id === folder.id).length;
+            return (
+              <div className="folder-row" key={folder.id}>
+                <button
+                  type="button"
+                  className={`folder-button ${selectedFolderId === folder.id ? "selected-list-item" : ""}`}
+                  onClick={() => onSelectFolder(folder.id)}
+                >
+                  <span>{folder.name}</span>
+                  <Badge>{count}</Badge>
+                </button>
+                {canManageResources && (
+                  <button
+                    type="button"
+                    className="icon-danger-button"
+                    title="Delete empty folder"
+                    aria-label={`Delete ${folder.name}`}
+                    onClick={() => void deleteResourceFolder(folder)}
+                    disabled={count > 0}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {canManageResources ? (
+          <div className="folder-create">
+            <input value={folderName} onChange={(event) => onFolderNameChange(event.target.value)} placeholder="New folder name" />
+            <button type="button" onClick={() => void createResourceFolder(resourceType)} disabled={!folderName.trim() || loading}>
+              Create folder
+            </button>
+          </div>
+        ) : (
+          <p className="permission-note">Folder creation, moves, and deletion require workspace owner permission.</p>
+        )}
+      </aside>
+    );
   }
 
   async function loadAgents() {
@@ -1481,28 +1689,71 @@ export function App() {
   }
 
   function DatasetsPanel() {
+    const datasetFolders = foldersFor("dataset");
+    const visibleDatasets = filterByFolder(datasets, selectedDataFolderId);
+    const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
+
     return (
-      <div className="grid two-wide-left">
+      <div className="grid data-workbench-grid">
         <ActionGuide
           title="Data powers evaluation and routing"
           detail="Import real conversation examples in English, Japanese, and Chinese. Labels make the data useful for evaluation, routing, and safety checks."
           action="Next after import: upload knowledge documents"
           onAction={() => setActiveTab("documents")}
         />
+        <ResourceFolderPanel
+          resourceType="dataset"
+          title="Dataset folders"
+          detail="Keep imports grouped by product, client, language, or test purpose as the workspace grows."
+          selectedFolderId={selectedDataFolderId}
+          onSelectFolder={setSelectedDataFolderId}
+          folderName={dataFolderName}
+          onFolderNameChange={setDataFolderName}
+        />
         <form className="panel stack" onSubmit={importDataset}>
           <h3>Import multilingual data</h3>
           <label>Dataset name<input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} /></label>
+          <label>Folder<select value={datasetFolderId} onChange={(event) => setDatasetFolderId(event.target.value)}>
+            <option value="">Unfiled</option>
+            {datasetFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+          </select></label>
           <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => setDatasetContent(event.target.value)} /></label>
           <button className="primary" disabled={loading}>Import JSONL</button>
         </form>
-        <section className="panel stack">
-          <h3>Datasets</h3>
-          {datasets.map((dataset) => (
-            <button key={dataset.id} className="list-button" onClick={() => { setSelectedDatasetId(dataset.id); void loadExamples(dataset.id); }}>
-              <strong>{dataset.name}</strong><span>{formatDate(dataset.created_at)}</span>
-            </button>
-          ))}
-          {datasets.length === 0 && <EmptyState title="No datasets" detail="Import JSONL examples to begin curation." />}
+        <section className="panel stack dataset-library-panel">
+          <div className="row-head">
+            <div>
+              <h3>Datasets</h3>
+              <p className="muted">{selectedDataset ? `Selected: ${selectedDataset.name}` : "Select a dataset to inspect examples."}</p>
+            </div>
+            <Badge>{visibleDatasets.length} shown</Badge>
+          </div>
+          <div className="resource-list">
+            {visibleDatasets.map((dataset) => (
+              <article key={dataset.id} className={`resource-row ${selectedDatasetId === dataset.id ? "selected-list-item" : ""}`}>
+                <button type="button" className="resource-main-button" onClick={() => { setSelectedDatasetId(dataset.id); void loadExamples(dataset.id); }}>
+                  <strong>{dataset.name}</strong>
+                  <span>{formatDate(dataset.created_at)}</span>
+                </button>
+                <div className="resource-meta">
+                  <Badge>{folderLabel("dataset", dataset.folder_id)}</Badge>
+                </div>
+                <div className="resource-actions">
+                  <select
+                    value={dataset.folder_id ?? ""}
+                    onChange={(event) => void moveDatasetFolder(dataset.id, event.target.value)}
+                    disabled={!canManageResources || loading}
+                    aria-label={`Move ${dataset.name} to folder`}
+                  >
+                    <option value="">Unfiled</option>
+                    {datasetFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+                  </select>
+                  <button type="button" className="danger-button" onClick={() => void deleteDataset(dataset.id)} disabled={!canManageResources || loading}>Delete</button>
+                </div>
+              </article>
+            ))}
+          </div>
+          {visibleDatasets.length === 0 && <EmptyState title="No datasets in this folder" detail="Import data here or switch to another folder." />}
         </section>
         <section className="panel full-width">
           <h3>Examples</h3>
@@ -1517,7 +1768,7 @@ export function App() {
                     <option value="intent">intent</option><option value="sentiment">sentiment</option><option value="product_area">product_area</option><option value="safety_risk">safety_risk</option><option value="escalation_needed">escalation_needed</option>
                   </select>
                   <input placeholder="label value" value={labelDrafts[example.id]?.value ?? ""} onChange={(event) => setLabelDrafts((current) => ({ ...current, [example.id]: { label_type: current[example.id]?.label_type ?? "intent", value: event.target.value } }))} />
-                  <button onClick={() => void saveLabel(example.id)}>Save label</button>
+                  <button type="button" onClick={() => void saveLabel(example.id)}>Save label</button>
                 </div>
               </article>
             ))}
@@ -1532,6 +1783,8 @@ export function App() {
     const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
     const totalChunkTokens = documentDetail?.chunks.reduce((sum, chunk) => sum + chunk.token_count, 0) ?? 0;
     const selectedDocument = documentDetail?.document ?? documents.find((document) => document.id === selectedDocumentId) ?? null;
+    const knowledgeFolders = foldersFor("knowledge_document");
+    const visibleDocuments = filterByFolder(documents, selectedKnowledgeFolderId);
 
     return (
       <div className="knowledge-console">
@@ -1550,6 +1803,15 @@ export function App() {
         </section>
 
         <section className="knowledge-workbench">
+          <ResourceFolderPanel
+            resourceType="knowledge_document"
+            title="Knowledge folders"
+            detail="Organize uploaded policies, FAQs, release notes, and manuals before the library becomes large."
+            selectedFolderId={selectedKnowledgeFolderId}
+            onSelectFolder={setSelectedKnowledgeFolderId}
+            folderName={knowledgeFolderName}
+            onFolderNameChange={setKnowledgeFolderName}
+          />
           <aside className="panel stack document-library-panel">
             <div className="row-head">
               <div>
@@ -1559,7 +1821,7 @@ export function App() {
               <button type="button" onClick={resetDocumentForm}>New</button>
             </div>
             <div className="document-list">
-              {documents.map((document) => (
+              {visibleDocuments.map((document) => (
                 <button
                   key={document.id}
                   className={`document-card ${selectedDocumentId === document.id ? "selected" : ""}`}
@@ -1569,11 +1831,11 @@ export function App() {
                     <strong>{document.title}</strong>
                     <Badge tone={document.status === "indexed" ? "good" : document.status === "failed" ? "bad" : "warn"}>{document.status}</Badge>
                   </div>
-                  <span>{document.language.toUpperCase()} · updated {formatDate(document.updated_at)}</span>
+                  <span>{document.language.toUpperCase()} · {folderLabel("knowledge_document", document.folder_id)} · updated {formatDate(document.updated_at)}</span>
                   {document.error_message && <small>{document.error_message}</small>}
                 </button>
               ))}
-              {documents.length === 0 && <EmptyState title="No documents" detail="Upload a policy or FAQ to give the agent cited evidence." />}
+              {visibleDocuments.length === 0 && <EmptyState title="No documents in this folder" detail="Upload a policy or FAQ here, or switch folders." />}
             </div>
           </aside>
 
@@ -1585,12 +1847,16 @@ export function App() {
               </div>
               <div className="review-actions">
                 {selectedDocument && <Badge tone={selectedDocument.status === "indexed" ? "good" : "warn"}>{selectedDocument.status}</Badge>}
-                {selectedDocumentId && <button type="button" className="danger-button" onClick={() => void deleteSelectedDocument()}>Delete</button>}
+                {selectedDocumentId && <button type="button" className="danger-button" onClick={() => void deleteSelectedDocument()} disabled={!canManageResources || loading}>Delete</button>}
               </div>
             </div>
             <div className="knowledge-meta-grid">
               <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
               <label>Language<select value={documentLanguage} onChange={(event) => setDocumentLanguage(event.target.value as Language)}><option value="en">English</option><option value="ja">Japanese</option><option value="zh">Chinese</option></select></label>
+              <label>Folder<select value={documentFolderId} onChange={(event) => setDocumentFolderId(event.target.value)}>
+                <option value="">Unfiled</option>
+                {knowledgeFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+              </select></label>
               <div className="version-card">
                 <span>Version</span>
                 <strong>{documentDetail?.latest_version ? `v${documentDetail.latest_version.version}` : "new"}</strong>
@@ -1603,6 +1869,7 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button className="primary" disabled={loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
+              {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResources || loading}>Move only</button>}
               {selectedDocumentId && <button type="button" onClick={resetDocumentForm}>Start new document</button>}
               <button type="button" onClick={() => setActiveTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
             </div>

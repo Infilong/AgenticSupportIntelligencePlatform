@@ -120,3 +120,31 @@ Frontend:
 
 ## Operating Notes
 This is the next recommended implementation ticket after the IA cleanup. It directly addresses user feedback that uploaded/imported resources must be manipulable and organized before lists become too large.
+
+
+## Implementation Record
+Implemented resource lifecycle organization as a shallow folder model for datasets and knowledge documents.
+
+Backend changes:
+- Added `ResourceFolder` with workspace ownership, resource type, optional parent ID, and creator.
+- Added nullable `folder_id` to `KnowledgeDocument` and `Dataset`.
+- Added folder CRUD API with owner-only create/update/delete and member list access.
+- Added folder validation to document upload/list/reindex/move and dataset import/list/move.
+- Added owner-only delete endpoints for knowledge documents and datasets.
+- Added audit records for folder, document, and dataset lifecycle actions.
+
+Frontend changes:
+- Added compact folder panels to Data and Knowledge pages.
+- Added folder selectors during dataset import and knowledge document upload/edit.
+- Added folder filtering, resource move controls, and delete controls.
+- Kept growing resource lists inside bounded scroll areas so many filenames do not stretch the page.
+- Disabled destructive controls for non-owners using current workspace ownership data.
+
+Verification focus:
+- Backend tests cover owner lifecycle, member denial, cross-workspace folder rejection, folder filtering, and reindex-to-unfiled behavior.
+- Frontend validation should confirm folder panels, move/delete controls, and scrollable lists remain clear on desktop and mobile.
+
+Known limitations:
+- Folders are shallow in v1; nested folders are represented in the schema but not exposed in the UI.
+- Dataset deletion is hard delete in v1; archive/restore is a future safer lifecycle ticket.
+- Frontend owner detection currently uses `workspace.created_by_user_id`; a richer membership/role API should replace this when role management expands.

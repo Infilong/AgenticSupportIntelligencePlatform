@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
-from app.models.workspace import Workspace
+from app.models.workspace import Workspace, WorkspaceRole
 from app.services.workspace_service import WorkspaceService
 
 WorkspaceId = Annotated[UUID, Path()]
@@ -25,5 +25,29 @@ def require_workspace_member(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "workspace_not_found", "message": "Workspace was not found."},
+        )
+    return workspace
+
+
+def require_workspace_owner(
+    workspace_id: WorkspaceId,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> Workspace:
+    service = WorkspaceService(db)
+    workspace = service.get_for_member(workspace_id, current_user.id)
+    if workspace is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "workspace_not_found", "message": "Workspace was not found."},
+        )
+    membership = service.get_membership(workspace_id, current_user.id)
+    if membership is None or membership.role != WorkspaceRole.owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "workspace_owner_required",
+                "message": "This action requires workspace owner permission.",
+            },
         )
     return workspace

@@ -55,11 +55,15 @@ class Dataset(Base):
     )
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    folder_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("resource_folders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     workspace = relationship("Workspace")
+    folder = relationship("ResourceFolder")
     import_batches = relationship(
         "ImportBatch", back_populates="dataset", cascade="all, delete-orphan"
     )
