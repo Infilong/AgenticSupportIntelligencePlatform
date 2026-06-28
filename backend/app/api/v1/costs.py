@@ -7,9 +7,12 @@ from app.db.session import get_db
 from app.dependencies.workspace import require_workspace_member
 from app.models.workspace import Workspace
 from app.schemas.costs import (
+    CostAgentSummaryResponse,
     CostModelSummaryResponse,
     CostPurposeSummaryResponse,
+    CostRunSummaryResponse,
     CostSummaryResponse,
+    RecentAIRunSummaryResponse,
 )
 from app.services.cost_service import CostService
 
@@ -27,7 +30,11 @@ def get_cost_summary(workspace: WorkspaceMemberAccess, db: DbSession) -> CostSum
         total_tokens=summary.total_tokens,
         total_estimated_cost=summary.total_estimated_cost,
         average_latency_ms=summary.average_latency_ms,
+        latency_p50_ms=summary.latency_p50_ms,
+        latency_p95_ms=summary.latency_p95_ms,
+        latency_p99_ms=summary.latency_p99_ms,
         cache_hit_rate=summary.cache_hit_rate,
+        failed_ai_runs=summary.failed_ai_runs,
         by_purpose=[
             CostPurposeSummaryResponse(
                 purpose=item.purpose,
@@ -46,5 +53,51 @@ def get_cost_summary(workspace: WorkspaceMemberAccess, db: DbSession) -> CostSum
                 estimated_cost=item.estimated_cost,
             )
             for item in summary.by_model
+        ],
+        by_agent=[
+            CostAgentSummaryResponse(
+                agent_id=item.agent_id,
+                agent_name=item.agent_name,
+                graph_runs=item.graph_runs,
+                model_calls=item.model_calls,
+                tokens=item.tokens,
+                estimated_cost=item.estimated_cost,
+                average_latency_ms=item.average_latency_ms,
+            )
+            for item in summary.by_agent
+        ],
+        recent_runs=[
+            CostRunSummaryResponse(
+                graph_run_id=item.graph_run_id,
+                agent_name=item.agent_name,
+                status=item.status,
+                route_decision=item.route_decision,
+                model_calls=item.model_calls,
+                tokens=item.tokens,
+                estimated_cost=item.estimated_cost,
+                latency_ms=item.latency_ms,
+                created_at=item.created_at,
+            )
+            for item in summary.recent_runs
+        ],
+        recent_ai_runs=[
+            RecentAIRunSummaryResponse(
+                id=item.id,
+                graph_run_id=item.graph_run_id,
+                provider=item.provider,
+                model=item.model,
+                purpose=item.purpose,
+                language=item.language,
+                prompt_tokens=item.prompt_tokens,
+                completion_tokens=item.completion_tokens,
+                total_tokens=item.total_tokens,
+                estimated_cost=item.estimated_cost,
+                latency_ms=item.latency_ms,
+                cache_hit=item.cache_hit,
+                status=item.status,
+                error_message=item.error_message,
+                created_at=item.created_at,
+            )
+            for item in summary.recent_ai_runs
         ],
     )

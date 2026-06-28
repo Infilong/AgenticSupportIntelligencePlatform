@@ -2090,6 +2090,38 @@ th {
   background: var(--surface-muted);
 }
 
+.cost-run-list,
+.ai-ledger-list {
+  display: grid;
+  gap: 10px;
+  max-height: 560px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.cost-run-row,
+.ai-ledger-row {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  min-width: 0;
+}
+
+.cost-run-row .resource-main-button span {
+  display: grid;
+  gap: 3px;
+}
+
+.cost-run-row strong,
+.cost-run-row small,
+.ai-ledger-row strong,
+.ai-ledger-row p {
+  overflow-wrap: anywhere;
+}
+
 
 
 .audit-console {

@@ -423,9 +423,50 @@ type CostSummary = {
   total_tokens: number;
   total_estimated_cost: number;
   average_latency_ms: number;
+  latency_p50_ms: number;
+  latency_p95_ms: number;
+  latency_p99_ms: number;
   cache_hit_rate: number;
+  failed_ai_runs: number;
   by_purpose: Array<{ purpose: string; runs: number; tokens: number; estimated_cost: number }>;
   by_model: Array<{ provider: string; model: string; runs: number; tokens: number; estimated_cost: number }>;
+  by_agent: Array<{
+    agent_id: string;
+    agent_name: string;
+    graph_runs: number;
+    model_calls: number;
+    tokens: number;
+    estimated_cost: number;
+    average_latency_ms: number;
+  }>;
+  recent_runs: Array<{
+    graph_run_id: string;
+    agent_name: string;
+    status: string;
+    route_decision: string | null;
+    model_calls: number;
+    tokens: number;
+    estimated_cost: number;
+    latency_ms: number;
+    created_at: string;
+  }>;
+  recent_ai_runs: Array<{
+    id: string;
+    graph_run_id: string | null;
+    provider: string;
+    model: string;
+    purpose: string;
+    language: string;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    estimated_cost: number;
+    latency_ms: number;
+    cache_hit: boolean;
+    status: string;
+    error_message: string | null;
+    created_at: string;
+  }>;
 };
 
 type AuditLog = {
@@ -3772,14 +3813,24 @@ export function App() {
     const topModel = costSummary && costSummary.by_model.length
       ? costSummary.by_model.reduce((top, item) => item.estimated_cost > top.estimated_cost ? item : top)
       : null;
+    const topAgent = costSummary && costSummary.by_agent.length
+      ? costSummary.by_agent.reduce((top, item) => item.estimated_cost > top.estimated_cost ? item : top)
+      : null;
     const estimatedCost = costSummary?.total_estimated_cost ?? 0;
     const tokenPosture = !costSummary || costSummary.total_runs === 0
       ? "No model calls yet"
-      : estimatedCost < 0.01
-        ? "Low demo spend"
-        : estimatedCost < 1
-          ? "Healthy monitored spend"
-          : "Review spend drivers";
+      : costSummary.failed_ai_runs > 0
+        ? "Model failures need review"
+        : estimatedCost < 0.01
+          ? "Low demo spend"
+          : estimatedCost < 1
+            ? "Healthy monitored spend"
+            : "Review spend drivers";
+    const latencyPosture = !costSummary || costSummary.total_runs === 0
+      ? "No latency data"
+      : costSummary.latency_p95_ms > 2000
+        ? "P95 latency needs attention"
+        : "Latency within local-demo range";
 
     return (
       <div className="cost-console">
@@ -3800,38 +3851,48 @@ export function App() {
         {costSummary ? (
           <>
             <section className="queue-summary-grid">
-              <Metric label="AI runs" value={costSummary.total_runs} />
+              <Metric label="AI calls" value={costSummary.total_runs} />
               <Metric label="Tokens" value={formatNumber(costSummary.total_tokens)} />
               <Metric label="Estimated cost" value={formatCost(costSummary.total_estimated_cost)} />
-              <Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} />
+              <Metric label="Failed calls" value={costSummary.failed_ai_runs} />
               <Metric label="Cache hit" value={`${(costSummary.cache_hit_rate * 100).toFixed(1)}%`} />
               <Metric label="Top model" value={topModel ? `${topModel.provider}/${topModel.model}` : "-"} />
+            </section>
+
+            <section className="queue-summary-grid">
+              <Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} />
+              <Metric label="P50 latency" value={`${costSummary.latency_p50_ms.toFixed(0)} ms`} />
+              <Metric label="P95 latency" value={`${costSummary.latency_p95_ms.toFixed(0)} ms`} />
+              <Metric label="P99 latency" value={`${costSummary.latency_p99_ms.toFixed(0)} ms`} />
+              <Metric label="Top agent" value={topAgent?.agent_name ?? "-"} />
+              <Metric label="Posture" value={latencyPosture} />
             </section>
 
             <section className="cost-workbench">
               <div className="panel stack">
                 <div className="row-head">
                   <div>
-                    <h3>Cost by AI purpose</h3>
-                    <p className="muted">Use this to decide where token-budget work matters most: classification, drafting, evaluation, or context compression.</p>
+                    <h3>Cost by agent</h3>
+                    <p className="muted">Agent attribution shows which workflow configuration is driving model calls, latency, and spend.</p>
                   </div>
-                  <Badge>{costSummary.by_purpose.length} purposes</Badge>
+                  <Badge>{costSummary.by_agent.length} agents</Badge>
                 </div>
                 <div className="cost-card-list">
-                  {costSummary.by_purpose.map((item) => (
-                    <article className="cost-card" key={item.purpose}>
+                  {costSummary.by_agent.map((item) => (
+                    <article className="cost-card" key={item.agent_id}>
                       <div className="row-head">
-                        <strong>{item.purpose}</strong>
+                        <strong>{item.agent_name}</strong>
                         <Badge>{formatCost(item.estimated_cost)}</Badge>
                       </div>
                       <div className="metric-grid compact">
-                        <Metric label="Runs" value={item.runs} />
+                        <Metric label="Graph runs" value={item.graph_runs} />
+                        <Metric label="AI calls" value={item.model_calls} />
                         <Metric label="Tokens" value={formatNumber(item.tokens)} />
-                        <Metric label="Avg tokens" value={item.runs ? formatNumber(Math.round(item.tokens / item.runs)) : 0} />
+                        <Metric label="Avg latency" value={formatLatency(item.average_latency_ms)} />
                       </div>
                     </article>
                   ))}
-                  {costSummary.by_purpose.length === 0 && <EmptyState title="No purpose spend" detail="Purpose breakdown appears after model calls are recorded." />}
+                  {costSummary.by_agent.length === 0 && <EmptyState title="No agent spend" detail="Run an agent to connect AI calls back to graph workflows." />}
                 </div>
               </div>
 
@@ -3852,28 +3913,121 @@ export function App() {
             <section className="panel stack full-width">
               <div className="row-head">
                 <div>
-                  <h3>Cost by model</h3>
-                  <p className="muted">Provider and model attribution proves that cost tracking is connected to real model routing decisions.</p>
+                  <h3>Recent graph-run spend</h3>
+                  <p className="muted">Each row links cost back to a trace so developers can inspect prompts, tools, guardrails, and routing decisions.</p>
                 </div>
-                <Badge>{costSummary.by_model.length} models</Badge>
+                <Badge>{costSummary.recent_runs.length} runs</Badge>
               </div>
-              <div className="model-spend-grid">
-                {costSummary.by_model.map((item) => (
-                  <article className="model-spend-card" key={`${item.provider}:${item.model}`}>
-                    <div className="row-head">
-                      <div>
-                        <strong>{item.model}</strong>
-                        <p className="muted">{item.provider}</p>
-                      </div>
-                      <Badge>{formatCost(item.estimated_cost)}</Badge>
-                    </div>
+              <div className="cost-run-list">
+                {costSummary.recent_runs.map((run) => (
+                  <article className="cost-run-row" key={run.graph_run_id}>
+                    <button type="button" className="resource-main-button" onClick={() => { setTraceRunId(run.graph_run_id); void loadTrace(run.graph_run_id); setActiveTab("trace"); }}>
+                      <span>
+                        <strong>{run.agent_name}</strong>
+                        <small>{shortId(run.graph_run_id)} · {formatDate(run.created_at)}</small>
+                      </span>
+                      <Badge tone={toneForStatus(run.status)}>{run.route_decision ?? run.status}</Badge>
+                    </button>
                     <div className="metric-grid compact">
-                      <Metric label="Runs" value={item.runs} />
-                      <Metric label="Tokens" value={formatNumber(item.tokens)} />
+                      <Metric label="AI calls" value={run.model_calls} />
+                      <Metric label="Tokens" value={formatNumber(run.tokens)} />
+                      <Metric label="Cost" value={formatCost(run.estimated_cost)} />
+                      <Metric label="Latency" value={formatLatency(run.latency_ms)} />
                     </div>
                   </article>
                 ))}
-                {costSummary.by_model.length === 0 && <EmptyState title="No model spend" detail="Model breakdown appears after AI run ledger entries are created." />}
+                {costSummary.recent_runs.length === 0 && <EmptyState title="No graph-run spend" detail="Run an agent to see run-level cost and trace links." />}
+              </div>
+            </section>
+
+            <section className="cost-workbench">
+              <div className="panel stack">
+                <div className="row-head">
+                  <div>
+                    <h3>Cost by AI purpose</h3>
+                    <p className="muted">Use this to decide where token-budget work matters most: classification, drafting, evaluation, or context compression.</p>
+                  </div>
+                  <Badge>{costSummary.by_purpose.length} purposes</Badge>
+                </div>
+                <div className="cost-card-list">
+                  {costSummary.by_purpose.map((item) => (
+                    <article className="cost-card" key={item.purpose}>
+                      <div className="row-head">
+                        <strong>{item.purpose}</strong>
+                        <Badge>{formatCost(item.estimated_cost)}</Badge>
+                      </div>
+                      <div className="metric-grid compact">
+                        <Metric label="AI calls" value={item.runs} />
+                        <Metric label="Tokens" value={formatNumber(item.tokens)} />
+                        <Metric label="Avg tokens" value={item.runs ? formatNumber(Math.round(item.tokens / item.runs)) : 0} />
+                      </div>
+                    </article>
+                  ))}
+                  {costSummary.by_purpose.length === 0 && <EmptyState title="No purpose spend" detail="Purpose breakdown appears after model calls are recorded." />}
+                </div>
+              </div>
+
+              <div className="panel stack">
+                <div className="row-head">
+                  <div>
+                    <h3>Cost by model</h3>
+                    <p className="muted">Provider and model attribution proves that cost tracking is connected to real model routing decisions.</p>
+                  </div>
+                  <Badge>{costSummary.by_model.length} models</Badge>
+                </div>
+                <div className="model-spend-grid">
+                  {costSummary.by_model.map((item) => (
+                    <article className="model-spend-card" key={`${item.provider}:${item.model}`}>
+                      <div className="row-head">
+                        <div>
+                          <strong>{item.model}</strong>
+                          <p className="muted">{item.provider}</p>
+                        </div>
+                        <Badge>{formatCost(item.estimated_cost)}</Badge>
+                      </div>
+                      <div className="metric-grid compact">
+                        <Metric label="AI calls" value={item.runs} />
+                        <Metric label="Tokens" value={formatNumber(item.tokens)} />
+                      </div>
+                    </article>
+                  ))}
+                  {costSummary.by_model.length === 0 && <EmptyState title="No model spend" detail="Model breakdown appears after AI run ledger entries are created." />}
+                </div>
+              </div>
+            </section>
+
+            <section className="panel stack full-width">
+              <div className="row-head">
+                <div>
+                  <h3>Recent AI run ledger</h3>
+                  <p className="muted">The latest model calls expose status, token split, cache behavior, provider, model, and error messages.</p>
+                </div>
+                <Badge>{costSummary.recent_ai_runs.length} calls</Badge>
+              </div>
+              <div className="ai-ledger-list">
+                {costSummary.recent_ai_runs.map((run) => (
+                  <article className="ai-ledger-row" key={run.id}>
+                    <div className="row-head">
+                      <div>
+                        <strong>{run.purpose}</strong>
+                        <p className="muted">{run.provider}/{run.model} · {run.language.toUpperCase()} · {formatDate(run.created_at)}</p>
+                      </div>
+                      <div className="review-actions">
+                        <Badge tone={toneForStatus(run.status)}>{run.status}</Badge>
+                        <Badge>{run.cache_hit ? "cache hit" : "cache miss"}</Badge>
+                      </div>
+                    </div>
+                    <div className="metric-grid compact">
+                      <Metric label="Prompt" value={formatNumber(run.prompt_tokens)} />
+                      <Metric label="Completion" value={formatNumber(run.completion_tokens)} />
+                      <Metric label="Total tokens" value={formatNumber(run.total_tokens)} />
+                      <Metric label="Cost" value={formatCost(run.estimated_cost)} />
+                      <Metric label="Latency" value={formatLatency(run.latency_ms)} />
+                    </div>
+                    {run.error_message && <p className="permission-note">{run.error_message}</p>}
+                  </article>
+                ))}
+                {costSummary.recent_ai_runs.length === 0 && <EmptyState title="No AI ledger rows" detail="Model calls create detailed ledger rows here." />}
               </div>
             </section>
           </>

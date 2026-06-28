@@ -246,3 +246,84 @@ def test_cache_entry_is_unique_by_workspace_key_and_purpose(
     with pytest.raises(IntegrityError):
         db_session.commit()
     db_session.rollback()
+
+
+def test_cost_summary_includes_agent_run_latency_and_recent_ledger(
+    client: TestClient,
+) -> None:
+    register(client, "cost-agent-owner@example.com")
+    token = login(client, "cost-agent-owner@example.com")
+    workspace = create_workspace(client, token)
+    document = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",
+        headers=auth_headers(token),
+        json={
+            "title": "Refund Policy",
+            "content_type": "text/plain",
+            "language": "en",
+            "content": "Refunds are available within 30 days after purchase. " * 40,
+        },
+    )
+    assert document.status_code == 201
+    agent = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        json={"name": "Cost Agent", "token_budget": 4000},
+    )
+    assert agent.status_code == 201
+    run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent.json()['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "Can I get a refund within 30 days?"},
+    )
+    assert run.status_code == 201
+
+    summary = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/costs/summary",
+        headers=auth_headers(token),
+    )
+
+    assert summary.status_code == 200
+    body = summary.json()
+    assert body["total_runs"] >= 2
+    assert body["failed_ai_runs"] == 0
+    assert body["latency_p50_ms"] >= 0
+    assert body["latency_p95_ms"] >= body["latency_p50_ms"]
+    assert body["latency_p99_ms"] >= body["latency_p95_ms"]
+    assert body["by_agent"]
+    assert body["by_agent"][0]["agent_name"] == "Cost Agent"
+    assert body["by_agent"][0]["model_calls"] >= 2
+    assert body["recent_runs"]
+    assert body["recent_runs"][0]["graph_run_id"] == run.json()["id"]
+    assert body["recent_runs"][0]["model_calls"] >= 2
+    assert body["recent_ai_runs"]
+    assert {item["purpose"] for item in body["recent_ai_runs"]} >= {
+        "classification",
+        "draft_response",
+    }
+
+
+def test_cost_summary_counts_failed_ai_runs(client: TestClient, db_session: Session) -> None:
+    register(client, "failed-cost-owner@example.com")
+    token = login(client, "failed-cost-owner@example.com")
+    workspace = create_workspace(client, token)
+
+    with pytest.raises(MockModelProviderError):
+        MockModelProvider(db_session).complete(
+            workspace_id=UUID(workspace["id"]),
+            purpose="draft_response",
+            language=SupportedLanguage.en,
+            prompt="Draft response.",
+            fail=True,
+        )
+
+    summary = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/costs/summary",
+        headers=auth_headers(token),
+    )
+
+    assert summary.status_code == 200
+    body = summary.json()
+    assert body["failed_ai_runs"] == 1
+    assert body["recent_ai_runs"][0]["status"] == "failed"
+    assert body["recent_ai_runs"][0]["error_message"] == "mock provider failure"
