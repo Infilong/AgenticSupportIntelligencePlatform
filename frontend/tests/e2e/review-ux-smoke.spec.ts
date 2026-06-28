@@ -81,6 +81,24 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   const runBody = await run.json();
   expect(runBody.route_decision).toBe("human_review");
 
+  const evaluationName = `E2E Evaluation ${runId}`;
+  const evaluation = await api.post(`/api/v1/workspaces/${workspaceBody.id}/evaluations`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      name: evaluationName,
+      modes: ["direct_llm", "vector_rag"],
+      jsonl_cases: JSON.stringify({
+        id: `eval-${runId}`,
+        language: "en",
+        input_message: "Can I get a refund within 30 days?",
+        expected_route: "finalize",
+        must_include: [],
+        must_not_include: ["unconditional"],
+      }),
+    },
+  });
+  expect(evaluation.status()).toBe(201);
+
   await page.addInitScript((sessionToken) => {
     window.localStorage.setItem("asi_token", sessionToken);
   }, token);
@@ -162,6 +180,18 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByRole("heading", { name: "Search documents" })).toBeVisible();
   await expect(page.getByText("search_documents", { exact: true })).toBeVisible();
   await expect(page.getByText("LangChain StructuredTool").first()).toBeVisible();
+
+  await productNav.getByRole("button", { name: "Evaluations", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Compare quality, routing, language, and cost" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Evaluation operations board" })).toBeVisible();
+  const evaluationSearchInput = page.getByPlaceholder("Run name, mode, status, or id");
+  await evaluationSearchInput.fill("");
+  await evaluationSearchInput.type("E2E Evaluation");
+  await expect(evaluationSearchInput).toHaveValue("E2E Evaluation");
+  await expect(evaluationSearchInput).toBeFocused();
+  await page.locator(".evaluation-run-buttons").getByRole("button", { name: new RegExp(evaluationName) }).click();
+  await expect(page.getByText("Selected run")).toBeVisible();
+  await expect(page.getByText(evaluationName).first()).toBeVisible();
 
   await productNav.getByRole("button", { name: "Guardrails", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Inspect runtime guardrails and review routing" })).toBeVisible();

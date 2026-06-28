@@ -1880,7 +1880,8 @@ th {
   .permission-summary-grid,
   .readiness-strip,
   .review-controls,
-  .runtime-control-grid {
+  .runtime-control-grid,
+  .evaluation-selected-summary {
     grid-template-columns: 1fr;
   }
 
@@ -2572,6 +2573,48 @@ th {
   max-height: 560px;
   overflow: auto;
   padding-right: 2px;
+}
+
+.evaluation-selected-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.evaluation-selected-summary > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 10px 12px;
+}
+
+.evaluation-selected-summary span {
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.evaluation-selected-summary strong,
+.evaluation-selected-summary small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.evaluation-selected-summary small {
+  color: var(--text-subtle);
+  line-height: 1.35;
+}
+
+.evaluation-view-filter {
+  flex-wrap: wrap;
+}
+
+.bounded-evaluation-list {
+  max-height: 520px;
 }
 
 .evaluation-toolbar {

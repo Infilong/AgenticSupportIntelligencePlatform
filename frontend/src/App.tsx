@@ -9,6 +9,7 @@ type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin" | "Setti
 const MAX_VISIBLE_EXAMPLES = 50;
 const MAX_VISIBLE_CHUNKS = 80;
 const MAX_VISIBLE_FOLDERS = 24;
+const MAX_VISIBLE_EVALUATION_RUNS = 20;
 
 type CurrentUser = {
   id: string;
@@ -394,6 +395,7 @@ type ReviewFilter = "all" | "mine" | "unassigned" | "critical" | "evidence" | "m
 type ReviewSort = "severity" | "newest" | "oldest";
 type ToolView = "all" | "enabled" | "disabled" | "failed" | "configured";
 type GuardrailView = "all" | "failed" | "configurable" | "fixed" | "routing";
+type EvaluationRunView = "all" | "active" | "archived" | "failed" | "selected";
 
 type EvaluationRun = {
   id: string;
@@ -958,6 +960,7 @@ export function App() {
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
   const [evaluationSearch, setEvaluationSearch] = useState("");
   const [evaluationStatusFilter, setEvaluationStatusFilter] = useState("all");
+  const [evaluationRunView, setEvaluationRunView] = useState<EvaluationRunView>("active");
   const [showArchivedEvaluations, setShowArchivedEvaluations] = useState(false);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
@@ -4543,18 +4546,25 @@ export function App() {
 
   function EvaluationsPanel() {
     const activeEvaluationRuns = evaluationRuns.filter((run) => !run.archived_at);
+    const selectedRunId = evaluationDetail?.run.id ?? "";
     const filteredEvaluationRuns = evaluationRuns.filter((run) => {
       const matchesStatus = evaluationStatusFilter === "all" || run.status === evaluationStatusFilter;
-      const matchesArchive = showArchivedEvaluations || !run.archived_at;
-      return matchesStatus && matchesArchive && matchesSearch(evaluationSearch, run.name, run.status, run.id);
+      const matchesView = evaluationRunMatchesView(run, evaluationRunView, selectedRunId, showArchivedEvaluations);
+      const modeText = parseEvaluationModes(run.modes_json).map(friendlyModeName).join(" ");
+      return matchesStatus && matchesView && matchesSearch(evaluationSearch, run.name, run.status, run.id, modeText);
     });
+    const displayedEvaluationRuns = filteredEvaluationRuns.slice(0, MAX_VISIBLE_EVALUATION_RUNS);
+    const hiddenEvaluationRunCount = Math.max(filteredEvaluationRuns.length - displayedEvaluationRuns.length, 0);
     const latestEvaluation = activeEvaluationRuns[0] ?? evaluationRuns[0] ?? null;
     const selectedModes = evaluationModes.join(", ") || "none";
-    const runStatusCounts = filteredEvaluationRuns.reduce<Record<string, number>>((counts, run) => {
+    const runStatusCounts = evaluationRuns.reduce<Record<string, number>>((counts, run) => {
       counts[run.status] = (counts[run.status] ?? 0) + 1;
       return counts;
     }, {});
     const archivedEvaluationCount = evaluationRuns.filter((run) => run.archived_at).length;
+    const selectedFailureCount = evaluationDetail?.results.filter((result) => !result.passed).length ?? 0;
+    const selectedLanguages = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.language))] : [];
+    const selectedResultModes = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.mode))] : [];
 
     return (
       <div className="evaluation-console">
@@ -4604,45 +4614,74 @@ export function App() {
           <aside className="panel stack evaluation-run-list">
             <div className="row-head">
               <div>
-                <h3>Evaluation runs</h3>
-                <p className="muted">Select a run to inspect language-specific metrics and case failures.</p>
+                <h3>Evaluation operations board</h3>
+                <p className="muted">Filter run history before drilling into language-specific quality, routing, and cost evidence.</p>
               </div>
-              <Badge>{filteredEvaluationRuns.length} shown</Badge>
+              <Badge>{displayedEvaluationRuns.length}/{filteredEvaluationRuns.length} shown</Badge>
             </div>
             <div className="metric-grid compact">
               <Metric label="Completed" value={runStatusCounts.completed ?? 0} />
               <Metric label="Failed" value={runStatusCounts.failed ?? 0} />
               <Metric label="Archived" value={archivedEvaluationCount} />
-              <Metric label="Total cases" value={filteredEvaluationRuns.reduce((sum, run) => sum + run.total_cases, 0)} />
+              <Metric label="Active cases" value={activeEvaluationRuns.reduce((sum, run) => sum + run.total_cases, 0)} />
+            </div>
+            <div className="evaluation-selected-summary">
+              <div>
+                <span>Selected run</span>
+                <strong>{evaluationDetail?.run.name ?? "No run selected"}</strong>
+                <small>{evaluationDetail ? `${evaluationDetail.results.length} results · ${selectedFailureCount} failures` : "Run or select an evaluation to inspect results."}</small>
+              </div>
+              <div>
+                <span>Coverage</span>
+                <strong>{selectedLanguages.length ? selectedLanguages.map((language) => language.toUpperCase()).join(" / ") : "No languages"}</strong>
+                <small>{selectedResultModes.length ? selectedResultModes.map(friendlyModeName).join(" · ") : "No modes loaded"}</small>
+              </div>
+            </div>
+            <div className="segmented evaluation-view-filter" aria-label="Evaluation run filter">
+              {evaluationRunViewOptions.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={evaluationRunView === option.id ? "selected" : ""}
+                  onClick={() => setEvaluationRunView(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
             <div className="library-toolbar evaluation-toolbar">
-              <label>Search runs<input value={evaluationSearch} onChange={(event) => setEvaluationSearch(event.target.value)} placeholder="Run name, status, or id" /></label>
+              <label>Search runs<input value={evaluationSearch} onChange={(event) => setEvaluationSearch(event.target.value)} placeholder="Run name, mode, status, or id" /></label>
               <label>Status<select value={evaluationStatusFilter} onChange={(event) => setEvaluationStatusFilter(event.target.value)}>
                 <option value="all">All statuses</option>
                 <option value="completed">Completed</option>
                 <option value="failed">Failed</option>
                 <option value="running">Running</option>
               </select></label>
-              <label className="check-row"><input type="checkbox" checked={showArchivedEvaluations} onChange={(event) => toggleArchivedEvaluations(event.target.checked)} /> Show archived runs</label>
+              <label className="check-row"><input type="checkbox" checked={showArchivedEvaluations} onChange={(event) => toggleArchivedEvaluations(event.target.checked)} /> Include archived runs in All view</label>
               <p className="permission-note">Owner controls: archive stale evaluation runs without deleting results, metrics, or audit evidence.</p>
             </div>
-            <div className="evaluation-run-buttons">
-              {filteredEvaluationRuns.map((run) => (
-                <article key={run.id} className={`evaluation-run-button ${evaluationDetail?.run.id === run.id ? "selected-list-item" : ""}`}>
-                  <button type="button" className="resource-main-button" onClick={() => void loadEvaluationDetail(run.id)}>
-                    <strong>{run.name}</strong>
-                    <Badge tone={run.archived_at ? "neutral" : toneForStatus(run.status)}>{run.archived_at ? "archived" : run.status}</Badge>
-                  </button>
-                  <span>{run.total_cases} cases · {formatDate(run.created_at)}</span>
-                  {run.archived_at && <span>Archived {formatDate(run.archived_at)}</span>}
-                  <div className="resource-actions">
-                    <button type="button" onClick={() => void loadEvaluationDetail(run.id)}>Inspect</button>
-                    {!run.archived_at && <button type="button" className="danger-button" onClick={() => void archiveEvaluation(run)} disabled={!canManageResources || loading}>Archive</button>}
-                  </div>
-                </article>
-              ))}
-              {filteredEvaluationRuns.length === 0 && <EmptyState title="No evaluations match this view" detail={evaluationRuns.length === 0 ? "Run JSONL cases to compare baselines and system v1." : "Clear search, change status, or include archived runs."} />}
+            <div className="evaluation-run-buttons bounded-evaluation-list">
+              {displayedEvaluationRuns.map((run) => {
+                const modes = parseEvaluationModes(run.modes_json);
+                return (
+                  <article key={run.id} className={`evaluation-run-button ${evaluationDetail?.run.id === run.id ? "selected-list-item" : ""}`}>
+                    <button type="button" className="resource-main-button" onClick={() => void loadEvaluationDetail(run.id)}>
+                      <strong>{run.name}</strong>
+                      <Badge tone={run.archived_at ? "neutral" : toneForStatus(run.status)}>{run.archived_at ? "archived" : run.status}</Badge>
+                    </button>
+                    <span>{run.total_cases} cases · {formatDate(run.created_at)}</span>
+                    <span>{modes.length ? modes.map(friendlyModeName).join(" · ") : "No modes recorded"}</span>
+                    {run.archived_at && <span>Archived {formatDate(run.archived_at)}</span>}
+                    <div className="resource-actions">
+                      <button type="button" onClick={() => void loadEvaluationDetail(run.id)}>Inspect</button>
+                      {!run.archived_at && <button type="button" className="danger-button" onClick={() => void archiveEvaluation(run)} disabled={!canManageResources || loading}>Archive</button>}
+                    </div>
+                  </article>
+                );
+              })}
+              {filteredEvaluationRuns.length === 0 && <EmptyState title="No evaluations match this view" detail={evaluationRuns.length === 0 ? "Run JSONL cases to compare baselines and system v1." : "Clear search, change status, or switch run filters."} />}
             </div>
+            {hiddenEvaluationRunCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_EVALUATION_RUNS} of {filteredEvaluationRuns.length} matching runs. Search by run name, mode, status, or id to narrow long histories.</p>}
           </aside>
         </section>
 
@@ -5774,6 +5813,14 @@ const guardrailViewOptions: Array<{ id: GuardrailView; label: string }> = [
   { id: "routing", label: "Routes to review" },
 ];
 
+const evaluationRunViewOptions: Array<{ id: EvaluationRunView; label: string }> = [
+  { id: "active", label: "Active" },
+  { id: "all", label: "All" },
+  { id: "failed", label: "Failures" },
+  { id: "selected", label: "Selected" },
+  { id: "archived", label: "Archived" },
+];
+
 function reviewOwnerLabel(review: HumanReview, user: CurrentUser | null): string {
   if (!review.reviewer_id) return "unassigned";
   if (user && review.reviewer_id === user.id) return "me";
@@ -6538,6 +6585,25 @@ function modeDescription(mode: Mode): string {
   if (mode === "direct_llm") return "No retrieval baseline for cost and hallucination comparison.";
   if (mode === "vector_rag") return "Retrieval baseline without the full guardrail workflow.";
   return "Hybrid RAG plus guardrails, routing, and traceability.";
+}
+
+function parseEvaluationModes(value: string): Mode[] {
+  const parsed = safeJson(value);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter((mode): mode is Mode => mode === "direct_llm" || mode === "vector_rag" || mode === "system_v1");
+}
+
+function evaluationRunMatchesView(
+  run: EvaluationRun,
+  view: EvaluationRunView,
+  selectedRunId: string,
+  includeArchivedInBroadViews: boolean,
+) {
+  if (view === "active") return !run.archived_at;
+  if (view === "archived") return Boolean(run.archived_at);
+  if (view === "failed") return run.status === "failed" && (includeArchivedInBroadViews || !run.archived_at);
+  if (view === "selected") return Boolean(selectedRunId) && run.id === selectedRunId;
+  return includeArchivedInBroadViews || !run.archived_at;
 }
 
 function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
