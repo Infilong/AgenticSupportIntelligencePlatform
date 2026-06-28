@@ -874,6 +874,92 @@ function Badge({ tone = "neutral", children }: { tone?: "neutral" | "good" | "wa
   return <span className={`badge badge-${tone}`}>{children}</span>;
 }
 
+function FolderPicker({
+  label,
+  value,
+  folders,
+  onChange,
+  disabled = false,
+  resourceLabel,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  folders: ResourceFolder[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  resourceLabel: string;
+  compact?: boolean;
+}) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const matchingFolders = folders.filter((folder) => {
+    if (!normalizedQuery) return true;
+    return `${folder.name} ${folder.id}`.toLowerCase().includes(normalizedQuery);
+  });
+  const displayedFolders = matchingFolders.slice(0, MAX_VISIBLE_FOLDERS);
+  const selectedFolder = folders.find((folder) => folder.id === value);
+  const hiddenCount = Math.max(matchingFolders.length - displayedFolders.length, 0);
+  const body = (
+    <>
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={`Search ${resourceLabel} folders`}
+        disabled={disabled || folders.length === 0}
+        aria-label={`Search ${label}`}
+      />
+      <div className="folder-picker-options" role="listbox" aria-label={label}>
+        <button
+          type="button"
+          className={value === "" ? "folder-picker-option selected-list-item" : "folder-picker-option"}
+          onClick={() => onChange("")}
+          disabled={disabled}
+        >
+          <span>Unfiled</span>
+          <Badge>default</Badge>
+        </button>
+        {displayedFolders.map((folder) => (
+          <button
+            type="button"
+            key={folder.id}
+            className={value === folder.id ? "folder-picker-option selected-list-item" : "folder-picker-option"}
+            onClick={() => onChange(folder.id)}
+            disabled={disabled}
+          >
+            <span>{folder.name}</span>
+            <small>{shortId(folder.id)}</small>
+          </button>
+        ))}
+      </div>
+      {hiddenCount > 0 && <small className="folder-picker-note">Showing first {MAX_VISIBLE_FOLDERS} of {matchingFolders.length}. Search to narrow.</small>}
+      {folders.length === 0 && <small className="folder-picker-note">No folders yet. New resources will be saved as Unfiled.</small>}
+    </>
+  );
+
+  if (compact) {
+    return (
+      <details className="folder-picker folder-picker-compact">
+        <summary>
+          <span>{label}</span>
+          <strong>{selectedFolder?.name ?? "Unfiled"}</strong>
+        </summary>
+        {body}
+      </details>
+    );
+  }
+
+  return (
+    <div className="folder-picker">
+      <div className="folder-picker-head">
+        <span>{label}</span>
+        <strong>{selectedFolder?.name ?? "Unfiled"}</strong>
+      </div>
+      {body}
+    </div>
+  );
+}
+
 function healthTone(status: HealthStatus): "neutral" | "good" | "warn" | "bad" {
   if (status === "ok") return "good";
   if (status === "critical") return "bad";
@@ -2917,10 +3003,14 @@ export function App() {
         <form className="panel stack" onSubmit={importDataset}>
           <h3>Import multilingual data</h3>
           <label>Dataset name<input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} /></label>
-          <label>Folder<select value={datasetFolderId} onChange={(event) => setDatasetFolderId(event.target.value)}>
-            <option value="">Unfiled</option>
-            {datasetFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-          </select></label>
+          <FolderPicker
+            label="Import target folder"
+            value={datasetFolderId}
+            folders={datasetFolders}
+            onChange={setDatasetFolderId}
+            disabled={loading}
+            resourceLabel="dataset"
+          />
           <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => setDatasetContent(event.target.value)} /></label>
           <button className="primary" disabled={!canWriteData || loading}>Import JSONL</button>
         </form>
@@ -2966,15 +3056,15 @@ export function App() {
                   <Badge>{folderLabel("dataset", dataset.folder_id)}</Badge>
                 </div>
                 <div className="resource-actions">
-                  <select
+                  <FolderPicker
+                    label={`Move ${dataset.name}`}
                     value={dataset.folder_id ?? ""}
-                    onChange={(event) => void moveDatasetFolder(dataset.id, event.target.value)}
+                    folders={datasetFolders}
+                    onChange={(folderId) => void moveDatasetFolder(dataset.id, folderId)}
                     disabled={!canManageResourceFolders || loading}
-                    aria-label={`Move ${dataset.name} to folder`}
-                  >
-                    <option value="">Unfiled</option>
-                    {datasetFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-                  </select>
+                    resourceLabel="dataset"
+                    compact
+                  />
                   <button type="button" className="danger-button" onClick={() => void deleteDataset(dataset.id)} disabled={!canManageResources || loading}>Delete</button>
                 </div>
               </article>
@@ -3142,15 +3232,15 @@ export function App() {
                   <span>{document.language.toUpperCase()} · {folderLabel("knowledge_document", document.folder_id)} · updated {formatDate(document.updated_at)}</span>
                   {document.error_message && <small>{document.error_message}</small>}
                   <div className="resource-actions">
-                    <select
+                    <FolderPicker
+                      label={`Move ${document.title}`}
                       value={document.folder_id ?? ""}
-                      onChange={(event) => void moveDocumentFolder(document.id, event.target.value)}
+                      folders={knowledgeFolders}
+                      onChange={(folderId) => void moveDocumentFolder(document.id, folderId)}
                       disabled={!canManageResourceFolders || loading}
-                      aria-label={`Move ${document.title} to folder`}
-                    >
-                      <option value="">Unfiled</option>
-                      {knowledgeFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-                    </select>
+                      resourceLabel="knowledge"
+                      compact
+                    />
                     <button type="button" className="danger-button" onClick={() => void deleteDocument(document.id)} disabled={!canManageResources || loading}>Delete</button>
                   </div>
                 </article>
@@ -3179,10 +3269,14 @@ export function App() {
             <div className="knowledge-meta-grid">
               <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
               <label>Language<select value={documentLanguage} onChange={(event) => setDocumentLanguage(event.target.value as Language)}><option value="en">English</option><option value="ja">Japanese</option><option value="zh">Chinese</option></select></label>
-              <label>Folder<select value={documentFolderId} onChange={(event) => setDocumentFolderId(event.target.value)}>
-                <option value="">Unfiled</option>
-                {knowledgeFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-              </select></label>
+              <FolderPicker
+                label="Knowledge target folder"
+                value={documentFolderId}
+                folders={knowledgeFolders}
+                onChange={setDocumentFolderId}
+                disabled={loading}
+                resourceLabel="knowledge"
+              />
               <div className="version-card">
                 <span>Version</span>
                 <strong>{documentDetail?.latest_version ? `v${documentDetail.latest_version.version}` : "new"}</strong>

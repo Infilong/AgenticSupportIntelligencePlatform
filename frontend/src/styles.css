@@ -3316,3 +3316,90 @@ th {
 .budget-policy-form .run-action-bar {
   grid-column: 1 / -1;
 }
+
+.folder-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.folder-picker-head {
+  display: grid;
+  gap: 3px;
+}
+
+.folder-picker-head span {
+  color: var(--text-subtle);
+  font-size: 0.84rem;
+  font-weight: 720;
+}
+
+.folder-picker-head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.folder-picker-options {
+  display: grid;
+  gap: 6px;
+  max-height: 190px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.folder-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.folder-picker-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.folder-picker-option small,
+.folder-picker-note {
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+}
+
+.resource-actions .folder-picker {
+  min-width: min(100%, 240px);
+}
+
+.folder-picker-compact {
+  min-width: min(100%, 260px);
+}
+
+.folder-picker-compact summary {
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 8px 10px;
+  list-style: none;
+}
+
+.folder-picker-compact summary::-webkit-details-marker {
+  display: none;
+}
+
+.folder-picker-compact summary span {
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.folder-picker-compact summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
