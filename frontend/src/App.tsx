@@ -1091,6 +1091,7 @@ export function App() {
   const [selectedAgentFolderId, setSelectedAgentFolderId] = useState("all");
   const [agentFolderName, setAgentFolderName] = useState("Production agents");
   const [agentSearch, setAgentSearch] = useState("");
+  const [agentPage, setAgentPage] = useState(0);
   const [agentName, setAgentName] = useState("Support Workflow Agent");
   const [agentTokenBudget, setAgentTokenBudget] = useState(4000);
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
@@ -1195,8 +1196,9 @@ export function App() {
   }, [selectedWorkspace?.id, selectedWorkspace?.name]);
 
   const selectedAgent = useMemo(
-    () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
-    [agents, selectedAgentId],
+    () => agents.find((agent) => agent.id === selectedAgentId)
+      ?? (agentSummary?.agent.id === selectedAgentId ? agentSummary.agent : null),
+    [agentSummary, agents, selectedAgentId],
   );
   const effectiveEvaluationAgentId = evaluationAgentId;
   const evaluationAgentLabel = (agentId: string | null | undefined) => {
@@ -1344,6 +1346,12 @@ export function App() {
     if (!permissionList.includes("data:read")) return;
     void loadDatasets();
   }, [token, selectedWorkspaceId, activeTab, selectedDataFolderId, datasetSearch, datasetPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "agent") return;
+    if (!permissionList.includes("agents:read")) return;
+    void loadAgents();
+  }, [token, selectedWorkspaceId, activeTab, selectedAgentFolderId, agentSearch, agentPage, permissionKey]);
 
   function setSessionToken(value: string) {
     setToken(value);
@@ -1535,11 +1543,11 @@ export function App() {
 
   function selectAgentFolder(folderId: string) {
     setSelectedAgentFolderId(folderId);
+    setAgentPage(0);
     setNewAgentFolderId(folderSelectionToFormValue(folderId));
-    const scopedAgents = filterByFolder(agents, folderId);
-    if (!scopedAgents.some((agent) => agent.id === selectedAgentId)) {
-      void selectAgent(scopedAgents[0]?.id ?? "");
-    }
+    setSelectedAgentId("");
+    setAgentSummary(null);
+    setAgentWorkflowSummary(null);
   }
 
   function matchesSearch(query: string, ...values: Array<string | null | undefined>) {
@@ -2130,9 +2138,28 @@ export function App() {
     );
   }
 
-  async function loadAgents() {
+  function agentListParams(page = agentPage, folderId = selectedAgentFolderId, search = agentSearch) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_RESOURCES,
+      offset: page * MAX_VISIBLE_RESOURCES,
+    };
+    if (folderId === "unfiled") {
+      params.unfiled = true;
+    } else if (folderId !== "all") {
+      params.folder_id = folderId;
+    }
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    return params;
+  }
+
+  async function loadAgents(page = agentPage, folderId = selectedAgentFolderId, search = agentSearch) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<Agent[]>(workspaceListPath("/agents", { limit: RESOURCE_LIST_FETCH_LIMIT }), { token });
+    const data = await apiRequest<Agent[]>(
+      workspaceListPath("/agents", agentListParams(page, folderId, search)),
+      { token },
+    );
     setAgents(data);
     const nextAgent = data.find((agent) => agent.id === selectedAgentId) ?? data[0];
     setSelectedAgentId(nextAgent?.id ?? "");
@@ -2195,7 +2222,12 @@ export function App() {
           folder_id: newAgentFolderId || null,
         },
       });
-      await loadAgents();
+      const targetFolderId = agent.folder_id ?? "unfiled";
+      setSelectedAgentFolderId(targetFolderId);
+      setAgentPage(0);
+      setAgentSearch("");
+      setNewAgentFolderId(agent.folder_id ?? "");
+      await loadAgents(0, targetFolderId, "");
       await loadResourceFolders();
       setSelectedAgentId(agent.id);
       setNewAgentName("Support Workflow Agent");
@@ -2223,7 +2255,8 @@ export function App() {
       setSelectedAgentId("");
       setAgentSummary(null);
       setAgentWorkflowSummary(null);
-      await loadAgents();
+      setAgentPage(0);
+      await loadAgents(0);
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -2237,10 +2270,14 @@ export function App() {
         body: { folder_id: folderId || null },
       });
       if (selectedAgentId === agentId) {
-        setSelectedAgentFolderId(folderId || "unfiled");
+        const targetFolderId = folderId || "unfiled";
+        setSelectedAgentFolderId(targetFolderId);
+        setAgentPage(0);
         setNewAgentFolderId(folderId);
+        await loadAgents(0, targetFolderId);
+      } else {
+        await loadAgents();
       }
-      await loadAgents();
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -3747,24 +3784,19 @@ export function App() {
     const workflowRuns = workflowNodes.reduce((sum, node) => sum + node.run_count, 0);
     const recentRuns = summary?.recent_runs ?? [];
     const agentFolders = foldersFor("agent_config");
-    const folderAgents = filterByFolder(agents, selectedAgentFolderId);
-    const visibleAgents = folderAgents.filter((agent) =>
-      matchesSearch(
-        agentSearch,
-        agent.name,
-        agent.id,
-        agent.active ? "active" : "inactive",
-        agent.archived_at ? "archived" : "current",
-        folderLabel("agent_config", agent.folder_id),
-      ),
-    );
-    const displayedAgents = visibleAgents.slice(0, MAX_VISIBLE_RESOURCES);
-    const hiddenAgentCount = Math.max(visibleAgents.length - displayedAgents.length, 0);
+    const displayedAgents = agents;
     const selectedAgentFolderLabel = selectedAgentFolderId === "all"
       ? "All agent folders"
       : selectedAgentFolderId === "unfiled"
         ? "Unfiled agents"
         : folderLabel("agent_config", selectedAgentFolderId);
+    const selectedAgentFolderCount = resourceItemCount("agent_config", selectedAgentFolderId);
+    const agentPageStart = agentPage * MAX_VISIBLE_RESOURCES + (agents.length ? 1 : 0);
+    const agentPageEnd = agentPage * MAX_VISIBLE_RESOURCES + agents.length;
+    const canGoToPreviousAgentPage = agentPage > 0;
+    const canGoToNextAgentPage = agentSearch.trim()
+      ? agents.length === MAX_VISIBLE_RESOURCES
+      : agentPageEnd < selectedAgentFolderCount;
     const failureRate = summary && summary.total_runs > 0
       ? Math.round((summary.failed_runs / summary.total_runs) * 100)
       : 0;
@@ -3819,9 +3851,9 @@ export function App() {
                 onChange={(event) => void selectAgent(event.target.value)}
               >
                 <option value="">Select agent</option>
-                {folderAgents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
+                {displayedAgents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
               </select>
-              <small>{folderAgents.length} agents in {selectedAgentFolderLabel}</small>
+              <small>{agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown in {selectedAgentFolderLabel}</small>
             </label>
             <form className="inline-form" onSubmit={createAgent}>
               <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} disabled={!canConfigureAgent || loading} />
@@ -3846,13 +3878,13 @@ export function App() {
                 <h3>Agent library</h3>
                 <p className="muted">Folder-scoped agent configs available for LangGraph runs, evaluations, and cost attribution.</p>
               </div>
-              <Badge>{displayedAgents.length}/{visibleAgents.length} shown</Badge>
+              <Badge>{agents.length} shown</Badge>
             </div>
             <div className="library-toolbar">
               <div className="folder-scope-banner">
                 <span>Current folder</span>
                 <strong>{selectedAgentFolderLabel}</strong>
-                <small>{visibleAgents.length} agents shown from {folderAgents.length} in this folder scope.</small>
+                <small>{agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown from {selectedAgentFolderCount} in this folder scope.</small>
               </div>
               <div className="folder-scope-banner">
                 <span>Create target</span>
@@ -3872,8 +3904,8 @@ export function App() {
                 Search current folder
                 <input
                   value={agentSearch}
-                  onChange={(event) => setAgentSearch(event.target.value)}
-                  placeholder="Agent name, status, folder, or id"
+                  onChange={(event) => { setAgentPage(0); setAgentSearch(event.target.value); }}
+                  placeholder="Agent name or runtime settings"
                 />
               </label>
             </div>
@@ -3902,9 +3934,14 @@ export function App() {
                   </div>
                 </article>
               ))}
-              {visibleAgents.length === 0 && <EmptyState title="No agents match this folder" detail={folderAgents.length === 0 ? "Create an agent here or switch folders." : "Clear search or choose another folder."} />}
+              {agents.length === 0 && <EmptyState title="No agents match this view" detail={selectedAgentFolderCount === 0 ? "Create an agent here or switch folders." : "Clear search, move to the previous page, or try another folder."} />}
             </div>
-            {hiddenAgentCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_RESOURCES} of {visibleAgents.length} matching agents. Search by name, status, folder, or id before moving or operating agents in large workspaces.</p>}
+            <div className="pagination-bar">
+              <button type="button" onClick={() => setAgentPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousAgentPage || loading}>Previous</button>
+              <span>Page {agentPage + 1} · {agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown</span>
+              <button type="button" onClick={() => setAgentPage((page) => page + 1)} disabled={!canGoToNextAgentPage || loading}>Next</button>
+            </div>
+            <p className="permission-note">Agent configs are loaded from the backend by folder, search, offset, and limit so large agent libraries stay navigable without loading every agent into the browser.</p>
           </aside>
         </section>
 

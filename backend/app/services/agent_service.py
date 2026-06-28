@@ -77,8 +77,10 @@ class AgentService:
         workspace_id: UUID,
         include_archived: bool = False,
         folder_id: UUID | None = None,
+        unfiled: bool = False,
         search: str | None = None,
         limit: int | None = None,
+        offset: int = 0,
     ) -> list[AgentConfig]:
         filters = [AgentConfig.workspace_id == workspace_id]
         if folder_id is not None:
@@ -86,6 +88,8 @@ class AgentService:
                 workspace_id=workspace_id, folder_id=folder_id, resource_type="agent_config"
             )
             filters.append(AgentConfig.folder_id == folder_id)
+        elif unfiled:
+            filters.append(AgentConfig.folder_id.is_(None))
         if not include_archived:
             filters.append(AgentConfig.archived_at.is_(None))
         normalized_search = (search or "").strip()
@@ -94,7 +98,12 @@ class AgentService:
             filters.append(
                 or_(AgentConfig.name.ilike(pattern), AgentConfig.settings_json.ilike(pattern))
             )
-        statement = select(AgentConfig).where(*filters).order_by(AgentConfig.created_at.desc())
+        statement = (
+            select(AgentConfig)
+            .where(*filters)
+            .order_by(AgentConfig.created_at.desc())
+            .offset(offset)
+        )
         if limit is not None:
             statement = statement.limit(limit)
         return list(self.db.scalars(statement).all())

@@ -585,6 +585,75 @@ def test_resource_list_filters_are_backend_bounded_and_searchable(client: TestCl
     assert triage_agent["folder_id"] == agent_folder["id"]
 
 
+def test_agent_list_supports_folder_unfiled_search_and_offset(client: TestClient) -> None:
+    register(client, "agent-page-owner@example.com")
+    token = login(client, "agent-page-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "agent_config", "Production agents")
+
+    created_names: list[str] = []
+    for index in range(4):
+        name = f"Paged Agent {index}"
+        response = client.post(
+            f"/api/v1/workspaces/{workspace['id']}/agents",
+            headers=auth_headers(token),
+            json={
+                "name": name,
+                "token_budget": 4000 + index,
+                "folder_id": folder["id"] if index < 3 else None,
+            },
+        )
+        assert response.status_code == 201
+        created_names.append(name)
+
+    first_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "limit": 2, "offset": 0},
+    )
+    second_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "limit": 2, "offset": 2},
+    )
+    unfiled_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"unfiled": True, "limit": 10},
+    )
+    search_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "search": "Paged Agent 1", "limit": 10},
+    )
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert unfiled_page.status_code == 200
+    assert search_page.status_code == 200
+    assert [item["name"] for item in first_page.json()] == ["Paged Agent 2", "Paged Agent 1"]
+    assert [item["name"] for item in second_page.json()] == ["Paged Agent 0"]
+    assert [item["name"] for item in unfiled_page.json()] == ["Paged Agent 3"]
+    assert [item["name"] for item in search_page.json()] == ["Paged Agent 1"]
+    assert created_names == ["Paged Agent 0", "Paged Agent 1", "Paged Agent 2", "Paged Agent 3"]
+
+
+def test_agent_list_rejects_folder_and_unfiled_conflict(client: TestClient) -> None:
+    register(client, "agent-conflict-owner@example.com")
+    token = login(client, "agent-conflict-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "agent_config", "Production agents")
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "unfiled": True},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "agent_filter_conflict"
+
+
 def test_resource_folder_counts_are_backend_authoritative_beyond_list_limit(
     client: TestClient,
 ) -> None:
