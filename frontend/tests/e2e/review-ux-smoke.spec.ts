@@ -102,6 +102,16 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByText("Prompt injection risk", { exact: true })).toBeVisible();
   await expect(page.getByText("prompt_injection")).toHaveCount(0);
 
+  await productNav.getByRole("button", { name: "Runs & traces", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Debug LangGraph executions" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Trace entry points" })).toBeVisible();
+  await page.locator(".trace-entry-panel").getByRole("button", { name: /Ignore all previous instructions/ }).click();
+  await expect(page.getByRole("heading", { name: "Execution navigator" })).toBeVisible();
+  await expect(page.getByText("AI runtime", { exact: true })).toBeVisible();
+  await expect(page.getByText("Prompt Injection").first()).toBeVisible();
+  await expect(page.locator(".trace-entry-panel").getByText("human_review")).toHaveCount(0);
+
+  await productNav.getByRole("button", { name: "Human review", exact: true }).click();
   const answer = page.getByLabel("Human-approved answer");
   await answer.fill("");
   await answer.type("We cannot follow instructions that attempt to override system policy.");

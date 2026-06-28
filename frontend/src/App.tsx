@@ -3845,19 +3845,93 @@ export function App() {
   }
 
   function TracePanel() {
+    const summary = agentSummary?.agent.id === selectedAgentId ? agentSummary : null;
+    const traceEntries = buildTraceEntries({
+      latestRun,
+      recentRuns: summary?.recent_runs ?? [],
+      reviews,
+    });
+    const loadedTrace = trace?.run.id ?? null;
+    const failedStepCount = trace?.steps.filter((step) => step.status === "failed" || step.error_message).length ?? 0;
+    const modelCallCount = trace?.ai_runs.length ?? 0;
+    const toolCallCount = trace?.steps.reduce((sum, step) => sum + step.tool_calls.length, 0) ?? 0;
+    const failedGuardrailCount = trace?.guardrails.filter((guardrail) => !guardrail.passed).length ?? 0;
+
     return (
-      <div className="stack">
-        <ActionGuide
-          title="Trace explains the workflow"
-          detail="Use this page to see each LangGraph node, state transition, tool call, retrieved citation, guardrail, model call, token estimate, latency, and error."
-          action="Next: resolve routed cases"
-          onAction={() => goToTab("reviews")}
-        />
-        <section className="panel inline-form">
-          <input placeholder="Graph run id" value={traceRunId} onChange={(event) => setTraceRunId(event.target.value)} />
-          <button onClick={() => void runAction("Trace loaded", () => loadTrace())}>Load trace</button>
+      <div className="trace-console">
+        <section className="panel trace-entry-hero">
+          <div>
+            <p className="eyebrow">Runs & traces</p>
+            <h2>Debug LangGraph executions</h2>
+            <p className="muted">Open a recent run, review-routed case, or pasted graph run ID to inspect state transitions, model calls, tools, guardrails, checkpoints, token cost, and final routing.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Trace status</span>
+            <strong>{trace ? "Trace loaded" : traceEntries.length ? "Select a trace" : "No runs yet"}</strong>
+            <p>{trace ? `${formatStepName(trace.run.route_decision ?? trace.run.status)} · ${trace.steps.length} graph nodes` : traceEntries.length ? "Start from a recent run instead of pasting an ID." : "Run an agent to create traceable execution records."}</p>
+            <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
+          </div>
         </section>
-        {trace ? <TraceViewer trace={trace} /> : <EmptyState title="No trace loaded" detail="Run an agent or paste a graph run ID." />}
+
+        <section className="settings-summary-grid trace-summary-grid">
+          <Metric label="Loaded run" value={loadedTrace ? shortId(loadedTrace) : "none"} />
+          <Metric label="Graph steps" value={trace?.steps.length ?? 0} />
+          <Metric label="Model calls" value={modelCallCount} />
+          <Metric label="Tool calls" value={toolCallCount} />
+          <Metric label="Failed steps" value={failedStepCount} />
+          <Metric label="Failed guardrails" value={failedGuardrailCount} />
+        </section>
+
+        <section className="trace-entry-layout">
+          <aside className="panel stack trace-entry-panel">
+            <div className="row-head">
+              <div>
+                <h3>Trace entry points</h3>
+                <p className="muted">Recent agent runs and pending review cases from this workspace.</p>
+              </div>
+              <Badge>{traceEntries.length}</Badge>
+            </div>
+            <div className="recent-run-list trace-entry-list">
+              {traceEntries.map((entry) => (
+                <button
+                  type="button"
+                  className={`recent-run-row ${loadedTrace === entry.id ? "selected-list-item" : ""}`}
+                  key={`${entry.source}:${entry.id}`}
+                  onClick={() => { setTraceRunId(entry.id); void loadTrace(entry.id); }}
+                >
+                  <span>
+                    <strong>{entry.label}</strong>
+                    <small>{entry.detail}</small>
+                  </span>
+                  <span className="recent-run-meta">
+                    <Badge tone={toneForStatus(entry.status)}>{entry.statusLabel}</Badge>
+                    <small>{entry.source} · {formatDate(entry.created_at)}</small>
+                  </span>
+                </button>
+              ))}
+              {traceEntries.length === 0 && (
+                <EmptyState title="No traceable runs" detail="Create or run an agent to populate recent trace entry points." />
+              )}
+            </div>
+          </aside>
+
+          <section className="panel stack trace-manual-loader">
+            <div className="row-head">
+              <div>
+                <h3>Load by graph run ID</h3>
+                <p className="muted">Use this when copying a run ID from audit logs, costs, tools, guardrails, or an external incident note.</p>
+              </div>
+              <Badge>workspace scoped</Badge>
+            </div>
+            <div className="inline-form">
+              <input aria-label="Graph run id" placeholder="Graph run id" value={traceRunId} onChange={(event) => setTraceRunId(event.target.value)} />
+              <button onClick={() => void runAction("Trace loaded", () => loadTrace())}>Load trace</button>
+            </div>
+            <p className="permission-note">The backend returns a trace only if this run belongs to the selected workspace.</p>
+          </section>
+        </section>
+
+        {trace ? <TraceViewer trace={trace} /> : <EmptyState title="No trace loaded" detail="Select a recent trace entry, run an agent, or paste a graph run ID." />}
       </div>
     );
   }
@@ -5601,6 +5675,12 @@ function formatStepName(value: string) {
   return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 }
 
+function formatTraceSignalValue(value: unknown) {
+  if (typeof value === "string") return friendlySignalValue(value);
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
 function traceStepSignals(value: unknown): Array<{ label: string; value: string }> {
   const record = asRecord(value);
   if (!record) return [];
@@ -5616,7 +5696,7 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
     "model_budget_failure",
   ]) {
     if (record[key] !== undefined && record[key] !== null) {
-      signals.push({ label: formatStepName(key), value: String(record[key]) });
+      signals.push({ label: formatStepName(key), value: formatTraceSignalValue(record[key]) });
     }
   }
   const citations = record.citations;
@@ -5631,6 +5711,66 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
 }
 
 type TraceStepFilter = "all" | "problems" | "models" | "tools" | "langchain";
+
+type TraceEntryPoint = {
+  id: string;
+  label: string;
+  detail: string;
+  status: string;
+  statusLabel: string;
+  created_at: string;
+  source: string;
+};
+
+function buildTraceEntries({
+  latestRun,
+  recentRuns,
+  reviews,
+}: {
+  latestRun: GraphRun | null;
+  recentRuns: GraphRun[];
+  reviews: HumanReview[];
+}): TraceEntryPoint[] {
+  const entries: TraceEntryPoint[] = [];
+  if (latestRun) {
+    entries.push({
+      id: latestRun.id,
+      label: formatStepName(latestRun.route_decision ?? latestRun.status),
+      detail: latestRun.input_message,
+      status: latestRun.status,
+      statusLabel: formatStepName(latestRun.status),
+      created_at: latestRun.created_at,
+      source: "Latest run",
+    });
+  }
+  for (const run of recentRuns) {
+    entries.push({
+      id: run.id,
+      label: formatStepName(run.route_decision ?? run.status),
+      detail: run.input_message,
+      status: run.status,
+      statusLabel: formatStepName(run.status),
+      created_at: run.created_at,
+      source: "Agent history",
+    });
+  }
+  for (const review of reviews.filter((item) => item.reviewer_decision === "pending")) {
+    entries.push({
+      id: review.graph_run_id,
+      label: friendlyReviewReason(review.reason),
+      detail: review.run?.input_message ?? "Review-routed run",
+      status: review.run?.status ?? review.reviewer_decision,
+      statusLabel: formatStepName(review.run?.status ?? review.reviewer_decision),
+      created_at: review.run?.created_at ?? review.created_at,
+      source: "Review queue",
+    });
+  }
+  const unique = new Map<string, TraceEntryPoint>();
+  for (const entry of entries) {
+    if (!unique.has(entry.id)) unique.set(entry.id, entry);
+  }
+  return [...unique.values()].slice(0, 8);
+}
 
 function TraceViewer({ trace }: { trace: GraphTrace }) {
   const [stepFilter, setStepFilter] = useState<TraceStepFilter>("all");
@@ -5671,15 +5811,15 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
         <div className="row-head">
           <div>
             <p className="eyebrow">Run context</p>
-            <h3>{trace.run.route_decision ?? trace.run.status}</h3>
+            <h3>{formatStepName(trace.run.route_decision ?? trace.run.status)}</h3>
           </div>
-          <Badge tone={toneForStatus(trace.run.status)}>{trace.run.status}</Badge>
+          <Badge tone={toneForStatus(trace.run.status)}>{formatStepName(trace.run.status)}</Badge>
         </div>
         <p className="message"><b>User</b>: {trace.run.input_message}</p>
         <p className="answer">{trace.run.final_answer ?? "No final answer. The run is blocked for review or has no supported source."}</p>
         <div className="metric-grid compact">
           <Metric label="Language" value={trace.run.language ?? "-"} />
-          <Metric label="Route" value={trace.run.route_decision ?? "-"} />
+          <Metric label="Route" value={trace.run.route_decision ? formatStepName(trace.run.route_decision) : "-"} />
           <Metric label="Completed" value={formatDate(trace.run.completed_at)} />
         </div>
       </div>
@@ -5778,7 +5918,7 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
             <h3>Execution navigator</h3>
             <p className="muted">Filter the LangGraph path, select a node, then drill into model, tool, state, and checkpoint evidence.</p>
           </div>
-          <Badge tone={trace.run.route_decision === "human_review" ? "warn" : "good"}>{trace.run.route_decision ?? "running"}</Badge>
+          <Badge tone={trace.run.route_decision === "human_review" ? "warn" : "good"}>{trace.run.route_decision ? formatStepName(trace.run.route_decision) : "running"}</Badge>
         </div>
         <div className="trace-filter-bar">
           {traceFilters.map((filter) => (
