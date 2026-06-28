@@ -680,6 +680,14 @@ type AuditLog = {
   created_at: string;
 };
 
+type AuditLogListResponse = {
+  items: AuditLog[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_next: boolean;
+};
+
 type HealthStatus = "ok" | "warning" | "critical" | "not_configured";
 
 type SystemHealthCheck = {
@@ -1195,6 +1203,8 @@ export function App() {
   const [auditImpactFilter, setAuditImpactFilter] = useState("all");
   const [auditActorFilter, setAuditActorFilter] = useState("all");
   const [auditPage, setAuditPage] = useState(0);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditHasNext, setAuditHasNext] = useState(false);
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [promptTemplateHistory, setPromptTemplateHistory] = useState<PromptTemplate[]>([]);
   const [promptHistoryPage, setPromptHistoryPage] = useState(0);
@@ -1567,7 +1577,7 @@ export function App() {
       can("costs:read") ? loadCosts() : Promise.resolve(setCostSummary(null)),
       can("budget_policy:read") ? loadBudgetPolicy() : Promise.resolve(setBudgetPolicy(null)),
       can("system:read") ? loadSystemHealth() : Promise.resolve(setSystemHealth(null)),
-      can("audit:read") ? loadAuditLogs() : Promise.resolve(setAuditLogs([])),
+      can("audit:read") ? loadAuditLogs() : Promise.resolve(clearAuditState()),
       can("prompts:read") ? loadPromptTemplates() : Promise.resolve(setPromptTemplates([])),
       can("models:read") ? loadModelConfigs() : Promise.resolve(setModelConfigs([])),
       canUseFolders ? loadResourceFolders(permissions) : Promise.resolve(clearResourceFolderState()),
@@ -1790,6 +1800,12 @@ export function App() {
     setTools([]);
     setToolTotal(0);
     setToolHasNext(false);
+  }
+
+  function clearAuditState() {
+    setAuditLogs([]);
+    setAuditTotal(0);
+    setAuditHasNext(false);
   }
 
   function clearGuardrailState() {
@@ -2974,11 +2990,13 @@ export function App() {
 
   async function loadAuditLogs(page = auditPage) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<AuditLog[]>(
+    const data = await apiRequest<AuditLogListResponse>(
       workspaceListPath("/audit-logs", auditLogListParams(page)),
       { token },
     );
-    setAuditLogs(data);
+    setAuditLogs(data.items);
+    setAuditTotal(data.total);
+    setAuditHasNext(data.has_next);
   }
 
   async function loadPromptTemplates() {
@@ -6035,7 +6053,7 @@ export function App() {
     const auditPageStart = auditPage * MAX_VISIBLE_AUDIT_EVENTS + (auditLogs.length ? 1 : 0);
     const auditPageEnd = auditPage * MAX_VISIBLE_AUDIT_EVENTS + auditLogs.length;
     const canGoToPreviousAuditPage = auditPage > 0;
-    const canGoToNextAuditPage = auditLogs.length === MAX_VISIBLE_AUDIT_EVENTS;
+    const canGoToNextAuditPage = auditHasNext;
 
     return (
       <div className="audit-console">
@@ -6046,7 +6064,7 @@ export function App() {
             <p className="muted">Every sensitive AI platform action should say who acted, what changed, when it happened, and which workspace resource was affected.</p>
           </div>
           <div className="next-action-card">
-            <span>Latest activity</span>
+            <span>Loaded activity</span>
             <strong>{latestLog ? friendlyAuditAction(latestLog.action) : "No audit events"}</strong>
             <p>{latestLog ? `${latestLog.resource_type} · ${formatDate(latestLog.created_at)}` : "Create or update agents, knowledge, prompts, models, or reviews to produce audit records."}</p>
             <button type="button" onClick={() => void runAction("Audit logs refreshed", () => loadAuditLogs(auditPage))}>Refresh audit logs</button>
@@ -6054,10 +6072,10 @@ export function App() {
         </section>
 
         <section className="settings-summary-grid">
-          <Metric label="Loaded events" value={auditLogs.length} />
-          <Metric label="High impact" value={highImpactLogs.length} />
-          <Metric label="User actions" value={actorCounts.user ?? 0} />
-          <Metric label="System actions" value={actorCounts.system ?? 0} />
+          <Metric label="Matching events" value={auditTotal} />
+          <Metric label="Loaded high impact" value={highImpactLogs.length} />
+          <Metric label="Loaded user actions" value={actorCounts.user ?? 0} />
+          <Metric label="Loaded system actions" value={actorCounts.system ?? 0} />
         </section>
 
         <section className="audit-workbench">
@@ -6067,7 +6085,7 @@ export function App() {
                 <h3>Operations timeline</h3>
                 <p className="muted">Recent workspace-scoped changes across agents, knowledge, prompts, models, and human review.</p>
               </div>
-              <Badge tone={auditLogs.length ? "good" : "neutral"}>{auditLogs.length} shown</Badge>
+              <Badge tone={auditTotal ? "good" : "neutral"}>{auditLogs.length} of {auditTotal} shown</Badge>
             </div>
 
             <div className="library-toolbar audit-toolbar">
@@ -6137,10 +6155,10 @@ export function App() {
             )}
             <div className="pagination-bar">
               <button type="button" onClick={() => setAuditPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousAuditPage || loading}>Previous</button>
-              <span>Page {auditPage + 1} · {auditLogs.length ? `${auditPageStart}-${auditPageEnd}` : "0"} shown</span>
+              <span>Page {auditPage + 1} · {auditLogs.length ? `${auditPageStart}-${auditPageEnd}` : "0"} of {auditTotal} events</span>
               <button type="button" onClick={() => setAuditPage((page) => page + 1)} disabled={!canGoToNextAuditPage || loading}>Next</button>
             </div>
-            <p className="permission-note">Audit events are loaded from the backend by search, impact, actor, offset, and limit. A full page enables Next; empty next pages mean the current filter has no more matches.</p>
+            <p className="permission-note">Audit events are loaded from the backend by search, impact, actor, offset, and limit. Backend totals decide whether another page exists.</p>
           </div>
 
           <aside className="panel stack audit-side-panel">

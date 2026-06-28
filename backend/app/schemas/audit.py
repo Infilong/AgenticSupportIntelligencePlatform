@@ -15,3 +15,11 @@ class AuditLogResponse(BaseModel):
     resource_id: str | None
     metadata_json: str
     created_at: datetime
+
+
+class AuditLogListResponse(BaseModel):
+    items: list[AuditLogResponse]
+    total: int
+    limit: int
+    offset: int
+    has_next: bool

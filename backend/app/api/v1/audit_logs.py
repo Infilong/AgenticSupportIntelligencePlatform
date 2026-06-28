@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.dependencies.workspace import require_workspace_permission
 from app.models.workspace import Workspace
-from app.schemas.audit import AuditLogResponse
+from app.schemas.audit import AuditLogListResponse, AuditLogResponse
 from app.services.audit_log_service import AuditLogService
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/audit-logs", tags=["audit-logs"])
@@ -19,7 +19,7 @@ AuditLimit = Annotated[int, Query(ge=1, le=200)]
 AuditOffset = Annotated[int, Query(ge=0)]
 
 
-@router.get("", response_model=list[AuditLogResponse])
+@router.get("", response_model=AuditLogListResponse)
 def list_audit_logs(
     workspace: AuditReadAccess,
     db: DbSession,
@@ -28,8 +28,9 @@ def list_audit_logs(
     impact: AuditImpactFilter = "all",
     limit: AuditLimit = 100,
     offset: AuditOffset = 0,
-) -> list[AuditLogResponse]:
-    logs = AuditLogService(db).list_logs(
+) -> AuditLogListResponse:
+    service = AuditLogService(db)
+    logs = service.list_logs(
         workspace_id=workspace.id,
         limit=limit,
         offset=offset,
@@ -37,4 +38,13 @@ def list_audit_logs(
         actor=actor,
         impact=impact,
     )
-    return [AuditLogResponse.model_validate(log) for log in logs]
+    total = service.count_logs(
+        workspace_id=workspace.id, search=search, actor=actor, impact=impact
+    )
+    return AuditLogListResponse(
+        items=[AuditLogResponse.model_validate(log) for log in logs],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(logs) < total,
+    )

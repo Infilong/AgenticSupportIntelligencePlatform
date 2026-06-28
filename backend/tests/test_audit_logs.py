@@ -81,17 +81,20 @@ def test_audit_logs_record_admin_actions_and_metadata(client: TestClient) -> Non
 
     assert logs.status_code == 200
     body = logs.json()
-    actions = [log["action"] for log in body]
+    assert body["total"] == 4
+    assert body["has_next"] is False
+    items = body["items"]
+    actions = [log["action"] for log in items]
     assert "agent.created" in actions
     assert "agent.updated" in actions
     assert "knowledge_document.uploaded" in actions
     assert "model_config.created" in actions
-    model_log = next(log for log in body if log["action"] == "model_config.created")
+    model_log = next(log for log in items if log["action"] == "model_config.created")
     metadata = json.loads(model_log["metadata_json"])
     assert metadata["provider"] == "mock"
     assert metadata["model"] == "mock-cheap"
-    assert all(log["workspace_id"] == workspace["id"] for log in body)
-    assert all(log["actor_user_id"] is not None for log in body)
+    assert all(log["workspace_id"] == workspace["id"] for log in items)
+    assert all(log["actor_user_id"] is not None for log in items)
 
 
 def test_audit_logs_support_backend_search_actor_impact_and_offset(
@@ -180,20 +183,42 @@ def test_audit_logs_support_backend_search_actor_impact_and_offset(
     assert medium_logs.status_code == 200
     assert low_logs.status_code == 200
     assert search_logs.status_code == 200
-    assert len(first_page.json()) == 2
-    assert len(second_page.json()) == 2
-    assert {item["id"] for item in first_page.json()}.isdisjoint(
-        {item["id"] for item in second_page.json()}
+    first_body = first_page.json()
+    second_body = second_page.json()
+    assert first_body["total"] == 4
+    assert first_body["limit"] == 2
+    assert first_body["offset"] == 0
+    assert first_body["has_next"] is True
+    assert len(first_body["items"]) == 2
+    assert second_body["total"] == 4
+    assert second_body["limit"] == 2
+    assert second_body["offset"] == 2
+    assert second_body["has_next"] is False
+    assert len(second_body["items"]) == 2
+    assert {item["id"] for item in first_body["items"]}.isdisjoint(
+        {item["id"] for item in second_body["items"]}
     )
-    assert all(item["actor_user_id"] for item in user_logs.json())
-    assert all(item["actor_user_id"] is None for item in system_logs.json())
-    assert {item["action"] for item in high_logs.json()} == {"prompt_template.activated"}
-    assert {item["action"] for item in medium_logs.json()} == {
+    user_body = user_logs.json()
+    system_body = system_logs.json()
+    high_body = high_logs.json()
+    medium_body = medium_logs.json()
+    low_body = low_logs.json()
+    search_body = search_logs.json()
+    assert user_body["total"] == 2
+    assert all(item["actor_user_id"] for item in user_body["items"])
+    assert system_body["total"] == 2
+    assert all(item["actor_user_id"] is None for item in system_body["items"])
+    assert high_body["total"] == 1
+    assert {item["action"] for item in high_body["items"]} == {"prompt_template.activated"}
+    assert medium_body["total"] == 2
+    assert {item["action"] for item in medium_body["items"]} == {
         "agent.created",
         "agent.updated",
     }
-    assert {item["action"] for item in low_logs.json()} == {"system.heartbeat"}
-    assert [item["resource_id"] for item in search_logs.json()] == ["activation-test"]
+    assert low_body["total"] == 1
+    assert {item["action"] for item in low_body["items"]} == {"system.heartbeat"}
+    assert search_body["total"] == 1
+    assert [item["resource_id"] for item in search_body["items"]] == ["activation-test"]
 
 
 def test_audit_logs_are_workspace_scoped(client: TestClient) -> None:
@@ -221,6 +246,10 @@ def test_audit_logs_are_workspace_scoped(client: TestClient) -> None:
     )
 
     assert owner_logs.status_code == 200
-    assert [log["action"] for log in owner_logs.json()] == ["agent.created"]
+    owner_body = owner_logs.json()
+    assert owner_body["total"] == 1
+    assert [log["action"] for log in owner_body["items"]] == ["agent.created"]
     assert other_logs.status_code == 200
-    assert other_logs.json() == []
+    other_body = other_logs.json()
+    assert other_body["total"] == 0
+    assert other_body["items"] == []
