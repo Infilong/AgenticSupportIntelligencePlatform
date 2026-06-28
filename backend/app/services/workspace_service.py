@@ -6,6 +6,33 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 
+MEMBER_PERMISSIONS = [
+    "workspace:read",
+    "agents:run",
+    "agents:configure",
+    "data:write",
+    "knowledge:write",
+    "reviews:resolve",
+    "evaluations:run",
+    "prompts:write",
+    "models:write",
+    "costs:read",
+    "audit:read",
+]
+
+OWNER_PERMISSIONS = [
+    *MEMBER_PERMISSIONS,
+    "workspace:manage",
+    "resource_folders:manage",
+    "resources:delete",
+]
+
+
+def permissions_for_role(role: WorkspaceRole) -> list[str]:
+    if role == WorkspaceRole.owner:
+        return OWNER_PERMISSIONS.copy()
+    return MEMBER_PERMISSIONS.copy()
+
 
 class WorkspaceService:
     def __init__(self, db: Session):

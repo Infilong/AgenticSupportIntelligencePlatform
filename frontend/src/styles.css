@@ -245,6 +245,7 @@ small {
 .sidebar-collapsed .workspace-card label,
 .sidebar-collapsed .workspace-create,
 .sidebar-collapsed .permission-summary,
+.sidebar-collapsed .permission-chip-row,
 .sidebar-collapsed .role-line,
 .sidebar-collapsed .workspace-card .row-head > div,
 .sidebar-collapsed .workspace-card .badge {
@@ -303,6 +304,24 @@ small {
   color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.permission-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permission-chip-row span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  padding: 3px 8px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 760;
 }
 
 .workspace-main {

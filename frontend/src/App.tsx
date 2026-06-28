@@ -18,6 +18,15 @@ type Workspace = {
   created_at: string;
 };
 
+type WorkspaceMembership = {
+  workspace_id: string;
+  user_id: string;
+  role: "owner" | "member";
+  permissions: string[];
+  can_manage_resources: boolean;
+  can_manage_workspace: boolean;
+};
+
 type Dataset = {
   id: string;
   name: string;
@@ -559,6 +568,7 @@ export function App() {
   const [displayName, setDisplayName] = useState("Demo User");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspaceMembership, setWorkspaceMembership] = useState<WorkspaceMembership | null>(null);
   const [workspaceName, setWorkspaceName] = useState("Agentic Platform Demo");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -650,23 +660,22 @@ export function App() {
     [agents, selectedAgentId],
   );
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
-  const canManageResources = Boolean(
-    selectedWorkspace && currentUser && selectedWorkspace.created_by_user_id === currentUser.id,
-  );
+  const canManageResources = Boolean(workspaceMembership?.can_manage_resources);
   const workspaceRole = !selectedWorkspaceId
     ? "No workspace"
-    : !currentUser
-      ? "Checking role"
-      : canManageResources
+    : workspaceMembership
+      ? workspaceMembership.role === "owner"
         ? "Owner"
-        : "Member";
+        : "Member"
+      : "Checking role";
   const permissionSummary = !selectedWorkspaceId
     ? "Create or select a workspace to unlock platform controls."
-    : !currentUser
+    : !workspaceMembership
       ? "Loading workspace permissions from the backend session."
-      : canManageResources
+      : workspaceMembership.can_manage_resources
         ? "Can manage resources, settings, and destructive cleanup in this workspace."
         : "Can inspect workspace data; owner-only cleanup and folder management are restricted.";
+  const visiblePermissions = workspaceMembership?.permissions.slice(0, 4) ?? [];
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
   const setupSteps = [
     { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
@@ -694,6 +703,7 @@ export function App() {
   useEffect(() => {
     if (!token) {
       setCurrentUser(null);
+      setWorkspaceMembership(null);
       return;
     }
     void loadCurrentUser();
@@ -701,6 +711,7 @@ export function App() {
   }, [token]);
 
   useEffect(() => {
+    setWorkspaceMembership(null);
     if (!token || !selectedWorkspaceId) return;
     void refreshWorkspaceData();
   }, [token, selectedWorkspaceId]);
@@ -779,6 +790,7 @@ export function App() {
 
   async function refreshWorkspaceData() {
     await Promise.all([
+      loadWorkspaceMembership(),
       loadDatasets(),
       loadDocuments(),
       loadAgents(),
@@ -844,6 +856,12 @@ export function App() {
       await loadResourceFolders();
       await loadAuditLogs();
     });
+  }
+
+  async function loadWorkspaceMembership() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<WorkspaceMembership>(workspacePath("/membership"), { token });
+    setWorkspaceMembership(data);
   }
 
   async function loadDatasets() {
@@ -1467,6 +1485,14 @@ export function App() {
             <strong>{workspaceRole}</strong>
           </div>
           <p className="permission-summary">{permissionSummary}</p>
+          {visiblePermissions.length > 0 && (
+            <div className="permission-chip-row" aria-label="Available permissions">
+              {visiblePermissions.map((permission) => <span key={permission}>{permission}</span>)}
+              {workspaceMembership && workspaceMembership.permissions.length > visiblePermissions.length && (
+                <span>+{workspaceMembership.permissions.length - visiblePermissions.length}</span>
+              )}
+            </div>
+          )}
           <form className="workspace-create" onSubmit={createWorkspace}>
             <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} />
             <button>Create</button>

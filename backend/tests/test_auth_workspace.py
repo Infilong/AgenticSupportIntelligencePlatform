@@ -1,9 +1,12 @@
+from uuid import UUID
+
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.security import decode_access_token, hash_password, verify_password
 from app.models.user import User
+from app.models.workspace import WorkspaceMember, WorkspaceRole
 
 
 def register(client: TestClient, email: str, password: str = "strong-password") -> dict:
@@ -25,6 +28,16 @@ def login(client: TestClient, email: str, password: str = "strong-password") -> 
 
 def auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def add_workspace_member(
+    db_session: Session, *, workspace_id: str, user_email: str, role: WorkspaceRole
+) -> None:
+    user = db_session.query(User).filter_by(email=user_email).one()
+    db_session.add(
+        WorkspaceMember(workspace_id=UUID(workspace_id), user_id=user.id, role=role)
+    )
+    db_session.commit()
 
 
 def test_password_hashing_verifies_password_and_rejects_wrong_password() -> None:
@@ -145,3 +158,82 @@ def test_workspace_create_rejects_blank_name(client: TestClient) -> None:
     response = client.post("/api/v1/workspaces", json={"name": "   "}, headers=auth_headers(token))
 
     assert response.status_code == 422
+
+
+def test_workspace_membership_endpoint_returns_owner_permissions(client: TestClient) -> None:
+    register(client, "owner-permissions@example.com")
+    token = login(client, "owner-permissions@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Permission Workspace"},
+        headers=auth_headers(token),
+    ).json()
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/membership",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["workspace_id"] == workspace["id"]
+    assert body["role"] == "owner"
+    assert body["can_manage_resources"] is True
+    assert body["can_manage_workspace"] is True
+    assert "resources:delete" in body["permissions"]
+    assert "resource_folders:manage" in body["permissions"]
+
+
+def test_workspace_membership_endpoint_returns_member_permissions(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "owner-member-permissions@example.com")
+    owner_token = login(client, "owner-member-permissions@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Member Permission Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+
+    register(client, "plain-member@example.com")
+    member_token = login(client, "plain-member@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="plain-member@example.com",
+        role=WorkspaceRole.member,
+    )
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/membership",
+        headers=auth_headers(member_token),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["role"] == "member"
+    assert body["can_manage_resources"] is False
+    assert body["can_manage_workspace"] is False
+    assert "workspace:read" in body["permissions"]
+    assert "resources:delete" not in body["permissions"]
+
+
+def test_workspace_membership_endpoint_hides_other_workspaces(client: TestClient) -> None:
+    register(client, "membership-owner@example.com")
+    owner_token = login(client, "membership-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Private Membership Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+
+    register(client, "membership-other@example.com")
+    other_token = login(client, "membership-other@example.com")
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/membership",
+        headers=auth_headers(other_token),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "workspace_not_found"
