@@ -86,6 +86,8 @@ class CostSummaryResponse(BaseModel):
     latency_p99_ms: float
     cache_hit_rate: float
     failed_ai_runs: int
+    failed_graph_runs: int
+    failed_tool_calls: int
     by_purpose: list[CostPurposeSummaryResponse]
     by_model: list[CostModelSummaryResponse]
     by_agent: list[CostAgentSummaryResponse]

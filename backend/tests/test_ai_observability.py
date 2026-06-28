@@ -7,6 +7,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
+from app.models.agent import (
+    AgentConfig,
+    GraphRun,
+    GraphRunStatus,
+    GraphStep,
+    GraphStepStatus,
+    ToolCall,
+)
 from app.models.ai import AIRun, AIRunStatus, CacheEntry
 from app.services.model_provider import MockModelProvider, MockModelProviderError
 from app.services.token_accounting import ModelPricing, estimate_cost, estimate_tokens
@@ -287,6 +295,8 @@ def test_cost_summary_includes_agent_run_latency_and_recent_ledger(
     body = summary.json()
     assert body["total_runs"] >= 2
     assert body["failed_ai_runs"] == 0
+    assert body["failed_graph_runs"] == 0
+    assert body["failed_tool_calls"] == 0
     assert body["latency_p50_ms"] >= 0
     assert body["latency_p95_ms"] >= body["latency_p50_ms"]
     assert body["latency_p99_ms"] >= body["latency_p95_ms"]
@@ -304,18 +314,58 @@ def test_cost_summary_includes_agent_run_latency_and_recent_ledger(
 
 
 def test_cost_summary_counts_failed_ai_runs(client: TestClient, db_session: Session) -> None:
-    register(client, "failed-cost-owner@example.com")
+    user = register(client, "failed-cost-owner@example.com")
     token = login(client, "failed-cost-owner@example.com")
     workspace = create_workspace(client, token)
+    workspace_id = UUID(workspace["id"])
 
     with pytest.raises(MockModelProviderError):
         MockModelProvider(db_session).complete(
-            workspace_id=UUID(workspace["id"]),
+            workspace_id=workspace_id,
             purpose="draft_response",
             language=SupportedLanguage.en,
             prompt="Draft response.",
             fail=True,
         )
+    agent = AgentConfig(workspace_id=workspace_id, name="Failed Ops Agent")
+    db_session.add(agent)
+    db_session.flush()
+    graph_run = GraphRun(
+        workspace_id=workspace_id,
+        agent_config_id=agent.id,
+        user_id=UUID(user["id"]),
+        input_message="trigger failure",
+        language=SupportedLanguage.en,
+        status=GraphRunStatus.failed,
+        route_decision="failed",
+    )
+    db_session.add(graph_run)
+    db_session.flush()
+    graph_step = GraphStep(
+        workspace_id=workspace_id,
+        graph_run_id=graph_run.id,
+        step_name="retrieve_evidence",
+        input_json="{}",
+        output_json="{}",
+        status=GraphStepStatus.failed,
+        latency_ms=12,
+        error_message="tool timeout",
+    )
+    db_session.add(graph_step)
+    db_session.flush()
+    db_session.add(
+        ToolCall(
+            workspace_id=workspace_id,
+            graph_run_id=graph_run.id,
+            graph_step_id=graph_step.id,
+            tool_name="search_documents",
+            input_json="{}",
+            output_json="{}",
+            status=GraphStepStatus.failed,
+            latency_ms=12,
+        )
+    )
+    db_session.commit()
 
     summary = client.get(
         f"/api/v1/workspaces/{workspace['id']}/costs/summary",
@@ -325,6 +375,8 @@ def test_cost_summary_counts_failed_ai_runs(client: TestClient, db_session: Sess
     assert summary.status_code == 200
     body = summary.json()
     assert body["failed_ai_runs"] == 1
+    assert body["failed_graph_runs"] == 1
+    assert body["failed_tool_calls"] == 1
     assert body["recent_ai_runs"][0]["status"] == "failed"
     assert body["recent_ai_runs"][0]["model_config_id"] is None
     assert body["recent_ai_runs"][0]["error_message"] == "mock provider failure"

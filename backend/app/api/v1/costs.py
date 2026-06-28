@@ -49,6 +49,8 @@ def get_cost_summary(workspace: WorkspaceMemberAccess, db: DbSession) -> CostSum
         latency_p99_ms=summary.latency_p99_ms,
         cache_hit_rate=summary.cache_hit_rate,
         failed_ai_runs=summary.failed_ai_runs,
+        failed_graph_runs=summary.failed_graph_runs,
+        failed_tool_calls=summary.failed_tool_calls,
         by_purpose=[
             CostPurposeSummaryResponse(
                 purpose=item.purpose,

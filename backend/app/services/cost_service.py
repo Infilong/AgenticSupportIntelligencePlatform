@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
-from app.models.agent import AgentConfig, GraphRun
+from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStepStatus, ToolCall
 from app.models.ai import AIRun, AIRunStatus
 from app.services.budget_policy_service import BudgetPolicyService, BudgetUsage
 
@@ -87,6 +87,8 @@ class CostSummary:
     latency_p99_ms: float
     cache_hit_rate: float
     failed_ai_runs: int
+    failed_graph_runs: int
+    failed_tool_calls: int
     by_purpose: list[CostPurposeSummary]
     by_model: list[CostModelSummary]
     by_agent: list[CostAgentSummary]
@@ -124,6 +126,18 @@ class CostService:
             select(func.count(AIRun.id)).where(
                 AIRun.workspace_id == workspace_id,
                 AIRun.status == AIRunStatus.failed,
+            )
+        ) or 0
+        failed_graph_runs = self.db.scalar(
+            select(func.count(GraphRun.id)).where(
+                GraphRun.workspace_id == workspace_id,
+                GraphRun.status == GraphRunStatus.failed,
+            )
+        ) or 0
+        failed_tool_calls = self.db.scalar(
+            select(func.count(ToolCall.id)).where(
+                ToolCall.workspace_id == workspace_id,
+                ToolCall.status == GraphStepStatus.failed,
             )
         ) or 0
         latency_values = list(
@@ -221,6 +235,8 @@ class CostService:
             latency_p99_ms=_percentile(latency_values, 99),
             cache_hit_rate=round((int(cache_hits) / int(total_runs)) if total_runs else 0.0, 4),
             failed_ai_runs=int(failed_ai_runs),
+            failed_graph_runs=int(failed_graph_runs),
+            failed_tool_calls=int(failed_tool_calls),
             by_purpose=[
                 CostPurposeSummary(
                     purpose=purpose,

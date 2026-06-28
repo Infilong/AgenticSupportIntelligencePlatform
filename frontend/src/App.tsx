@@ -575,6 +575,8 @@ type CostSummary = {
   latency_p99_ms: number;
   cache_hit_rate: number;
   failed_ai_runs: number;
+  failed_graph_runs: number;
+  failed_tool_calls: number;
   by_purpose: Array<{ purpose: string; runs: number; tokens: number; estimated_cost: number }>;
   by_model: Array<{ provider: string; model: string; runs: number; tokens: number; estimated_cost: number }>;
   by_agent: Array<{
@@ -5583,8 +5585,8 @@ export function App() {
     const estimatedCost = costSummary?.total_estimated_cost ?? 0;
     const tokenPosture = !costSummary || costSummary.total_runs === 0
       ? "No model calls yet"
-      : costSummary.failed_ai_runs > 0
-        ? "Model failures need review"
+      : costSummary.failed_ai_runs > 0 || costSummary.failed_graph_runs > 0 || costSummary.failed_tool_calls > 0
+        ? "Operational failures need review"
         : estimatedCost < 0.01
           ? "Low demo spend"
           : estimatedCost < 1
@@ -5618,7 +5620,9 @@ export function App() {
               <Metric label="AI calls" value={costSummary.total_runs} />
               <Metric label="Tokens" value={formatNumber(costSummary.total_tokens)} />
               <Metric label="Estimated cost" value={formatCost(costSummary.total_estimated_cost)} />
-              <Metric label="Failed calls" value={costSummary.failed_ai_runs} />
+              <Metric label="Failed model calls" value={costSummary.failed_ai_runs} />
+              <Metric label="Failed graph runs" value={costSummary.failed_graph_runs} />
+              <Metric label="Tool errors" value={costSummary.failed_tool_calls} />
               <Metric label="Cache hit" value={`${(costSummary.cache_hit_rate * 100).toFixed(1)}%`} />
               <Metric label="Top model" value={topModel ? `${topModel.provider}/${topModel.model}` : "-"} />
             </section>
