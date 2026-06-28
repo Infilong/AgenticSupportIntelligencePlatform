@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.workspace import require_workspace_permission
+from app.models.evaluation import EvaluationRunStatus
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.evaluation import (
@@ -45,6 +46,10 @@ IncludeArchived = Annotated[bool, Query()]
 FolderFilter = Annotated[UUID | None, Query()]
 SearchFilter = Annotated[str | None, Query(max_length=120)]
 ListLimit = Annotated[int | None, Query(ge=1, le=500)]
+ListOffset = Annotated[int, Query(ge=0)]
+UnfiledFilter = Annotated[bool, Query()]
+ArchivedOnlyFilter = Annotated[bool, Query()]
+StatusFilter = Annotated[EvaluationRunStatus | None, Query(alias="status")]
 
 
 @router.post("", response_model=EvaluationDetailResponse, status_code=status.HTTP_201_CREATED)
@@ -85,17 +90,33 @@ def list_evaluations(
     workspace: EvaluationReadAccess,
     db: DbSession,
     include_archived: IncludeArchived = False,
+    archived_only: ArchivedOnlyFilter = False,
     folder_id: FolderFilter = None,
+    unfiled: UnfiledFilter = False,
     search: SearchFilter = None,
+    status_filter: StatusFilter = None,
     limit: ListLimit = None,
+    offset: ListOffset = 0,
 ) -> list[EvaluationRunResponse]:
+    if folder_id is not None and unfiled:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "evaluation_filter_conflict",
+                "message": "Use either folder_id or unfiled, not both.",
+            },
+        )
     try:
         runs = EvaluationRunner(db).list_runs(
             workspace_id=workspace.id,
             include_archived=include_archived,
+            archived_only=archived_only,
             folder_id=folder_id,
+            unfiled=unfiled,
             search=search,
+            status_filter=status_filter,
             limit=limit,
+            offset=offset,
         )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc

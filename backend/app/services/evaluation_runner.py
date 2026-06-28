@@ -119,9 +119,13 @@ class EvaluationRunner:
         *,
         workspace_id: UUID,
         include_archived: bool = False,
+        archived_only: bool = False,
         folder_id: UUID | None = None,
+        unfiled: bool = False,
         search: str | None = None,
+        status_filter: EvaluationRunStatus | None = None,
         limit: int | None = None,
+        offset: int = 0,
     ) -> list[EvaluationRun]:
         ResourceFolderService(self.db).validate_folder(
             workspace_id=workspace_id, folder_id=folder_id, resource_type="evaluation_run"
@@ -129,8 +133,14 @@ class EvaluationRunner:
         filters = [EvaluationRun.workspace_id == workspace_id]
         if folder_id is not None:
             filters.append(EvaluationRun.folder_id == folder_id)
-        if not include_archived:
+        elif unfiled:
+            filters.append(EvaluationRun.folder_id.is_(None))
+        if archived_only:
+            filters.append(EvaluationRun.archived_at.is_not(None))
+        elif not include_archived:
             filters.append(EvaluationRun.archived_at.is_(None))
+        if status_filter is not None:
+            filters.append(EvaluationRun.status == status_filter)
         normalized_search = (search or "").strip()
         if normalized_search:
             pattern = f"%{normalized_search}%"
@@ -141,7 +151,12 @@ class EvaluationRunner:
                     EvaluationRun.status.ilike(pattern),
                 )
             )
-        statement = select(EvaluationRun).where(*filters).order_by(EvaluationRun.created_at.desc())
+        statement = (
+            select(EvaluationRun)
+            .where(*filters)
+            .order_by(EvaluationRun.created_at.desc())
+            .offset(offset)
+        )
         if limit is not None:
             statement = statement.limit(limit)
         return list(self.db.scalars(statement).all())

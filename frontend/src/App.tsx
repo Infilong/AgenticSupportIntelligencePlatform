@@ -19,7 +19,6 @@ const MAX_VISIBLE_CHUNKS = 80;
 const MAX_VISIBLE_FOLDERS = 24;
 const MAX_VISIBLE_RESOURCES = 40;
 const MAX_VISIBLE_EVALUATION_RUNS = 20;
-const RESOURCE_LIST_FETCH_LIMIT = 500;
 const MAX_VISIBLE_ADMIN_ASSETS = 30;
 const MAX_VISIBLE_AUDIT_EVENTS = 30;
 const MAX_VISIBLE_COST_ITEMS = 12;
@@ -1134,6 +1133,7 @@ export function App() {
   const [evaluationStatusFilter, setEvaluationStatusFilter] = useState("all");
   const [evaluationRunView, setEvaluationRunView] = useState<EvaluationRunView>("active");
   const [showArchivedEvaluations, setShowArchivedEvaluations] = useState(false);
+  const [evaluationPage, setEvaluationPage] = useState(0);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
   const [budgetPolicy, setBudgetPolicy] = useState<BudgetPolicy | null>(null);
@@ -1353,6 +1353,13 @@ export function App() {
     void loadAgents();
   }, [token, selectedWorkspaceId, activeTab, selectedAgentFolderId, agentSearch, agentPage, permissionKey]);
 
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "evaluations") return;
+    if (!permissionList.includes("evaluations:read")) return;
+    if (evaluationRunView === "selected") return;
+    void loadEvaluations();
+  }, [token, selectedWorkspaceId, activeTab, selectedEvaluationFolderId, evaluationSearch, evaluationStatusFilter, evaluationRunView, showArchivedEvaluations, evaluationPage, permissionKey]);
+
   function setSessionToken(value: string) {
     setToken(value);
     localStorage.setItem("asi_token", value);
@@ -1534,9 +1541,13 @@ export function App() {
 
   function selectEvaluationFolder(folderId: string) {
     setSelectedEvaluationFolderId(folderId);
+    setEvaluationPage(0);
     setEvaluationFolderId(folderSelectionToFormValue(folderId));
-    const scopedRuns = filterByFolder(evaluationRuns, folderId);
-    if (evaluationDetail && !scopedRuns.some((run) => run.id === evaluationDetail.run.id)) {
+    const selectedRunFolderId = evaluationDetail?.run.folder_id ?? null;
+    const selectedRunInScope = folderId === "all"
+      || (folderId === "unfiled" && !selectedRunFolderId)
+      || selectedRunFolderId === folderId;
+    if (evaluationDetail && !selectedRunInScope) {
       setEvaluationDetail(null);
     }
   }
@@ -2514,13 +2525,47 @@ export function App() {
     });
   }
 
-  async function loadEvaluations(includeArchived = showArchivedEvaluations) {
+  function evaluationListParams(
+    page = evaluationPage,
+    includeArchived = showArchivedEvaluations,
+    folderId = selectedEvaluationFolderId,
+    search = evaluationSearch,
+  ) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_EVALUATION_RUNS,
+      offset: page * MAX_VISIBLE_EVALUATION_RUNS,
+    };
+    if (folderId === "unfiled") {
+      params.unfiled = true;
+    } else if (folderId !== "all") {
+      params.folder_id = folderId;
+    }
+    if (evaluationRunView === "archived") {
+      params.archived_only = true;
+    } else if (includeArchived && (evaluationRunView === "all" || evaluationRunView === "failed")) {
+      params.include_archived = true;
+    }
+    const status = evaluationRunView === "failed"
+      ? "failed"
+      : evaluationStatusFilter !== "all" ? evaluationStatusFilter : "";
+    if (status) {
+      params.status = status;
+    }
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    return params;
+  }
+
+  async function loadEvaluations(
+    includeArchived = showArchivedEvaluations,
+    page = evaluationPage,
+    folderId = selectedEvaluationFolderId,
+    search = evaluationSearch,
+  ) {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<EvaluationRun[]>(
-      workspaceListPath("/evaluations", {
-        include_archived: includeArchived || null,
-        limit: RESOURCE_LIST_FETCH_LIMIT,
-      }),
+      workspaceListPath("/evaluations", evaluationListParams(page, includeArchived, folderId, search)),
       { token },
     );
     setEvaluationRuns(data);
@@ -2540,8 +2585,13 @@ export function App() {
           agent_id: effectiveEvaluationAgentId || null,
         },
       });
+      const targetFolderId = detail.run.folder_id ?? "unfiled";
+      setSelectedEvaluationFolderId(targetFolderId);
+      setEvaluationFolderId(detail.run.folder_id ?? "");
+      setEvaluationPage(0);
+      setEvaluationSearch("");
       setEvaluationDetail(detail);
-      await loadEvaluations();
+      await loadEvaluations(showArchivedEvaluations, 0, targetFolderId, "");
       await loadResourceFolders();
       await loadCosts();
     });
@@ -2559,7 +2609,8 @@ export function App() {
       if (evaluationDetail?.run.id === run.id) {
         setEvaluationDetail(null);
       }
-      await loadEvaluations(showArchivedEvaluations);
+      setEvaluationPage(0);
+      await loadEvaluations(showArchivedEvaluations, 0);
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -2573,7 +2624,8 @@ export function App() {
       if (evaluationDetail?.run.id === run.id) {
         setEvaluationDetail(null);
       }
-      await loadEvaluations(showArchivedEvaluations);
+      setEvaluationPage(0);
+      await loadEvaluations(showArchivedEvaluations, 0);
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -2587,9 +2639,15 @@ export function App() {
         body: { folder_id: folderId || null },
       });
       if (evaluationDetail?.run.id === runId) {
+        const targetFolderId = movedRun.folder_id ?? "unfiled";
+        setSelectedEvaluationFolderId(targetFolderId);
+        setEvaluationFolderId(movedRun.folder_id ?? "");
+        setEvaluationPage(0);
         setEvaluationDetail({ ...evaluationDetail, run: movedRun });
+        await loadEvaluations(showArchivedEvaluations, 0, targetFolderId);
+      } else {
+        await loadEvaluations(showArchivedEvaluations);
       }
-      await loadEvaluations(showArchivedEvaluations);
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -2597,7 +2655,8 @@ export function App() {
 
   function toggleArchivedEvaluations(value: boolean) {
     setShowArchivedEvaluations(value);
-    void loadEvaluations(value);
+    setEvaluationPage(0);
+    void loadEvaluations(value, 0);
   }
 
   async function loadCosts() {
@@ -5233,37 +5292,31 @@ export function App() {
 
   function EvaluationsPanel() {
     const evaluationFolders = foldersFor("evaluation_run");
-    const folderEvaluationRuns = filterByFolder(evaluationRuns, selectedEvaluationFolderId);
-    const activeEvaluationRuns = folderEvaluationRuns.filter((run) => !run.archived_at);
-    const selectedRunId = evaluationDetail?.run.id ?? "";
-    const filteredEvaluationRuns = folderEvaluationRuns.filter((run) => {
-      const matchesStatus = evaluationStatusFilter === "all" || run.status === evaluationStatusFilter;
-      const matchesView = evaluationRunMatchesView(run, evaluationRunView, selectedRunId, showArchivedEvaluations);
-      const modeText = parseEvaluationModes(run.modes_json).map(friendlyModeName).join(" ");
-      return matchesStatus && matchesView && matchesSearch(
-        evaluationSearch,
-        run.name,
-        run.status,
-        run.id,
-        modeText,
-        run.agent_config_id,
-        evaluationAgentLabel(run.agent_config_id),
-      );
-    });
-    const displayedEvaluationRuns = filteredEvaluationRuns.slice(0, MAX_VISIBLE_EVALUATION_RUNS);
-    const hiddenEvaluationRunCount = Math.max(filteredEvaluationRuns.length - displayedEvaluationRuns.length, 0);
-    const latestEvaluation = activeEvaluationRuns[0] ?? folderEvaluationRuns[0] ?? evaluationRuns[0] ?? null;
+    const displayedEvaluationRuns = evaluationRunView === "selected" && evaluationDetail
+      ? [evaluationDetail.run]
+      : evaluationRuns;
+    const activeEvaluationRuns = displayedEvaluationRuns.filter((run) => !run.archived_at);
+    const latestEvaluation = activeEvaluationRuns[0] ?? displayedEvaluationRuns[0] ?? evaluationDetail?.run ?? null;
     const selectedModes = evaluationModes.join(", ") || "none";
-    const runStatusCounts = folderEvaluationRuns.reduce<Record<string, number>>((counts, run) => {
+    const runStatusCounts = displayedEvaluationRuns.reduce<Record<string, number>>((counts, run) => {
       counts[run.status] = (counts[run.status] ?? 0) + 1;
       return counts;
     }, {});
-    const archivedEvaluationCount = folderEvaluationRuns.filter((run) => run.archived_at).length;
+    const archivedEvaluationCount = displayedEvaluationRuns.filter((run) => run.archived_at).length;
     const selectedEvaluationFolderLabel = selectedEvaluationFolderId === "all"
       ? "All evaluation folders"
       : selectedEvaluationFolderId === "unfiled"
         ? "Unfiled evaluations"
         : folderLabel("evaluation_run", selectedEvaluationFolderId);
+    const selectedEvaluationFolderCount = resourceItemCount("evaluation_run", selectedEvaluationFolderId);
+    const evaluationPageStart = evaluationPage * MAX_VISIBLE_EVALUATION_RUNS + (evaluationRuns.length ? 1 : 0);
+    const evaluationPageEnd = evaluationPage * MAX_VISIBLE_EVALUATION_RUNS + evaluationRuns.length;
+    const canGoToPreviousEvaluationPage = evaluationRunView !== "selected" && evaluationPage > 0;
+    const canGoToNextEvaluationPage = evaluationRunView !== "selected"
+      && evaluationRuns.length === MAX_VISIBLE_EVALUATION_RUNS;
+    const evaluationRangeLabel = evaluationRunView === "selected"
+      ? evaluationDetail ? "Selected run" : "0"
+      : evaluationRuns.length ? `${evaluationPageStart}-${evaluationPageEnd}` : "0";
     const selectedFailureCount = evaluationDetail?.results.filter((result) => !result.passed).length ?? 0;
     const selectedLanguages = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.language))] : [];
     const selectedResultModes = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.mode))] : [];
@@ -5281,7 +5334,7 @@ export function App() {
             <span>Current experiment</span>
             <strong>{selectedModes}</strong>
             <p>{latestEvaluation ? `${selectedEvaluationFolderLabel}: ${latestEvaluation.name} · ${latestEvaluation.status}` : "Run the seeded multilingual cases to create a quality baseline."}</p>
-            <button type="button" onClick={() => void runAction("Evaluations refreshed", () => loadEvaluations(showArchivedEvaluations))}>Refresh runs</button>
+            <button type="button" onClick={() => void runAction("Evaluations refreshed", () => loadEvaluations(showArchivedEvaluations, evaluationPage))}>Refresh runs</button>
           </div>
         </section>
 
@@ -5318,7 +5371,7 @@ export function App() {
             <div className="folder-scope-banner">
               <span>Current folder</span>
               <strong>{selectedEvaluationFolderLabel}</strong>
-              <small>{filteredEvaluationRuns.length} runs match this folder scope from {folderEvaluationRuns.length} total.</small>
+              <small>{evaluationRangeLabel} shown from {selectedEvaluationFolderCount} in this folder scope.</small>
             </div>
             <FolderPicker
               label="Evaluation target folder"
@@ -5353,7 +5406,7 @@ export function App() {
                 <h3>Evaluation operations board</h3>
                 <p className="muted">Filter folder-scoped run history before drilling into language-specific quality, routing, and cost evidence.</p>
               </div>
-              <Badge>{displayedEvaluationRuns.length}/{filteredEvaluationRuns.length} shown</Badge>
+              <Badge>{displayedEvaluationRuns.length} shown</Badge>
             </div>
             <div className="metric-grid compact">
               <Metric label="Completed" value={runStatusCounts.completed ?? 0} />
@@ -5384,15 +5437,15 @@ export function App() {
                   type="button"
                   key={option.id}
                   className={evaluationRunView === option.id ? "selected" : ""}
-                  onClick={() => setEvaluationRunView(option.id)}
+                  onClick={() => { setEvaluationPage(0); setEvaluationRunView(option.id); }}
                 >
                   {option.label}
                 </button>
               ))}
             </div>
             <div className="library-toolbar evaluation-toolbar">
-              <label>Search runs<input value={evaluationSearch} onChange={(event) => setEvaluationSearch(event.target.value)} placeholder="Run name, agent, mode, status, or id" /></label>
-              <label>Status<select value={evaluationStatusFilter} onChange={(event) => setEvaluationStatusFilter(event.target.value)}>
+              <label>Search runs<input value={evaluationSearch} onChange={(event) => { setEvaluationPage(0); setEvaluationSearch(event.target.value); }} placeholder="Run name, mode, or status" /></label>
+              <label>Status<select value={evaluationStatusFilter} onChange={(event) => { setEvaluationPage(0); setEvaluationStatusFilter(event.target.value); }}>
                 <option value="all">All statuses</option>
                 <option value="completed">Completed</option>
                 <option value="failed">Failed</option>
@@ -5431,9 +5484,14 @@ export function App() {
                   </article>
                 );
               })}
-              {filteredEvaluationRuns.length === 0 && <EmptyState title="No evaluations match this view" detail={evaluationRuns.length === 0 ? "Run JSONL cases to compare baselines and system v1." : "Clear search, change status, or switch folders/run filters."} />}
+              {displayedEvaluationRuns.length === 0 && <EmptyState title="No evaluations match this view" detail={selectedEvaluationFolderCount === 0 ? "Run JSONL cases to compare baselines and system v1." : "Clear search, change status, move to the previous page, or switch folders/run filters."} />}
             </div>
-            {hiddenEvaluationRunCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_EVALUATION_RUNS} of {filteredEvaluationRuns.length} matching runs in this folder. Search by run name, mode, status, folder, or id to narrow long histories.</p>}
+            <div className="pagination-bar">
+              <button type="button" onClick={() => setEvaluationPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousEvaluationPage || loading}>Previous</button>
+              <span>Page {evaluationPage + 1} · {evaluationRangeLabel} shown</span>
+              <button type="button" onClick={() => setEvaluationPage((page) => page + 1)} disabled={!canGoToNextEvaluationPage || loading}>Next</button>
+            </div>
+            <p className="permission-note">Evaluation runs are loaded from the backend by folder, archive view, status, search, offset, and limit so long experiment histories stay navigable.</p>
           </aside>
         </section>
 
@@ -7929,19 +7987,6 @@ function parseEvaluationModes(value: string): Mode[] {
   const parsed = safeJson(value);
   if (!Array.isArray(parsed)) return [];
   return parsed.filter((mode): mode is Mode => mode === "direct_llm" || mode === "vector_rag" || mode === "system_v1");
-}
-
-function evaluationRunMatchesView(
-  run: EvaluationRun,
-  view: EvaluationRunView,
-  selectedRunId: string,
-  includeArchivedInBroadViews: boolean,
-) {
-  if (view === "active") return !run.archived_at;
-  if (view === "archived") return Boolean(run.archived_at);
-  if (view === "failed") return run.status === "failed" && (includeArchivedInBroadViews || !run.archived_at);
-  if (view === "selected") return Boolean(selectedRunId) && run.id === selectedRunId;
-  return includeArchivedInBroadViews || !run.archived_at;
 }
 
 function EvaluationDashboard({ detail, agents }: { detail: EvaluationDetail; agents: Agent[] }) {

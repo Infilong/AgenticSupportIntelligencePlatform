@@ -503,6 +503,119 @@ def test_evaluation_runs_can_be_foldered_filtered_and_moved(client: TestClient) 
     assert [item["id"] for item in filtered_after_move.json()] == [run["id"]]
 
 
+def test_evaluation_list_supports_folder_unfiled_status_archive_search_and_offset(
+    client: TestClient,
+) -> None:
+    register(client, "eval-page-owner@example.com")
+    token = login(client, "eval-page-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "evaluation_run", "Regression packs")
+
+    created_names: list[str] = []
+    for index in range(4):
+        name = f"Paged Evaluation {index}"
+        response = client.post(
+            f"/api/v1/workspaces/{workspace['id']}/evaluations",
+            headers=auth_headers(token),
+            json={
+                "name": name,
+                "folder_id": folder["id"] if index < 3 else None,
+                "modes": ["direct_llm"],
+                "jsonl_cases": jsonl_content(
+                    {
+                        "id": f"en_paged_eval_{index:03d}",
+                        "language": "en",
+                        "input_message": "Can I get a refund within 30 days?",
+                        "expected_route": "finalize",
+                    }
+                ),
+            },
+        )
+        assert response.status_code == 201
+        created_names.append(name)
+
+    first_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "limit": 2, "offset": 0},
+    )
+    second_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "limit": 2, "offset": 2},
+    )
+    unfiled_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"unfiled": True, "limit": 10},
+    )
+    search_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "search": "Paged Evaluation 1", "limit": 10},
+    )
+    status_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "status": "completed", "limit": 10},
+    )
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert unfiled_page.status_code == 200
+    assert search_page.status_code == 200
+    assert status_page.status_code == 200
+    assert [item["name"] for item in first_page.json()] == [
+        "Paged Evaluation 2",
+        "Paged Evaluation 1",
+    ]
+    assert [item["name"] for item in second_page.json()] == ["Paged Evaluation 0"]
+    assert [item["name"] for item in unfiled_page.json()] == ["Paged Evaluation 3"]
+    assert [item["name"] for item in search_page.json()] == ["Paged Evaluation 1"]
+    assert [item["status"] for item in status_page.json()] == [
+        "completed",
+        "completed",
+        "completed",
+    ]
+
+    archived = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{second_page.json()[0]['id']}",
+        headers=auth_headers(token),
+    )
+    archived_only_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "archived_only": True, "limit": 10},
+    )
+
+    assert archived.status_code == 204
+    assert archived_only_page.status_code == 200
+    assert [item["name"] for item in archived_only_page.json()] == ["Paged Evaluation 0"]
+    assert archived_only_page.json()[0]["archived_at"] is not None
+    assert created_names == [
+        "Paged Evaluation 0",
+        "Paged Evaluation 1",
+        "Paged Evaluation 2",
+        "Paged Evaluation 3",
+    ]
+
+
+def test_evaluation_list_rejects_folder_and_unfiled_conflict(client: TestClient) -> None:
+    register(client, "eval-conflict-owner@example.com")
+    token = login(client, "eval-conflict-owner@example.com")
+    workspace = create_workspace(client, token)
+    folder = create_folder(client, token, workspace["id"], "evaluation_run", "Regression packs")
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations",
+        headers=auth_headers(token),
+        params={"folder_id": folder["id"], "unfiled": True},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "evaluation_filter_conflict"
+
+
 def test_evaluation_folders_reject_wrong_type_and_foreign_workspace(client: TestClient) -> None:
     register(client, "eval-folder-a@example.com")
     token_a = login(client, "eval-folder-a@example.com")
