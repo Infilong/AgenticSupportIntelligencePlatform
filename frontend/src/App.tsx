@@ -2,7 +2,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models";
+type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models";
 type WorkspaceMemberRole = "owner" | "member";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin";
 
@@ -417,6 +417,30 @@ type EvaluationDetail = {
   metrics: EvaluationMetric[];
 };
 
+type AttentionItem = {
+  id: string;
+  category: string;
+  severity: "critical" | "warning" | "info";
+  title: string;
+  detail: string;
+  count: number;
+  action_label: string;
+  target_tab: Tab;
+  target_id: string | null;
+  created_at: string | null;
+};
+
+type AttentionSummary = {
+  workspace_id: string;
+  total_items: number;
+  critical_count: number;
+  warning_count: number;
+  info_count: number;
+  pending_reviews: number;
+  assigned_to_me_reviews: number;
+  items: AttentionItem[];
+};
+
 type CostSummary = {
   workspace_id: string;
   total_runs: number;
@@ -514,6 +538,7 @@ type ApiOptions = {
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purpose: string }> = [
   { id: "overview", label: "Dashboard", token: "DB", group: "Platform", purpose: "Workspace health, next action, and platform coverage." },
+  { id: "tasks", label: "My Tasks", token: "TK", group: "Platform", purpose: "Backend-ranked review, failure, guardrail, evaluation, and operations tasks." },
   { id: "datasets", label: "Data", token: "DT", group: "Build", purpose: "Import and label multilingual examples for evaluation and routing." },
   { id: "documents", label: "Knowledge", token: "KB", group: "Build", purpose: "Manage RAG policies, FAQs, versions, chunks, and citations." },
   { id: "agent", label: "Agents", token: "AG", group: "Build", purpose: "Configure and run governed LangGraph agent workflows." },
@@ -765,6 +790,7 @@ export function App() {
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
+  const [attentionSummary, setAttentionSummary] = useState<AttentionSummary | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [promptName, setPromptName] = useState("support_response_drafter");
@@ -820,6 +846,7 @@ export function App() {
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
   const setupSteps = [
     { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
+    { label: "Tasks", done: Boolean(attentionSummary && attentionSummary.total_items === 0), tab: "tasks" as Tab },
     { label: "Data", done: datasets.length > 0, tab: "datasets" as Tab },
     { label: "Knowledge", done: documents.length > 0, tab: "documents" as Tab },
     { label: "Agents", done: agents.length > 0, tab: "agent" as Tab },
@@ -936,6 +963,7 @@ export function App() {
     await Promise.all([
       loadWorkspaceMembership(),
       loadWorkspaceMembers(),
+      loadAttentionSummary(),
       loadDatasets(),
       loadDocuments(),
       loadAgents(),
@@ -1569,6 +1597,12 @@ export function App() {
     setCostSummary(data);
   }
 
+  async function loadAttentionSummary() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<AttentionSummary>(workspacePath("/attention"), { token });
+    setAttentionSummary(data);
+  }
+
   async function loadAuditLogs() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<AuditLog[]>(workspacePath("/audit-logs"), { token });
@@ -1819,6 +1853,8 @@ export function App() {
 
   function renderActiveTab() {
     switch (activeTab) {
+      case "tasks":
+        return TasksPanel();
       case "datasets":
         return DatasetsPanel();
       case "documents":
@@ -1848,6 +1884,99 @@ export function App() {
       default:
         return OverviewPanel();
     }
+  }
+
+  function TasksPanel() {
+    const items = attentionSummary?.items ?? [];
+    const criticalItems = items.filter((item) => item.severity === "critical");
+    const warningItems = items.filter((item) => item.severity === "warning");
+    const infoItems = items.filter((item) => item.severity === "info");
+    const nextTask = criticalItems[0] ?? warningItems[0] ?? infoItems[0] ?? null;
+
+    function openAttentionItem(item: AttentionItem) {
+      setActiveTab(item.target_tab);
+      if (item.target_tab === "trace" && item.target_id) {
+        setTraceRunId(item.target_id);
+        void loadTrace(item.target_id);
+      }
+    }
+
+    return (
+      <div className="tasks-console">
+        <section className="panel tasks-hero">
+          <div>
+            <p className="eyebrow">My tasks</p>
+            <h2>Operate what needs attention</h2>
+            <p className="muted">This queue is built from backend workspace signals: pending reviews, failed runs, model failures, tool errors, guardrail blocks, indexing failures, and evaluation regressions.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Next task</span>
+            <strong>{nextTask ? nextTask.title : "Queue clear"}</strong>
+            <p>{nextTask ? nextTask.detail : "No backend attention items are currently open for this workspace."}</p>
+            {nextTask ? (
+              <button className="primary" type="button" onClick={() => openAttentionItem(nextTask)}>{nextTask.action_label}</button>
+            ) : (
+              <button type="button" onClick={() => void runAction("Tasks refreshed", loadAttentionSummary)}>Refresh tasks</button>
+            )}
+          </div>
+        </section>
+
+        <section className="queue-summary-grid">
+          <Metric label="Open tasks" value={attentionSummary?.total_items ?? 0} />
+          <Metric label="Critical" value={attentionSummary?.critical_count ?? 0} />
+          <Metric label="Warnings" value={attentionSummary?.warning_count ?? 0} />
+          <Metric label="Pending reviews" value={attentionSummary?.pending_reviews ?? 0} />
+          <Metric label="Assigned to me" value={attentionSummary?.assigned_to_me_reviews ?? 0} />
+          <Metric label="Workspace" value={selectedWorkspace?.name ?? "-"} />
+        </section>
+
+        <section className="tasks-workbench">
+          <div className="panel stack task-list-panel">
+            <div className="row-head">
+              <div>
+                <h3>Attention queue</h3>
+                <p className="muted">Each task has a backend source and opens the relevant operations page.</p>
+              </div>
+              <button type="button" onClick={() => void runAction("Tasks refreshed", loadAttentionSummary)}>Refresh</button>
+            </div>
+            <div className="task-list">
+              {items.map((item) => (
+                <article className={`task-card task-${item.severity}`} key={item.id}>
+                  <div className="row-head">
+                    <div>
+                      <strong>{item.title}</strong>
+                      <p className="muted">{item.category} · {item.created_at ? formatDate(item.created_at) : "current"}</p>
+                    </div>
+                    <div className="review-actions">
+                      <Badge tone={item.severity === "critical" ? "bad" : item.severity === "warning" ? "warn" : "neutral"}>{item.severity}</Badge>
+                      <Badge>{item.count}</Badge>
+                    </div>
+                  </div>
+                  <p>{item.detail}</p>
+                  <div className="run-action-bar">
+                    <button type="button" className={item.severity === "critical" ? "primary" : "secondary"} onClick={() => openAttentionItem(item)}>{item.action_label}</button>
+                    <button type="button" onClick={() => setActiveTab(item.target_tab)}>Open {tabs.find((tab) => tab.id === item.target_tab)?.label ?? item.target_tab}</button>
+                  </div>
+                </article>
+              ))}
+              {items.length === 0 && <EmptyState title="No open workspace tasks" detail="Pending reviews, failed runs, model failures, tool errors, guardrail blocks, indexing failures, and evaluation regressions will appear here." />}
+            </div>
+          </div>
+
+          <aside className="panel stack task-side-panel">
+            <h3>How to use this queue</h3>
+            <p className="muted">Treat this as the operator start page after login. It answers what needs attention and which platform tool should be opened next.</p>
+            <div className="policy-list">
+              <span>Reviewers should resolve assigned or unassigned human-review tasks first</span>
+              <span>Developers should inspect failed graph runs, tools, and model calls through Trace</span>
+              <span>Admins should watch guardrail blocks, evaluation failures, and cost anomalies</span>
+              <span>Knowledge owners should fix failed indexing before relying on RAG citations</span>
+            </div>
+            <button type="button" onClick={() => setActiveTab("overview")}>Back to dashboard</button>
+          </aside>
+        </section>
+      </div>
+    );
   }
 
   function OverviewPanel() {

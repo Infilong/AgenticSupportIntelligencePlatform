@@ -539,9 +539,59 @@ small {
   margin-bottom: 8px;
 }
 
-.overview-console {
+.overview-console,
+.tasks-console {
   display: grid;
   gap: 16px;
+}
+
+.tasks-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 18px;
+  align-items: stretch;
+  border-color: var(--border);
+  background: var(--surface-muted);
+}
+
+.tasks-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.task-side-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.task-list {
+  display: grid;
+  gap: 12px;
+}
+
+.task-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.task-card p,
+.task-card strong {
+  overflow-wrap: anywhere;
+}
+
+.task-critical {
+  border-color: #8f8f8f;
+  background: #f7f7f7;
+}
+
+.task-warning {
+  background: var(--surface-muted);
 }
 
 .overview-hero {
@@ -1544,6 +1594,8 @@ th {
   .knowledge-meta-grid,
   .overview-hero,
   .overview-layout,
+  .tasks-hero,
+  .tasks-workbench,
   .overview-attention-grid,
   .app-shell,
   .two,
