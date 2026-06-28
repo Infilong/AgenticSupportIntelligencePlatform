@@ -38,7 +38,9 @@ def chunk_text(
 
     if language == SupportedLanguage.en:
         return _chunk_english(stripped, max_tokens=max_tokens, overlap_tokens=overlap_tokens)
-    return _chunk_cjk(stripped, max_tokens=max_tokens, overlap_tokens=overlap_tokens)
+    return _chunk_cjk(
+        stripped, language=language, max_tokens=max_tokens, overlap_tokens=overlap_tokens
+    )
 
 
 def _chunk_english(text: str, *, max_tokens: int, overlap_tokens: int) -> list[TextChunk]:
@@ -65,29 +67,139 @@ def _chunk_english(text: str, *, max_tokens: int, overlap_tokens: int) -> list[T
     return chunks
 
 
-def _chunk_cjk(text: str, *, max_tokens: int, overlap_tokens: int) -> list[TextChunk]:
+def _chunk_cjk(
+    text: str,
+    *,
+    language: SupportedLanguage,
+    max_tokens: int,
+    overlap_tokens: int,
+) -> list[TextChunk]:
     max_chars = max_tokens * 2
-    overlap_chars = overlap_tokens * 2
-    step = max_chars - overlap_chars
+    sentences = _split_cjk_sentences(text)
     chunks: list[TextChunk] = []
-    start = 0
-    while start < len(text):
-        end = min(start + max_chars, len(text))
-        content = text[start:end].strip()
-        if content:
-            chunks.append(
-                TextChunk(
-                    chunk_index=len(chunks),
-                    content=content,
-                    token_count=estimate_token_count(content, SupportedLanguage.zh),
-                    metadata={"strategy": "cjk_char_window", "start_char": start, "end_char": end},
+    current: list[str] = []
+    current_start = 0
+    cursor = 0
+
+    for sentence in sentences:
+        sentence_start = cursor
+        cursor += len(sentence)
+        if estimate_token_count(sentence, language) > max_tokens:
+            if current:
+                _append_cjk_sentence_chunk(
+                    chunks,
+                    current,
+                    language=language,
+                    start_char=current_start,
+                    end_char=sentence_start,
+                )
+                current = []
+            chunks.extend(
+                _chunk_long_cjk_sentence(
+                    sentence,
+                    language=language,
+                    max_chars=max_chars,
+                    overlap_tokens=overlap_tokens,
+                    base_index=len(chunks),
+                    start_offset=sentence_start,
                 )
             )
-        if end == len(text):
+            current_start = cursor
+            continue
+
+        candidate = "".join([*current, sentence])
+        if current and estimate_token_count(candidate, language) > max_tokens:
+            _append_cjk_sentence_chunk(
+                chunks,
+                current,
+                language=language,
+                start_char=current_start,
+                end_char=sentence_start,
+            )
+            current = [sentence]
+            current_start = sentence_start
+        else:
+            if not current:
+                current_start = sentence_start
+            current.append(sentence)
+
+    if current:
+        _append_cjk_sentence_chunk(
+            chunks, current, language=language, start_char=current_start, end_char=len(text)
+        )
+    return chunks
+
+
+def _split_cjk_sentences(text: str) -> list[str]:
+    sentences = [
+        part.strip()
+        for part in re.findall(r"[^。！？!?]+[。！？!?]?", text)
+        if part.strip()
+    ]
+    return sentences or [text]
+
+
+def _append_cjk_sentence_chunk(
+    chunks: list[TextChunk],
+    sentences: list[str],
+    *,
+    language: SupportedLanguage,
+    start_char: int,
+    end_char: int,
+) -> None:
+    content = "".join(sentences).strip()
+    if not content:
+        return
+    chunks.append(
+        TextChunk(
+            chunk_index=len(chunks),
+            content=content,
+            token_count=estimate_token_count(content, language),
+            metadata={
+                "strategy": "cjk_sentence_window",
+                "start_char": start_char,
+                "end_char": end_char,
+                "sentence_count": len(sentences),
+            },
+        )
+    )
+
+
+def _chunk_long_cjk_sentence(
+    sentence: str,
+    *,
+    language: SupportedLanguage,
+    max_chars: int,
+    overlap_tokens: int,
+    base_index: int,
+    start_offset: int,
+) -> list[TextChunk]:
+    overlap_chars = overlap_tokens * 2
+    step = max(1, max_chars - overlap_chars)
+    chunks: list[TextChunk] = []
+    start = 0
+    while start < len(sentence):
+        end = min(start + max_chars, len(sentence))
+        content = sentence[start:end].strip()
+        if content:
+            absolute_start = start_offset + start
+            absolute_end = start_offset + end
+            chunks.append(
+                TextChunk(
+                    chunk_index=base_index + len(chunks),
+                    content=content,
+                    token_count=estimate_token_count(content, language),
+                    metadata={
+                        "strategy": "cjk_long_sentence_window",
+                        "start_char": absolute_start,
+                        "end_char": absolute_end,
+                    },
+                )
+            )
+        if end == len(sentence):
             break
         start += step
     return chunks
-
 
 
 def _collapse_adjacent_duplicate_units(text: str, language: SupportedLanguage) -> str:

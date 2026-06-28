@@ -1,3 +1,4 @@
+from itertools import pairwise
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -69,9 +70,9 @@ def test_language_aware_chunking_uses_word_and_cjk_windows() -> None:
     assert len(english) > 1
     assert english[0].metadata["strategy"] == "word_window"
     assert len(japanese) > 1
-    assert japanese[0].metadata["strategy"] == "cjk_char_window"
+    assert japanese[0].metadata["strategy"] == "cjk_sentence_window"
     assert len(chinese) > 1
-    assert chinese[0].metadata["strategy"] == "cjk_char_window"
+    assert chinese[0].metadata["strategy"] == "cjk_sentence_window"
 
 
 def test_chunking_collapses_adjacent_duplicate_cjk_sentences() -> None:
@@ -80,6 +81,40 @@ def test_chunking_collapses_adjacent_duplicate_cjk_sentences() -> None:
     combined = "".join(chunk.content for chunk in chunks)
 
     assert combined.count("退款政策适用于购买后三十天内。") == 1
+
+
+def test_cjk_chunking_packs_sentences_without_duplicate_overlap() -> None:
+    source = "退款政策适用于购买后三十天内。账单问题请在工作区设置中查看。" * 30
+
+    chunks = chunk_text(source, SupportedLanguage.zh, max_tokens=24, overlap_tokens=6)
+
+    assert len(chunks) > 1
+    assert all(chunk.metadata["strategy"] == "cjk_sentence_window" for chunk in chunks)
+    assert all(chunk.content.endswith(("。", "！", "？")) for chunk in chunks)
+    for previous, current in pairwise(chunks):
+        assert previous.content[-12:] != current.content[:12]
+
+
+def test_cjk_chunking_uses_language_specific_token_counts() -> None:
+    japanese = chunk_text(
+        "購入から30日以内であれば返金できます。" * 12,
+        SupportedLanguage.ja,
+        max_tokens=18,
+        overlap_tokens=4,
+    )
+    chinese = chunk_text(
+        "购买后三十天内可以申请退款。" * 12,
+        SupportedLanguage.zh,
+        max_tokens=18,
+        overlap_tokens=4,
+    )
+
+    assert japanese[0].token_count == chunk_text(
+        japanese[0].content, SupportedLanguage.ja
+    )[0].token_count
+    assert chinese[0].token_count == chunk_text(
+        chinese[0].content, SupportedLanguage.zh
+    )[0].token_count
 
 
 def test_mock_embedding_provider_is_deterministic_and_small() -> None:
