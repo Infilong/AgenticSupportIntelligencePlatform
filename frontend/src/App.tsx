@@ -2,7 +2,8 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "audit" | "prompts" | "models";
+type Tab = "overview" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models";
+type WorkspaceMemberRole = "owner" | "member";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin";
 
 type CurrentUser = {
@@ -21,10 +22,21 @@ type Workspace = {
 type WorkspaceMembership = {
   workspace_id: string;
   user_id: string;
-  role: "owner" | "member";
+  role: WorkspaceMemberRole;
   permissions: string[];
   can_manage_resources: boolean;
   can_manage_workspace: boolean;
+};
+
+type WorkspaceMember = {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: WorkspaceMemberRole;
+  permissions: string[];
+  created_at: string;
 };
 
 type Dataset = {
@@ -470,6 +482,7 @@ const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purp
   { id: "reviews", label: "Human review", token: "RV", group: "Operate", purpose: "Resolve blocked, risky, low-confidence, or unsupported runs." },
   { id: "evaluations", label: "Evaluations", token: "EV", group: "Evaluate", purpose: "Compare quality, routing, language preservation, and baselines." },
   { id: "costs", label: "Usage & costs", token: "US", group: "Evaluate", purpose: "Monitor tokens, latency, cache behavior, model purpose, and spend." },
+  { id: "members", label: "Members", token: "MB", group: "Admin", purpose: "Manage workspace members, owner rights, and available permissions." },
   { id: "prompts", label: "Prompts", token: "PR", group: "Admin", purpose: "Version and activate LangChain prompt templates by language." },
   { id: "models", label: "Models", token: "MO", group: "Admin", purpose: "Control provider, model purpose, context, and token pricing." },
   { id: "audit", label: "Audit", token: "AU", group: "Admin", purpose: "Inspect accountable workspace and AI operations changes." },
@@ -648,6 +661,9 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceMembership, setWorkspaceMembership] = useState<WorkspaceMembership | null>(null);
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState<WorkspaceMemberRole>("member");
   const [workspaceName, setWorkspaceName] = useState("Agentic Platform Demo");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -772,6 +788,7 @@ export function App() {
     { label: "Human review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
     { label: "Evaluations", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
     { label: "Usage", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
+    { label: "Members", done: workspaceMembers.length > 0, tab: "members" as Tab },
     { label: "Prompts", done: promptTemplates.some((template) => template.active), tab: "prompts" as Tab },
     { label: "Models", done: modelConfigs.some((config) => config.active), tab: "models" as Tab },
     { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
@@ -877,6 +894,7 @@ export function App() {
   async function refreshWorkspaceData() {
     await Promise.all([
       loadWorkspaceMembership(),
+      loadWorkspaceMembers(),
       loadDatasets(),
       loadDocuments(),
       loadAgents(),
@@ -956,6 +974,50 @@ export function App() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<WorkspaceMembership>(workspacePath("/membership"), { token });
     setWorkspaceMembership(data);
+  }
+
+  async function loadWorkspaceMembers() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<WorkspaceMember[]>(workspacePath("/members"), { token });
+    setWorkspaceMembers(data);
+  }
+
+  async function addWorkspaceMember(event: FormEvent) {
+    event.preventDefault();
+    await runAction("Workspace member added", async () => {
+      await apiRequest<WorkspaceMember>(workspacePath("/members"), {
+        method: "POST",
+        token,
+        body: { email: memberEmail, role: memberRole },
+      });
+      setMemberEmail("");
+      setMemberRole("member");
+      await loadWorkspaceMembers();
+      await loadAuditLogs();
+    });
+  }
+
+  async function updateWorkspaceMemberRole(member: WorkspaceMember, role: WorkspaceMemberRole) {
+    if (member.role === role) return;
+    await runAction("Workspace member role updated", async () => {
+      await apiRequest<WorkspaceMember>(workspacePath(`/members/${member.user_id}`), {
+        method: "PATCH",
+        token,
+        body: { role },
+      });
+      await loadWorkspaceMembers();
+      await loadWorkspaceMembership();
+      await loadAuditLogs();
+    });
+  }
+
+  async function removeWorkspaceMember(member: WorkspaceMember) {
+    if (!window.confirm(`Remove ${member.email} from this workspace?`)) return;
+    await runAction("Workspace member removed", async () => {
+      await apiRequest(workspacePath(`/members/${member.user_id}`), { method: "DELETE", token });
+      await loadWorkspaceMembers();
+      await loadAuditLogs();
+    });
   }
 
   async function loadDatasets() {
@@ -1734,6 +1796,8 @@ export function App() {
         return EvaluationsPanel();
       case "costs":
         return CostsPanel();
+      case "members":
+        return MembersPanel();
       case "audit":
         return AuditPanel();
       case "prompts":
@@ -3200,6 +3264,135 @@ export function App() {
             {evaluationDetail && <Badge tone={toneForStatus(evaluationDetail.run.status)}>{evaluationDetail.run.status}</Badge>}
           </div>
           {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} /> : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
+        </section>
+      </div>
+    );
+  }
+
+  function MembersPanel() {
+    const ownerCount = workspaceMembers.filter((member) => member.role === "owner").length;
+    const memberCount = workspaceMembers.filter((member) => member.role === "member").length;
+    const canManageWorkspace = Boolean(workspaceMembership?.can_manage_workspace);
+    const currentMember = workspaceMembers.find((member) => member.user_id === currentUser?.id) ?? null;
+
+    return (
+      <div className="settings-console member-console">
+        <section className="panel settings-hero">
+          <div>
+            <p className="eyebrow">Workspace administration</p>
+            <h2>Manage members and permissions</h2>
+            <p className="muted">Membership is backend-enforced. Owners can add registered users, change v1 roles, and remove non-self members while the workspace keeps at least one owner.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Your access</span>
+            <strong>{workspaceRole}</strong>
+            <p>{currentMember ? `${currentMember.email} has ${currentMember.permissions.length} permissions in this workspace.` : permissionSummary}</p>
+            <button type="button" onClick={() => void runAction("Workspace members refreshed", loadWorkspaceMembers)}>Refresh members</button>
+          </div>
+        </section>
+
+        <section className="settings-summary-grid">
+          <Metric label="Members" value={workspaceMembers.length} />
+          <Metric label="Owners" value={ownerCount} />
+          <Metric label="Standard members" value={memberCount} />
+          <Metric label="Manage workspace" value={canManageWorkspace ? "allowed" : "restricted"} />
+        </section>
+
+        <section className="settings-workbench">
+          <form className="panel stack settings-editor-panel" onSubmit={addWorkspaceMember}>
+            <div className="row-head">
+              <div>
+                <h3>Add registered user</h3>
+                <p className="muted">Use this for local-team collaboration. The user must already have an account in this app.</p>
+              </div>
+              <Badge tone={canManageWorkspace ? "good" : "warn"}>{canManageWorkspace ? "owner action" : "restricted"}</Badge>
+            </div>
+            <div className="settings-meta-grid">
+              <label>
+                User email
+                <input value={memberEmail} onChange={(event) => setMemberEmail(event.target.value)} placeholder="engineer@example.com" />
+              </label>
+              <label>
+                Initial role
+                <select value={memberRole} onChange={(event) => setMemberRole(event.target.value as WorkspaceMemberRole)}>
+                  <option value="member">Member</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </label>
+            </div>
+            <div className="settings-note">V1 roles are intentionally simple: owners manage workspace membership and destructive actions; members can inspect and operate most platform workflows.</div>
+            <div className="run-action-bar">
+              <button className="primary" disabled={!canManageWorkspace || !memberEmail.trim() || loading}>Add member</button>
+              <button type="button" onClick={() => setActiveTab("audit")}>Open audit trail</button>
+            </div>
+          </form>
+
+          <aside className="panel stack settings-side-panel">
+            <h3>Permission model</h3>
+            <p className="muted">This is not full enterprise RBAC yet. The current backend supports owner and member roles, and every workspace route still enforces membership.</p>
+            <div className="policy-list">
+              <span>Owners: manage members, folders, destructive cleanup, and agent archive actions</span>
+              <span>Members: run agents, resolve reviews, manage data/prompts/models, inspect traces and costs</span>
+              <span>Non-members: receive workspace-not-found responses for scoped APIs</span>
+            </div>
+          </aside>
+        </section>
+
+        <section className="panel full-width stack settings-history-panel">
+          <div className="row-head">
+            <div>
+              <h3>Workspace members</h3>
+              <p className="muted">Role changes and removals are owner-only and recorded in the audit log.</p>
+            </div>
+            <Badge>{workspaceMembers.length} users</Badge>
+          </div>
+          <div className="member-card-grid">
+            {workspaceMembers.map((member) => {
+              const isCurrentUser = member.user_id === currentUser?.id;
+              const visibleMemberPermissions = member.permissions.slice(0, 6);
+              return (
+                <article className="member-card" key={member.id}>
+                  <div className="row-head">
+                    <div>
+                      <strong>{member.display_name}</strong>
+                      <p className="muted">{member.email}</p>
+                    </div>
+                    <div className="review-actions">
+                      {isCurrentUser && <Badge tone="good">you</Badge>}
+                      <Badge tone={member.role === "owner" ? "good" : "neutral"}>{member.role}</Badge>
+                    </div>
+                  </div>
+                  <div className="settings-meta-grid compact-member-controls">
+                    <label>
+                      Role
+                      <select
+                        value={member.role}
+                        onChange={(event) => void updateWorkspaceMemberRole(member, event.target.value as WorkspaceMemberRole)}
+                        disabled={!canManageWorkspace || isCurrentUser || loading}
+                      >
+                        <option value="member">Member</option>
+                        <option value="owner">Owner</option>
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="danger-button"
+                      onClick={() => void removeWorkspaceMember(member)}
+                      disabled={!canManageWorkspace || isCurrentUser || loading}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="permission-chip-row member-permissions">
+                    {visibleMemberPermissions.map((permission) => <span key={permission}>{permission}</span>)}
+                    {member.permissions.length > visibleMemberPermissions.length && <span>+{member.permissions.length - visibleMemberPermissions.length}</span>}
+                  </div>
+                  <small>Joined {formatDate(member.created_at)}</small>
+                </article>
+              );
+            })}
+          </div>
+          {workspaceMembers.length === 0 && <EmptyState title="No members loaded" detail="Refresh members or check workspace access." />}
         </section>
       </div>
     );

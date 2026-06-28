@@ -955,6 +955,37 @@ small {
   font-weight: 700;
 }
 
+.member-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.member-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+  min-width: 0;
+}
+
+.member-card strong,
+.member-card p,
+.member-card small,
+.member-permissions span {
+  overflow-wrap: anywhere;
+}
+
+.compact-member-controls {
+  align-items: end;
+}
+
+.compact-member-controls .danger-button {
+  min-height: 42px;
+}
+
 .icon-danger-button {
   min-height: 34px;
   border-color: #9a9a9a;

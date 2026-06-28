@@ -237,3 +237,161 @@ def test_workspace_membership_endpoint_hides_other_workspaces(client: TestClient
 
     assert response.status_code == 404
     assert response.json()["detail"]["code"] == "workspace_not_found"
+
+
+def test_owner_can_list_add_update_and_remove_workspace_members(client: TestClient) -> None:
+    owner = register(client, "member-admin-owner@example.com")
+    owner_token = login(client, "member-admin-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Member Admin Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    member = register(client, "member-admin-target@example.com")
+
+    add_response = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+        json={"email": "MEMBER-admin-target@example.com", "role": "member"},
+    )
+    list_response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+    )
+    promote_response = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/members/{member['id']}",
+        headers=auth_headers(owner_token),
+        json={"role": "owner"},
+    )
+    demote_response = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/members/{member['id']}",
+        headers=auth_headers(owner_token),
+        json={"role": "member"},
+    )
+    remove_response = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/members/{member['id']}",
+        headers=auth_headers(owner_token),
+    )
+    final_list = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+    )
+
+    assert owner["id"] != member["id"]
+    assert add_response.status_code == 201
+    assert add_response.json()["email"] == "member-admin-target@example.com"
+    assert add_response.json()["role"] == "member"
+    assert "workspace:read" in add_response.json()["permissions"]
+    assert list_response.status_code == 200
+    assert [item["email"] for item in list_response.json()] == [
+        "member-admin-owner@example.com",
+        "member-admin-target@example.com",
+    ]
+    assert promote_response.status_code == 200
+    assert promote_response.json()["role"] == "owner"
+    assert demote_response.status_code == 200
+    assert demote_response.json()["role"] == "member"
+    assert remove_response.status_code == 204
+    assert [item["email"] for item in final_list.json()] == ["member-admin-owner@example.com"]
+
+
+def test_workspace_member_management_rejects_missing_duplicate_and_non_owner(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "member-management-owner@example.com")
+    owner_token = login(client, "member-management-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Owner Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    register(client, "member-management-existing@example.com")
+    existing_token = login(client, "member-management-existing@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="member-management-existing@example.com",
+        role=WorkspaceRole.member,
+    )
+
+    missing = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+        json={"email": "missing-member@example.com", "role": "member"},
+    )
+    duplicate = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+        json={"email": "member-management-existing@example.com", "role": "member"},
+    )
+    non_owner_add = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(existing_token),
+        json={"email": "missing-member@example.com", "role": "member"},
+    )
+
+    assert missing.status_code == 404
+    assert missing.json()["detail"]["code"] == "workspace_member_user_not_found"
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"]["code"] == "workspace_member_already_exists"
+    assert non_owner_add.status_code == 403
+    assert non_owner_add.json()["detail"]["code"] == "workspace_owner_required"
+
+
+def test_workspace_member_management_preserves_owner_membership(
+    client: TestClient, db_session: Session
+) -> None:
+    owner = register(client, "owner-guard@example.com")
+    owner_token = login(client, "owner-guard@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Owner Guard Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    other_owner = register(client, "other-owner-guard@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="other-owner-guard@example.com",
+        role=WorkspaceRole.owner,
+    )
+
+    self_demote = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/members/{owner['id']}",
+        headers=auth_headers(owner_token),
+        json={"role": "member"},
+    )
+    self_remove = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/members/{owner['id']}",
+        headers=auth_headers(owner_token),
+    )
+    remove_other_owner = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/members/{other_owner['id']}",
+        headers=auth_headers(owner_token),
+    )
+
+    assert self_demote.status_code == 409
+    assert self_demote.json()["detail"]["code"] == "workspace_owner_guard"
+    assert self_remove.status_code == 409
+    assert self_remove.json()["detail"]["code"] == "workspace_owner_guard"
+    assert remove_other_owner.status_code == 204
+
+
+def test_workspace_member_list_is_workspace_scoped(client: TestClient) -> None:
+    register(client, "scoped-owner@example.com")
+    owner_token = login(client, "scoped-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Scoped Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    register(client, "scoped-other@example.com")
+    other_token = login(client, "scoped-other@example.com")
+
+    forbidden = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(other_token),
+    )
+
+    assert forbidden.status_code == 404
+    assert forbidden.json()["detail"]["code"] == "workspace_not_found"
