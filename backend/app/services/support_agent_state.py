@@ -19,6 +19,8 @@ class SupportAgentState(TypedDict, total=False):
     classification_confidence: float
     classification_rationale: str
     retrieved_chunks: list[dict]
+    packed_context_chunks: list[dict]
+    packed_context_citations: list[str]
     retrieval_trace_id: str | None
     langchain_tool: str
     draft_answer: str | None
@@ -31,5 +33,10 @@ class SupportAgentState(TypedDict, total=False):
     errors: list[str]
     model_provider_failure: str | None
     trimmed_context_count: int
+    context_prompt_tokens: int
+    context_completion_tokens: int
+    context_total_tokens: int
+    context_model: str | None
+    context_max_tokens: int
     token_budget_action: str | None
     model_budget_failure: str | None

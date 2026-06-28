@@ -6916,6 +6916,9 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
     "no_source",
     "token_budget_action",
     "trimmed_context_count",
+    "context_total_tokens",
+    "context_max_tokens",
+    "context_model",
     "model_budget_failure",
   ]) {
     if (record[key] !== undefined && record[key] !== null) {
@@ -6935,7 +6938,7 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
 
 function traceRetrievedChunks(value: unknown): TraceRetrievedChunk[] {
   const record = asRecord(value);
-  const chunks = record?.retrieved_chunks;
+  const chunks = record?.retrieved_chunks ?? record?.packed_context_chunks;
   if (!Array.isArray(chunks)) return [];
   return chunks
     .map((chunk): TraceRetrievedChunk | null => {

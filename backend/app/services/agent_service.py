@@ -491,11 +491,23 @@ def _workflow_nodes() -> list[dict[str, Any]]:
             "expected_state_keys": ["retrieved_chunks", "retrieval_trace_id", "citations"],
         },
         {
+            "name": "compress_context",
+            "role": "deterministic token-budget context packing",
+            "runtime_framework": "LangGraph StateGraph node",
+            "uses_langchain": False,
+            "expected_state_keys": [
+                "packed_context_chunks",
+                "packed_context_citations",
+                "token_budget_action",
+                "context_total_tokens",
+            ],
+        },
+        {
             "name": "draft_response",
-            "role": "LangChain grounded drafting chain with cited documents",
+            "role": "LangChain grounded drafting chain with packed cited documents",
             "runtime_framework": "LangGraph StateGraph node",
             "uses_langchain": True,
-            "expected_state_keys": ["draft_answer", "token_budget_action"],
+            "expected_state_keys": ["draft_answer"],
         },
         {
             "name": "score_confidence",
@@ -543,6 +555,12 @@ def _workflow_edges() -> list[dict[str, str | None]]:
         },
         {
             "source": "retrieve_evidence",
+            "target": "compress_context",
+            "condition": None,
+            "label": "next",
+        },
+        {
+            "source": "compress_context",
             "target": "draft_response",
             "condition": None,
             "label": "next",

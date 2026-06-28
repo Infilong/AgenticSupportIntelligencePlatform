@@ -47,6 +47,7 @@ class SupportAgentGraphRunner:
         graph.add_node("detect_language", self.detect_language)
         graph.add_node("classify_intent", self.classify_intent)
         graph.add_node("retrieve_evidence", self.retrieve_evidence)
+        graph.add_node("compress_context", self.compress_context)
         graph.add_node("draft_response", self.draft_response)
         graph.add_node("score_confidence", self.score_confidence)
         graph.add_node("route_review_or_finalize", self.route_review_or_finalize)
@@ -54,7 +55,8 @@ class SupportAgentGraphRunner:
         graph.add_edge(START, "detect_language")
         graph.add_edge("detect_language", "classify_intent")
         graph.add_edge("classify_intent", "retrieve_evidence")
-        graph.add_edge("retrieve_evidence", "draft_response")
+        graph.add_edge("retrieve_evidence", "compress_context")
+        graph.add_edge("compress_context", "draft_response")
         graph.add_edge("draft_response", "score_confidence")
         graph.add_edge("score_confidence", "route_review_or_finalize")
         graph.add_conditional_edges(
@@ -248,18 +250,93 @@ class SupportAgentGraphRunner:
         self.db.commit()
         return output
 
-    def draft_response(self, state: SupportAgentState) -> SupportAgentState:
+    def compress_context(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
         language = SupportedLanguage(state["detected_language"])
+        chunks = state.get("retrieved_chunks") or []
         if (
             state.get("model_provider_failure")
             or state.get("model_budget_failure")
-            or not state.get("retrieved_chunks")
+            or not chunks
+        ):
+            output: SupportAgentState = {
+                "packed_context_chunks": [],
+                "packed_context_citations": [],
+                "citations": [],
+                "trimmed_context_count": 0,
+                "token_budget_action": "no_context",
+            }
+            self._record_step("compress_context", state, output, started)
+            return output
+
+        completion = _mock_answer(
+            language=language,
+            intent=state.get("intent"),
+            input_message=state["input_message"],
+            chunks=chunks,
+        )
+        documents = chunk_payloads_to_documents(chunks)
+        packed_documents, budget_plan, trimmed_count = _fit_draft_documents_to_budget(
+            db=self.db,
+            workspace_id=UUID(state["workspace_id"]),
+            input_message=state["input_message"],
+            language=language,
+            documents=documents,
+            completion_text=completion,
+            model_config_id=_agent_model_config_id(state),
+        )
+        if not budget_plan.allowed:
+            output = _budget_failure_output(state, budget_plan, purpose="draft_response")
+            output.update(
+                {
+                    "packed_context_chunks": [],
+                    "packed_context_citations": [],
+                    "citations": [],
+                    "trimmed_context_count": len(chunks),
+                    "token_budget_action": "context_budget_denied",
+                }
+            )
+            self._record_step(
+                "compress_context",
+                state,
+                output,
+                started,
+                status=GraphStepStatus.failed,
+                error_message=output["model_budget_failure"],
+            )
+            return output
+
+        packed_chunks = chunks[: len(packed_documents)]
+        citations = [str(chunk.get("citation")) for chunk in packed_chunks]
+        output: SupportAgentState = {
+            "packed_context_chunks": packed_chunks,
+            "packed_context_citations": citations,
+            "citations": citations,
+            "trimmed_context_count": trimmed_count,
+            "context_prompt_tokens": budget_plan.prompt_tokens,
+            "context_completion_tokens": budget_plan.completion_tokens,
+            "context_total_tokens": budget_plan.total_tokens,
+            "context_model": budget_plan.model,
+            "context_max_tokens": budget_plan.max_context_tokens,
+            "token_budget_action": (
+                "trimmed_retrieved_context" if trimmed_count else "context_within_budget"
+            ),
+        }
+        self._record_step("compress_context", state, output, started)
+        return output
+
+    def draft_response(self, state: SupportAgentState) -> SupportAgentState:
+        started = time.perf_counter()
+        language = SupportedLanguage(state["detected_language"])
+        chunks = state.get("packed_context_chunks") or []
+        if (
+            state.get("model_provider_failure")
+            or state.get("model_budget_failure")
+            or not chunks
         ):
             output: SupportAgentState = {"draft_answer": None}
             self._record_step("draft_response", state, output, started)
             return output
-        chunks = state.get("retrieved_chunks") or []
         completion = _mock_answer(
             language=language,
             intent=state.get("intent"),
@@ -273,13 +350,16 @@ class SupportAgentGraphRunner:
             language=language,
             template_text=DRAFT_RESPONSE_TEMPLATE_TEXT,
         )
-        budget_documents, budget_plan, trimmed_count = _fit_draft_documents_to_budget(
+        budget_plan = _plan_model_call(
             db=self.db,
             workspace_id=UUID(state["workspace_id"]),
-            input_message=state["input_message"],
-            language=language,
-            documents=documents,
+            purpose="draft_response",
+            fallback_model="mock-standard",
+            prompt_text=build_draft_response_prompt(
+                input_message=state["input_message"], language=language, documents=documents
+            ),
             completion_text=completion,
+            language=language,
             model_config_id=_agent_model_config_id(state),
         )
         if not budget_plan.allowed:
@@ -294,16 +374,13 @@ class SupportAgentGraphRunner:
                 error_message=output["model_budget_failure"],
             )
             return output
-        if trimmed_count:
-            chunks = chunks[: len(budget_documents)]
-            documents = budget_documents
         try:
             ai_response = run_draft_response_chain(
                 provider=ConfiguredModelProvider(self.db),
                 workspace_id=UUID(state["workspace_id"]),
                 language=language,
                 input_message=state["input_message"],
-                documents=budget_documents,
+                documents=documents,
                 graph_run_id=UUID(state["graph_run_id"]),
                 prompt_template=prompt_template,
                 completion_text=completion,
@@ -323,15 +400,6 @@ class SupportAgentGraphRunner:
             )
             return output
         output: SupportAgentState = {"draft_answer": ai_response.content}
-        if trimmed_count:
-            output.update(
-                {
-                    "retrieved_chunks": chunks,
-                    "citations": [str(chunk.get("citation")) for chunk in chunks],
-                    "token_budget_action": "trimmed_retrieved_context",
-                    "trimmed_context_count": trimmed_count,
-                }
-            )
         self._record_step("draft_response", state, output, started, ai_response.ai_run.id)
         return output
 
@@ -632,6 +700,7 @@ def _checkpoint_snapshot(
     merged_state: SupportAgentState = {**input_state, **output}
     snapshot = _compact_state(merged_state)
     retrieved_chunks = merged_state.get("retrieved_chunks") or []
+    packed_chunks = merged_state.get("packed_context_chunks") or []
     citations = merged_state.get("citations") or []
     snapshot["checkpoint"] = {
         "completed_step": step_name,
@@ -639,6 +708,7 @@ def _checkpoint_snapshot(
         "error_message": error_message,
         "state_keys": sorted(str(key) for key in merged_state.keys()),
         "retrieved_chunk_count": len(retrieved_chunks) if isinstance(retrieved_chunks, list) else 0,
+        "packed_context_count": len(packed_chunks) if isinstance(packed_chunks, list) else 0,
         "citation_count": len(citations) if isinstance(citations, list) else 0,
         "has_draft_answer": bool(merged_state.get("draft_answer")),
         "has_final_answer": bool(merged_state.get("final_answer")),
@@ -664,11 +734,17 @@ def _compact_state(state: SupportAgentState) -> dict:
         "route_reasons",
         "final_answer",
         "citations",
+        "packed_context_citations",
         "no_source",
         "model_provider_failure",
         "model_budget_failure",
         "token_budget_action",
         "trimmed_context_count",
+        "context_prompt_tokens",
+        "context_completion_tokens",
+        "context_total_tokens",
+        "context_model",
+        "context_max_tokens",
         "confidence_threshold",
         "agent_token_budget",
         "agent_model_config_id",

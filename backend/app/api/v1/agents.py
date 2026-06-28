@@ -432,13 +432,14 @@ def _checkpoint_sort_key(checkpoint: Checkpoint) -> tuple[int, str]:
         "detect_language": 10,
         "classify_intent": 20,
         "retrieve_evidence": 30,
-        "draft_response": 40,
-        "score_confidence": 50,
-        "route_review_or_finalize": 60,
-        "finalize_response": 70,
-        "human_review_approved": 80,
-        "human_review_edited": 80,
-        "human_review_rejected": 80,
+        "compress_context": 40,
+        "draft_response": 50,
+        "score_confidence": 60,
+        "route_review_or_finalize": 70,
+        "finalize_response": 80,
+        "human_review_approved": 90,
+        "human_review_edited": 90,
+        "human_review_rejected": 90,
     }
     node_name = checkpoint.checkpoint_key.removesuffix(":after")
     return (node_order.get(node_name, 999), checkpoint.checkpoint_key)
@@ -504,7 +505,7 @@ def _static_graph_runtime_response() -> GraphRuntimeResponse:
         state_schema="SupportAgentState TypedDict",
         graph_builder="app.services.support_agent_graph.SupportAgentGraphRunner",
         execution_mode="deterministic graph with conditional human-review routing",
-        node_count=7,
+        node_count=8,
         conditional_routes=[
             "route_review_or_finalize -> finalize_response",
             "route_review_or_finalize -> human_review",
@@ -547,8 +548,9 @@ def _node_role(step_name: str) -> str:
         "detect_language": "deterministic language detection",
         "classify_intent": "LangChain classification chain with cheap model config",
         "retrieve_evidence": "LangChain retrieval tool plus persisted retrieval trace",
-        "draft_response": "LangChain grounded drafting chain with cited documents",
+        "draft_response": "LangChain grounded drafting chain with packed cited documents",
         "score_confidence": "deterministic confidence scoring",
+        "compress_context": "deterministic token-budget context packing",
         "route_review_or_finalize": "conditional LangGraph routing gate",
         "finalize_response": "final response commit",
     }

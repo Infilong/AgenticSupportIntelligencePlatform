@@ -143,7 +143,7 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     trace_body = trace.json()
     assert trace_body["runtime"]["orchestrator"] == "LangGraph StateGraph"
     assert trace_body["runtime"]["state_schema"] == "SupportAgentState TypedDict"
-    assert trace_body["runtime"]["node_count"] == 7
+    assert trace_body["runtime"]["node_count"] == 8
     assert {component["name"] for component in trace_body["runtime"]["langchain_components"]} >= {
         "ChatPromptTemplate",
         "RunnableLambda + StrOutputParser",
@@ -162,6 +162,7 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
         "detect_language",
         "classify_intent",
         "retrieve_evidence",
+        "compress_context",
         "draft_response",
         "score_confidence",
         "route_review_or_finalize",
@@ -243,9 +244,9 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     assert len(ai_steps) == len(ai_runs)
     assert all(step.token_count and step.token_count > 0 for step in ai_steps)
     assert all(step.estimated_cost is not None for step in ai_steps)
-    assert len(graph_steps) == 7
+    assert len(graph_steps) == 8
     assert all(step.span_id for step in graph_steps)
-    assert len(checkpoints) == 7
+    assert len(checkpoints) == 8
     assert all(checkpoint.graph_run_id == graph_run_id for checkpoint in checkpoints)
 
 
@@ -549,11 +550,16 @@ def test_support_agent_trims_retrieved_context_before_draft_model_call(
     )
     assert trace.status_code == 200
     trace_body = trace.json()
+    context_step = next(
+        step for step in trace_body["steps"] if step["step_name"] == "compress_context"
+    )
+    context_output = safe_json(context_step["output_json"])
+    assert context_output["token_budget_action"] == "trimmed_retrieved_context"
+    assert context_output["trimmed_context_count"] > 0
+    assert len(context_output["packed_context_chunks"]) < 4
+    assert context_output["context_total_tokens"] <= 512
+    assert context_output["context_model"] == "mock-trim-drafter"
     draft_step = next(step for step in trace_body["steps"] if step["step_name"] == "draft_response")
-    output = safe_json(draft_step["output_json"])
-    assert output["token_budget_action"] == "trimmed_retrieved_context"
-    assert output["trimmed_context_count"] > 0
-    assert len(output["retrieved_chunks"]) < 4
     assert draft_step["ai_run"]["status"] == "succeeded"
     assert draft_step["ai_run"]["model"] == "mock-trim-drafter"
     assert draft_step["ai_run"]["total_tokens"] <= 512
@@ -795,14 +801,15 @@ def test_agent_workflow_summary_returns_runtime_graph_and_node_stats(
     body = response.json()
     assert body["agent"]["id"] == agent["id"]
     assert body["runtime"]["orchestrator"] == "LangGraph StateGraph"
-    assert body["runtime"]["node_count"] == 7
-    assert len(body["nodes"]) == 7
-    assert len(body["edges"]) == 9
+    assert body["runtime"]["node_count"] == 8
+    assert len(body["nodes"]) == 8
+    assert len(body["edges"]) == 10
     node_names = [node["name"] for node in body["nodes"]]
     assert node_names == [
         "detect_language",
         "classify_intent",
         "retrieve_evidence",
+        "compress_context",
         "draft_response",
         "score_confidence",
         "route_review_or_finalize",
@@ -810,11 +817,14 @@ def test_agent_workflow_summary_returns_runtime_graph_and_node_stats(
     ]
     classification = next(node for node in body["nodes"] if node["name"] == "classify_intent")
     retrieval = next(node for node in body["nodes"] if node["name"] == "retrieve_evidence")
+    context = next(node for node in body["nodes"] if node["name"] == "compress_context")
     assert classification["uses_langchain"] is True
     assert classification["run_count"] == 1
     assert classification["total_tokens"] > 0
     assert retrieval["uses_langchain"] is True
     assert retrieval["run_count"] == 1
+    assert context["uses_langchain"] is False
+    assert context["run_count"] == 1
     assert any(edge["condition"] == "route_decision == human_review" for edge in body["edges"])
 
 
