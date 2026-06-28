@@ -391,6 +391,7 @@ type ReviewDraft = {
 
 type ReviewFilter = "all" | "mine" | "unassigned" | "critical" | "evidence" | "model" | "language";
 type ReviewSort = "severity" | "newest" | "oldest";
+type GuardrailView = "all" | "failed" | "configurable" | "fixed" | "routing";
 
 type EvaluationRun = {
   id: string;
@@ -936,6 +937,8 @@ export function App() {
   const [toolConfigDrafts, setToolConfigDrafts] = useState<Record<string, { enabled: boolean; timeout_ms: string; max_retries: string }>>({});
   const [guardrails, setGuardrails] = useState<GuardrailCatalogItem[]>([]);
   const [guardrailPolicyDrafts, setGuardrailPolicyDrafts] = useState<Record<string, GuardrailPolicyDraft>>({});
+  const [guardrailSearch, setGuardrailSearch] = useState("");
+  const [guardrailView, setGuardrailView] = useState<GuardrailView>("all");
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
@@ -3768,6 +3771,21 @@ export function App() {
     const failedEvaluations = guardrails.reduce((sum, item) => sum + item.usage.failed_evaluations, 0);
     const enabledGuardrails = guardrails.filter((item) => item.enabled).length;
     const configurableGuardrails = guardrails.filter((item) => item.configurable).length;
+    const fixedGuardrails = guardrails.length - configurableGuardrails;
+    const routingGuardrails = guardrails.filter((item) => item.action_on_fail !== "record_only").length;
+    const visibleGuardrails = guardrails.filter((guardrail) => {
+      const matchesView = guardrailMatchesView(guardrail, guardrailView);
+      return matchesView && matchesSearch(
+        guardrailSearch,
+        guardrail.label,
+        guardrail.description,
+        guardrail.guardrail_type,
+        friendlyGuardrailStage(guardrail.stage),
+        friendlyGuardrailAction(guardrail.action_on_fail),
+        guardrail.severity,
+        ...guardrail.related_workflow_nodes.map(formatStepName),
+      );
+    });
     const recentFailures = guardrails.flatMap((item) =>
       item.recent_failures.map((failure) => ({ ...failure, label: item.label, guardrail_type: item.guardrail_type })),
     ).sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 8);
@@ -3793,14 +3811,52 @@ export function App() {
           <Metric label="Guardrails" value={guardrails.length} />
           <Metric label="Enabled" value={enabledGuardrails} />
           <Metric label="Configurable" value={configurableGuardrails} />
+          <Metric label="Fixed" value={fixedGuardrails} />
           <Metric label="Evaluations" value={totalEvaluations} />
           <Metric label="Failures" value={failedEvaluations} />
           <Metric label="Pass rate" value={`${passRate}%`} />
         </section>
 
+        <section className="panel stack guardrail-toolbar">
+          <div className="row-head">
+            <div>
+              <h3>Governance policy board</h3>
+              <p className="muted">Filter implemented runtime policies without losing the backend truth: fixed safety checks, owner-configurable routing checks, and failed evaluations are all shown from the same catalog.</p>
+            </div>
+            <Badge>{visibleGuardrails.length}/{guardrails.length} shown</Badge>
+          </div>
+          <div className="guardrail-filter-row">
+            <div className="segmented guardrail-filter" aria-label="Guardrail policy filter">
+              {guardrailViewOptions.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={guardrailView === option.id ? "selected" : ""}
+                  onClick={() => setGuardrailView(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <label>
+              Search policies
+              <input
+                value={guardrailSearch}
+                onChange={(event) => setGuardrailSearch(event.target.value)}
+                placeholder="Policy, stage, action, workflow node, or severity"
+              />
+            </label>
+            <div className="folder-scope-banner">
+              <span>Routing policies</span>
+              <strong>{routingGuardrails}</strong>
+              <small>Policies that can send a graph run to human review instead of finalizing.</small>
+            </div>
+          </div>
+        </section>
+
         <section className="guardrail-workbench">
           <div className="guardrail-grid">
-            {guardrails.map((guardrail) => {
+            {visibleGuardrails.map((guardrail) => {
               const draft = guardrailPolicyDrafts[guardrail.guardrail_type] ?? {
                 enabled: guardrail.enabled,
                 severity: guardrail.severity,
@@ -3812,7 +3868,7 @@ export function App() {
               <article className="panel stack guardrail-card" key={guardrail.guardrail_type}>
                 <div className="row-head">
                   <div>
-                    <p className="eyebrow">{guardrail.stage}</p>
+                    <p className="eyebrow">{friendlyGuardrailStage(guardrail.stage)}</p>
                     <h3>{guardrail.label}</h3>
                   </div>
                   <Badge tone={guardrail.enabled ? "good" : "warn"}>{guardrail.enabled ? "enabled" : "disabled"}</Badge>
@@ -3827,7 +3883,7 @@ export function App() {
                 <div className="tool-chip-row">
                   <Badge tone={toneForReviewReason(guardrail.guardrail_type)}>{guardrail.severity}</Badge>
                   <Badge>{guardrail.configurable ? "configurable" : "fixed policy"}</Badge>
-                  <Badge>{guardrail.action_on_fail}</Badge>
+                  <Badge>{friendlyGuardrailAction(guardrail.action_on_fail)}</Badge>
                   {thresholdSupported && <Badge>threshold {guardrail.threshold ?? "default"}</Badge>}
                   {guardrail.related_workflow_nodes.map((node) => <Badge key={node}>{formatStepName(node)}</Badge>)}
                 </div>
@@ -3936,6 +3992,7 @@ export function App() {
               );
             })}
             {guardrails.length === 0 && <EmptyState title="No guardrails loaded" detail="Refresh the workspace or run an agent to load runtime guardrail policies." />}
+            {guardrails.length > 0 && visibleGuardrails.length === 0 && <EmptyState title="No guardrails match this view" detail="Clear search or choose another policy filter." />}
           </div>
 
           <aside className="panel stack guardrail-failure-panel">
@@ -5627,6 +5684,14 @@ const reviewFilterOptions: Array<{ id: ReviewFilter; label: string }> = [
   { id: "language", label: "Language" },
 ];
 
+const guardrailViewOptions: Array<{ id: GuardrailView; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "failed", label: "Failures" },
+  { id: "configurable", label: "Configurable" },
+  { id: "fixed", label: "Fixed" },
+  { id: "routing", label: "Routes to review" },
+];
+
 function reviewOwnerLabel(review: HumanReview, user: CurrentUser | null): string {
   if (!review.reviewer_id) return "unassigned";
   if (user && review.reviewer_id === user.id) return "me";
@@ -5728,6 +5793,28 @@ function friendlyGuardrailName(reason: string) {
     escalation_needed: "Escalation needed",
   };
   return labels[reason] ?? reason;
+}
+
+function friendlyGuardrailAction(action: string) {
+  if (action === "route_to_human_review") return "Route to human review";
+  if (action === "record_only") return "Record only";
+  return formatStepName(action);
+}
+
+function friendlyGuardrailStage(stage: string) {
+  return stage
+    .split(" ")
+    .map((part) => formatStepName(part))
+    .join(" ");
+}
+
+function guardrailMatchesView(guardrail: GuardrailCatalogItem, view: GuardrailView) {
+  if (view === "all") return true;
+  if (view === "failed") return guardrail.usage.failed_evaluations > 0;
+  if (view === "configurable") return guardrail.configurable;
+  if (view === "fixed") return !guardrail.configurable;
+  if (view === "routing") return guardrail.action_on_fail !== "record_only";
+  return true;
 }
 
 function friendlyReviewReasonSummary(parts: string[]) {

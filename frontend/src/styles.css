@@ -2995,6 +2995,22 @@ th {
   align-items: start;
 }
 
+.guardrail-toolbar {
+  background: var(--surface-muted);
+}
+
+.guardrail-filter-row {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(260px, 0.75fr) minmax(220px, 0.45fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.guardrail-filter {
+  align-self: end;
+  flex-wrap: wrap;
+}
+
 .guardrail-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
@@ -3020,6 +3036,7 @@ th {
 
 @media (max-width: 900px) {
   .guardrail-hero,
+  .guardrail-filter-row,
   .guardrail-workbench,
   .guardrail-grid {
     grid-template-columns: 1fr;
