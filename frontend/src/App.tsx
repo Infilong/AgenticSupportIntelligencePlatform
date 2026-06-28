@@ -187,6 +187,14 @@ type Agent = {
   created_at: string;
 };
 
+type AgentListResponse = {
+  items: Agent[];
+  total: number;
+  limit: number | null;
+  offset: number;
+  has_next: boolean;
+};
+
 type GraphRun = {
   id: string;
   trace_id: string | null;
@@ -1160,6 +1168,8 @@ export function App() {
   const [agentFolderName, setAgentFolderName] = useState("Production agents");
   const [agentSearch, setAgentSearch] = useState("");
   const [agentPage, setAgentPage] = useState(0);
+  const [agentTotal, setAgentTotal] = useState(0);
+  const [agentHasNext, setAgentHasNext] = useState(false);
   const [agentName, setAgentName] = useState("Support Workflow Agent");
   const [agentTokenBudget, setAgentTokenBudget] = useState(4000);
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
@@ -1848,6 +1858,8 @@ export function App() {
 
   function clearAgentState() {
     setAgents([]);
+    setAgentTotal(0);
+    setAgentHasNext(false);
     setEvaluationAgentOptions([]);
     setSelectedAgentId("");
     setAgentSummary(null);
@@ -2389,12 +2401,14 @@ export function App() {
 
   async function loadAgents(page = agentPage, folderId = selectedAgentFolderId, search = agentSearch) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<Agent[]>(
+    const data = await apiRequest<AgentListResponse>(
       workspaceListPath("/agents", agentListParams(page, folderId, search)),
       { token },
     );
-    setAgents(data);
-    const nextAgent = data.find((agent) => agent.id === selectedAgentId) ?? data[0];
+    setAgents(data.items);
+    setAgentTotal(data.total);
+    setAgentHasNext(data.has_next);
+    const nextAgent = data.items.find((agent) => agent.id === selectedAgentId) ?? data.items[0];
     setSelectedAgentId(nextAgent?.id ?? "");
     setEvaluationAgentId((current) => current || nextAgent?.id || "");
     if (nextAgent) {
@@ -2908,14 +2922,14 @@ export function App() {
       setEvaluationAgentOptions([]);
       return;
     }
-    const data = await apiRequest<Agent[]>(
+    const data = await apiRequest<AgentListResponse>(
       workspaceListPath("/agents", {
         limit: MAX_VISIBLE_EVALUATION_RUNS,
         search: search.trim() || null,
       }),
       { token },
     );
-    setEvaluationAgentOptions(data);
+    setEvaluationAgentOptions(data.items);
   }
 
 
@@ -4342,9 +4356,7 @@ export function App() {
     const agentPageStart = agentPage * MAX_VISIBLE_RESOURCES + (agents.length ? 1 : 0);
     const agentPageEnd = agentPage * MAX_VISIBLE_RESOURCES + agents.length;
     const canGoToPreviousAgentPage = agentPage > 0;
-    const canGoToNextAgentPage = agentSearch.trim()
-      ? agents.length === MAX_VISIBLE_RESOURCES
-      : agentPageEnd < selectedAgentFolderCount;
+    const canGoToNextAgentPage = agentHasNext;
     const failureRate = summary && summary.total_runs > 0
       ? Math.round((summary.failed_runs / summary.total_runs) * 100)
       : 0;
@@ -4426,13 +4438,13 @@ export function App() {
                 <h3>Agent library</h3>
                 <p className="muted">Folder-scoped agent configs available for LangGraph runs, evaluations, and cost attribution.</p>
               </div>
-              <Badge>{agents.length} shown</Badge>
+              <Badge>{agents.length} of {agentTotal} shown</Badge>
             </div>
             <div className="library-toolbar">
               <div className="folder-scope-banner">
                 <span>Current folder</span>
                 <strong>{selectedAgentFolderLabel}</strong>
-                <small>{agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown from {selectedAgentFolderCount} in this folder scope.</small>
+                <small>{agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown from {agentTotal} matching this view.</small>
               </div>
               <div className="folder-scope-banner">
                 <span>Create target</span>
@@ -4482,11 +4494,11 @@ export function App() {
                   </div>
                 </article>
               ))}
-              {agents.length === 0 && <EmptyState title="No agents match this view" detail={selectedAgentFolderCount === 0 ? "Create an agent here or switch folders." : "Clear search, move to the previous page, or try another folder."} />}
+              {agents.length === 0 && <EmptyState title="No agents match this view" detail={agentTotal === 0 && selectedAgentFolderCount === 0 ? "Create an agent here or switch folders." : "Clear search, move to the previous page, or try another folder."} />}
             </div>
             <div className="pagination-bar">
               <button type="button" onClick={() => setAgentPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousAgentPage || loading}>Previous</button>
-              <span>Page {agentPage + 1} · {agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown</span>
+              <span>Page {agentPage + 1} · {agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} of {agentTotal}</span>
               <button type="button" onClick={() => setAgentPage((page) => page + 1)} disabled={!canGoToNextAgentPage || loading}>Next</button>
             </div>
             <p className="permission-note">Agent configs are loaded from the backend by folder, search, offset, and limit so large agent libraries stay navigable without loading every agent into the browser.</p>

@@ -82,6 +82,51 @@ class AgentService:
         limit: int | None = None,
         offset: int = 0,
     ) -> list[AgentConfig]:
+        filters = self._agent_filters(
+            workspace_id=workspace_id,
+            include_archived=include_archived,
+            folder_id=folder_id,
+            unfiled=unfiled,
+            search=search,
+        )
+        statement = (
+            select(AgentConfig)
+            .where(*filters)
+            .order_by(AgentConfig.created_at.desc())
+            .offset(offset)
+        )
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
+
+    def count_agents(
+        self,
+        *,
+        workspace_id: UUID,
+        include_archived: bool = False,
+        folder_id: UUID | None = None,
+        unfiled: bool = False,
+        search: str | None = None,
+    ) -> int:
+        filters = self._agent_filters(
+            workspace_id=workspace_id,
+            include_archived=include_archived,
+            folder_id=folder_id,
+            unfiled=unfiled,
+            search=search,
+        )
+        total = self.db.scalar(select(func.count(AgentConfig.id)).where(*filters))
+        return int(total or 0)
+
+    def _agent_filters(
+        self,
+        *,
+        workspace_id: UUID,
+        include_archived: bool,
+        folder_id: UUID | None,
+        unfiled: bool,
+        search: str | None,
+    ) -> list:
         filters = [AgentConfig.workspace_id == workspace_id]
         if folder_id is not None:
             ResourceFolderService(self.db).validate_folder(
@@ -98,15 +143,7 @@ class AgentService:
             filters.append(
                 or_(AgentConfig.name.ilike(pattern), AgentConfig.settings_json.ilike(pattern))
             )
-        statement = (
-            select(AgentConfig)
-            .where(*filters)
-            .order_by(AgentConfig.created_at.desc())
-            .offset(offset)
-        )
-        if limit is not None:
-            statement = statement.limit(limit)
-        return list(self.db.scalars(statement).all())
+        return filters
 
     def update_agent(
         self,

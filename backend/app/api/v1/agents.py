@@ -17,6 +17,7 @@ from app.models.workspace import Workspace
 from app.schemas.agent import (
     AgentCreateRequest,
     AgentFolderUpdateRequest,
+    AgentListResponse,
     AgentOperationalSummaryResponse,
     AgentResponse,
     AgentRunRequest,
@@ -110,7 +111,7 @@ def create_agent(
     return AgentResponse.model_validate(agent)
 
 
-@router.get("/agents", response_model=list[AgentResponse])
+@router.get("/agents", response_model=AgentListResponse)
 def list_agents(
     workspace: AgentReadAccess,
     db: DbSession,
@@ -120,7 +121,7 @@ def list_agents(
     search: SearchFilter = None,
     limit: ListLimit = None,
     offset: ListOffset = 0,
-) -> list[AgentResponse]:
+) -> AgentListResponse:
     if folder_id is not None and unfiled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -129,8 +130,9 @@ def list_agents(
                 "message": "Use either folder_id or unfiled, not both.",
             },
         )
+    service = AgentService(db)
     try:
-        agents = AgentService(db).list_agents(
+        agents = service.list_agents(
             workspace_id=workspace.id,
             include_archived=include_archived,
             folder_id=folder_id,
@@ -139,9 +141,22 @@ def list_agents(
             limit=limit,
             offset=offset,
         )
+        total = service.count_agents(
+            workspace_id=workspace.id,
+            include_archived=include_archived,
+            folder_id=folder_id,
+            unfiled=unfiled,
+            search=search,
+        )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
-    return [AgentResponse.model_validate(agent) for agent in agents]
+    return AgentListResponse(
+        items=[AgentResponse.model_validate(agent) for agent in agents],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(agents) < total,
+    )
 
 
 @router.patch("/agents/{agent_id}/folder", response_model=AgentResponse)

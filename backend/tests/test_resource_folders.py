@@ -142,9 +142,13 @@ def test_owner_can_organize_filter_move_and_delete_data_resources(client: TestCl
     )
 
     assert filtered_documents.status_code == 200
-    assert [item["id"] for item in filtered_documents.json()] == [document["id"]]
+    filtered_documents_body = filtered_documents.json()
+    assert filtered_documents_body["total"] == 1
+    assert [item["id"] for item in filtered_documents_body["items"]] == [document["id"]]
     assert filtered_datasets.status_code == 200
-    assert [item["id"] for item in filtered_datasets.json()] == [dataset["id"]]
+    filtered_datasets_body = filtered_datasets.json()
+    assert filtered_datasets_body["total"] == 1
+    assert [item["id"] for item in filtered_datasets_body["items"]] == [dataset["id"]]
 
     reindexed_document = client.post(
         f"/api/v1/workspaces/{workspace['id']}/knowledge-documents/{document['id']}/reindex",
@@ -235,9 +239,16 @@ def test_owner_can_organize_filter_move_and_archive_agent_configs(client: TestCl
     )
 
     assert filtered_agents.status_code == 200
-    assert [item["id"] for item in filtered_agents.json()] == [agent["id"]]
+    filtered_agents_body = filtered_agents.json()
+    assert filtered_agents_body["total"] == 1
+    assert [item["id"] for item in filtered_agents_body["items"]] == [agent["id"]]
     assert unfiled_agents.status_code == 200
-    assert {item["id"] for item in unfiled_agents.json()} == {agent["id"], unfiled_agent["id"]}
+    unfiled_agents_body = unfiled_agents.json()
+    assert unfiled_agents_body["total"] == 2
+    assert {item["id"] for item in unfiled_agents_body["items"]} == {
+        agent["id"],
+        unfiled_agent["id"],
+    }
     assert agent["folder_id"] == folder["id"]
     assert delete_non_empty.status_code == 409
     assert delete_non_empty.json()["detail"]["code"] == "resource_folder_not_empty"
@@ -571,13 +582,21 @@ def test_resource_list_filters_are_backend_bounded_and_searchable(client: TestCl
     )
 
     assert document_search.status_code == 200
-    assert [item["id"] for item in document_search.json()] == [refund_document["id"]]
+    document_search_body = document_search.json()
+    assert document_search_body["total"] == 1
+    assert [item["id"] for item in document_search_body["items"]] == [refund_document["id"]]
     assert document_limit.status_code == 200
-    assert len(document_limit.json()) == 1
+    document_limit_body = document_limit.json()
+    assert document_limit_body["total"] == 2
+    assert len(document_limit_body["items"]) == 1
     assert dataset_search.status_code == 200
-    assert [item["id"] for item in dataset_search.json()] == [billing_dataset["id"]]
+    dataset_search_body = dataset_search.json()
+    assert dataset_search_body["total"] == 1
+    assert [item["id"] for item in dataset_search_body["items"]] == [billing_dataset["id"]]
     assert agent_search.status_code == 200
-    assert [item["id"] for item in agent_search.json()] == [escalations_agent.json()["id"]]
+    agent_search_body = agent_search.json()
+    assert agent_search_body["total"] == 1
+    assert [item["id"] for item in agent_search_body["items"]] == [escalations_agent.json()["id"]]
     assert evaluation_search.status_code == 200
     assert [item["id"] for item in evaluation_search.json()] == [security_eval.json()["run"]["id"]]
     assert evaluation_limit.status_code == 200
@@ -631,10 +650,26 @@ def test_agent_list_supports_folder_unfiled_search_and_offset(client: TestClient
     assert second_page.status_code == 200
     assert unfiled_page.status_code == 200
     assert search_page.status_code == 200
-    assert [item["name"] for item in first_page.json()] == ["Paged Agent 2", "Paged Agent 1"]
-    assert [item["name"] for item in second_page.json()] == ["Paged Agent 0"]
-    assert [item["name"] for item in unfiled_page.json()] == ["Paged Agent 3"]
-    assert [item["name"] for item in search_page.json()] == ["Paged Agent 1"]
+    first_body = first_page.json()
+    second_body = second_page.json()
+    unfiled_body = unfiled_page.json()
+    search_body = search_page.json()
+    assert first_body["total"] == 3
+    assert first_body["limit"] == 2
+    assert first_body["offset"] == 0
+    assert first_body["has_next"] is True
+    assert second_body["total"] == 3
+    assert second_body["limit"] == 2
+    assert second_body["offset"] == 2
+    assert second_body["has_next"] is False
+    assert unfiled_body["total"] == 1
+    assert unfiled_body["has_next"] is False
+    assert search_body["total"] == 1
+    assert search_body["has_next"] is False
+    assert [item["name"] for item in first_body["items"]] == ["Paged Agent 2", "Paged Agent 1"]
+    assert [item["name"] for item in second_body["items"]] == ["Paged Agent 0"]
+    assert [item["name"] for item in unfiled_body["items"]] == ["Paged Agent 3"]
+    assert [item["name"] for item in search_body["items"]] == ["Paged Agent 1"]
     assert created_names == ["Paged Agent 0", "Paged Agent 1", "Paged Agent 2", "Paged Agent 3"]
 
 
@@ -690,7 +725,9 @@ def test_resource_folder_counts_are_backend_authoritative_beyond_list_limit(
     )
 
     assert limited_list.status_code == 200
-    assert len(limited_list.json()) == 1
+    limited_body = limited_list.json()
+    assert limited_body["total"] == 3
+    assert len(limited_body["items"]) == 1
     assert counts.status_code == 200
     body = counts.json()
     assert body["resource_type"] == "knowledge_document"

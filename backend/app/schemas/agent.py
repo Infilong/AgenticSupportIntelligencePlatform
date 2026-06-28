@@ -62,6 +62,14 @@ class AgentResponse(BaseModel):
     created_at: datetime
 
 
+class AgentListResponse(BaseModel):
+    items: list[AgentResponse]
+    total: int
+    limit: int | None
+    offset: int
+    has_next: bool
+
+
 class AgentRunRequest(BaseModel):
     input_message: str = Field(min_length=1, max_length=4000)
 

@@ -63,6 +63,7 @@ These should remain workspace-scoped, searchable where exposed, and trace-linked
 - Add import from actual `.jsonl` and document files later if needed; when that happens, the file picker must reuse the same target-folder and post-upload management rules.
 - Consider workspace archive/delete only after a clear retention policy exists for traces, ledgers, review decisions, and audit logs.
 - Agent model-route assignment now uses a backend-bounded searchable picker instead of a native dropdown over model config history. Apply the same pattern to any future resource-backed form field that can grow beyond a small enum.
+- Agent library pagination now uses backend total-count metadata, so folder/search counts and Next-page behavior are not guessed from the current browser page.
 
 ## Verification
 Documentation matrix based on the current frontend/backend audit. Relevant previous validation:

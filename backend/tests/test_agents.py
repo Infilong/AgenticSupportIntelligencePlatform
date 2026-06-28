@@ -934,16 +934,22 @@ def test_owner_can_archive_agent_without_deleting_run_history(client: TestClient
 
     assert archived.status_code == 204
     assert default_list.status_code == 200
-    assert default_list.json() == []
+    default_body = default_list.json()
+    assert default_body["items"] == []
+    assert default_body["total"] == 0
+    assert default_body["has_next"] is False
     assert archived_list.status_code == 200
-    assert archived_list.json()[0]["id"] == agent["id"]
-    assert archived_list.json()[0]["active"] is False
-    assert archived_list.json()[0]["archived_at"] is not None
+    archived_body = archived_list.json()
+    assert archived_body["total"] == 1
+    assert archived_body["has_next"] is False
+    assert archived_body["items"][0]["id"] == agent["id"]
+    assert archived_body["items"][0]["active"] is False
+    assert archived_body["items"][0]["archived_at"] is not None
     assert rerun.status_code == 409
     assert rerun.json()["detail"]["code"] == "agent_unavailable"
     assert trace.status_code == 200
     assert trace.json()["run"]["id"] == run["id"]
-    assert any(log["action"] == "agent.archived" for log in audit_logs.json())
+    assert any(log["action"] == "agent.archived" for log in audit_logs.json()["items"])
 
 
 def test_agent_archive_requires_owner_and_is_workspace_scoped(
@@ -984,7 +990,9 @@ def test_agent_archive_requires_owner_and_is_workspace_scoped(
     assert member_delete.json()["detail"]["required_permission"] == "agents:delete"
     assert other_delete.status_code == 404
     assert other_delete.json()["detail"]["code"] == "agent_not_found"
-    assert [item["id"] for item in owner_list.json()] == [agent["id"]]
+    owner_body = owner_list.json()
+    assert owner_body["total"] == 1
+    assert [item["id"] for item in owner_body["items"]] == [agent["id"]]
 
 
 def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:
