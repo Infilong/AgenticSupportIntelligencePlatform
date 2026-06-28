@@ -21,6 +21,7 @@ const MAX_VISIBLE_RESOURCES = 40;
 const MAX_VISIBLE_EVALUATION_RUNS = 20;
 const MAX_VISIBLE_ADMIN_ASSETS = 30;
 const MAX_VISIBLE_AUDIT_EVENTS = 30;
+const MAX_VISIBLE_COST_ITEMS = 12;
 
 type CurrentUser = {
   id: string;
@@ -1120,6 +1121,9 @@ export function App() {
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
   const [budgetPolicy, setBudgetPolicy] = useState<BudgetPolicy | null>(null);
+  const [costSearch, setCostSearch] = useState("");
+  const [costRunStatusFilter, setCostRunStatusFilter] = useState("all");
+  const [aiLedgerStatusFilter, setAiLedgerStatusFilter] = useState("all");
   const [budgetDraft, setBudgetDraft] = useState<BudgetPolicyDraft>({
     monthly_token_budget: "100000",
     monthly_cost_budget: "10",
@@ -6024,6 +6028,46 @@ export function App() {
       : costSummary.latency_p95_ms > 2000
         ? "P95 latency needs attention"
         : "Latency within local-demo range";
+    const filteredAgentSpend = (costSummary?.by_agent ?? []).filter((item) =>
+      matchesSearch(costSearch, item.agent_name, item.agent_id, String(item.tokens), String(item.estimated_cost)),
+    );
+    const filteredPurposeSpend = (costSummary?.by_purpose ?? []).filter((item) =>
+      matchesSearch(costSearch, item.purpose, String(item.tokens), String(item.estimated_cost)),
+    );
+    const filteredModelSpend = (costSummary?.by_model ?? []).filter((item) =>
+      matchesSearch(costSearch, item.provider, item.model, String(item.tokens), String(item.estimated_cost)),
+    );
+    const filteredRecentRuns = (costSummary?.recent_runs ?? []).filter((run) => {
+      const matchesStatus = costRunStatusFilter === "all" || run.status === costRunStatusFilter || run.route_decision === costRunStatusFilter;
+      return matchesStatus && matchesSearch(
+        costSearch,
+        run.agent_name,
+        run.graph_run_id,
+        run.status,
+        run.route_decision,
+        String(run.tokens),
+        String(run.estimated_cost),
+      );
+    });
+    const filteredAIRuns = (costSummary?.recent_ai_runs ?? []).filter((run) => {
+      const matchesStatus = aiLedgerStatusFilter === "all" || run.status === aiLedgerStatusFilter;
+      return matchesStatus && matchesSearch(
+        costSearch,
+        run.provider,
+        run.model,
+        run.purpose,
+        run.language,
+        run.status,
+        run.id,
+        run.graph_run_id,
+        run.error_message,
+      );
+    });
+    const displayedAgentSpend = filteredAgentSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
+    const displayedPurposeSpend = filteredPurposeSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
+    const displayedModelSpend = filteredModelSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
+    const displayedRecentRuns = filteredRecentRuns.slice(0, MAX_VISIBLE_COST_ITEMS);
+    const displayedAIRuns = filteredAIRuns.slice(0, MAX_VISIBLE_COST_ITEMS);
 
     return (
       <div className="cost-console">
@@ -6072,6 +6116,44 @@ export function App() {
               <Metric label="Posture" value={latencyPosture} />
             </section>
 
+            <section className="panel stack full-width cost-filter-panel">
+              <div className="row-head">
+                <div>
+                  <h3>Cost investigation filters</h3>
+                  <p className="muted">Filter spend drivers, recent graph runs, and AI ledger rows without changing backend accounting.</p>
+                </div>
+                <Badge>{filteredAgentSpend.length + filteredPurposeSpend.length + filteredModelSpend.length} spend matches</Badge>
+              </div>
+              <div className="library-toolbar cost-toolbar">
+                <label>
+                  Search cost evidence
+                  <input
+                    value={costSearch}
+                    onChange={(event) => setCostSearch(event.target.value)}
+                    placeholder="Agent, model, purpose, run id, status, error, or language"
+                  />
+                </label>
+                <label>
+                  Graph-run status
+                  <select value={costRunStatusFilter} onChange={(event) => setCostRunStatusFilter(event.target.value)}>
+                    <option value="all">All graph runs</option>
+                    <option value="completed">Completed</option>
+                    <option value="needs_human_review">Needs review</option>
+                    <option value="failed">Failed</option>
+                    <option value="human_review">Review route</option>
+                  </select>
+                </label>
+                <label>
+                  AI call status
+                  <select value={aiLedgerStatusFilter} onChange={(event) => setAiLedgerStatusFilter(event.target.value)}>
+                    <option value="all">All AI calls</option>
+                    <option value="succeeded">Succeeded</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
             <section className="cost-workbench">
               <div className="panel stack">
                 <div className="row-head">
@@ -6079,10 +6161,10 @@ export function App() {
                     <h3>Cost by agent</h3>
                     <p className="muted">Agent attribution shows which workflow configuration is driving model calls, latency, and spend.</p>
                   </div>
-                  <Badge>{costSummary.by_agent.length} agents</Badge>
+                  <Badge>{displayedAgentSpend.length}/{filteredAgentSpend.length} agents</Badge>
                 </div>
                 <div className="cost-card-list">
-                  {costSummary.by_agent.map((item) => (
+                  {displayedAgentSpend.map((item) => (
                     <article className="cost-card" key={item.agent_id}>
                       <div className="row-head">
                         <strong>{item.agent_name}</strong>
@@ -6097,6 +6179,8 @@ export function App() {
                     </article>
                   ))}
                   {costSummary.by_agent.length === 0 && <EmptyState title="No agent spend" detail="Run an agent to connect AI calls back to graph workflows." />}
+                  {costSummary.by_agent.length > 0 && filteredAgentSpend.length === 0 && <EmptyState title="No agent spend matches" detail="Clear search to inspect all agent cost attribution." />}
+                  {filteredAgentSpend.length > displayedAgentSpend.length && <p className="permission-note">Showing first {MAX_VISIBLE_COST_ITEMS} of {filteredAgentSpend.length} matching agents.</p>}
                 </div>
               </div>
 
@@ -6192,10 +6276,10 @@ export function App() {
                   <h3>Recent graph-run spend</h3>
                   <p className="muted">Each row links cost back to a trace so developers can inspect prompts, tools, guardrails, and routing decisions.</p>
                 </div>
-                <Badge>{costSummary.recent_runs.length} runs</Badge>
+                <Badge>{displayedRecentRuns.length}/{filteredRecentRuns.length} runs</Badge>
               </div>
               <div className="cost-run-list">
-                {costSummary.recent_runs.map((run) => (
+                {displayedRecentRuns.map((run) => (
                   <article className="cost-run-row" key={run.graph_run_id}>
                     <button type="button" className="resource-main-button" onClick={() => { setTraceRunId(run.graph_run_id); void loadTrace(run.graph_run_id); goToTab("trace"); }}>
                       <span>
@@ -6213,6 +6297,8 @@ export function App() {
                   </article>
                 ))}
                 {costSummary.recent_runs.length === 0 && <EmptyState title="No graph-run spend" detail="Run an agent to see run-level cost and trace links." />}
+                {costSummary.recent_runs.length > 0 && filteredRecentRuns.length === 0 && <EmptyState title="No graph-run spend matches" detail="Clear search or change graph-run status filter." />}
+                {filteredRecentRuns.length > displayedRecentRuns.length && <p className="permission-note">Showing first {MAX_VISIBLE_COST_ITEMS} of {filteredRecentRuns.length} matching graph runs.</p>}
               </div>
             </section>
 
@@ -6223,10 +6309,10 @@ export function App() {
                     <h3>Cost by AI purpose</h3>
                     <p className="muted">Use this to decide where token-budget work matters most: classification, drafting, evaluation, or context compression.</p>
                   </div>
-                  <Badge>{costSummary.by_purpose.length} purposes</Badge>
+                  <Badge>{displayedPurposeSpend.length}/{filteredPurposeSpend.length} purposes</Badge>
                 </div>
                 <div className="cost-card-list">
-                  {costSummary.by_purpose.map((item) => (
+                  {displayedPurposeSpend.map((item) => (
                     <article className="cost-card" key={item.purpose}>
                       <div className="row-head">
                         <strong>{item.purpose}</strong>
@@ -6240,6 +6326,8 @@ export function App() {
                     </article>
                   ))}
                   {costSummary.by_purpose.length === 0 && <EmptyState title="No purpose spend" detail="Purpose breakdown appears after model calls are recorded." />}
+                  {costSummary.by_purpose.length > 0 && filteredPurposeSpend.length === 0 && <EmptyState title="No purpose spend matches" detail="Clear search to inspect all AI purpose spend." />}
+                  {filteredPurposeSpend.length > displayedPurposeSpend.length && <p className="permission-note">Showing first {MAX_VISIBLE_COST_ITEMS} of {filteredPurposeSpend.length} matching purposes.</p>}
                 </div>
               </div>
 
@@ -6249,10 +6337,10 @@ export function App() {
                     <h3>Cost by model</h3>
                     <p className="muted">Provider and model attribution proves that cost tracking is connected to real model routing decisions.</p>
                   </div>
-                  <Badge>{costSummary.by_model.length} models</Badge>
+                  <Badge>{displayedModelSpend.length}/{filteredModelSpend.length} models</Badge>
                 </div>
                 <div className="model-spend-grid">
-                  {costSummary.by_model.map((item) => (
+                  {displayedModelSpend.map((item) => (
                     <article className="model-spend-card" key={`${item.provider}:${item.model}`}>
                       <div className="row-head">
                         <div>
@@ -6268,6 +6356,8 @@ export function App() {
                     </article>
                   ))}
                   {costSummary.by_model.length === 0 && <EmptyState title="No model spend" detail="Model breakdown appears after AI run ledger entries are created." />}
+                  {costSummary.by_model.length > 0 && filteredModelSpend.length === 0 && <EmptyState title="No model spend matches" detail="Clear search to inspect all model cost attribution." />}
+                  {filteredModelSpend.length > displayedModelSpend.length && <p className="permission-note">Showing first {MAX_VISIBLE_COST_ITEMS} of {filteredModelSpend.length} matching models.</p>}
                 </div>
               </div>
             </section>
@@ -6278,10 +6368,10 @@ export function App() {
                   <h3>Recent AI run ledger</h3>
                   <p className="muted">The latest model calls expose status, token split, cache behavior, provider, model, and error messages.</p>
                 </div>
-                <Badge>{costSummary.recent_ai_runs.length} calls</Badge>
+                <Badge>{displayedAIRuns.length}/{filteredAIRuns.length} calls</Badge>
               </div>
               <div className="ai-ledger-list">
-                {costSummary.recent_ai_runs.map((run) => (
+                {displayedAIRuns.map((run) => (
                   <article className="ai-ledger-row" key={run.id}>
                     <div className="row-head">
                       <div>
@@ -6305,6 +6395,8 @@ export function App() {
                   </article>
                 ))}
                 {costSummary.recent_ai_runs.length === 0 && <EmptyState title="No AI ledger rows" detail="Model calls create detailed ledger rows here." />}
+                {costSummary.recent_ai_runs.length > 0 && filteredAIRuns.length === 0 && <EmptyState title="No AI ledger rows match" detail="Clear search or change AI call status filter." />}
+                {filteredAIRuns.length > displayedAIRuns.length && <p className="permission-note">Showing first {MAX_VISIBLE_COST_ITEMS} of {filteredAIRuns.length} matching AI ledger rows.</p>}
               </div>
             </section>
           </>

@@ -49,3 +49,7 @@ Documentation-only ticket. Existing backend behavior is covered by `backend/test
 ## 2026-06-29 Audit Trail Follow-up
 - Audit logs are loaded through the existing workspace-scoped, server-limited API.
 - The Audit page now adds frontend search, impact filtering, actor filtering, and bounded rendering so admin review remains usable as events grow.
+
+## 2026-06-29 Cost Workbench Follow-up
+- Cost and AI ledger views now provide shared search plus graph-run and AI-call status filters.
+- Spend driver lists are bounded so token/cost investigation remains usable as agents, model routes, and runs grow.
