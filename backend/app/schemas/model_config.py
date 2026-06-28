@@ -20,6 +20,14 @@ class ModelConfigResponse(BaseModel):
     created_at: datetime
 
 
+class ModelConfigListResponse(BaseModel):
+    items: list[ModelConfigResponse]
+    total: int
+    limit: int | None
+    offset: int
+    has_next: bool
+
+
 class ModelConfigCreateRequest(BaseModel):
     provider: str = Field(min_length=1, max_length=80)
     model: str = Field(min_length=1, max_length=120)

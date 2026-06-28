@@ -109,7 +109,9 @@ def test_prompt_template_admin_can_create_list_and_activate_versions(
     assert activated.status_code == 200
     assert activated.json()["active"] is True
     assert listed.status_code == 200
-    active_versions = [item["version"] for item in listed.json() if item["active"]]
+    listed_body = listed.json()
+    assert listed_body["total"] == 2
+    active_versions = [item["version"] for item in listed_body["items"] if item["active"]]
     assert active_versions == [2]
     stored = db_session.scalars(select(PromptTemplate)).all()
     assert {template.version for template in stored} == {1, 2}
@@ -151,15 +153,33 @@ def test_prompt_template_list_supports_search_status_and_offset(client: TestClie
     assert draft_page.status_code == 200
     assert archived_page.status_code == 200
     assert search_page.status_code == 200
-    assert len(first_page.json()) == 2
-    assert len(second_page.json()) == 1
-    assert {item["id"] for item in first_page.json()}.isdisjoint(
-        {item["id"] for item in second_page.json()}
+    first_body = first_page.json()
+    second_body = second_page.json()
+    active_body = active_page.json()
+    draft_body = draft_page.json()
+    archived_body = archived_page.json()
+    search_body = search_page.json()
+    assert first_body["total"] == 3
+    assert first_body["limit"] == 2
+    assert first_body["offset"] == 0
+    assert first_body["has_next"] is True
+    assert len(first_body["items"]) == 2
+    assert second_body["total"] == 3
+    assert second_body["limit"] == 2
+    assert second_body["offset"] == 2
+    assert second_body["has_next"] is False
+    assert len(second_body["items"]) == 1
+    assert {item["id"] for item in first_body["items"]}.isdisjoint(
+        {item["id"] for item in second_body["items"]}
     )
-    assert [item["id"] for item in active_page.json()] == [created[0]["id"]]
-    assert {item["id"] for item in draft_page.json()} == {created[2]["id"], created[3]["id"]}
-    assert [item["id"] for item in archived_page.json()] == [created[1]["id"]]
-    assert [item["id"] for item in search_page.json()] == [created[3]["id"]]
+    assert active_body["total"] == 1
+    assert [item["id"] for item in active_body["items"]] == [created[0]["id"]]
+    assert draft_body["total"] == 2
+    assert {item["id"] for item in draft_body["items"]} == {created[2]["id"], created[3]["id"]}
+    assert archived_body["total"] == 1
+    assert [item["id"] for item in archived_body["items"]] == [created[1]["id"]]
+    assert search_body["total"] == 1
+    assert [item["id"] for item in search_body["items"]] == [created[3]["id"]]
 
 
 def test_active_prompt_template_is_used_by_next_agent_run(client: TestClient) -> None:
@@ -235,7 +255,9 @@ def test_prompt_templates_are_workspace_scoped(client: TestClient) -> None:
     assert forbidden_activate.status_code == 404
     assert forbidden_activate.json()["detail"]["code"] == "prompt_template_not_found"
     assert other_list.status_code == 200
-    assert other_list.json() == []
+    other_body = other_list.json()
+    assert other_body["total"] == 0
+    assert other_body["items"] == []
 
 
 def test_prompt_template_archive_and_owner_only_mutation(
@@ -289,10 +311,14 @@ def test_prompt_template_archive_and_owner_only_mutation(
 
     assert archived.status_code == 204
     assert default_list.status_code == 200
-    assert default_list.json() == []
+    default_body = default_list.json()
+    assert default_body["total"] == 0
+    assert default_body["items"] == []
     assert archived_list.status_code == 200
-    assert archived_list.json()[0]["archived_at"] is not None
-    assert archived_list.json()[0]["active"] is False
+    archived_body = archived_list.json()
+    assert archived_body["total"] == 1
+    assert archived_body["items"][0]["archived_at"] is not None
+    assert archived_body["items"][0]["active"] is False
     assert activate_archived.status_code == 404
     assert activate_archived.json()["detail"]["code"] == "prompt_template_not_found"
 

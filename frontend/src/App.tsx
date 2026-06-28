@@ -734,6 +734,14 @@ type PromptTemplate = {
   created_at: string;
 };
 
+type PromptTemplateListResponse = {
+  items: PromptTemplate[];
+  total: number;
+  limit: number | null;
+  offset: number;
+  has_next: boolean;
+};
+
 type ModelConfig = {
   id: string;
   workspace_id: string | null;
@@ -746,6 +754,14 @@ type ModelConfig = {
   active: boolean;
   archived_at: string | null;
   created_at: string;
+};
+
+type ModelConfigListResponse = {
+  items: ModelConfig[];
+  total: number;
+  limit: number | null;
+  offset: number;
+  has_next: boolean;
 };
 
 type ApiOptions = {
@@ -1208,6 +1224,8 @@ export function App() {
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [promptTemplateHistory, setPromptTemplateHistory] = useState<PromptTemplate[]>([]);
   const [promptHistoryPage, setPromptHistoryPage] = useState(0);
+  const [promptHistoryTotal, setPromptHistoryTotal] = useState(0);
+  const [promptHistoryHasNext, setPromptHistoryHasNext] = useState(false);
   const [promptName, setPromptName] = useState("support_response_drafter");
   const [promptLanguage, setPromptLanguage] = useState<Language>("en");
   const [promptText, setPromptText] = useState(defaultPromptTemplateText);
@@ -1219,6 +1237,8 @@ export function App() {
   const [modelConfigs, setModelConfigs] = useState<ModelConfig[]>([]);
   const [modelConfigHistory, setModelConfigHistory] = useState<ModelConfig[]>([]);
   const [modelHistoryPage, setModelHistoryPage] = useState(0);
+  const [modelHistoryTotal, setModelHistoryTotal] = useState(0);
+  const [modelHistoryHasNext, setModelHistoryHasNext] = useState(false);
   const [modelProvider, setModelProvider] = useState("mock");
   const [modelName, setModelName] = useState("mock-cheap");
   const [modelPurpose, setModelPurpose] = useState("classification");
@@ -1578,8 +1598,8 @@ export function App() {
       can("budget_policy:read") ? loadBudgetPolicy() : Promise.resolve(setBudgetPolicy(null)),
       can("system:read") ? loadSystemHealth() : Promise.resolve(setSystemHealth(null)),
       can("audit:read") ? loadAuditLogs() : Promise.resolve(clearAuditState()),
-      can("prompts:read") ? loadPromptTemplates() : Promise.resolve(setPromptTemplates([])),
-      can("models:read") ? loadModelConfigs() : Promise.resolve(setModelConfigs([])),
+      can("prompts:read") ? loadPromptTemplates() : Promise.resolve(clearPromptState()),
+      can("models:read") ? loadModelConfigs() : Promise.resolve(clearModelState()),
       canUseFolders ? loadResourceFolders(permissions) : Promise.resolve(clearResourceFolderState()),
     ]);
   }
@@ -1806,6 +1826,20 @@ export function App() {
     setAuditLogs([]);
     setAuditTotal(0);
     setAuditHasNext(false);
+  }
+
+  function clearPromptState() {
+    setPromptTemplates([]);
+    setPromptTemplateHistory([]);
+    setPromptHistoryTotal(0);
+    setPromptHistoryHasNext(false);
+  }
+
+  function clearModelState() {
+    setModelConfigs([]);
+    setModelConfigHistory([]);
+    setModelHistoryTotal(0);
+    setModelHistoryHasNext(false);
   }
 
   function clearGuardrailState() {
@@ -3001,11 +3035,11 @@ export function App() {
 
   async function loadPromptTemplates() {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<PromptTemplate[]>(
+    const data = await apiRequest<PromptTemplateListResponse>(
       workspaceListPath("/prompt-templates", { status: "all", limit: 500 }),
       { token },
     );
-    setPromptTemplates(data);
+    setPromptTemplates(data.items);
   }
 
   function promptTemplateHistoryParams(
@@ -3036,14 +3070,16 @@ export function App() {
     search = promptSearch,
   ) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<PromptTemplate[]>(
+    const data = await apiRequest<PromptTemplateListResponse>(
       workspaceListPath(
         "/prompt-templates",
         promptTemplateHistoryParams(page, includeArchived, status, search),
       ),
       { token },
     );
-    setPromptTemplateHistory(data);
+    setPromptTemplateHistory(data.items);
+    setPromptHistoryTotal(data.total);
+    setPromptHistoryHasNext(data.has_next);
   }
 
   async function createPromptTemplateVersion(event: FormEvent) {
@@ -3101,11 +3137,11 @@ export function App() {
 
   async function loadModelConfigs() {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<ModelConfig[]>(
+    const data = await apiRequest<ModelConfigListResponse>(
       workspaceListPath("/model-configs", { status: "all", limit: 500 }),
       { token },
     );
-    setModelConfigs(data);
+    setModelConfigs(data.items);
   }
 
   function modelConfigHistoryParams(
@@ -3136,11 +3172,13 @@ export function App() {
     search = modelSearch,
   ) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<ModelConfig[]>(
+    const data = await apiRequest<ModelConfigListResponse>(
       workspaceListPath("/model-configs", modelConfigHistoryParams(page, includeArchived, status, search)),
       { token },
     );
-    setModelConfigHistory(data);
+    setModelConfigHistory(data.items);
+    setModelHistoryTotal(data.total);
+    setModelHistoryHasNext(data.has_next);
   }
 
   async function createModelConfig(event: FormEvent) {
@@ -6202,7 +6240,7 @@ export function App() {
     const promptHistoryPageStart = promptHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedPromptTemplates.length ? 1 : 0);
     const promptHistoryPageEnd = promptHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + displayedPromptTemplates.length;
     const canGoToPreviousPromptHistoryPage = promptHistoryPage > 0;
-    const canGoToNextPromptHistoryPage = displayedPromptTemplates.length === MAX_VISIBLE_ADMIN_ASSETS;
+    const canGoToNextPromptHistoryPage = promptHistoryHasNext;
 
     return (
       <div className="settings-console prompt-console">
@@ -6299,7 +6337,7 @@ export function App() {
                 />
                 Show archived
               </label>
-              <Badge>{displayedPromptTemplates.length} shown</Badge>
+              <Badge>{displayedPromptTemplates.length} of {promptHistoryTotal} shown</Badge>
             </div>
           </div>
           <div className="library-toolbar settings-history-toolbar">
@@ -6352,10 +6390,10 @@ export function App() {
           )}
           <div className="pagination-bar">
             <button type="button" onClick={() => setPromptHistoryPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousPromptHistoryPage || loading}>Previous</button>
-            <span>Page {promptHistoryPage + 1} · {displayedPromptTemplates.length ? `${promptHistoryPageStart}-${promptHistoryPageEnd}` : "0"} shown</span>
+            <span>Page {promptHistoryPage + 1} · {displayedPromptTemplates.length ? `${promptHistoryPageStart}-${promptHistoryPageEnd}` : "0"} of {promptHistoryTotal} prompts</span>
             <button type="button" onClick={() => setPromptHistoryPage((page) => page + 1)} disabled={!canGoToNextPromptHistoryPage || loading}>Next</button>
           </div>
-          <p className="permission-note">A full prompt-history page enables Next; empty next pages mean the current backend filter has no more matches.</p>
+          <p className="permission-note">Backend totals decide whether another prompt-history page exists.</p>
         </section>
       </div>
     );
@@ -6597,7 +6635,7 @@ export function App() {
     const modelHistoryPageStart = modelHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedModelConfigs.length ? 1 : 0);
     const modelHistoryPageEnd = modelHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + displayedModelConfigs.length;
     const canGoToPreviousModelHistoryPage = modelHistoryPage > 0;
-    const canGoToNextModelHistoryPage = displayedModelConfigs.length === MAX_VISIBLE_ADMIN_ASSETS;
+    const canGoToNextModelHistoryPage = modelHistoryHasNext;
 
     return (
       <div className="settings-console model-console">
@@ -6706,7 +6744,7 @@ export function App() {
                 />
                 Show archived
               </label>
-              <Badge>{displayedModelConfigs.length} shown</Badge>
+              <Badge>{displayedModelConfigs.length} of {modelHistoryTotal} shown</Badge>
             </div>
           </div>
           <div className="library-toolbar settings-history-toolbar">
@@ -6761,10 +6799,10 @@ export function App() {
           )}
           <div className="pagination-bar">
             <button type="button" onClick={() => setModelHistoryPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousModelHistoryPage || loading}>Previous</button>
-            <span>Page {modelHistoryPage + 1} · {displayedModelConfigs.length ? `${modelHistoryPageStart}-${modelHistoryPageEnd}` : "0"} shown</span>
+            <span>Page {modelHistoryPage + 1} · {displayedModelConfigs.length ? `${modelHistoryPageStart}-${modelHistoryPageEnd}` : "0"} of {modelHistoryTotal} configs</span>
             <button type="button" onClick={() => setModelHistoryPage((page) => page + 1)} disabled={!canGoToNextModelHistoryPage || loading}>Next</button>
           </div>
-          <p className="permission-note">A full model-history page enables Next; empty next pages mean the current backend filter has no more matches.</p>
+          <p className="permission-note">Backend totals decide whether another model-history page exists.</p>
           {activeConfigs.length > 0 && <p className="muted">Active OpenAI/OpenAI-compatible configs perform live calls when the backend has an API key; otherwise the failed attempt is visible in trace, review, and cost records.</p>}
         </section>
       </div>

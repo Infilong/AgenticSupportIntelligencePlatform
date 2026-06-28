@@ -9,7 +9,11 @@ from app.dependencies.auth import get_current_user
 from app.dependencies.workspace import require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
-from app.schemas.model_config import ModelConfigCreateRequest, ModelConfigResponse
+from app.schemas.model_config import (
+    ModelConfigCreateRequest,
+    ModelConfigListResponse,
+    ModelConfigResponse,
+)
 from app.services.audit_log_service import AuditLogService
 from app.services.model_config_service import ModelConfigNotFoundError, ModelConfigService
 
@@ -28,7 +32,7 @@ HistoryLimit = Annotated[int | None, Query(ge=1, le=500)]
 HistoryOffset = Annotated[int, Query(ge=0)]
 
 
-@router.get("", response_model=list[ModelConfigResponse])
+@router.get("", response_model=ModelConfigListResponse)
 def list_model_configs(
     workspace: ModelReadAccess,
     db: DbSession,
@@ -37,8 +41,9 @@ def list_model_configs(
     search: HistorySearchFilter = None,
     limit: HistoryLimit = None,
     offset: HistoryOffset = 0,
-) -> list[ModelConfigResponse]:
-    configs = ModelConfigService(db).list_configs(
+) -> ModelConfigListResponse:
+    service = ModelConfigService(db)
+    configs = service.list_configs(
         workspace_id=workspace.id,
         include_archived=include_archived,
         status_filter=status_filter,
@@ -46,7 +51,19 @@ def list_model_configs(
         limit=limit,
         offset=offset,
     )
-    return [ModelConfigResponse.model_validate(config) for config in configs]
+    total = service.count_configs(
+        workspace_id=workspace.id,
+        include_archived=include_archived,
+        status_filter=status_filter,
+        search=search,
+    )
+    return ModelConfigListResponse(
+        items=[ModelConfigResponse.model_validate(config) for config in configs],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(configs) < total,
+    )
 
 
 @router.post("", response_model=ModelConfigResponse, status_code=status.HTTP_201_CREATED)

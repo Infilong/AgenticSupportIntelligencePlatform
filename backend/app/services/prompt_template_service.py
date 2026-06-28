@@ -28,29 +28,12 @@ class PromptTemplateService:
         limit: int | None = None,
         offset: int = 0,
     ) -> list[PromptTemplate]:
-        filters = [PromptTemplate.workspace_id == workspace_id]
-        if status_filter == "active":
-            filters.extend([PromptTemplate.active.is_(True), PromptTemplate.archived_at.is_(None)])
-        elif status_filter == "draft":
-            filters.extend([PromptTemplate.active.is_(False), PromptTemplate.archived_at.is_(None)])
-        elif status_filter == "archived":
-            filters.append(PromptTemplate.archived_at.is_not(None))
-        elif not include_archived:
-            filters.append(PromptTemplate.archived_at.is_(None))
-
-        normalized_search = (search or "").strip()
-        if normalized_search:
-            pattern = f"%{normalized_search}%"
-            filters.append(
-                or_(
-                    PromptTemplate.name.ilike(pattern),
-                    PromptTemplate.language.ilike(pattern),
-                    cast(PromptTemplate.version, String).ilike(pattern),
-                    cast(PromptTemplate.id, String).ilike(pattern),
-                    PromptTemplate.template_text.ilike(pattern),
-                )
-            )
-
+        filters = _prompt_template_filters(
+            workspace_id=workspace_id,
+            include_archived=include_archived,
+            status_filter=status_filter,
+            search=search,
+        )
         statement = (
             select(PromptTemplate)
             .where(*filters)
@@ -65,6 +48,23 @@ class PromptTemplateService:
         if limit is not None:
             statement = statement.limit(limit)
         return list(self.db.scalars(statement).all())
+
+    def count_templates(
+        self,
+        *,
+        workspace_id: UUID,
+        include_archived: bool = False,
+        status_filter: str = "all",
+        search: str | None = None,
+    ) -> int:
+        filters = _prompt_template_filters(
+            workspace_id=workspace_id,
+            include_archived=include_archived,
+            status_filter=status_filter,
+            search=search,
+        )
+        total = self.db.scalar(select(func.count(PromptTemplate.id)).where(*filters))
+        return int(total or 0)
 
     def get_active_or_create_default(
         self,
@@ -225,3 +225,31 @@ class PromptTemplateService:
         for template in templates:
             template.active = False
         self.db.flush()
+
+
+def _prompt_template_filters(
+    *, workspace_id: UUID, include_archived: bool, status_filter: str, search: str | None
+) -> list:
+    filters = [PromptTemplate.workspace_id == workspace_id]
+    if status_filter == "active":
+        filters.extend([PromptTemplate.active.is_(True), PromptTemplate.archived_at.is_(None)])
+    elif status_filter == "draft":
+        filters.extend([PromptTemplate.active.is_(False), PromptTemplate.archived_at.is_(None)])
+    elif status_filter == "archived":
+        filters.append(PromptTemplate.archived_at.is_not(None))
+    elif not include_archived:
+        filters.append(PromptTemplate.archived_at.is_(None))
+
+    normalized_search = (search or "").strip()
+    if normalized_search:
+        pattern = f"%{normalized_search}%"
+        filters.append(
+            or_(
+                PromptTemplate.name.ilike(pattern),
+                PromptTemplate.language.ilike(pattern),
+                cast(PromptTemplate.version, String).ilike(pattern),
+                cast(PromptTemplate.id, String).ilike(pattern),
+                PromptTemplate.template_text.ilike(pattern),
+            )
+        )
+    return filters

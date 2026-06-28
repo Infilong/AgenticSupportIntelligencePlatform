@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.prompt_template import (
     PromptTemplateCreateVersionRequest,
+    PromptTemplateListResponse,
     PromptTemplateResponse,
 )
 from app.services.audit_log_service import AuditLogService
@@ -34,7 +35,7 @@ HistoryLimit = Annotated[int | None, Query(ge=1, le=500)]
 HistoryOffset = Annotated[int, Query(ge=0)]
 
 
-@router.get("", response_model=list[PromptTemplateResponse])
+@router.get("", response_model=PromptTemplateListResponse)
 def list_prompt_templates(
     workspace: PromptReadAccess,
     db: DbSession,
@@ -43,8 +44,9 @@ def list_prompt_templates(
     search: HistorySearchFilter = None,
     limit: HistoryLimit = None,
     offset: HistoryOffset = 0,
-) -> list[PromptTemplateResponse]:
-    templates = PromptTemplateService(db).list_templates(
+) -> PromptTemplateListResponse:
+    service = PromptTemplateService(db)
+    templates = service.list_templates(
         workspace_id=workspace.id,
         include_archived=include_archived,
         status_filter=status_filter,
@@ -52,7 +54,19 @@ def list_prompt_templates(
         limit=limit,
         offset=offset,
     )
-    return [PromptTemplateResponse.model_validate(template) for template in templates]
+    total = service.count_templates(
+        workspace_id=workspace.id,
+        include_archived=include_archived,
+        status_filter=status_filter,
+        search=search,
+    )
+    return PromptTemplateListResponse(
+        items=[PromptTemplateResponse.model_validate(template) for template in templates],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(templates) < total,
+    )
 
 
 @router.post("", response_model=PromptTemplateResponse, status_code=status.HTTP_201_CREATED)

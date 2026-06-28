@@ -20,6 +20,14 @@ class PromptTemplateResponse(BaseModel):
     created_at: datetime
 
 
+class PromptTemplateListResponse(BaseModel):
+    items: list[PromptTemplateResponse]
+    total: int
+    limit: int | None
+    offset: int
+    has_next: bool
+
+
 class PromptTemplateCreateVersionRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     language: SupportedLanguage
