@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -34,6 +35,7 @@ class HumanReviewResponse(BaseModel):
     created_at: datetime
     resolved_at: datetime | None
     run: HumanReviewRunContext | None = None
+    review_context: dict[str, Any] | None = None
 
 
 class HumanReviewResolveRequest(BaseModel):

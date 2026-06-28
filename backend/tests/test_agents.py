@@ -132,6 +132,11 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     classification_step = next(
         step for step in trace_body["steps"] if step["step_name"] == "classify_intent"
     )
+    classification_output = safe_json(classification_step["output_json"])
+    assert classification_output["intent"] == "refund_request"
+    assert classification_output["product_area"] == "billing"
+    assert classification_output["safety_risk"] == "low"
+    assert classification_output["classification_rationale"]
     assert classification_step["ai_run"]["provider"] == "mock"
     assert classification_step["ai_run"]["model"] == "mock-cheap"
     assert classification_step["ai_run"]["prompt_tokens"] > 0

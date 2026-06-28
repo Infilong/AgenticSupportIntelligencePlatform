@@ -898,6 +898,56 @@ th {
 }
 
 
+.review-decision-brief {
+  border: 1px solid #bfd7ff;
+  border-radius: 8px;
+  background: #f4f8ff;
+  padding: 12px;
+}
+
+.review-decision-brief span {
+  color: #315a8c;
+  font-size: 0.74rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.review-decision-brief strong {
+  display: block;
+  margin-top: 4px;
+  color: #17202a;
+}
+
+.review-decision-brief p {
+  margin: 6px 0 0;
+  color: #526071;
+}
+
+.blocker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d8dee7;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 4px 10px 4px 4px;
+}
+
+.blocker-chip span {
+  color: #526071;
+  font-size: 0.8rem;
+}
+
+.citation-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #526071;
+}
+
+.citation-list li {
+  margin: 4px 0;
+}
+
 .review-card {
   display: grid;
   gap: 12px;

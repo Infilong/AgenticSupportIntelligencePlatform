@@ -210,6 +210,36 @@ type HumanReviewRunContext = {
   created_at: string;
   completed_at: string | null;
 };
+type ReviewBlocker = {
+  code: string;
+  label: string;
+  severity: string;
+  action: string;
+};
+
+type ReviewContext = {
+  headline: string;
+  recommended_action: string;
+  can_approve: boolean;
+  classification: {
+    intent?: string | null;
+    sentiment?: string | null;
+    product_area?: string | null;
+    safety_risk?: string | null;
+    escalation_needed?: boolean | null;
+    confidence?: number | null;
+    rationale?: string | null;
+  };
+  evidence: {
+    retrieval_trace_id?: string | null;
+    retrieved_chunk_count: number;
+    citation_count: number;
+    citations: string[];
+    no_source: boolean;
+  };
+  blockers: ReviewBlocker[];
+};
+
 
 type HumanReview = {
   id: string;
@@ -225,6 +255,7 @@ type HumanReview = {
   created_at: string;
   resolved_at: string | null;
   run: HumanReviewRunContext | null;
+  review_context: ReviewContext | null;
 };
 
 type ReviewDraft = {
@@ -442,6 +473,11 @@ function safeJson(value: string): unknown {
 function formatCost(value: number | null | undefined) {
   if (!value) return "$0.0000";
   return `$${value.toFixed(4)}`;
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (typeof value !== "number" || Number.isNaN(value)) return "-";
+  return `${Math.round(value * 100)}%`;
 }
 
 function formatNumber(value: number | null | undefined) {
@@ -1596,8 +1632,11 @@ export function App() {
               const unassigned = review.reviewer_id === null;
               const ownerLabel = reviewOwnerLabel(review, currentUser);
               const run = review.run;
+              const context = review.review_context;
               const proposedAnswer = review.proposed_answer ?? run?.final_answer ?? null;
               const canApprove = Boolean(proposedAnswer);
+              const classification = context?.classification;
+              const evidence = context?.evidence;
               return (
                 <article className="review-row pending-review review-card" key={review.id}>
                   <div className="row-head">
@@ -1626,13 +1665,54 @@ export function App() {
                     </div>
                   </div>
 
+                  {context && (
+                    <section className="review-decision-brief">
+                      <div>
+                        <span>Recommended action</span>
+                        <strong>{context.headline}</strong>
+                        <p>{context.recommended_action}</p>
+                      </div>
+                    </section>
+                  )}
+
                   <div className="guardrail-list">
-                    {guardrailParts.map((part) => <Badge key={part} tone={toneForReviewReason(part)}>{friendlyGuardrailName(part)}</Badge>)}
+                    {(context?.blockers.length ? context.blockers : guardrailParts.map((part) => ({ code: part, label: friendlyGuardrailName(part), severity: "warning", action: "Inspect the trace before resolving." }))).map((blocker) => (
+                      <div className="blocker-chip" key={blocker.code}>
+                        <Badge tone={toneForReviewReason(blocker.code)}>{blocker.label}</Badge>
+                        <span>{blocker.action}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="review-context-grid">
+                    <div className="answer-box">
+                      <span>Classification</span>
+                      <div className="signal-grid review-signals">
+                        <div className="signal"><span>Intent</span><strong>{classification?.intent ?? "unknown"}</strong></div>
+                        <div className="signal"><span>Area</span><strong>{classification?.product_area ?? "unknown"}</strong></div>
+                        <div className="signal"><span>Risk</span><strong>{classification?.safety_risk ?? "unknown"}</strong></div>
+                        <div className="signal"><span>Confidence</span><strong>{formatPercent(classification?.confidence)}</strong></div>
+                      </div>
+                      {classification?.rationale && <p>{classification.rationale}</p>}
+                    </div>
+                    <div className="answer-box">
+                      <span>Evidence</span>
+                      <div className="signal-grid review-signals">
+                        <div className="signal"><span>Chunks</span><strong>{evidence?.retrieved_chunk_count ?? 0}</strong></div>
+                        <div className="signal"><span>Citations</span><strong>{evidence?.citation_count ?? 0}</strong></div>
+                        <div className="signal"><span>No source</span><strong>{evidence?.no_source ? "yes" : "no"}</strong></div>
+                      </div>
+                      {evidence?.citations.length ? (
+                        <ul className="citation-list">
+                          {evidence.citations.map((citation) => <li key={citation}>{citation}</li>)}
+                        </ul>
+                      ) : <p>No cited source was selected for this run.</p>}
+                    </div>
                   </div>
 
                   <div className="answer-box">
                     <span>Proposed answer</span>
-                    <p>{proposedAnswer ?? "No proposed answer was generated. The reviewer should reject or write a safe response after inspecting the trace."}</p>
+                    <p>{proposedAnswer ?? "No safe draft was generated. Write a sourced human response or reject this run after inspecting the trace."}</p>
                   </div>
 
                   <div className="review-editor">
@@ -2069,7 +2149,7 @@ function reviewReasonParts(reason: string): string[] {
 
 function reviewSeverity(reason: string): "critical" | "high" | "medium" {
   const parts = reviewReasonParts(reason);
-  if (parts.some((part) => ["prompt_injection", "privacy_complaint", "model_provider_failure"].includes(part))) {
+  if (parts.some((part) => ["prompt_injection", "privacy_complaint", "high_safety_risk", "model_provider_failure"].includes(part))) {
     return "critical";
   }
   if (parts.some((part) => ["model_budget_failure", "unsupported_answer", "citation_required"].includes(part))) {
@@ -2092,8 +2172,8 @@ function toneForReviewSeverity(severity: "critical" | "high" | "medium"): "neutr
 }
 
 function toneForReviewReason(reason: string): "neutral" | "good" | "warn" | "bad" {
-  if (["prompt_injection", "privacy_complaint", "model_provider_failure"].includes(reason)) return "bad";
-  if (["model_budget_failure", "unsupported_answer", "citation_required", "confidence_threshold"].includes(reason)) return "warn";
+  if (["prompt_injection", "privacy_complaint", "high_safety_risk", "model_provider_failure"].includes(reason)) return "bad";
+  if (["model_budget_failure", "unsupported_answer", "citation_required", "confidence_threshold", "escalation_needed"].includes(reason)) return "warn";
   return "neutral";
 }
 
@@ -2126,6 +2206,9 @@ function friendlyReviewReason(reason: string) {
   if (parts.includes("model_provider_failure") || parts.includes("model_budget_failure")) {
     return "Model or token budget failure needs review";
   }
+  if (parts.includes("privacy_complaint") || parts.includes("high_safety_risk")) {
+    return "Safety or privacy escalation needs review";
+  }
   if (parts.includes("prompt_injection")) {
     return "Prompt injection attempt needs review";
   }
@@ -2150,6 +2233,9 @@ function friendlyGuardrailName(reason: string) {
     unsupported_answer: "Unsupported answer",
     confidence_threshold: "Low confidence",
     language_preservation: "Language mismatch",
+    privacy_complaint: "Privacy complaint",
+    high_safety_risk: "High safety risk",
+    escalation_needed: "Escalation needed",
   };
   return labels[reason] ?? reason;
 }

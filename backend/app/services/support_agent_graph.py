@@ -72,21 +72,7 @@ class SupportAgentGraphRunner:
     def classify_intent(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
         language = SupportedLanguage(state["detected_language"])
-        text = state["input_message"].lower()
-        if _has_prompt_injection(text):
-            intent = "prompt_injection"
-        elif any(
-            term in text for term in ["privacy", "個人情報", "个人信息", "泄露"]
-        ):
-            intent = "privacy_complaint"
-        elif any(
-            term in text for term in ["security", "login", "ログイン", "端末", "安全"]
-        ):
-            intent = "account_security"
-        elif any(term in text for term in ["refund", "返金", "退款"]):
-            intent = "refund_request"
-        else:
-            intent = "general_support"
+        classification = _classification_analysis(state["input_message"])
         prompt_template = PromptTemplateService(self.db).get_active_or_create_default(
             workspace_id=UUID(state["workspace_id"]),
             name="support_intent_classifier",
@@ -99,7 +85,7 @@ class SupportAgentGraphRunner:
             purpose="classification",
             fallback_model="mock-cheap",
             prompt_text=build_classification_prompt(state["input_message"]),
-            completion_text=intent,
+            completion_text=json.dumps(classification, ensure_ascii=False),
             language=language,
         )
         if not budget_plan.allowed:
@@ -121,7 +107,7 @@ class SupportAgentGraphRunner:
                 input_message=state["input_message"],
                 graph_run_id=UUID(state["graph_run_id"]),
                 prompt_template=prompt_template,
-                completion_text=intent,
+                completion_text=json.dumps(classification, ensure_ascii=False),
             )
         except ModelProviderError as exc:
             output = _provider_failure_output(state, exc)
@@ -135,7 +121,18 @@ class SupportAgentGraphRunner:
                 error_message=str(exc),
             )
             return output
-        output: SupportAgentState = {"intent": ai_response.content}
+        structured = ai_response.structured_output or classification
+        output: SupportAgentState = {
+            "intent": str(structured.get("intent") or ai_response.content),
+            "sentiment": str(structured.get("sentiment") or "neutral"),
+            "product_area": str(structured.get("product_area") or "general"),
+            "safety_risk": str(structured.get("safety_risk") or "low"),
+            "escalation_needed": bool(structured.get("escalation_needed", False)),
+            "classification_confidence": float(structured.get("confidence") or 0.0),
+            "classification_rationale": str(
+                structured.get("rationale") or "Classified by support workflow."
+            ),
+        }
         self._record_step("classify_intent", state, output, started, ai_response.ai_run.id)
         return output
 
@@ -294,7 +291,9 @@ class SupportAgentGraphRunner:
 
     def score_confidence(self, state: SupportAgentState) -> SupportAgentState:
         started = time.perf_counter()
-        if state.get("intent") in {"prompt_injection", "privacy_complaint"}:
+        if state.get("classification_confidence") is not None:
+            confidence = float(state.get("classification_confidence") or 0.0)
+        elif state.get("intent") in {"prompt_injection", "privacy_complaint"}:
             confidence = 0.2
         elif state.get("retrieved_chunks") and state.get("draft_answer"):
             confidence = 0.85
@@ -453,6 +452,59 @@ def _fit_draft_documents_to_budget(
         trimmed_count += 1
 
 
+def _classification_analysis(input_message: str) -> dict:
+    text = input_message.lower()
+    if _has_prompt_injection(text):
+        return {
+            "intent": "prompt_injection",
+            "sentiment": "urgent",
+            "product_area": "security",
+            "safety_risk": "high",
+            "escalation_needed": True,
+            "confidence": 0.96,
+            "rationale": "The message asks the system to ignore or reveal instructions.",
+        }
+    if any(term in text for term in ["privacy", "個人情報", "个人信息", "泄露"]):
+        return {
+            "intent": "privacy_complaint",
+            "sentiment": "angry",
+            "product_area": "privacy",
+            "safety_risk": "high",
+            "escalation_needed": True,
+            "confidence": 0.9,
+            "rationale": "The customer reports possible personal-data exposure or privacy harm.",
+        }
+    if any(term in text for term in ["security", "login", "ログイン", "端末", "安全"]):
+        return {
+            "intent": "account_security",
+            "sentiment": "urgent",
+            "product_area": "security",
+            "safety_risk": "medium",
+            "escalation_needed": False,
+            "confidence": 0.82,
+            "rationale": "The request is about account access or security-sensitive activity.",
+        }
+    if any(term in text for term in ["refund", "返金", "退款"]):
+        return {
+            "intent": "refund_request",
+            "sentiment": "neutral",
+            "product_area": "billing",
+            "safety_risk": "low",
+            "escalation_needed": False,
+            "confidence": 0.88,
+            "rationale": "The customer is asking about refund eligibility or process.",
+        }
+    return {
+        "intent": "general_support",
+        "sentiment": "neutral",
+        "product_area": "general",
+        "safety_risk": "low",
+        "escalation_needed": False,
+        "confidence": 0.55,
+        "rationale": "The message does not match a specialized support category.",
+    }
+
+
 def _budget_failure_output(
     state: SupportAgentState, plan: ModelCallBudgetPlan, *, purpose: str
 ) -> SupportAgentState:
@@ -528,6 +580,12 @@ def _compact_state(state: SupportAgentState) -> dict:
         "detected_language",
         "intent",
         "retrieval_trace_id",
+        "sentiment",
+        "product_area",
+        "safety_risk",
+        "escalation_needed",
+        "classification_confidence",
+        "classification_rationale",
         "draft_answer",
         "confidence_score",
         "route_decision",
@@ -560,6 +618,10 @@ def _route_reasons(state: SupportAgentState, confidence_threshold: float) -> lis
         reasons.append("prompt_injection")
     if state.get("intent") == "privacy_complaint":
         reasons.append("privacy_complaint")
+    if state.get("safety_risk") == "high":
+        reasons.append("high_safety_risk")
+    if state.get("escalation_needed"):
+        reasons.append("escalation_needed")
     if not state.get("citations"):
         reasons.append("citation_required")
     if state.get("no_source"):

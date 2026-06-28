@@ -5,21 +5,36 @@ from typing import Any
 from uuid import UUID
 
 from langchain_core.documents import Document
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import StructuredTool
+from pydantic import BaseModel, Field
 
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, PromptTemplate
 from app.services.model_provider import ModelProvider
 from app.services.retrieval_service import RetrievalResult, RetrievalService
 
+
+class ClassificationOutput(BaseModel):
+    intent: str = Field(description="Stable intent label used by backend routing.")
+    sentiment: str = Field(description="Customer sentiment: neutral, frustrated, angry, or urgent.")
+    product_area: str = Field(
+        description="Product or operational area such as billing or security."
+    )
+    safety_risk: str = Field(description="Safety or business risk level: low, medium, or high.")
+    escalation_needed: bool = Field(description="Whether a human escalation is needed.")
+    confidence: float = Field(ge=0.0, le=1.0, description="Classifier confidence from 0 to 1.")
+    rationale: str = Field(description="Short reviewer-readable reason for the classification.")
+
+
+CLASSIFICATION_OUTPUT_PARSER = PydanticOutputParser(pydantic_object=ClassificationOutput)
+
 CLASSIFICATION_SYSTEM_TEMPLATE = (
-    "Classify the support message into one concise intent label. "
-    "Prefer deterministic labels used by the backend workflow: "
-    "refund_request, account_security, privacy_complaint, "
-    "prompt_injection, or general_support. Return only the label."
+    "Classify the support message for an AI support operations workflow. "
+    "Return only valid JSON that matches these format instructions:\n"
+    "{format_instructions}"
 )
 CLASSIFICATION_HUMAN_TEMPLATE = "Support message:\n{input_message}"
 CLASSIFICATION_TEMPLATE_TEXT = (
@@ -44,7 +59,7 @@ DRAFT_RESPONSE_TEMPLATE_TEXT = (
 
 CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages(
     [("system", CLASSIFICATION_SYSTEM_TEMPLATE), ("human", CLASSIFICATION_HUMAN_TEMPLATE)]
-)
+).partial(format_instructions=CLASSIFICATION_OUTPUT_PARSER.get_format_instructions())
 
 DRAFT_RESPONSE_PROMPT = ChatPromptTemplate.from_messages(
     [("system", DRAFT_RESPONSE_SYSTEM_TEMPLATE), ("human", DRAFT_RESPONSE_HUMAN_TEMPLATE)]
@@ -56,6 +71,7 @@ class LangChainModelCall:
     content: str
     ai_run: AIRun
     prompt_text: str
+    structured_output: dict[str, Any] | None = None
 
 
 def build_classification_prompt(input_message: str) -> str:
@@ -92,13 +108,18 @@ def run_classification_chain(
         captured["ai_run"] = response.ai_run
         return response.content
 
-    chain = CLASSIFICATION_PROMPT | RunnableLambda(call_model) | StrOutputParser()
-    content = chain.invoke({"input_message": input_message}).strip()
+    chain = CLASSIFICATION_PROMPT | RunnableLambda(call_model) | CLASSIFICATION_OUTPUT_PARSER
+    parsed = chain.invoke({"input_message": input_message})
     return LangChainModelCall(
-        content=content,
+        content=parsed.intent,
         ai_run=captured["ai_run"],
         prompt_text=captured["prompt_text"],
+        structured_output=parsed.model_dump(),
     )
+
+
+def parse_classification_output(text: str) -> ClassificationOutput:
+    return CLASSIFICATION_OUTPUT_PARSER.invoke(text)
 
 
 def create_search_documents_tool(*, db, workspace_id: UUID) -> StructuredTool:

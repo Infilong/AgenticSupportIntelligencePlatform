@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -6,6 +7,7 @@ from app.services.langchain_support import (
     build_classification_prompt,
     build_draft_response_prompt,
     chunk_payloads_to_documents,
+    parse_classification_output,
     parse_model_text,
     retrieval_results_to_documents,
     run_classification_chain,
@@ -17,7 +19,8 @@ from app.services.retrieval_service import RetrievalResult
 def test_langchain_classification_prompt_contains_message_and_allowed_labels() -> None:
     prompt = build_classification_prompt("Can I get a refund within 30 days?")
 
-    assert "refund_request" in prompt
+    assert "intent" in prompt
+    assert "product_area" in prompt
     assert "Can I get a refund within 30 days?" in prompt
 
 
@@ -72,6 +75,22 @@ def test_langchain_output_parser_normalizes_text() -> None:
     assert parse_model_text("  refund_request\n") == "refund_request"
 
 
+def test_langchain_classification_parser_validates_structured_json() -> None:
+    parsed = parse_classification_output(json.dumps({
+        "intent": "privacy_complaint",
+        "sentiment": "angry",
+        "product_area": "privacy",
+        "safety_risk": "high",
+        "escalation_needed": True,
+        "confidence": 0.9,
+        "rationale": "The user reports personal data exposure.",
+    }))
+
+    assert parsed.intent == "privacy_complaint"
+    assert parsed.escalation_needed is True
+    assert parsed.safety_risk == "high"
+
+
 class RecordingProvider:
     def __init__(self) -> None:
         self.calls: list[dict] = []
@@ -96,10 +115,20 @@ def test_classification_chain_calls_provider_inside_langchain_runnable() -> None
         input_message="Can I get a refund?",
         graph_run_id=graph_run_id,
         prompt_template=None,
-        completion_text=" refund_request\n",
+        completion_text=json.dumps({
+            "intent": "refund_request",
+            "sentiment": "neutral",
+            "product_area": "billing",
+            "safety_risk": "low",
+            "escalation_needed": False,
+            "confidence": 0.88,
+            "rationale": "The customer is asking about refund eligibility.",
+        }),
     )
 
     assert result.content == "refund_request"
+    assert result.structured_output is not None
+    assert result.structured_output["product_area"] == "billing"
     assert len(provider.calls) == 1
     call = provider.calls[0]
     assert call["workspace_id"] == workspace_id

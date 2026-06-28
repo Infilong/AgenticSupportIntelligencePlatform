@@ -106,6 +106,18 @@ def test_no_source_run_creates_guardrails_and_pending_review(
     assert review_body["run"]["input_message"] == "How do I permanently delete my account?"
     assert review_body["run"]["route_decision"] == "human_review"
     assert review_body["run"]["status"] == "needs_human_review"
+    context = review_body["review_context"]
+    assert context["headline"]
+    assert context["recommended_action"]
+    assert context["can_approve"] is False
+    assert context["classification"]["intent"] == "general_support"
+    assert context["classification"]["product_area"] == "general"
+    assert context["evidence"]["no_source"] is True
+    assert context["evidence"]["citation_count"] == 0
+    assert {blocker["code"] for blocker in context["blockers"]} >= {
+        "citation_required",
+        "unsupported_answer",
+    }
     stored_reviews = db_session.scalars(select(HumanReview)).all()
     assert len(stored_reviews) == 1
 

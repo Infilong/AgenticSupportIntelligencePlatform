@@ -11,6 +11,12 @@ class SupportAgentState(TypedDict, total=False):
     agent_settings: dict
     detected_language: str
     intent: str
+    sentiment: str
+    product_area: str
+    safety_risk: str
+    escalation_needed: bool
+    classification_confidence: float
+    classification_rationale: str
     retrieved_chunks: list[dict]
     retrieval_trace_id: str | None
     langchain_tool: str
