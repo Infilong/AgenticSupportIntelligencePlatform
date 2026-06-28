@@ -1207,9 +1207,11 @@ export function App() {
   const canManageResourceFolders = Boolean(workspaceMembership?.permissions.includes("resource_folders:manage"));
   const canWriteData = Boolean(workspaceMembership?.permissions.includes("data:write"));
   const canWriteKnowledge = Boolean(workspaceMembership?.permissions.includes("knowledge:write"));
+  const canConfigureAgent = Boolean(workspaceMembership?.permissions.includes("agents:configure"));
   const canRunAgent = Boolean(workspaceMembership?.permissions.includes("agents:run"));
   const canRunEvaluations = Boolean(workspaceMembership?.permissions.includes("evaluations:run"));
   const canDeleteAgent = Boolean(workspaceMembership?.permissions.includes("agents:delete"));
+  const canResolveReviews = Boolean(workspaceMembership?.permissions.includes("reviews:resolve"));
   const canManageBudgetPolicy = Boolean(
     workspaceMembership?.permissions.includes("budget_policy:manage"),
   );
@@ -3518,7 +3520,7 @@ export function App() {
               <button type="submit" className="primary" disabled={!canWriteKnowledge || loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
               {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResourceFolders || loading}>Move only</button>}
               {selectedDocumentId && <button type="button" onClick={() => resetDocumentForm()}>Start new document</button>}
-              <button type="button" onClick={() => goToTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
+              <TabShortcut tab="agent" disabled={canRunAgent && indexedDocumentCount === 0}>{canRunAgent ? "Run agent" : "View agents"}</TabShortcut>
             </div>
           </form>
         </section>
@@ -3680,8 +3682,8 @@ export function App() {
               <small>{folderAgents.length} agents in {selectedAgentFolderLabel}</small>
             </label>
             <form className="inline-form" onSubmit={createAgent}>
-              <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} />
-              <button type="submit">Create agent</button>
+              <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} disabled={!canConfigureAgent || loading} />
+              <button type="submit" disabled={!canConfigureAgent || loading || !newAgentName.trim()}>Create agent</button>
             </form>
           </div>
         </section>
@@ -3791,7 +3793,7 @@ export function App() {
                   <strong>{selectedAgent?.name ?? "No agent selected"}</strong>
                   <small>{selectedWorkspace?.name ?? "No workspace"} · {workspaceMembership?.role ?? "unknown role"}</small>
                 </div>
-                <label>Agent name<input value={agentName} onChange={(event) => setAgentName(event.target.value)} /></label>
+                <label>Agent name<input value={agentName} onChange={(event) => setAgentName(event.target.value)} disabled={!canConfigureAgent || loading} /></label>
               </section>
               <section className="agent-config-section">
                 <div>
@@ -3799,8 +3801,8 @@ export function App() {
                   <strong>{agentTokenBudget.toLocaleString()} token budget</strong>
                   <small>Lower budgets route expensive or unsupported cases to review instead of silently overspending.</small>
                 </div>
-                <label>Token budget<input type="number" min="500" max="32000" step="100" value={agentTokenBudget} onChange={(event) => setAgentTokenBudget(Number(event.target.value))} /></label>
-                <label>Confidence threshold<input type="number" min="0.1" max="0.95" step="0.05" value={agentConfidenceThreshold} onChange={(event) => setAgentConfidenceThreshold(Number(event.target.value))} /></label>
+                <label>Token budget<input type="number" min="500" max="32000" step="100" value={agentTokenBudget} onChange={(event) => setAgentTokenBudget(Number(event.target.value))} disabled={!canConfigureAgent || loading} /></label>
+                <label>Confidence threshold<input type="number" min="0.1" max="0.95" step="0.05" value={agentConfidenceThreshold} onChange={(event) => setAgentConfidenceThreshold(Number(event.target.value))} disabled={!canConfigureAgent || loading} /></label>
               </section>
               <section className="agent-config-section">
                 <div>
@@ -3808,8 +3810,8 @@ export function App() {
                   <strong>Top {agentRetrievalTopK} · min score {agentRetrievalMinScore}</strong>
                   <small>Controls how much evidence reaches the LangChain retriever/context packer before drafting.</small>
                 </div>
-                <label>Retrieval top K<input type="number" min="1" max="8" step="1" value={agentRetrievalTopK} onChange={(event) => setAgentRetrievalTopK(Number(event.target.value))} /></label>
-                <label>Retrieval min score<input type="number" min="0" max="1" step="0.05" value={agentRetrievalMinScore} onChange={(event) => setAgentRetrievalMinScore(Number(event.target.value))} /></label>
+                <label>Retrieval top K<input type="number" min="1" max="8" step="1" value={agentRetrievalTopK} onChange={(event) => setAgentRetrievalTopK(Number(event.target.value))} disabled={!canConfigureAgent || loading} /></label>
+                <label>Retrieval min score<input type="number" min="0" max="1" step="0.05" value={agentRetrievalMinScore} onChange={(event) => setAgentRetrievalMinScore(Number(event.target.value))} disabled={!canConfigureAgent || loading} /></label>
               </section>
               <section className="agent-config-section wide">
                 <div>
@@ -3818,7 +3820,7 @@ export function App() {
                   <small>Agent override is optional; otherwise the workspace active route or mock fallback is used.</small>
                 </div>
                 <label>Default model route
-                  <select value={agentModelConfigId} onChange={(event) => setAgentModelConfigId(event.target.value)}>
+                  <select value={agentModelConfigId} onChange={(event) => setAgentModelConfigId(event.target.value)} disabled={!canConfigureAgent || loading}>
                     <option value="">Workspace purpose routing</option>
                     {modelConfigs.filter((config) => !config.archived_at).map((config) => (
                       <option key={config.id} value={config.id}>
@@ -3827,7 +3829,7 @@ export function App() {
                     ))}
                   </select>
                 </label>
-                <button type="submit" className="primary" disabled={loading || !selectedAgentId}>Save runtime controls</button>
+                <button type="submit" className="primary" disabled={!canConfigureAgent || loading || !selectedAgentId}>Save runtime controls</button>
               </section>
             </form>
 
@@ -3852,7 +3854,7 @@ export function App() {
                   <TabShortcut tab="trace" disabled={!recentRuns.length && !latestRun}>Traces</TabShortcut>
                 </div>
               </div>
-              <p className="permission-note">Developers can tune and run agents. Archiving requires agents:delete permission and preserves historical runs for audit.</p>
+              <p className="permission-note">Developers can tune and run agents. Read-only roles can inspect configuration and traces without changing runtime controls. Archiving requires agents:delete permission.</p>
             </aside>
           </div>
         </section>
@@ -4058,7 +4060,7 @@ export function App() {
               <textarea rows={8} value={agentMessage} onChange={(event) => setAgentMessage(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button type="submit" className="primary" disabled={loading || !selectedAgentId}>Run agent</button>
+              <button type="submit" className="primary" disabled={!canRunAgent || loading || !selectedAgentId}>Run agent</button>
               <TabShortcut tab="trace" disabled={!traceRunId}>Open trace</TabShortcut>
               <TabShortcut tab="reviews">Review queue</TabShortcut>
             </div>
@@ -4080,7 +4082,7 @@ export function App() {
             {latestRun && (
               <div className="run-next-actions">
                 <button type="button" onClick={() => { setTraceRunId(latestRun.id); void loadTrace(latestRun.id); goToTab("trace"); }}>Inspect trace</button>
-                {latestRun.route_decision === "human_review" && <button type="button" onClick={() => goToTab("reviews")}>Resolve review</button>}
+                {latestRun.route_decision === "human_review" && canResolveReviews && <button type="button" onClick={() => goToTab("reviews")}>Resolve review</button>}
                 <TabShortcut tab="costs">Usage & costs</TabShortcut>
               </div>
             )}
@@ -4951,10 +4953,10 @@ export function App() {
                       <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); goToTab("trace"); }}>
                         Inspect trace
                       </button>
-                      {unassigned && <button type="button" onClick={() => void claimReview(review)}>Claim</button>}
-                      {assignedToMe && <button type="button" onClick={() => void releaseReview(review)}>Release</button>}
+                      {unassigned && canResolveReviews && <button type="button" onClick={() => void claimReview(review)}>Claim</button>}
+                      {assignedToMe && canResolveReviews && <button type="button" onClick={() => void releaseReview(review)}>Release</button>}
                       <button type="button" className="primary" disabled={resolutionBlocked} onClick={() => void resolveReview(review)}>
-                        {assignedToOther ? "Assigned to another reviewer" : !canApprove && draft.decision === "approved" ? "No draft to approve" : draft.decision === "edited" && !draft.edited_answer.trim() ? "Write answer before resolving" : "Resolve review"}
+                        {!canResolveReviews ? "Read only" : assignedToOther ? "Assigned to another reviewer" : !canApprove && draft.decision === "approved" ? "No draft to approve" : draft.decision === "edited" && !draft.edited_answer.trim() ? "Write answer before resolving" : "Resolve review"}
                       </button>
                     </footer>
                   </article>
@@ -5162,7 +5164,7 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button type="submit" className="primary" disabled={!canRunEvaluations || loading || evaluationModes.length === 0}>Run evaluation</button>
-              <button type="button" onClick={() => goToTab("costs")}>Inspect cost ledger</button>
+              <TabShortcut tab="costs">Inspect cost ledger</TabShortcut>
             </div>
           </form>
 
