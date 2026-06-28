@@ -3984,6 +3984,8 @@ export function App() {
         ...tool.related_workflow_nodes.map(formatStepName),
       );
     });
+    const displayedTools = visibleTools.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
+    const hiddenToolCount = Math.max(visibleTools.length - displayedTools.length, 0);
     const lastUsedAt = tools
       .map((tool) => tool.usage.last_used_at)
       .filter((value): value is string => Boolean(value))
@@ -4053,7 +4055,7 @@ export function App() {
         </section>
 
         <section className="tool-grid">
-          {visibleTools.map((tool) => {
+          {displayedTools.map((tool) => {
             const draft = toolConfigDrafts[tool.name] ?? {
               enabled: tool.enabled,
               timeout_ms: tool.timeout_ms ? String(tool.timeout_ms) : "",
@@ -4183,6 +4185,7 @@ export function App() {
               </article>
             );
           })}
+          {hiddenToolCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {visibleTools.length} matching tools. Search by tool, permission, workflow node, schema, or runtime before changing workspace defaults.</p>}
           {tools.length === 0 && <EmptyState title="No tools loaded" detail="Refresh the workspace or run an agent to load runtime tool definitions." />}
           {tools.length > 0 && visibleTools.length === 0 && <EmptyState title="No tools match this view" detail="Clear search or choose another tool filter." />}
         </section>
@@ -4211,6 +4214,8 @@ export function App() {
         ...guardrail.related_workflow_nodes.map(formatStepName),
       );
     });
+    const displayedGuardrails = visibleGuardrails.slice(0, MAX_VISIBLE_ADMIN_ASSETS);
+    const hiddenGuardrailCount = Math.max(visibleGuardrails.length - displayedGuardrails.length, 0);
     const recentFailures = guardrails.flatMap((item) =>
       item.recent_failures.map((failure) => ({ ...failure, label: item.label, guardrail_type: item.guardrail_type })),
     ).sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 8);
@@ -4281,7 +4286,7 @@ export function App() {
 
         <section className="guardrail-workbench">
           <div className="guardrail-grid">
-            {visibleGuardrails.map((guardrail) => {
+            {displayedGuardrails.map((guardrail) => {
               const draft = guardrailPolicyDrafts[guardrail.guardrail_type] ?? {
                 enabled: guardrail.enabled,
                 severity: guardrail.severity,
@@ -4416,6 +4421,7 @@ export function App() {
               </article>
               );
             })}
+            {hiddenGuardrailCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_ADMIN_ASSETS} of {visibleGuardrails.length} matching guardrail policies. Search by policy, stage, action, workflow node, or severity before changing governance settings.</p>}
             {guardrails.length === 0 && <EmptyState title="No guardrails loaded" detail="Refresh the workspace or run an agent to load runtime guardrail policies." />}
             {guardrails.length > 0 && visibleGuardrails.length === 0 && <EmptyState title="No guardrails match this view" detail="Clear search or choose another policy filter." />}
           </div>

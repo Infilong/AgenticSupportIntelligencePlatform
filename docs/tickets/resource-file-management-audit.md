@@ -59,3 +59,8 @@ Documentation-only ticket. Existing backend behavior is covered by `backend/test
 - The Human review page now has queue/history search and bounded pending/resolved lists.
 - Search covers review reason, customer message, citations, reviewer identity, stored answers, and run ids.
 - This remains client-side for local-first v1; backend pagination/search should be added before larger deployments.
+
+## 2026-06-29 Tool And Guardrail Catalog Follow-up
+- Tools and guardrails are backend runtime catalogs, not user-uploaded files, so they do not need resource folders in v1.
+- Their operations boards now combine search, filters, backend-limited recent activity, and bounded top-level card rendering.
+- If these catalogs become user-created plugin libraries later, add folder or package grouping before exposing upload/install flows.
