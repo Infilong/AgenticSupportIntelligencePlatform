@@ -14,6 +14,7 @@ from app.models.agent import (
     ToolCall,
 )
 from app.models.ai import AIRun, AIRunStatus
+from app.models.review import GuardrailResult
 from app.models.user import User
 
 
@@ -95,8 +96,10 @@ def test_attention_summary_reports_review_guardrail_and_cost_tasks(client: TestC
     assert "pending_reviews" in item_ids
     assert "unassigned_reviews" in item_ids
     assert "guardrail_failures" in item_ids
+    guardrail_item = next(item for item in body["items"] if item["id"] == "guardrail_failures")
+    assert guardrail_item["target_tab"] == "trace"
+    assert guardrail_item["target_id"] == run.json()["id"]
     assert any(item["target_tab"] == "reviews" for item in body["items"])
-    assert any(item["target_tab"] == "guardrails" for item in body["items"])
 
 
 def test_attention_summary_counts_assigned_reviews(client: TestClient) -> None:
@@ -203,6 +206,17 @@ def test_attention_traceable_failures_include_graph_run_targets(
             latency_ms=8,
         )
     )
+    db_session.add(
+        GuardrailResult(
+            workspace_id=UUID(workspace["id"]),
+            graph_run_id=run.id,
+            graph_step_id=failed_step.id,
+            guardrail_type="citation_required",
+            passed=False,
+            severity="warning",
+            message="citation missing",
+        )
+    )
     db_session.commit()
 
     response = client.get(
@@ -218,6 +232,8 @@ def test_attention_traceable_failures_include_graph_run_targets(
     assert items["failed_model_calls"]["target_id"] == str(run.id)
     assert items["tool_failures"]["target_tab"] == "trace"
     assert items["tool_failures"]["target_id"] == str(run.id)
+    assert items["guardrail_failures"]["target_tab"] == "trace"
+    assert items["guardrail_failures"]["target_id"] == str(run.id)
 
 
 def test_attention_summary_is_workspace_scoped(client: TestClient) -> None:

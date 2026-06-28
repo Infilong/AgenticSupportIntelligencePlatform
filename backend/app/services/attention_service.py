@@ -265,11 +265,13 @@ class AttentionService:
         )
         if count == 0:
             return None
-        latest = self.db.scalar(
-            select(func.max(GuardrailResult.created_at)).where(
+        latest_guardrail = self.db.scalar(
+            select(GuardrailResult)
+            .where(
                 GuardrailResult.workspace_id == workspace_id,
                 GuardrailResult.passed.is_(False),
             )
+            .order_by(GuardrailResult.created_at.desc())
         )
         return AttentionItem(
             id="guardrail_failures",
@@ -281,9 +283,10 @@ class AttentionService:
                 "Review policy result and linked trace."
             ),
             count=count,
-            action_label="Open guardrails",
-            target_tab="guardrails",
-            created_at=latest,
+            action_label="Inspect trace",
+            target_tab="trace",
+            target_id=str(latest_guardrail.graph_run_id) if latest_guardrail else None,
+            created_at=latest_guardrail.created_at if latest_guardrail else None,
         )
 
     def _failed_documents(self, *, workspace_id: UUID) -> AttentionItem | None:
