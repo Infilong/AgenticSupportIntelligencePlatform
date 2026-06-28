@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_member, require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.dataset import (
@@ -30,7 +30,15 @@ router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["datasets"])
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+DatasetWriteAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("data:write"))
+]
+ResourceFolderManageAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("resource_folders:manage"))
+]
+ResourceDeleteAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("resources:delete"))
+]
 FolderFilter = Annotated[UUID | None, Query()]
 DatasetId = Annotated[UUID, Path()]
 ExampleId = Annotated[UUID, Path()]
@@ -43,7 +51,7 @@ ExampleId = Annotated[UUID, Path()]
 )
 def import_dataset(
     payload: DatasetImportRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: DatasetWriteAccess,
     db: DbSession,
 ) -> DatasetImportResponse:
     service = DatasetService(db)
@@ -106,7 +114,7 @@ def list_examples(
 def edit_label(
     example_id: ExampleId,
     payload: LabelEditRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: DatasetWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> LabelResponse:
@@ -130,7 +138,7 @@ def edit_label(
 def move_dataset_folder(
     dataset_id: DatasetId,
     payload: DatasetFolderUpdateRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceFolderManageAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> DatasetResponse:
@@ -159,7 +167,7 @@ def move_dataset_folder(
 @router.delete("/datasets/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_dataset(
     dataset_id: DatasetId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceDeleteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:

@@ -12,6 +12,9 @@ from app.db.base import Base
 
 class WorkspaceRole(StrEnum):
     owner = "owner"
+    developer = "developer"
+    reviewer = "reviewer"
+    viewer = "viewer"
     member = "member"
 
 

@@ -858,7 +858,8 @@ def test_agent_archive_requires_owner_and_is_workspace_scoped(
     )
 
     assert member_delete.status_code == 403
-    assert member_delete.json()["detail"]["code"] == "workspace_owner_required"
+    assert member_delete.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_delete.json()["detail"]["required_permission"] == "agents:delete"
     assert other_delete.status_code == 404
     assert other_delete.json()["detail"]["code"] == "agent_not_found"
     assert [item["id"] for item in owner_list.json()] == [agent["id"]]

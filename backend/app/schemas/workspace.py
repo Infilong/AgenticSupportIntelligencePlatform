@@ -61,7 +61,7 @@ class WorkspaceMemberResponse(BaseModel):
 
 class WorkspaceMemberAddRequest(BaseModel):
     email: str = Field(min_length=3, max_length=320)
-    role: WorkspaceRole = WorkspaceRole.member
+    role: WorkspaceRole = WorkspaceRole.developer
 
     @field_validator("email")
     @classmethod

@@ -189,34 +189,34 @@ def test_workspace_membership_endpoint_returns_owner_permissions(client: TestCli
     assert "resource_folders:manage" in body["permissions"]
 
 
-def test_workspace_membership_endpoint_returns_member_permissions(
+def test_workspace_membership_endpoint_returns_viewer_permissions(
     client: TestClient, db_session: Session
 ) -> None:
-    register(client, "owner-member-permissions@example.com")
-    owner_token = login(client, "owner-member-permissions@example.com")
+    register(client, "owner-viewer-permissions@example.com")
+    owner_token = login(client, "owner-viewer-permissions@example.com")
     workspace = client.post(
         "/api/v1/workspaces",
-        json={"name": "Member Permission Workspace"},
+        json={"name": "Viewer Permission Workspace"},
         headers=auth_headers(owner_token),
     ).json()
 
-    register(client, "plain-member@example.com")
-    member_token = login(client, "plain-member@example.com")
+    register(client, "plain-viewer@example.com")
+    viewer_token = login(client, "plain-viewer@example.com")
     add_workspace_member(
         db_session,
         workspace_id=workspace["id"],
-        user_email="plain-member@example.com",
-        role=WorkspaceRole.member,
+        user_email="plain-viewer@example.com",
+        role=WorkspaceRole.viewer,
     )
 
     response = client.get(
         f"/api/v1/workspaces/{workspace['id']}/membership",
-        headers=auth_headers(member_token),
+        headers=auth_headers(viewer_token),
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["role"] == "member"
+    assert body["role"] == "viewer"
     assert body["can_manage_resources"] is False
     assert body["can_manage_workspace"] is False
     assert "workspace:read" in body["permissions"]
@@ -227,6 +227,9 @@ def test_workspace_membership_endpoint_returns_member_permissions(
     assert "prompts:read" in body["permissions"]
     assert "models:read" in body["permissions"]
     assert "settings:read" in body["permissions"]
+    assert "data:write" not in body["permissions"]
+    assert "agents:run" not in body["permissions"]
+    assert "reviews:resolve" not in body["permissions"]
     assert "resources:delete" not in body["permissions"]
     assert "prompts:write" not in body["permissions"]
     assert "models:write" not in body["permissions"]
@@ -488,3 +491,144 @@ def test_workspace_settings_update_is_workspace_scoped(client: TestClient) -> No
 
     assert forbidden.status_code == 404
     assert forbidden.json()["detail"]["code"] == "workspace_not_found"
+
+
+def test_workspace_role_presets_expose_distinct_permissions(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "role-preset-owner@example.com")
+    owner_token = login(client, "role-preset-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Role Preset Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+
+    role_users = {
+        WorkspaceRole.developer: "role-developer@example.com",
+        WorkspaceRole.reviewer: "role-reviewer@example.com",
+        WorkspaceRole.viewer: "role-viewer@example.com",
+    }
+    tokens = {}
+    for role, email in role_users.items():
+        register(client, email)
+        tokens[role] = login(client, email)
+        add_workspace_member(
+            db_session,
+            workspace_id=workspace["id"],
+            user_email=email,
+            role=role,
+        )
+
+    developer = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/membership",
+        headers=auth_headers(tokens[WorkspaceRole.developer]),
+    ).json()
+    reviewer = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/membership",
+        headers=auth_headers(tokens[WorkspaceRole.reviewer]),
+    ).json()
+    viewer = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/membership",
+        headers=auth_headers(tokens[WorkspaceRole.viewer]),
+    ).json()
+
+    assert developer["role"] == "developer"
+    assert "data:write" in developer["permissions"]
+    assert "knowledge:write" in developer["permissions"]
+    assert "agents:run" in developer["permissions"]
+    assert "resource_folders:manage" in developer["permissions"]
+    assert "resources:delete" not in developer["permissions"]
+
+    assert reviewer["role"] == "reviewer"
+    assert "reviews:resolve" in reviewer["permissions"]
+    assert "reviews:read" in reviewer["permissions"]
+    assert "data:write" not in reviewer["permissions"]
+    assert "agents:run" not in reviewer["permissions"]
+
+    assert viewer["role"] == "viewer"
+    assert "workspace:read" in viewer["permissions"]
+    assert "reviews:resolve" not in viewer["permissions"]
+    assert "data:write" not in viewer["permissions"]
+
+
+def test_workspace_permission_dependency_blocks_disallowed_role_actions(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "role-gate-owner@example.com")
+    owner_token = login(client, "role-gate-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Role Gate Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    agent = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents",
+        headers=auth_headers(owner_token),
+        json={"name": "Role Gate Agent", "token_budget": 4000},
+    ).json()
+
+    register(client, "role-gate-developer@example.com")
+    developer_token = login(client, "role-gate-developer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="role-gate-developer@example.com",
+        role=WorkspaceRole.developer,
+    )
+
+    register(client, "role-gate-viewer@example.com")
+    viewer_token = login(client, "role-gate-viewer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="role-gate-viewer@example.com",
+        role=WorkspaceRole.viewer,
+    )
+
+    register(client, "role-gate-reviewer@example.com")
+    reviewer_token = login(client, "role-gate-reviewer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="role-gate-reviewer@example.com",
+        role=WorkspaceRole.reviewer,
+    )
+
+    viewer_import = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/datasets/import",
+        headers=auth_headers(viewer_token),
+        json={
+            "dataset_name": "Viewer Import",
+            "source_type": "jsonl",
+            "content": '{"messages":[{"role":"user","content":"Can I get a refund?"}]}',
+        },
+    )
+    developer_import = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/datasets/import",
+        headers=auth_headers(developer_token),
+        json={
+            "dataset_name": "Developer Import",
+            "source_type": "jsonl",
+            "content": '{"messages":[{"role":"user","content":"Can I get a refund?"}]}',
+        },
+    )
+    reviewer_run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(reviewer_token),
+        json={"input_message": "Can I get a refund?"},
+    )
+    developer_run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(developer_token),
+        json={"input_message": "Can I get a refund?"},
+    )
+
+    assert viewer_import.status_code == 403
+    assert viewer_import.json()["detail"]["code"] == "workspace_permission_required"
+    assert viewer_import.json()["detail"]["required_permission"] == "data:write"
+    assert developer_import.status_code == 201
+
+    assert reviewer_run.status_code == 403
+    assert reviewer_run.json()["detail"]["required_permission"] == "agents:run"
+    assert developer_run.status_code == 201

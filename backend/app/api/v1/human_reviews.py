@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member
+from app.dependencies.workspace import require_workspace_member, require_workspace_permission
 from app.models.agent import GraphRun, GraphStep
 from app.models.review import HumanReview
 from app.models.user import User
@@ -30,6 +30,9 @@ from app.services.human_review_service import (
 router = APIRouter(prefix="/workspaces/{workspace_id}/human-reviews", tags=["human-reviews"])
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
+ReviewResolveAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("reviews:resolve"))
+]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 ReviewId = Annotated[UUID, Path()]
 
@@ -62,7 +65,7 @@ def get_human_review(
 @router.post("/{review_id}/claim", response_model=HumanReviewResponse)
 def claim_human_review(
     review_id: ReviewId,
-    workspace: WorkspaceMemberAccess,
+    workspace: ReviewResolveAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> HumanReviewResponse:
@@ -99,7 +102,7 @@ def claim_human_review(
 @router.post("/{review_id}/release", response_model=HumanReviewResponse)
 def release_human_review(
     review_id: ReviewId,
-    workspace: WorkspaceMemberAccess,
+    workspace: ReviewResolveAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> HumanReviewResponse:
@@ -137,7 +140,7 @@ def release_human_review(
 def resolve_human_review(
     review_id: ReviewId,
     payload: HumanReviewResolveRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: ReviewResolveAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> HumanReviewResponse:

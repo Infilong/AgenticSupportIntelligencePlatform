@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_member, require_workspace_permission
 from app.models.agent import Checkpoint
 from app.models.ai import AIRun
 from app.models.review import GuardrailResult
@@ -47,7 +47,13 @@ from app.services.audit_log_service import AuditLogService
 router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["agents"])
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+AgentConfigureAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("agents:configure"))
+]
+AgentRunAccess = Annotated[Workspace, Depends(require_workspace_permission("agents:run"))]
+AgentDeleteAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("agents:delete"))
+]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 IncludeArchived = Annotated[bool, Query()]
 AgentId = Annotated[UUID, Path()]
@@ -57,7 +63,7 @@ RunId = Annotated[UUID, Path()]
 @router.post("/agents", response_model=AgentResponse, status_code=status.HTTP_201_CREATED)
 def create_agent(
     payload: AgentCreateRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: AgentConfigureAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> AgentResponse:
@@ -180,7 +186,7 @@ def get_agent_workflow(
 def update_agent(
     agent_id: AgentId,
     payload: AgentUpdateRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: AgentConfigureAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> AgentResponse:
@@ -236,7 +242,7 @@ def update_agent(
 @router.delete("/agents/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
 def archive_agent(
     agent_id: AgentId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: AgentDeleteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:
@@ -264,7 +270,7 @@ def archive_agent(
 def run_agent(
     agent_id: AgentId,
     payload: AgentRunRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: AgentRunAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> GraphRunResponse:

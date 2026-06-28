@@ -73,12 +73,16 @@ The current CSS uses teal accents, cards, and soft color states. The objective a
 - Current workspace role is not visible near the workspace selector.
 
 ## Missing Permission-Aware UX
-The backend has `WorkspaceRole.owner` and `WorkspaceRole.member`, but only membership is enforced for most routes. UI does not show:
-- current role
+Original audit finding: the backend only had `WorkspaceRole.owner` and `WorkspaceRole.member`, with most routes enforcing membership but not action-level permissions.
+
+Current status: role presets now include `owner`, `developer`, `reviewer`, `viewer`, and legacy `member`. Key write, operate, review, folder, archive, and destructive routes use backend permission dependencies. Remaining work is to continue applying granular permission dependencies to lower-risk settings surfaces and to add custom enterprise RBAC later if needed.
+
+The UI now shows current role, available permissions, and disabled/restricted controls for major actions. Continue checking future tickets for:
+- current role visibility
 - allowed actions
 - disabled/restricted controls
-- why an action is unavailable
-- owner-only destructive actions
+- clear unavailable-action explanations
+- destructive action permission gates
 
 ## Missing Task and Attention Workflow
 Needed dashboard sections:

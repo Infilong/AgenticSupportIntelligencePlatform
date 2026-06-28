@@ -7,21 +7,17 @@ from app.core.security import normalize_email
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 
-MEMBER_PERMISSIONS = [
+READ_PERMISSIONS = [
     "workspace:read",
     "tasks:read",
     "data:read",
     "knowledge:read",
     "agents:read",
-    "agents:run",
-    "agents:configure",
     "tools:read",
     "guardrails:read",
     "traces:read",
     "reviews:read",
-    "reviews:resolve",
     "evaluations:read",
-    "evaluations:run",
     "costs:read",
     "budget_policy:read",
     "members:read",
@@ -32,18 +28,51 @@ MEMBER_PERMISSIONS = [
     "settings:read",
 ]
 
-OWNER_PERMISSIONS = [
-    *MEMBER_PERMISSIONS,
-    "workspace:manage",
+REVIEWER_PERMISSIONS = [
+    *READ_PERMISSIONS,
+    "reviews:resolve",
+]
+
+DEVELOPER_PERMISSIONS = [
+    *READ_PERMISSIONS,
+    "data:write",
+    "knowledge:write",
+    "agents:run",
+    "agents:configure",
+    "tools:configure",
+    "evaluations:run",
+    "prompts:write",
     "resource_folders:manage",
+]
+
+MEMBER_PERMISSIONS = [
+    *READ_PERMISSIONS,
+    "data:write",
+    "knowledge:write",
+    "agents:run",
+    "agents:configure",
+    "reviews:resolve",
+    "evaluations:run",
+]
+
+OWNER_PERMISSIONS = [
+    *DEVELOPER_PERMISSIONS,
+    "reviews:resolve",
+    "workspace:manage",
     "resources:delete",
     "agents:delete",
-    "prompts:write",
     "models:write",
-    "tools:configure",
     "guardrails:configure",
     "budget_policy:manage",
 ]
+
+ROLE_PERMISSIONS = {
+    WorkspaceRole.owner: OWNER_PERMISSIONS,
+    WorkspaceRole.developer: DEVELOPER_PERMISSIONS,
+    WorkspaceRole.member: MEMBER_PERMISSIONS,
+    WorkspaceRole.reviewer: REVIEWER_PERMISSIONS,
+    WorkspaceRole.viewer: READ_PERMISSIONS,
+}
 
 
 class WorkspaceMemberError(ValueError):
@@ -67,9 +96,7 @@ class WorkspaceMemberOwnerError(WorkspaceMemberError):
 
 
 def permissions_for_role(role: WorkspaceRole) -> list[str]:
-    if role == WorkspaceRole.owner:
-        return OWNER_PERMISSIONS.copy()
-    return MEMBER_PERMISSIONS.copy()
+    return ROLE_PERMISSIONS.get(role, READ_PERMISSIONS).copy()
 
 
 class WorkspaceService:

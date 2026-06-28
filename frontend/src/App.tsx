@@ -3,8 +3,16 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
 type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models" | "system" | "settings";
-type WorkspaceMemberRole = "owner" | "member";
+type WorkspaceMemberRole = "owner" | "developer" | "reviewer" | "viewer" | "member";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin" | "Settings";
+
+function formatWorkspaceRole(role: WorkspaceMemberRole): string {
+  if (role === "owner") return "Owner";
+  if (role === "developer") return "Developer";
+  if (role === "reviewer") return "Reviewer";
+  if (role === "viewer") return "Viewer";
+  return "Legacy member";
+}
 
 const MAX_VISIBLE_EXAMPLES = 50;
 const MAX_VISIBLE_CHUNKS = 80;
@@ -885,7 +893,7 @@ export function App() {
   const [workspaceMembership, setWorkspaceMembership] = useState<WorkspaceMembership | null>(null);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [memberEmail, setMemberEmail] = useState("");
-  const [memberRole, setMemberRole] = useState<WorkspaceMemberRole>("member");
+  const [memberRole, setMemberRole] = useState<WorkspaceMemberRole>("developer");
   const [workspaceName, setWorkspaceName] = useState("Agentic Platform Demo");
   const [workspaceSettingsName, setWorkspaceSettingsName] = useState("");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
@@ -1032,6 +1040,11 @@ export function App() {
     .filter((section) => section.items.length > 0);
   const activeTabInfo = availableTabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const canManageResources = Boolean(workspaceMembership?.can_manage_resources);
+  const canManageResourceFolders = Boolean(workspaceMembership?.permissions.includes("resource_folders:manage"));
+  const canWriteData = Boolean(workspaceMembership?.permissions.includes("data:write"));
+  const canWriteKnowledge = Boolean(workspaceMembership?.permissions.includes("knowledge:write"));
+  const canRunEvaluations = Boolean(workspaceMembership?.permissions.includes("evaluations:run"));
+  const canDeleteAgent = Boolean(workspaceMembership?.permissions.includes("agents:delete"));
   const canManageBudgetPolicy = Boolean(
     workspaceMembership?.permissions.includes("budget_policy:manage"),
   );
@@ -1042,17 +1055,19 @@ export function App() {
   const workspaceRole = !selectedWorkspaceId
     ? "No workspace"
     : workspaceMembership
-      ? workspaceMembership.role === "owner"
-        ? "Owner"
-        : "Member"
+      ? formatWorkspaceRole(workspaceMembership.role)
       : "Checking role";
   const permissionSummary = !selectedWorkspaceId
     ? "Create or select a workspace to unlock platform controls."
     : !workspaceMembership
       ? "Loading workspace permissions from the backend session."
-      : workspaceMembership.can_manage_resources
-        ? "Can manage resources, settings, and destructive cleanup in this workspace."
-        : "Can inspect workspace data; owner-only cleanup and folder management are restricted.";
+      : workspaceMembership.can_manage_workspace
+        ? "Can manage workspace identity, membership, budgets, models, and destructive cleanup."
+        : canWriteData || canWriteKnowledge
+          ? "Can build and operate agent resources, with destructive cleanup restricted."
+          : workspaceMembership.permissions.includes("reviews:resolve")
+            ? "Can review routed AI outputs and inspect supporting traces."
+            : "Read-only workspace access; write, review, and cleanup actions are restricted.";
   const visiblePermissions = workspaceMembership?.permissions.slice(0, 4) ?? [];
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
   const allSetupSteps = [
@@ -1655,7 +1670,7 @@ export function App() {
                     <Badge>{count}</Badge>
                   </button>
                 )}
-                {canManageResources && (
+                {canManageResourceFolders && (
                   <div className="folder-actions">
                     {isEditing ? (
                       <>
@@ -1701,7 +1716,7 @@ export function App() {
           {folders.length > 0 && matchingFolders.length === 0 && <EmptyState title="No folders match this search" detail="Clear search to browse all folders." />}
         </div>
         {hiddenFolderCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_FOLDERS} of {matchingFolders.length} matching folders. Search before moving resources in large workspaces.</p>}
-        {canManageResources ? (
+        {canManageResourceFolders ? (
           <div className="folder-create">
             <input value={folderName} onChange={(event) => onFolderNameChange(event.target.value)} placeholder="New folder name" />
             <button type="button" onClick={() => void createResourceFolder(resourceType)} disabled={!folderName.trim() || loading}>
@@ -1709,7 +1724,7 @@ export function App() {
             </button>
           </div>
         ) : (
-          <p className="permission-note">Folder creation, moves, and deletion require workspace owner permission.</p>
+          <p className="permission-note">Folder creation and organization require resource_folders:manage permission.</p>
         )}
       </aside>
     );
@@ -2901,7 +2916,7 @@ export function App() {
             {datasetFolders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
           </select></label>
           <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => setDatasetContent(event.target.value)} /></label>
-          <button className="primary" disabled={loading}>Import JSONL</button>
+          <button className="primary" disabled={!canWriteData || loading}>Import JSONL</button>
         </form>
         <section className="panel stack dataset-library-panel">
           <div className="row-head">
@@ -2931,7 +2946,7 @@ export function App() {
               />
             </label>
             <p className="permission-note">
-              Owner controls: move imports between folders or delete obsolete datasets.
+              Role-aware controls: data writers can import, folder managers can organize, and resource cleanup requires owner permission.
             </p>
           </div>
           <div className="resource-list">
@@ -2948,7 +2963,7 @@ export function App() {
                   <select
                     value={dataset.folder_id ?? ""}
                     onChange={(event) => void moveDatasetFolder(dataset.id, event.target.value)}
-                    disabled={!canManageResources || loading}
+                    disabled={!canManageResourceFolders || loading}
                     aria-label={`Move ${dataset.name} to folder`}
                   >
                     <option value="">Unfiled</option>
@@ -3102,7 +3117,7 @@ export function App() {
                 />
               </label>
               <p className="permission-note">
-                Owner controls: upload, edit, move, reindex, or delete knowledge files.
+                Role-aware controls: knowledge writers can upload and reindex, folder managers can organize, and deletion requires owner permission.
               </p>
             </div>
             <div className="document-list">
@@ -3121,7 +3136,7 @@ export function App() {
                     <select
                       value={document.folder_id ?? ""}
                       onChange={(event) => void moveDocumentFolder(document.id, event.target.value)}
-                      disabled={!canManageResources || loading}
+                      disabled={!canManageResourceFolders || loading}
                       aria-label={`Move ${document.title} to folder`}
                     >
                       <option value="">Unfiled</option>
@@ -3169,8 +3184,8 @@ export function App() {
               <textarea rows={16} value={documentContent} onChange={(event) => setDocumentContent(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
-              {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResources || loading}>Move only</button>}
+              <button className="primary" disabled={!canWriteKnowledge || loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
+              {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResourceFolders || loading}>Move only</button>}
               {selectedDocumentId && <button type="button" onClick={() => resetDocumentForm()}>Start new document</button>}
               <button type="button" onClick={() => goToTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
             </div>
@@ -3403,7 +3418,7 @@ export function App() {
                   <button type="button" onClick={() => goToTab("trace")} disabled={!recentRuns.length && !latestRun}>Traces</button>
                 </div>
               </div>
-              <p className="permission-note">Workspace members can tune and run agents. Archiving remains owner-gated and preserves historical runs for audit.</p>
+              <p className="permission-note">Developers can tune and run agents. Archiving requires agents:delete permission and preserves historical runs for audit.</p>
             </aside>
           </div>
         </section>
@@ -3428,7 +3443,7 @@ export function App() {
               <Metric label="Last run" value={formatDate(summary?.last_run_at ?? null)} />
             </div>
             <div className="agent-lifecycle-actions">
-              {canManageResources ? (
+              {canDeleteAgent ? (
                 <button
                   type="button"
                   className="danger-button"
@@ -3438,7 +3453,7 @@ export function App() {
                   Archive agent
                 </button>
               ) : (
-                <p className="permission-note">Agent archive and destructive lifecycle actions require workspace owner permission.</p>
+                <p className="permission-note">Agent archive requires agents:delete permission.</p>
               )}
               <small>Archiving preserves historical runs and traces for auditability.</small>
             </div>
@@ -4608,7 +4623,7 @@ export function App() {
               <textarea rows={16} value={evaluationCases} onChange={(event) => setEvaluationCases(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button className="primary" disabled={loading || evaluationModes.length === 0}>Run evaluation</button>
+              <button className="primary" disabled={!canRunEvaluations || loading || evaluationModes.length === 0}>Run evaluation</button>
               <button type="button" onClick={() => goToTab("costs")}>Inspect cost ledger</button>
             </div>
           </form>
@@ -4704,7 +4719,9 @@ export function App() {
 
   function MembersPanel() {
     const ownerCount = workspaceMembers.filter((member) => member.role === "owner").length;
-    const memberCount = workspaceMembers.filter((member) => member.role === "member").length;
+    const developerCount = workspaceMembers.filter((member) => member.role === "developer" || member.role === "member").length;
+    const reviewerCount = workspaceMembers.filter((member) => member.role === "reviewer").length;
+    const viewerCount = workspaceMembers.filter((member) => member.role === "viewer").length;
     const canManageWorkspace = Boolean(workspaceMembership?.can_manage_workspace);
     const currentMember = workspaceMembers.find((member) => member.user_id === currentUser?.id) ?? null;
 
@@ -4714,7 +4731,7 @@ export function App() {
           <div>
             <p className="eyebrow">Workspace administration</p>
             <h2>Manage members and permissions</h2>
-            <p className="muted">Membership is backend-enforced. Owners can add registered users, change v1 roles, and remove non-self members while the workspace keeps at least one owner.</p>
+            <p className="muted">Membership is backend-enforced. Owners assign role presets for platform owners, developers, reviewers, and viewers while the workspace keeps at least one owner.</p>
           </div>
           <div className="next-action-card">
             <span>Your access</span>
@@ -4727,7 +4744,9 @@ export function App() {
         <section className="settings-summary-grid">
           <Metric label="Members" value={workspaceMembers.length} />
           <Metric label="Owners" value={ownerCount} />
-          <Metric label="Standard members" value={memberCount} />
+          <Metric label="Developers" value={developerCount} />
+          <Metric label="Reviewers" value={reviewerCount} />
+          <Metric label="Viewers" value={viewerCount} />
           <Metric label="Manage workspace" value={canManageWorkspace ? "allowed" : "restricted"} />
         </section>
 
@@ -4748,12 +4767,15 @@ export function App() {
               <label>
                 Initial role
                 <select value={memberRole} onChange={(event) => setMemberRole(event.target.value as WorkspaceMemberRole)}>
-                  <option value="member">Member</option>
+                  <option value="developer">Developer</option>
+                  <option value="reviewer">Reviewer</option>
+                  <option value="viewer">Viewer</option>
                   <option value="owner">Owner</option>
+                  <option value="member">Legacy member</option>
                 </select>
               </label>
             </div>
-            <div className="settings-note">V1 roles are intentionally simple: owners manage workspace membership and destructive actions; members can inspect and operate most platform workflows.</div>
+            <div className="settings-note">Role presets are enforced by backend permissions. Legacy members keep operational build and review access for existing workspaces.</div>
             <div className="run-action-bar">
               <button className="primary" disabled={!canManageWorkspace || !memberEmail.trim() || loading}>Add member</button>
               <button type="button" onClick={() => goToTab("audit")}>Open audit trail</button>
@@ -4762,10 +4784,12 @@ export function App() {
 
           <aside className="panel stack settings-side-panel">
             <h3>Permission model</h3>
-            <p className="muted">This is not full enterprise RBAC yet. The current backend supports owner and member roles, and every workspace route still enforces membership.</p>
+            <p className="muted">This is role-preset RBAC, not custom enterprise policy yet. Backend permissions gate write, operate, review, and destructive actions.</p>
             <div className="policy-list">
-              <span>Owners: manage members, folders, destructive cleanup, and agent archive actions</span>
-              <span>Members: run agents, resolve reviews, manage data/prompts/models, inspect traces and costs</span>
+              <span>Owners: manage members, budgets, models, guardrails, destructive cleanup, and agent archive actions</span>
+              <span>Developers: import data, manage knowledge, configure/run agents, tools, prompts, folders, and evaluations</span>
+              <span>Reviewers: inspect traces and resolve human-review tasks without build/admin controls</span>
+              <span>Viewers: read-only inspection across allowed workspace pages</span>
               <span>Non-members: receive workspace-not-found responses for scoped APIs</span>
             </div>
           </aside>
@@ -4792,7 +4816,7 @@ export function App() {
                     </div>
                     <div className="review-actions">
                       {isCurrentUser && <Badge tone="good">you</Badge>}
-                      <Badge tone={member.role === "owner" ? "good" : "neutral"}>{member.role}</Badge>
+                      <Badge tone={member.role === "owner" ? "good" : member.role === "reviewer" ? "warn" : "neutral"}>{formatWorkspaceRole(member.role)}</Badge>
                     </div>
                   </div>
                   <div className="settings-meta-grid compact-member-controls">
@@ -4803,8 +4827,11 @@ export function App() {
                         onChange={(event) => void updateWorkspaceMemberRole(member, event.target.value as WorkspaceMemberRole)}
                         disabled={!canManageWorkspace || isCurrentUser || loading}
                       >
-                        <option value="member">Member</option>
+                        <option value="developer">Developer</option>
+                        <option value="reviewer">Reviewer</option>
+                        <option value="viewer">Viewer</option>
                         <option value="owner">Owner</option>
+                        <option value="member">Legacy member</option>
                       </select>
                     </label>
                     <button

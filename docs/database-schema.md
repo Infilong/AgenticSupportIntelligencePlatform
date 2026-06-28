@@ -28,7 +28,7 @@ WorkspaceMember
 - id
 - workspace_id
 - user_id
-- role
+- role: owner / developer / reviewer / viewer / member legacy
 - created_at
 
 AuditLog

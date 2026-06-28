@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_member, require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.evaluation import (
@@ -23,7 +23,12 @@ from app.services.evaluation_runner import EvaluationRunner, EvaluationRunNotFou
 router = APIRouter(prefix="/workspaces/{workspace_id}/evaluations", tags=["evaluations"])
 DbSession = Annotated[Session, Depends(get_db)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+EvaluationRunAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("evaluations:run"))
+]
+ResourceDeleteAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("resources:delete"))
+]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 EvaluationId = Annotated[UUID, Path()]
 IncludeArchived = Annotated[bool, Query()]
@@ -32,7 +37,7 @@ IncludeArchived = Annotated[bool, Query()]
 @router.post("", response_model=EvaluationDetailResponse, status_code=status.HTTP_201_CREATED)
 def run_evaluation(
     payload: EvaluationRunRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: EvaluationRunAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> EvaluationDetailResponse:
@@ -87,7 +92,7 @@ def get_evaluation(
 @router.delete("/{evaluation_id}", status_code=status.HTTP_204_NO_CONTENT)
 def archive_evaluation(
     evaluation_id: EvaluationId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceDeleteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:

@@ -87,14 +87,20 @@ def import_dataset(
     return response.json()["dataset"]
 
 
-def add_member(db_session: Session, *, workspace_id: str, user_email: str) -> None:
+def add_member(
+    db_session: Session,
+    *,
+    workspace_id: str,
+    user_email: str,
+    role: WorkspaceRole = WorkspaceRole.member,
+) -> None:
     user = db_session.scalar(select(User).where(User.email == user_email))
     assert user is not None
     db_session.add(
         WorkspaceMember(
             workspace_id=UUID(workspace_id),
             user_id=user.id,
-            role=WorkspaceRole.member,
+            role=role,
         )
     )
     db_session.commit()
@@ -229,7 +235,12 @@ def test_folder_and_resource_destructive_actions_require_owner(
 
     register(client, "member-rbac@example.com")
     member_token = login(client, "member-rbac@example.com")
-    add_member(db_session, workspace_id=workspace["id"], user_email="member-rbac@example.com")
+    add_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="member-rbac@example.com",
+        role=WorkspaceRole.viewer,
+    )
 
     member_list = client.get(
         f"/api/v1/workspaces/{workspace['id']}/resource-folders",
@@ -259,7 +270,11 @@ def test_folder_and_resource_destructive_actions_require_owner(
     assert document_move.status_code == 403
     assert document_delete.status_code == 403
     assert dataset_delete.status_code == 403
-    assert folder_delete.json()["detail"]["code"] == "workspace_owner_required"
+    assert folder_delete.json()["detail"]["code"] == "workspace_permission_required"
+    assert folder_delete.json()["detail"]["required_permission"] == "resource_folders:manage"
+    assert document_move.json()["detail"]["required_permission"] == "resource_folders:manage"
+    assert document_delete.json()["detail"]["required_permission"] == "resources:delete"
+    assert dataset_delete.json()["detail"]["required_permission"] == "resources:delete"
 
 
 def test_cross_workspace_folder_ids_are_rejected(client: TestClient) -> None:

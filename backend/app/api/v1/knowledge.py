@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_member, require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.knowledge import (
@@ -31,7 +31,15 @@ router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["knowledge-documen
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+KnowledgeWriteAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("knowledge:write"))
+]
+ResourceFolderManageAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("resource_folders:manage"))
+]
+ResourceDeleteAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("resources:delete"))
+]
 FolderFilter = Annotated[UUID | None, Query()]
 DocumentId = Annotated[UUID, Path()]
 
@@ -43,7 +51,7 @@ DocumentId = Annotated[UUID, Path()]
 )
 def upload_knowledge_document(
     payload: KnowledgeDocumentUploadRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: KnowledgeWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> KnowledgeDocumentIndexResponse:
@@ -130,7 +138,7 @@ def get_knowledge_document(
 def reindex_knowledge_document(
     document_id: DocumentId,
     payload: KnowledgeDocumentReindexRequest,
-    workspace: WorkspaceMemberAccess,
+    workspace: KnowledgeWriteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> KnowledgeDocumentIndexResponse:
@@ -177,7 +185,7 @@ def reindex_knowledge_document(
 def move_knowledge_document_folder(
     document_id: DocumentId,
     payload: KnowledgeDocumentFolderUpdateRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceFolderManageAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> KnowledgeDocumentResponse:
@@ -206,7 +214,7 @@ def move_knowledge_document_folder(
 @router.delete("/knowledge-documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_knowledge_document(
     document_id: DocumentId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceDeleteAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:

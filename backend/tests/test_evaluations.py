@@ -305,6 +305,7 @@ def test_evaluation_archive_requires_owner_and_workspace_scope(client: TestClien
     )
 
     assert member_archive.status_code == 403
-    assert member_archive.json()["detail"]["code"] == "workspace_owner_required"
+    assert member_archive.json()["detail"]["code"] == "workspace_permission_required"
+    assert member_archive.json()["detail"]["required_permission"] == "resources:delete"
     assert cross_workspace_archive.status_code == 404
     assert cross_workspace_archive.json()["detail"]["code"] == "evaluation_not_found"

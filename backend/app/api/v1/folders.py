@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.workspace import require_workspace_member, require_workspace_owner
+from app.dependencies.workspace import require_workspace_member, require_workspace_permission
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.folder import (
@@ -27,7 +27,9 @@ router = APIRouter(prefix="/workspaces/{workspace_id}/resource-folders", tags=["
 DbSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 WorkspaceMemberAccess = Annotated[Workspace, Depends(require_workspace_member)]
-WorkspaceOwnerAccess = Annotated[Workspace, Depends(require_workspace_owner)]
+ResourceFolderManageAccess = Annotated[
+    Workspace, Depends(require_workspace_permission("resource_folders:manage"))
+]
 FolderId = Annotated[UUID, Path()]
 
 
@@ -52,7 +54,7 @@ def list_resource_folders(
 @router.post("", response_model=ResourceFolderResponse, status_code=status.HTTP_201_CREATED)
 def create_resource_folder(
     payload: ResourceFolderCreateRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceFolderManageAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> ResourceFolderResponse:
@@ -83,7 +85,7 @@ def create_resource_folder(
 def update_resource_folder(
     folder_id: FolderId,
     payload: ResourceFolderUpdateRequest,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceFolderManageAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> ResourceFolderResponse:
@@ -112,7 +114,7 @@ def update_resource_folder(
 @router.delete("/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_resource_folder(
     folder_id: FolderId,
-    workspace: WorkspaceOwnerAccess,
+    workspace: ResourceFolderManageAccess,
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:
