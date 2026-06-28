@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -95,8 +96,16 @@ def test_tools_catalog_exposes_runtime_tool_and_usage_from_graph_runs(client: Te
     assert tool["usage"]["total_calls"] == 1
     assert tool["usage"]["failed_calls"] == 0
     assert tool["usage"]["last_used_at"] is not None
-    assert tool["recent_calls"][0]["graph_run_id"] == run.json()["id"]
-    assert tool["recent_calls"][0]["result_summary"] == "1 result(s) returned"
+    recent_call = tool["recent_calls"][0]
+    assert recent_call["graph_run_id"] == run.json()["id"]
+    assert recent_call["step_name"] == "retrieve_evidence"
+    assert recent_call["graph_run_status"] == "completed"
+    assert recent_call["graph_run_input_message"] == "Can I get a refund within 30 days?"
+    assert recent_call["graph_run_language"] == "en"
+    assert recent_call["result_summary"] == "1 result(s) returned"
+    assert json.loads(recent_call["input_json"])["query"] == "Can I get a refund within 30 days?"
+    assert json.loads(recent_call["output_json"])["result_count"] == 1
+    assert recent_call["error_message"] is None
 
 
 def test_tools_catalog_is_workspace_scoped(client: TestClient) -> None:
@@ -230,7 +239,14 @@ def test_disabled_retrieval_tool_routes_agent_to_review_and_records_failed_tool_
     tool = tools.json()[0]
     assert tool["enabled"] is False
     assert tool["usage"]["failed_calls"] == 1
-    assert tool["recent_calls"][0]["result_summary"] == "Tool disabled by workspace config"
+    failed_call = tool["recent_calls"][0]
+    assert failed_call["result_summary"] == "Tool disabled by workspace config"
+    assert failed_call["step_name"] == "retrieve_evidence"
+    assert failed_call["graph_run_status"] == "needs_human_review"
+    assert (
+        failed_call["error_message"] == "search_documents disabled by workspace tool configuration"
+    )
+    assert json.loads(failed_call["output_json"])["tool_disabled"] is True
     retrieve_step = next(
         step for step in trace.json()["steps"] if step["step_name"] == "retrieve_evidence"
     )

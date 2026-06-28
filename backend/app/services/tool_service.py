@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.agent import GraphStepStatus, ToolCall
+from app.models.agent import GraphRun, GraphStep, GraphStepStatus, ToolCall
 from app.models.tool import ToolConfig
 
 
@@ -40,8 +40,15 @@ class ToolCallSummary:
     id: UUID
     graph_run_id: UUID
     graph_step_id: UUID
+    step_name: str
+    graph_run_status: str
+    graph_run_input_message: str
+    graph_run_language: str | None
     status: str
     latency_ms: int
+    input_json: str
+    output_json: str
+    error_message: str | None
     result_summary: str
     created_at: datetime
 
@@ -221,9 +228,11 @@ class ToolService:
         )
 
     def _recent_calls(self, *, workspace_id: UUID, tool_name: str) -> list[ToolCallSummary]:
-        calls = list(
-            self.db.scalars(
-                select(ToolCall)
+        rows = list(
+            self.db.execute(
+                select(ToolCall, GraphStep, GraphRun)
+                .join(GraphStep, ToolCall.graph_step_id == GraphStep.id)
+                .join(GraphRun, ToolCall.graph_run_id == GraphRun.id)
                 .where(ToolCall.workspace_id == workspace_id, ToolCall.tool_name == tool_name)
                 .order_by(ToolCall.created_at.desc())
                 .limit(8)
@@ -234,12 +243,19 @@ class ToolService:
                 id=call.id,
                 graph_run_id=call.graph_run_id,
                 graph_step_id=call.graph_step_id,
+                step_name=step.step_name,
+                graph_run_status=str(run.status),
+                graph_run_input_message=run.input_message,
+                graph_run_language=str(run.language) if run.language else None,
                 status=str(call.status),
                 latency_ms=call.latency_ms,
+                input_json=call.input_json,
+                output_json=call.output_json,
+                error_message=step.error_message,
                 result_summary=_tool_result_summary(call.output_json),
                 created_at=call.created_at,
             )
-            for call in calls
+            for call, step, run in rows
         ]
 
 

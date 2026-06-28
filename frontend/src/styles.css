@@ -3160,6 +3160,37 @@ th {
 .tool-call-list {
   display: grid;
   gap: 8px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.tool-execution-row {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.tool-execution-context {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.tool-execution-context span {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tool-execution-context p {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {

@@ -15,8 +15,15 @@ class ToolCallSummaryResponse(BaseModel):
     id: UUID
     graph_run_id: UUID
     graph_step_id: UUID
+    step_name: str
+    graph_run_status: str
+    graph_run_input_message: str
+    graph_run_language: str | None
     status: str
     latency_ms: int
+    input_json: str
+    output_json: str
+    error_message: str | None
     result_summary: str
     created_at: datetime
 

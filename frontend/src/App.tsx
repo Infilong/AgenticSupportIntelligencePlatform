@@ -255,8 +255,15 @@ type ToolCatalogCall = {
   id: string;
   graph_run_id: string;
   graph_step_id: string;
+  step_name: string;
+  graph_run_status: string;
+  graph_run_input_message: string;
+  graph_run_language: string | null;
   status: string;
   latency_ms: number;
+  input_json: string;
+  output_json: string;
+  error_message: string | null;
   result_summary: string;
   created_at: string;
 };
@@ -3958,21 +3965,34 @@ export function App() {
                     <Badge>{tool.recent_calls.length}</Badge>
                   </div>
                   {tool.recent_calls.map((call) => (
-                    <button
-                      type="button"
-                      className="recent-run-row"
-                      key={call.id}
-                      onClick={() => { setTraceRunId(call.graph_run_id); void loadTrace(call.graph_run_id); goToTab("trace"); }}
-                    >
-                      <span>
-                        <strong>{call.result_summary}</strong>
-                        <small>{call.graph_run_id}</small>
-                      </span>
-                      <span className="recent-run-meta">
-                        <Badge tone={toneForStatus(call.status)}>{call.status}</Badge>
-                        <small>{call.latency_ms} ms</small>
-                      </span>
-                    </button>
+                    <article className="tool-execution-row" key={call.id}>
+                      <div className="row-head">
+                        <div>
+                          <strong>{call.result_summary}</strong>
+                          <p className="muted">{formatStepName(call.step_name)} · run {shortId(call.graph_run_id)} · {formatDate(call.created_at)}</p>
+                        </div>
+                        <div className="review-actions">
+                          <Badge tone={toneForStatus(call.status)}>{call.status}</Badge>
+                          <Badge tone={toneForStatus(call.graph_run_status)}>{formatStepName(call.graph_run_status)}</Badge>
+                          <small>{call.latency_ms} ms</small>
+                        </div>
+                      </div>
+                      <div className="tool-execution-context">
+                        <span>{call.graph_run_language ? call.graph_run_language.toUpperCase() : "-"}</span>
+                        <p>{call.graph_run_input_message}</p>
+                      </div>
+                      {call.error_message && <div className="status error">{call.error_message}</div>}
+                      <div className="run-action-bar">
+                        <button type="button" onClick={() => { setTraceRunId(call.graph_run_id); void loadTrace(call.graph_run_id); goToTab("trace"); }}>Open trace</button>
+                      </div>
+                      <details>
+                        <summary>Tool input/output evidence</summary>
+                        <div className="two">
+                          <JsonBlock value={safeJson(call.input_json)} />
+                          <JsonBlock value={safeJson(call.output_json)} />
+                        </div>
+                      </details>
+                    </article>
                   ))}
                   {tool.recent_calls.length === 0 && <EmptyState title="No executions" detail="Run an agent to create tool usage history." />}
                 </div>
