@@ -1967,9 +1967,17 @@ th {
 
 .review-queue-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 180px);
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr) minmax(150px, 180px);
   gap: 12px;
   align-items: end;
+}
+
+.review-queue-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .review-filter {

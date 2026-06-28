@@ -22,6 +22,7 @@ const MAX_VISIBLE_EVALUATION_RUNS = 20;
 const MAX_VISIBLE_ADMIN_ASSETS = 30;
 const MAX_VISIBLE_AUDIT_EVENTS = 30;
 const MAX_VISIBLE_COST_ITEMS = 12;
+const MAX_VISIBLE_REVIEWS = 30;
 
 type CurrentUser = {
   id: string;
@@ -1104,6 +1105,7 @@ export function App() {
   const [selectedReviewId, setSelectedReviewId] = useState("");
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [reviewSort, setReviewSort] = useState<ReviewSort>("severity");
+  const [reviewSearch, setReviewSearch] = useState("");
 
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
@@ -4546,24 +4548,30 @@ export function App() {
   function ReviewsPanel() {
     const pendingReviewItems = reviews.filter((review) => review.reviewer_decision === "pending");
     const filteredPendingReviewItems = sortReviews(
-      pendingReviewItems.filter((review) => reviewMatchesFilter(review, reviewFilter, currentUser)),
+      pendingReviewItems.filter((review) => reviewMatchesFilter(review, reviewFilter, currentUser)
+        && matchesSearch(reviewSearch, ...reviewSearchFields(review))),
       reviewSort,
     );
+    const displayedPendingReviewItems = filteredPendingReviewItems.slice(0, MAX_VISIBLE_REVIEWS);
+    const hiddenPendingReviewCount = Math.max(filteredPendingReviewItems.length - displayedPendingReviewItems.length, 0);
     const resolvedReviewItems = sortReviews(
-      reviews.filter((review) => review.reviewer_decision !== "pending"),
+      reviews.filter((review) => review.reviewer_decision !== "pending"
+        && matchesSearch(reviewSearch, ...reviewSearchFields(review))),
       "newest",
     );
+    const displayedResolvedReviewItems = resolvedReviewItems.slice(0, MAX_VISIBLE_REVIEWS);
+    const hiddenResolvedReviewCount = Math.max(resolvedReviewItems.length - displayedResolvedReviewItems.length, 0);
     const criticalCount = pendingReviewItems.filter((review) => reviewSeverity(review.reason) === "critical").length;
     const mineCount = pendingReviewItems.filter((review) => review.reviewer_id === currentUser?.id).length;
     const unassignedCount = pendingReviewItems.filter((review) => review.reviewer_id === null).length;
     const evidenceCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "evidence", currentUser)).length;
     const modelCount = pendingReviewItems.filter((review) => reviewMatchesFilter(review, "model", currentUser)).length;
-    const selectedPendingReview = filteredPendingReviewItems.find((review) => review.id === selectedReviewId)
-      ?? filteredPendingReviewItems[0]
+    const selectedPendingReview = displayedPendingReviewItems.find((review) => review.id === selectedReviewId)
+      ?? displayedPendingReviewItems[0]
       ?? null;
     const selectedBlockers = selectedPendingReview ? reviewReasonParts(selectedPendingReview.reason) : [];
     const nextAction = pendingReviewItems.length
-      ? `${filteredPendingReviewItems.length} visible case${filteredPendingReviewItems.length === 1 ? "" : "s"} need a decision`
+      ? `${filteredPendingReviewItems.length} matching case${filteredPendingReviewItems.length === 1 ? "" : "s"} need a decision`
       : "Queue clear";
 
     return (
@@ -4602,6 +4610,14 @@ export function App() {
             </div>
 
             <div className="review-queue-controls">
+              <label>
+                Search queue and history
+                <input
+                  value={reviewSearch}
+                  onChange={(event) => setReviewSearch(event.target.value)}
+                  placeholder="Reason, customer message, citation, reviewer, run id"
+                />
+              </label>
               <div className="segmented review-filter" aria-label="Review queue filter">
                 {reviewFilterOptions.map((option) => (
                   <button
@@ -4625,7 +4641,7 @@ export function App() {
             </div>
 
             <div className="review-queue-list" aria-label="Pending human review cases">
-              {filteredPendingReviewItems.map((review) => {
+              {displayedPendingReviewItems.map((review) => {
                 const severity = reviewSeverity(review.reason);
                 const parts = reviewReasonParts(review.reason);
                 const selected = selectedPendingReview?.id === review.id;
@@ -4648,6 +4664,7 @@ export function App() {
                 );
               })}
             </div>
+            {hiddenPendingReviewCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_REVIEWS} of {filteredPendingReviewItems.length} matching pending reviews. Search by reason, customer message, citation, reviewer, or run id to narrow the queue before resolving cases.</p>}
 
             <div className="review-case-list selected-review-detail">
               {(selectedPendingReview ? [selectedPendingReview] : []).map((review) => {
@@ -4822,7 +4839,7 @@ export function App() {
             {pendingReviewItems.length > 0 && filteredPendingReviewItems.length === 0 && (
               <EmptyState
                 title="No cases match this filter"
-                detail="Change the filter or refresh the queue."
+                detail="Change the filter, search text, or refresh the queue."
               />
             )}
             {pendingReviewItems.length > 0 && filteredPendingReviewItems.length > 0 && !selectedPendingReview && (
@@ -4862,7 +4879,7 @@ export function App() {
             </div>
             <Badge>{resolvedReviewItems.length} resolved</Badge>
           </div>
-          {resolvedReviewItems.map((review) => {
+          {displayedResolvedReviewItems.map((review) => {
             const storedAnswer = review.edited_answer ?? review.proposed_answer ?? review.run?.final_answer ?? "No answer was stored.";
             return (
               <article className="review-row resolved-review" key={review.id}>
@@ -4892,6 +4909,7 @@ export function App() {
               </article>
             );
           })}
+          {hiddenResolvedReviewCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_REVIEWS} of {resolvedReviewItems.length} matching resolved reviews. Search by decision, stored answer, reviewer, customer message, citation, or run id to narrow audit history.</p>}
           {resolvedReviewItems.length === 0 && (
             <EmptyState title="No resolved reviews" detail="Completed decisions will appear here." />
           )}
@@ -6510,6 +6528,36 @@ function toneForReviewReason(reason: string): "neutral" | "good" | "warn" | "bad
   if (["prompt_injection", "privacy_complaint", "high_safety_risk", "model_provider_failure"].includes(reason)) return "bad";
   if (["model_budget_failure", "unsupported_answer", "citation_required", "confidence_threshold", "escalation_needed"].includes(reason)) return "warn";
   return "neutral";
+}
+
+function reviewSearchFields(review: HumanReview): string[] {
+  const context = review.review_context;
+  return [
+    review.id,
+    review.graph_run_id,
+    review.reason,
+    friendlyReviewReason(review.reason),
+    review.reviewer_decision,
+    review.reviewer_display_name,
+    review.reviewer_email,
+    review.proposed_answer,
+    review.edited_answer,
+    review.comments,
+    review.run?.input_message,
+    review.run?.language,
+    review.run?.status,
+    review.run?.route_decision,
+    review.run?.final_answer,
+    context?.headline,
+    context?.recommended_action,
+    context?.classification.intent,
+    context?.classification.sentiment,
+    context?.classification.product_area,
+    context?.classification.safety_risk,
+    context?.classification.rationale,
+    ...(context?.evidence.citations ?? []),
+    ...(context?.blockers.flatMap((blocker) => [blocker.code, blocker.label, blocker.severity, blocker.action]) ?? []),
+  ].filter((value): value is string => Boolean(value));
 }
 
 function reviewMatchesFilter(review: HumanReview, filter: ReviewFilter, user: CurrentUser | null = null): boolean {

@@ -53,3 +53,9 @@ Documentation-only ticket. Existing backend behavior is covered by `backend/test
 ## 2026-06-29 Cost Workbench Follow-up
 - Cost and AI ledger views now provide shared search plus graph-run and AI-call status filters.
 - Spend driver lists are bounded so token/cost investigation remains usable as agents, model routes, and runs grow.
+
+## 2026-06-29 Human Review Queue Follow-up
+- Human review records are not file uploads, but they can grow quickly as agents route blocked runs to reviewers.
+- The Human review page now has queue/history search and bounded pending/resolved lists.
+- Search covers review reason, customer message, citations, reviewer identity, stored answers, and run ids.
+- This remains client-side for local-first v1; backend pagination/search should be added before larger deployments.
