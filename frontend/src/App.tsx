@@ -17,6 +17,7 @@ function formatWorkspaceRole(role: WorkspaceMemberRole): string {
 const MAX_VISIBLE_EXAMPLES = 50;
 const MAX_VISIBLE_CHUNKS = 80;
 const MAX_VISIBLE_FOLDERS = 24;
+const MAX_VISIBLE_RESOURCES = 40;
 const MAX_VISIBLE_EVALUATION_RUNS = 20;
 
 type CurrentUser = {
@@ -2878,6 +2879,8 @@ export function App() {
     const visibleDatasets = folderDatasets.filter((dataset) =>
       matchesSearch(datasetSearch, dataset.name, dataset.id, folderLabel("dataset", dataset.folder_id)),
     );
+    const displayedDatasets = visibleDatasets.slice(0, MAX_VISIBLE_RESOURCES);
+    const hiddenDatasetCount = Math.max(visibleDatasets.length - displayedDatasets.length, 0);
     const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
     const selectedFolderLabel = selectedDataFolderId === "all" ? "All dataset folders" : selectedDataFolderId === "unfiled" ? "Unfiled datasets" : folderLabel("dataset", selectedDataFolderId);
     const visibleExamples = examples.filter((example) =>
@@ -2953,7 +2956,7 @@ export function App() {
             </p>
           </div>
           <div className="resource-list">
-            {visibleDatasets.map((dataset) => (
+            {displayedDatasets.map((dataset) => (
               <article key={dataset.id} className={`resource-row ${selectedDatasetId === dataset.id ? "selected-list-item" : ""}`}>
                 <button type="button" className="resource-main-button" onClick={() => { setSelectedDatasetId(dataset.id); void loadExamples(dataset.id); }}>
                   <strong>{dataset.name}</strong>
@@ -2983,6 +2986,7 @@ export function App() {
               detail={folderDatasets.length === 0 ? "Import data here or switch folders." : "Clear search or try another folder."}
             />
           )}
+          {hiddenDatasetCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_RESOURCES} of {visibleDatasets.length} matching datasets in this folder. Search by name, folder, or id before moving or deleting resources in large workspaces.</p>}
         </section>
         <section className="panel stack full-width inspector-panel">
           <div className="row-head">
@@ -3050,6 +3054,8 @@ export function App() {
         folderLabel("knowledge_document", document.folder_id),
       ),
     );
+    const displayedDocuments = visibleDocuments.slice(0, MAX_VISIBLE_RESOURCES);
+    const hiddenDocumentCount = Math.max(visibleDocuments.length - displayedDocuments.length, 0);
     const selectedFolderLabel = selectedKnowledgeFolderId === "all" ? "All knowledge folders" : selectedKnowledgeFolderId === "unfiled" ? "Unfiled knowledge" : folderLabel("knowledge_document", selectedKnowledgeFolderId);
     const visibleChunks = documentDetail
       ? documentDetail.chunks.filter((chunk) =>
@@ -3124,7 +3130,7 @@ export function App() {
               </p>
             </div>
             <div className="document-list">
-              {visibleDocuments.map((document) => (
+              {displayedDocuments.map((document) => (
                 <article
                   key={document.id}
                   className={`document-card ${selectedDocumentId === document.id ? "selected" : ""}`}
@@ -3156,6 +3162,7 @@ export function App() {
                 />
               )}
             </div>
+            {hiddenDocumentCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_RESOURCES} of {visibleDocuments.length} matching documents in this folder. Search by title, language, status, folder, or id before editing, moving, or deleting files.</p>}
           </aside>
 
           <form className="panel stack knowledge-editor-panel" onSubmit={selectedDocumentId ? saveDocumentEdit : uploadDocument}>
