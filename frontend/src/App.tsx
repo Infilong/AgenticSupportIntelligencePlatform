@@ -1307,89 +1307,141 @@ export function App() {
   }
 
   function OverviewPanel() {
+    const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
+    const activeModelCount = modelConfigs.filter((config) => config.active).length;
+    const latestRoute = latestRun?.route_decision ?? latestRun?.status ?? "No run";
+    const primaryAction = pendingReviews > 0
+      ? { label: "Resolve human review", tab: "reviews" as Tab, detail: "A routed case is waiting for a reviewer." }
+      : nextStep
+        ? { label: `Continue setup: ${nextStep.label}`, tab: nextStep.tab, detail: "Complete the next required workspace capability." }
+        : { label: "Run support agent", tab: "agent" as Tab, detail: "Workspace is ready for an end-to-end workflow run." };
+    const healthCards: Array<{
+      label: string;
+      value: string | number;
+      tone: "neutral" | "good" | "warn" | "bad";
+      detail: string;
+    }> = [
+      {
+        label: "Readiness",
+        value: `${readinessPercent}%`,
+        tone: readinessPercent === 100 ? "good" : "warn",
+        detail: `${completedStepCount}/${setupSteps.length} checks complete`,
+      },
+      {
+        label: "Knowledge",
+        value: `${indexedDocumentCount}/${documents.length}`,
+        tone: indexedDocumentCount > 0 ? "good" : "warn",
+        detail: "indexed documents",
+      },
+      {
+        label: "Pending reviews",
+        value: pendingReviews,
+        tone: pendingReviews > 0 ? "warn" : "good",
+        detail: pendingReviews > 0 ? "operator action needed" : "queue clear",
+      },
+      {
+        label: "AI runs",
+        value: costSummary?.total_runs ?? 0,
+        tone: costSummary?.total_runs ? "good" : "neutral",
+        detail: `${formatCost(costSummary?.total_estimated_cost)} estimated`,
+      },
+    ];
+
     return (
-      <div className="stack">
-        <section className="command-center">
+      <div className="overview-console">
+        <section className="panel overview-hero">
           <div>
-            <p className="eyebrow">Operations console</p>
-            <h2>Stateful AI support workflow for multilingual teams.</h2>
-            <p>
-              Current state: <strong>{consoleState}</strong>. The console shows real workspace data,
-              agent routing, review risk, evaluation quality, and token cost.
-            </p>
+            <p className="eyebrow">Workspace control center</p>
+            <h2>{selectedWorkspace?.name ?? "Support workspace"}</h2>
+            <p className="muted">Operate a multilingual, stateful AI support workflow with governed RAG, LangGraph traces, human review, evaluation, and token-cost accounting.</p>
           </div>
-          <div className="command-actions">
-            <button className="primary" onClick={() => setActiveTab(nextStep?.tab ?? "agent")}>
-              {nextStep ? `Continue to ${nextStep.label}` : "Run support agent"}
-            </button>
-            <button className="secondary" onClick={() => setActiveTab("trace")}>Open trace explorer</button>
+          <div className="next-action-card">
+            <span>Recommended next action</span>
+            <strong>{primaryAction.label}</strong>
+            <p>{primaryAction.detail}</p>
+            <button className="primary" onClick={() => setActiveTab(primaryAction.tab)}>Open</button>
           </div>
         </section>
 
-        <section className="grid three">
-          <section className="panel stack">
+        <section className="overview-health-grid">
+          {healthCards.map((card) => (
+            <article className="overview-health-card" key={card.label}>
+              <div className="row-head">
+                <span>{card.label}</span>
+                <Badge tone={card.tone}>{card.tone === "good" ? "ok" : card.tone === "warn" ? "attention" : "idle"}</Badge>
+              </div>
+              <strong>{card.value}</strong>
+              <p>{card.detail}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="overview-layout">
+          <section className="panel stack setup-path-panel">
             <div className="row-head">
-              <h3>System readiness</h3>
+              <div>
+                <h3>Setup path</h3>
+                <p className="muted">Follow the numbered path once, then operate from Agent, Review, Trace, and Cost.</p>
+              </div>
               <Badge tone={readinessPercent === 100 ? "good" : "warn"}>{readinessPercent}%</Badge>
             </div>
             <div className="progress-track large"><span style={{ width: `${readinessPercent}%` }} /></div>
-            <div className="readiness-list">
-              {setupSteps.map((step) => (
-                <button key={step.label} className={step.done ? "check-item done" : "check-item"} onClick={() => setActiveTab(step.tab)}>
-                  <span>{step.done ? "Done" : "Open"}</span>
+            <div className="step-grid compact-steps">
+              {setupSteps.map((step, index) => (
+                <button
+                  key={step.label}
+                  className={`step-card ${step.done ? "done" : ""}`}
+                  onClick={() => setActiveTab(step.tab)}
+                >
+                  <span>{index + 1}</span>
                   <strong>{step.label}</strong>
+                  <small>{step.done ? "Ready" : "Open"}</small>
                 </button>
               ))}
             </div>
           </section>
 
-          <section className="panel stack">
+          <aside className="panel stack operations-panel">
             <div className="row-head">
-              <h3>Admin queue</h3>
-              {pendingReviews > 0 ? <Badge tone="warn">Action needed</Badge> : <Badge tone="good">Clear</Badge>}
+              <div>
+                <h3>Live operations</h3>
+                <p className="muted">Current routing and queue state.</p>
+              </div>
+              <Badge tone={pendingReviews > 0 ? "warn" : "good"}>{pendingReviews > 0 ? "review" : "clear"}</Badge>
             </div>
-            <Metric label="Pending reviews" value={pendingReviews} />
-            <Metric label="Knowledge documents" value={documents.length} />
-            <button onClick={() => setActiveTab("reviews")}>Review queue</button>
-            <button onClick={() => setActiveTab("documents")}>Manage knowledge</button>
-          </section>
-
-          <section className="panel stack">
-            <div className="row-head">
-              <h3>Developer toolbox</h3>
-              <Badge>Local</Badge>
-            </div>
-            <Metric label="Latest route" value={latestRun?.route_decision ?? "-"} />
+            <Metric label="Latest route" value={latestRoute} />
             <Metric label="Evaluation runs" value={evaluationRuns.length} />
-            <button onClick={() => setActiveTab("trace")}>Inspect graph state</button>
-            <button onClick={() => setActiveTab("evaluations")}>Run evaluation</button>
-            <button onClick={() => setActiveTab("costs")}>Open cost ledger</button>
-            <button onClick={() => setActiveTab("models")}>Model settings</button>
-            <button onClick={() => setActiveTab("audit")}>Audit logs</button>
-          </section>
+            <Metric label="Active models" value={activeModelCount} />
+            <div className="overview-action-list">
+              <button onClick={() => setActiveTab("agent")}>Run agent</button>
+              <button onClick={() => setActiveTab("reviews")}>Human review</button>
+              <button onClick={() => setActiveTab("trace")} disabled={!traceRunId}>Trace explorer</button>
+              <button onClick={() => setActiveTab("costs")}>Cost ledger</button>
+            </div>
+          </aside>
         </section>
 
-        <section className="panel">
-          <div className="row-head">
-            <div>
-              <h3>Workflow map</h3>
-              <p className="muted">Each step is backed by a workspace-scoped API, persisted trace, or cost ledger.</p>
-            </div>
-            {pendingReviews > 0 && <Badge tone="warn">{pendingReviews} review pending</Badge>}
-          </div>
-          <div className="step-grid">
-            {setupSteps.map((step, index) => (
-              <button
-                key={step.label}
-                className={`step-card ${step.done ? "done" : ""}`}
-                onClick={() => setActiveTab(step.tab)}
-              >
-                <span>{index + 1}</span>
-                <strong>{step.label}</strong>
-                <small>{step.done ? "Ready" : "Needs action"}</small>
-              </button>
-            ))}
-          </div>
+        <section className="overview-admin-grid">
+          <button className="overview-admin-card" onClick={() => setActiveTab("documents")}>
+            <span>Knowledge admin</span>
+            <strong>{documents.length} documents</strong>
+            <small>Upload, edit, reindex, and inspect chunks.</small>
+          </button>
+          <button className="overview-admin-card" onClick={() => setActiveTab("prompts")}>
+            <span>Prompt operations</span>
+            <strong>{promptTemplates.length} templates</strong>
+            <small>Version LangChain prompts by language.</small>
+          </button>
+          <button className="overview-admin-card" onClick={() => setActiveTab("models")}>
+            <span>Model controls</span>
+            <strong>{activeModelCount} active</strong>
+            <small>Configure model purpose, cost, and context limits.</small>
+          </button>
+          <button className="overview-admin-card" onClick={() => setActiveTab("audit")}>
+            <span>Audit trail</span>
+            <strong>{auditLogs.length} events</strong>
+            <small>Review workspace and AI operations changes.</small>
+          </button>
         </section>
       </div>
     );

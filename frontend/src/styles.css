@@ -400,6 +400,109 @@ small {
   margin-bottom: 8px;
 }
 
+.overview-console {
+  display: grid;
+  gap: 16px;
+}
+
+.overview-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 20px;
+  align-items: stretch;
+  border-color: #b9d7d3;
+  background: #fbfefd;
+}
+
+.overview-hero h2 {
+  margin-bottom: 8px;
+}
+
+.next-action-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #cfe1df;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.next-action-card span,
+.overview-health-card span,
+.overview-admin-card span {
+  color: #657386;
+  font-size: 0.74rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.next-action-card p,
+.overview-health-card p {
+  margin: 0;
+  color: #526071;
+  line-height: 1.45;
+}
+
+.overview-health-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.overview-health-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.overview-health-card strong {
+  font-size: 1.35rem;
+}
+
+.overview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.compact-steps {
+  margin-top: 0;
+}
+
+.operations-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.overview-action-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.overview-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.overview-admin-card {
+  display: grid;
+  gap: 7px;
+  min-height: 118px;
+  align-content: start;
+  text-align: left;
+  background: #ffffff;
+}
+
+.overview-admin-card small {
+  line-height: 1.4;
+}
+
 .command-center p,
 .guide-panel p,
 .info-card p,
@@ -852,6 +955,8 @@ th {
 
 @media (max-width: 1120px) {
   .console-strip,
+  .overview-admin-grid,
+  .overview-health-grid,
   .readiness-strip,
   .runtime-control-grid,
   .three {
@@ -863,11 +968,15 @@ th {
   .auth-page,
   .agent-hero,
   .agent-workbench,
+  .overview-hero,
+  .overview-layout,
   .app-shell,
   .two,
   .two-wide-left,
   .three,
   .console-strip,
+  .overview-admin-grid,
+  .overview-health-grid,
   .readiness-strip,
   .review-controls,
   .runtime-control-grid {
