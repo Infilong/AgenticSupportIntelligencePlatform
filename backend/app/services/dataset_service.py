@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.language import LanguageDetectionError, detect_language_for_messages
@@ -142,6 +142,41 @@ class DatasetService:
         limit: int | None = None,
         offset: int = 0,
     ) -> list[Dataset]:
+        conditions = self._dataset_filters(
+            workspace_id=workspace_id, folder_id=folder_id, unfiled=unfiled, search=search
+        )
+        statement = (
+            select(Dataset)
+            .where(*conditions)
+            .order_by(Dataset.created_at.desc())
+            .offset(offset)
+        )
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
+
+    def count_datasets(
+        self,
+        *,
+        workspace_id: UUID,
+        folder_id: UUID | None = None,
+        unfiled: bool = False,
+        search: str | None = None,
+    ) -> int:
+        conditions = self._dataset_filters(
+            workspace_id=workspace_id, folder_id=folder_id, unfiled=unfiled, search=search
+        )
+        statement = select(func.count()).select_from(Dataset).where(*conditions)
+        return int(self.db.scalar(statement) or 0)
+
+    def _dataset_filters(
+        self,
+        *,
+        workspace_id: UUID,
+        folder_id: UUID | None,
+        unfiled: bool,
+        search: str | None,
+    ) -> list[object]:
         conditions = [Dataset.workspace_id == workspace_id]
         if folder_id is not None:
             ResourceFolderService(self.db).validate_folder(
@@ -154,15 +189,7 @@ class DatasetService:
         if normalized_search:
             pattern = f"%{normalized_search}%"
             conditions.append(or_(Dataset.name.ilike(pattern), Dataset.description.ilike(pattern)))
-        statement = (
-            select(Dataset)
-            .where(*conditions)
-            .order_by(Dataset.created_at.desc())
-            .offset(offset)
-        )
-        if limit is not None:
-            statement = statement.limit(limit)
-        return list(self.db.scalars(statement).all())
+        return conditions
 
     def list_examples(self, *, workspace_id: UUID, dataset_id: UUID) -> list[ConversationExample]:
         if self.get_dataset(workspace_id=workspace_id, dataset_id=dataset_id) is None:

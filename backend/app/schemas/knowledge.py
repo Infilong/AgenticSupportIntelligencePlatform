@@ -87,6 +87,14 @@ class KnowledgeDocumentResponse(BaseModel):
     updated_at: datetime
 
 
+class KnowledgeDocumentListResponse(BaseModel):
+    items: list[KnowledgeDocumentResponse]
+    total: int
+    limit: int | None
+    offset: int
+    has_next: bool
+
+
 class KnowledgeDocumentIndexResponse(BaseModel):
     document: KnowledgeDocumentResponse
     latest_version: DocumentVersionResponse

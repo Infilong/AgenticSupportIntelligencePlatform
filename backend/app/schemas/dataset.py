@@ -45,6 +45,14 @@ class DatasetResponse(BaseModel):
     created_at: datetime
 
 
+class DatasetListResponse(BaseModel):
+    items: list[DatasetResponse]
+    total: int
+    limit: int | None
+    offset: int
+    has_next: bool
+
+
 class ImportBatchResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

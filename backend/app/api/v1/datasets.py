@@ -14,6 +14,7 @@ from app.schemas.dataset import (
     DatasetFolderUpdateRequest,
     DatasetImportRequest,
     DatasetImportResponse,
+    DatasetListResponse,
     DatasetResponse,
     LabelEditRequest,
     LabelResponse,
@@ -83,7 +84,7 @@ def import_dataset(
     )
 
 
-@router.get("/datasets", response_model=list[DatasetResponse])
+@router.get("/datasets", response_model=DatasetListResponse)
 def list_datasets(
     workspace: DatasetReadAccess,
     db: DbSession,
@@ -92,7 +93,7 @@ def list_datasets(
     search: SearchFilter = None,
     limit: ListLimit = None,
     offset: ListOffset = 0,
-) -> list[DatasetResponse]:
+) -> DatasetListResponse:
     if folder_id is not None and unfiled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -101,8 +102,9 @@ def list_datasets(
                 "message": "Use either folder_id or unfiled, not both.",
             },
         )
+    service = DatasetService(db)
     try:
-        datasets = DatasetService(db).list_datasets(
+        datasets = service.list_datasets(
             workspace_id=workspace.id,
             folder_id=folder_id,
             unfiled=unfiled,
@@ -110,9 +112,21 @@ def list_datasets(
             limit=limit,
             offset=offset,
         )
+        total = service.count_datasets(
+            workspace_id=workspace.id,
+            folder_id=folder_id,
+            unfiled=unfiled,
+            search=search,
+        )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
-    return [DatasetResponse.model_validate(dataset) for dataset in datasets]
+    return DatasetListResponse(
+        items=[DatasetResponse.model_validate(dataset) for dataset in datasets],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(datasets) < total,
+    )
 
 
 @router.get("/datasets/{dataset_id}/examples", response_model=list[ConversationExampleResponse])

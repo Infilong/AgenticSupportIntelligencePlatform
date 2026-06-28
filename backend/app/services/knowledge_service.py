@@ -105,6 +105,41 @@ class KnowledgeService:
         limit: int | None = None,
         offset: int = 0,
     ) -> list[KnowledgeDocument]:
+        conditions = self._document_filters(
+            workspace_id=workspace_id, folder_id=folder_id, unfiled=unfiled, search=search
+        )
+        statement = (
+            select(KnowledgeDocument)
+            .where(*conditions)
+            .order_by(KnowledgeDocument.created_at.desc())
+            .offset(offset)
+        )
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
+
+    def count_documents(
+        self,
+        *,
+        workspace_id: UUID,
+        folder_id: UUID | None = None,
+        unfiled: bool = False,
+        search: str | None = None,
+    ) -> int:
+        conditions = self._document_filters(
+            workspace_id=workspace_id, folder_id=folder_id, unfiled=unfiled, search=search
+        )
+        statement = select(func.count()).select_from(KnowledgeDocument).where(*conditions)
+        return int(self.db.scalar(statement) or 0)
+
+    def _document_filters(
+        self,
+        *,
+        workspace_id: UUID,
+        folder_id: UUID | None,
+        unfiled: bool,
+        search: str | None,
+    ) -> list[object]:
         conditions = [KnowledgeDocument.workspace_id == workspace_id]
         if folder_id is not None:
             ResourceFolderService(self.db).validate_folder(
@@ -123,15 +158,7 @@ class KnowledgeService:
                     cast(KnowledgeDocument.status, String).ilike(pattern),
                 )
             )
-        statement = (
-            select(KnowledgeDocument)
-            .where(*conditions)
-            .order_by(KnowledgeDocument.created_at.desc())
-            .offset(offset)
-        )
-        if limit is not None:
-            statement = statement.limit(limit)
-        return list(self.db.scalars(statement).all())
+        return conditions
 
     def get_document_detail(
         self, *, workspace_id: UUID, document_id: UUID

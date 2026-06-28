@@ -15,6 +15,7 @@ from app.schemas.knowledge import (
     KnowledgeDocumentDetailResponse,
     KnowledgeDocumentFolderUpdateRequest,
     KnowledgeDocumentIndexResponse,
+    KnowledgeDocumentListResponse,
     KnowledgeDocumentReindexRequest,
     KnowledgeDocumentResponse,
     KnowledgeDocumentUploadRequest,
@@ -91,7 +92,7 @@ def upload_knowledge_document(
     return _index_response(result)
 
 
-@router.get("/knowledge-documents", response_model=list[KnowledgeDocumentResponse])
+@router.get("/knowledge-documents", response_model=KnowledgeDocumentListResponse)
 def list_knowledge_documents(
     workspace: KnowledgeReadAccess,
     db: DbSession,
@@ -100,7 +101,7 @@ def list_knowledge_documents(
     search: SearchFilter = None,
     limit: ListLimit = None,
     offset: ListOffset = 0,
-) -> list[KnowledgeDocumentResponse]:
+) -> KnowledgeDocumentListResponse:
     if folder_id is not None and unfiled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,8 +110,9 @@ def list_knowledge_documents(
                 "message": "Use either folder_id or unfiled, not both.",
             },
         )
+    service = KnowledgeService(db)
     try:
-        documents = KnowledgeService(db).list_documents(
+        documents = service.list_documents(
             workspace_id=workspace.id,
             folder_id=folder_id,
             unfiled=unfiled,
@@ -118,9 +120,21 @@ def list_knowledge_documents(
             limit=limit,
             offset=offset,
         )
+        total = service.count_documents(
+            workspace_id=workspace.id,
+            folder_id=folder_id,
+            unfiled=unfiled,
+            search=search,
+        )
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
-    return [KnowledgeDocumentResponse.model_validate(document) for document in documents]
+    return KnowledgeDocumentListResponse(
+        items=[KnowledgeDocumentResponse.model_validate(document) for document in documents],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(documents) < total,
+    )
 
 
 @router.get(

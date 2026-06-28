@@ -219,7 +219,10 @@ def test_list_detail_and_reindex_are_workspace_scoped(client: TestClient) -> Non
     )
 
     assert owner_list.status_code == 200
-    assert [item["id"] for item in owner_list.json()] == [document_id]
+    owner_body = owner_list.json()
+    assert owner_body["total"] == 1
+    assert owner_body["has_next"] is False
+    assert [item["id"] for item in owner_body["items"]] == [document_id]
     assert forbidden_detail.status_code == 404
     assert forbidden_detail.json()["detail"]["code"] == "knowledge_document_not_found"
     assert forbidden_reindex.status_code == 404
@@ -299,7 +302,10 @@ def test_delete_document_removes_workspace_document_and_index_rows(
 
     assert deleted.status_code == 204
     assert detail.status_code == 404
-    assert listed.json() == []
+    listed_body = listed.json()
+    assert listed_body["items"] == []
+    assert listed_body["total"] == 0
+    assert listed_body["has_next"] is False
     assert db_session.scalar(select(KnowledgeDocument)) is None
     assert db_session.scalar(select(DocumentVersion)) is None
     assert db_session.scalar(select(DocumentChunk)) is None
@@ -478,10 +484,26 @@ def test_knowledge_document_list_supports_folder_unfiled_search_and_offset(
     assert second_page.status_code == 200
     assert unfiled_page.status_code == 200
     assert search_page.status_code == 200
-    assert [item["title"] for item in first_page.json()] == ["Paged Policy 2", "Paged Policy 1"]
-    assert [item["title"] for item in second_page.json()] == ["Paged Policy 0"]
-    assert [item["title"] for item in unfiled_page.json()] == ["Paged Policy 3"]
-    assert [item["title"] for item in search_page.json()] == ["Paged Policy 1"]
+    first_body = first_page.json()
+    second_body = second_page.json()
+    unfiled_body = unfiled_page.json()
+    search_body = search_page.json()
+    assert first_body["total"] == 3
+    assert first_body["limit"] == 2
+    assert first_body["offset"] == 0
+    assert first_body["has_next"] is True
+    assert second_body["total"] == 3
+    assert second_body["limit"] == 2
+    assert second_body["offset"] == 2
+    assert second_body["has_next"] is False
+    assert unfiled_body["total"] == 1
+    assert unfiled_body["has_next"] is False
+    assert search_body["total"] == 1
+    assert search_body["has_next"] is False
+    assert [item["title"] for item in first_body["items"]] == ["Paged Policy 2", "Paged Policy 1"]
+    assert [item["title"] for item in second_body["items"]] == ["Paged Policy 0"]
+    assert [item["title"] for item in unfiled_body["items"]] == ["Paged Policy 3"]
+    assert [item["title"] for item in search_body["items"]] == ["Paged Policy 1"]
     assert created_titles == [
         "Paged Policy 0",
         "Paged Policy 1",

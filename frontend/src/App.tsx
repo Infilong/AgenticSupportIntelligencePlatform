@@ -65,6 +65,14 @@ type Dataset = {
   created_at: string;
 };
 
+type DatasetListResponse = {
+  items: Dataset[];
+  total: number;
+  limit: number | null;
+  offset: number;
+  has_next: boolean;
+};
+
 type ResourceType = "knowledge_document" | "dataset" | "evaluation_run" | "agent_config";
 
 type ResourceFolder = {
@@ -119,6 +127,14 @@ type KnowledgeDocument = {
   folder_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type KnowledgeDocumentListResponse = {
+  items: KnowledgeDocument[];
+  total: number;
+  limit: number | null;
+  offset: number;
+  has_next: boolean;
 };
 
 type DocumentChunk = {
@@ -1107,6 +1123,8 @@ export function App() {
   const [selectedDataFolderId, setSelectedDataFolderId] = useState("all");
   const [datasetSearch, setDatasetSearch] = useState("");
   const [datasetPage, setDatasetPage] = useState(0);
+  const [datasetTotal, setDatasetTotal] = useState(0);
+  const [datasetHasNext, setDatasetHasNext] = useState(false);
   const [exampleSearch, setExampleSearch] = useState("");
   const [dataFolderName, setDataFolderName] = useState("Training data");
   const [examples, setExamples] = useState<ConversationExample[]>([]);
@@ -1121,6 +1139,8 @@ export function App() {
   const [selectedKnowledgeFolderId, setSelectedKnowledgeFolderId] = useState("all");
   const [documentSearch, setDocumentSearch] = useState("");
   const [documentPage, setDocumentPage] = useState(0);
+  const [documentTotal, setDocumentTotal] = useState(0);
+  const [documentHasNext, setDocumentHasNext] = useState(false);
   const [chunkSearch, setChunkSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
@@ -1798,12 +1818,16 @@ export function App() {
 
   function clearDatasetState() {
     setDatasets([]);
+    setDatasetTotal(0);
+    setDatasetHasNext(false);
     setSelectedDatasetId("");
     setExamples([]);
   }
 
   function clearKnowledgeState() {
     setDocuments([]);
+    setDocumentTotal(0);
+    setDocumentHasNext(false);
     setSelectedDocumentId("");
     setDocumentDetail(null);
   }
@@ -1932,12 +1956,19 @@ export function App() {
 
   async function loadDatasets(page = datasetPage) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<Dataset[]>(
+    const data = await apiRequest<DatasetListResponse>(
       workspaceListPath("/datasets", datasetListParams(page)),
       { token },
     );
-    setDatasets(data);
-    setSelectedDatasetId((current) => current || data[0]?.id || "");
+    setDatasets(data.items);
+    setDatasetTotal(data.total);
+    setDatasetHasNext(data.has_next);
+    setSelectedDatasetId((current) => {
+      if (data.items.some((dataset) => dataset.id === current)) return current;
+      const nextDatasetId = data.items[0]?.id ?? "";
+      if (!nextDatasetId) setExamples([]);
+      return nextDatasetId;
+    });
   }
 
   async function importDataset(event: FormEvent) {
@@ -2029,11 +2060,16 @@ export function App() {
 
   async function loadDocuments(page = documentPage) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<KnowledgeDocument[]>(
+    const data = await apiRequest<KnowledgeDocumentListResponse>(
       workspaceListPath("/knowledge-documents", knowledgeDocumentListParams(page)),
       { token },
     );
-    setDocuments(data);
+    setDocuments(data.items);
+    setDocumentTotal(data.total);
+    setDocumentHasNext(data.has_next);
+    if (selectedDocumentId && !data.items.some((document) => document.id === selectedDocumentId)) {
+      resetDocumentForm();
+    }
   }
 
   async function uploadDocument(event: FormEvent) {
@@ -3831,9 +3867,7 @@ export function App() {
     const datasetPageStart = datasetPage * MAX_VISIBLE_RESOURCES + (datasets.length ? 1 : 0);
     const datasetPageEnd = datasetPage * MAX_VISIBLE_RESOURCES + datasets.length;
     const canGoToPreviousDatasetPage = datasetPage > 0;
-    const canGoToNextDatasetPage = datasetSearch.trim()
-      ? datasets.length === MAX_VISIBLE_RESOURCES
-      : datasetPageEnd < selectedFolderDatasetCount;
+    const canGoToNextDatasetPage = datasetHasNext;
     const visibleExamples = examples.filter((example) =>
       matchesSearch(
         exampleSearch,
@@ -3885,13 +3919,13 @@ export function App() {
               <h3>Datasets</h3>
               <p className="muted">{selectedDataset ? `Selected: ${selectedDataset.name}` : "Select a dataset to inspect examples."}</p>
             </div>
-            <Badge>{datasets.length} shown</Badge>
+            <Badge>{datasets.length} of {datasetTotal} shown</Badge>
           </div>
           <div className="library-toolbar">
             <div className="folder-scope-banner">
               <span>Current folder</span>
               <strong>{selectedFolderLabel}</strong>
-              <small>{datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} shown from {selectedFolderDatasetCount} in this folder scope.</small>
+              <small>{datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} shown from {datasetTotal} matching this view.</small>
             </div>
             <div className="folder-scope-banner">
               <span>Import target</span>
@@ -3938,12 +3972,12 @@ export function App() {
           {datasets.length === 0 && (
             <EmptyState
               title="No datasets match this view"
-              detail={selectedFolderDatasetCount === 0 ? "Import data here or switch folders." : "Clear search, move to the previous page, or try another folder."}
+              detail={datasetTotal === 0 && selectedFolderDatasetCount === 0 ? "Import data here or switch folders." : "Clear search, move to the previous page, or try another folder."}
             />
           )}
           <div className="pagination-bar">
             <button type="button" onClick={() => setDatasetPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousDatasetPage || loading}>Previous</button>
-            <span>Page {datasetPage + 1} · {datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} shown</span>
+            <span>Page {datasetPage + 1} · {datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} of {datasetTotal}</span>
             <button type="button" onClick={() => setDatasetPage((page) => page + 1)} disabled={!canGoToNextDatasetPage || loading}>Next</button>
           </div>
           <p className="permission-note">Dataset history is loaded from the backend by folder, search, offset, and limit so large import libraries stay navigable without loading every dataset into the browser.</p>
@@ -4010,9 +4044,7 @@ export function App() {
     const documentPageStart = documentPage * MAX_VISIBLE_RESOURCES + (documents.length ? 1 : 0);
     const documentPageEnd = documentPage * MAX_VISIBLE_RESOURCES + documents.length;
     const canGoToPreviousDocumentPage = documentPage > 0;
-    const canGoToNextDocumentPage = documentSearch.trim()
-      ? documents.length === MAX_VISIBLE_RESOURCES
-      : documentPageEnd < selectedFolderDocumentCount;
+    const canGoToNextDocumentPage = documentHasNext;
     const visibleChunks = documentDetail
       ? documentDetail.chunks.filter((chunk) =>
           matchesSearch(
@@ -4066,7 +4098,7 @@ export function App() {
               <div className="folder-scope-banner">
                 <span>Current folder</span>
                 <strong>{selectedFolderLabel}</strong>
-                <small>{documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} shown from {selectedFolderDocumentCount} in this folder scope.</small>
+                <small>{documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} shown from {documentTotal} matching this view.</small>
               </div>
               <div className="folder-scope-banner">
                 <span>Upload target</span>
@@ -4114,13 +4146,13 @@ export function App() {
               {documents.length === 0 && (
                 <EmptyState
                   title="No documents match this view"
-                  detail={selectedFolderDocumentCount === 0 ? "Upload a policy or FAQ here, or switch folders." : "Clear search, move to the previous page, or try another folder."}
+                  detail={documentTotal === 0 && selectedFolderDocumentCount === 0 ? "Upload a policy or FAQ here, or switch folders." : "Clear search, move to the previous page, or try another folder."}
                 />
               )}
             </div>
             <div className="pagination-bar">
               <button type="button" onClick={() => setDocumentPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousDocumentPage || loading}>Previous</button>
-              <span>Page {documentPage + 1} · {documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} shown</span>
+              <span>Page {documentPage + 1} · {documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} of {documentTotal}</span>
               <button type="button" onClick={() => setDocumentPage((page) => page + 1)} disabled={!canGoToNextDocumentPage || loading}>Next</button>
             </div>
             <p className="permission-note">This library is loaded from the backend by folder, search, offset, and limit so large knowledge bases stay navigable without loading every file into the browser.</p>

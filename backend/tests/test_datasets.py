@@ -153,7 +153,12 @@ def test_import_csv_and_list_datasets(client: TestClient) -> None:
         f"/api/v1/workspaces/{workspace['id']}/datasets", headers=auth_headers(token)
     )
     assert list_response.status_code == 200
-    assert [dataset["name"] for dataset in list_response.json()] == ["CSV Examples"]
+    body = list_response.json()
+    assert body["total"] == 1
+    assert body["limit"] is None
+    assert body["offset"] == 0
+    assert body["has_next"] is False
+    assert [dataset["name"] for dataset in body["items"]] == ["CSV Examples"]
 
 
 def test_manual_label_edit_creates_and_replaces_human_label(client: TestClient) -> None:
@@ -301,10 +306,26 @@ def test_dataset_list_supports_folder_unfiled_search_and_offset(client: TestClie
     assert second_page.status_code == 200
     assert unfiled_page.status_code == 200
     assert search_page.status_code == 200
-    assert [item["name"] for item in first_page.json()] == ["Paged Dataset 2", "Paged Dataset 1"]
-    assert [item["name"] for item in second_page.json()] == ["Paged Dataset 0"]
-    assert [item["name"] for item in unfiled_page.json()] == ["Paged Dataset 3"]
-    assert [item["name"] for item in search_page.json()] == ["Paged Dataset 1"]
+    first_body = first_page.json()
+    second_body = second_page.json()
+    unfiled_body = unfiled_page.json()
+    search_body = search_page.json()
+    assert first_body["total"] == 3
+    assert first_body["limit"] == 2
+    assert first_body["offset"] == 0
+    assert first_body["has_next"] is True
+    assert second_body["total"] == 3
+    assert second_body["limit"] == 2
+    assert second_body["offset"] == 2
+    assert second_body["has_next"] is False
+    assert unfiled_body["total"] == 1
+    assert unfiled_body["has_next"] is False
+    assert search_body["total"] == 1
+    assert search_body["has_next"] is False
+    assert [item["name"] for item in first_body["items"]] == ["Paged Dataset 2", "Paged Dataset 1"]
+    assert [item["name"] for item in second_body["items"]] == ["Paged Dataset 0"]
+    assert [item["name"] for item in unfiled_body["items"]] == ["Paged Dataset 3"]
+    assert [item["name"] for item in search_body["items"]] == ["Paged Dataset 1"]
     assert created_names == [
         "Paged Dataset 0",
         "Paged Dataset 1",
