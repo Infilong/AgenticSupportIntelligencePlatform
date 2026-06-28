@@ -37,6 +37,7 @@ from app.schemas.agent import (
 from app.services.agent_service import (
     AgentModelConfigNotFoundError,
     AgentNotFoundError,
+    AgentRateLimitExceededError,
     AgentService,
     AgentUnavailableError,
     GraphRunNotFoundError,
@@ -285,6 +286,14 @@ def run_agent(
             detail={
                 "code": "agent_unavailable",
                 "message": "Agent is inactive or archived and cannot be run.",
+            },
+        ) from exc
+    except AgentRateLimitExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "code": "agent_rate_limit_exceeded",
+                "message": "Workspace agent run rate limit was exceeded.",
             },
         ) from exc
     AuditLogService(db).record(

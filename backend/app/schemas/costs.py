@@ -4,6 +4,20 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
+class BudgetPolicySummaryResponse(BaseModel):
+    monthly_token_budget: int
+    monthly_cost_budget: float
+    per_run_token_budget: int
+    per_run_cost_budget: float
+    rate_limit_requests_per_hour: int
+    alert_threshold_percent: float
+    tokens_used_this_month: int
+    estimated_cost_this_month: float
+    token_budget_used_percent: float
+    cost_budget_used_percent: float
+    alerting: bool
+
+
 class CostPurposeSummaryResponse(BaseModel):
     purpose: str
     runs: int
@@ -61,6 +75,7 @@ class RecentAIRunSummaryResponse(BaseModel):
 
 class CostSummaryResponse(BaseModel):
     workspace_id: UUID
+    budget_policy: BudgetPolicySummaryResponse
     total_runs: int
     total_tokens: int
     total_estimated_cost: float

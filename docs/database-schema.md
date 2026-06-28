@@ -308,9 +308,21 @@ CacheEntry
 - value_json
 - expires_at nullable
 - created_at
+
+WorkspaceBudgetPolicy
+- id
+- workspace_id unique
+- monthly_token_budget
+- monthly_cost_budget
+- per_run_token_budget
+- per_run_cost_budget
+- rate_limit_requests_per_hour
+- alert_threshold_percent
+- created_at
+- updated_at
 ```
 
-Every model call should create an `AIRun`. Every AI run should record prompt template and version when a prompt template is used.
+Every model call should create an `AIRun`. Every AI run should record prompt template and version when a prompt template is used. Workspace budget policy is owner-managed and read by cost summaries, system health, and agent runtime rate/token-budget enforcement.
 
 ## Evaluation
 ```text

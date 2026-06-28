@@ -1,6 +1,7 @@
 from app.models.agent import AgentConfig, Checkpoint, GraphRun, GraphStep, ToolCall
 from app.models.ai import AIRun, CacheEntry, ModelConfig, PromptTemplate
 from app.models.audit import AuditLog
+from app.models.budget import WorkspaceBudgetPolicy
 from app.models.dataset import ConversationExample, Dataset, ImportBatch, Label, Message
 from app.models.evaluation import EvaluationCase, EvaluationMetric, EvaluationResult, EvaluationRun
 from app.models.folder import ResourceFolder
@@ -45,6 +46,7 @@ __all__ = [
     "RetrievedChunk",
     "User",
     "Workspace",
+    "WorkspaceBudgetPolicy",
     "WorkspaceMember",
     "WorkspaceRole",
 ]

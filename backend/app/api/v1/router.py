@@ -5,6 +5,7 @@ from app.api.v1 import (
     attention,
     audit_logs,
     auth,
+    budget_policies,
     costs,
     datasets,
     evaluations,
@@ -23,6 +24,7 @@ from app.api.v1 import (
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router)
 api_router.include_router(workspaces.router)
+api_router.include_router(budget_policies.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(agents.router)
 api_router.include_router(attention.router)

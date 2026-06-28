@@ -109,6 +109,7 @@ Frontend:
 ## Risks
 - Hard-deleting datasets may remove evaluation-relevant examples; archive may be safer.
 - Adding folders without search/pagination only partially solves large-list scale.
+- Folder management currently covers Data and Knowledge first; future growing artifact surfaces should follow the same folder or collection pattern before they accumulate many files.
 - Current role model is minimal; avoid overclaiming admin/developer/reviewer/viewer until backend supports them.
 - Nested folders can create complexity; start with shallow folders unless strongly needed.
 
@@ -138,6 +139,8 @@ Frontend changes:
 - Added folder selectors during dataset import and knowledge document upload/edit.
 - Added folder filtering, resource move controls, and delete controls.
 - Kept growing resource lists inside bounded scroll areas so many filenames do not stretch the page.
+- Established a frontend rule: any future resource field/list that can grow with uploaded filenames, imported datasets, evaluation suites, prompt collections, or model artifacts must use a folder/collection or bounded selector pattern instead of an unbounded flat page section.
+- Bounded evaluation run, prompt template, model config, cost run, and AI ledger lists so named artifact collections do not stretch the page indefinitely.
 - Disabled destructive controls for non-owners using current workspace ownership data.
 
 Verification focus:

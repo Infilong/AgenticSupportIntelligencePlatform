@@ -23,6 +23,7 @@ from app.schemas.system_health import (
     SystemHealthResponse,
     SystemHealthSection,
 )
+from app.services.budget_policy_service import BudgetPolicyService
 
 
 class SystemHealthService:
@@ -159,14 +160,26 @@ class SystemHealthService:
             or 0
         )
         avg_budget = round(sum(budgets) / len(budgets)) if budgets else 0
-        status: HealthStatus = "warning" if agent_count == 0 else "ok"
+        budget_service = BudgetPolicyService(self.db)
+        policy = budget_service.get_or_create(workspace_id=workspace_id)
+        usage = budget_service.current_month_usage(workspace_id=workspace_id)
+        status: HealthStatus = "warning" if usage.alerting or agent_count == 0 else "ok"
+        token_status: HealthStatus = (
+            "warning"
+            if usage.token_budget_used_percent >= policy.alert_threshold_percent
+            else "ok"
+        )
+        cost_status: HealthStatus = (
+            "warning"
+            if usage.cost_budget_used_percent >= policy.alert_threshold_percent
+            else "ok"
+        )
         return SystemHealthSection(
             id="budgets",
             title="Budgets and limits",
             status=status,
             summary=(
-                "Agent-level token budgets are configured; global budget and "
-                "rate-limit controls are planned."
+                "Workspace budget policy is configured and enforced on agent run rate/token caps."
                 if agent_count
                 else "Create an agent to enforce token budgets on graph runs."
             ),
@@ -175,18 +188,32 @@ class SystemHealthService:
                 SystemHealthMetric(label="Average token budget", value=avg_budget),
                 SystemHealthMetric(label="Largest model context", value=max_context),
                 SystemHealthMetric(
-                    label="Global budget limit",
-                    value="not configured",
-                    status="not_configured",
+                    label="Monthly token budget",
+                    value=policy.monthly_token_budget,
+                    status=token_status,
+                    detail=f"{usage.tokens} tokens used this month.",
+                ),
+                SystemHealthMetric(
+                    label="Monthly cost budget",
+                    value=f"${policy.monthly_cost_budget:.2f}",
+                    status=cost_status,
+                    detail=f"${usage.estimated_cost:.4f} estimated cost this month.",
+                ),
+                SystemHealthMetric(
+                    label="Per-run token cap",
+                    value=policy.per_run_token_budget,
                     detail=(
-                        "Current build enforces agent/request budgets, not workspace monthly caps."
+                        "The runtime uses the lower of the agent budget and "
+                        "workspace per-run cap."
                     ),
                 ),
                 SystemHealthMetric(
                     label="Rate limits",
-                    value="not configured",
-                    status="not_configured",
-                    detail="Documented admin control; not implemented in v1 local runtime yet.",
+                    value=f"{policy.rate_limit_requests_per_hour}/hour",
+                    detail=(
+                        "Agent run creation is blocked once this workspace hourly "
+                        "request limit is reached."
+                    ),
                 ),
             ],
         )

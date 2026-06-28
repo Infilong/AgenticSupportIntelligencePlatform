@@ -43,6 +43,7 @@ from app.models import (  # noqa: F401
     ToolConfig,
     User,
     Workspace,
+    WorkspaceBudgetPolicy,
     WorkspaceMember,
 )
 

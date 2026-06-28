@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.agent import AgentConfig, GraphRun
 from app.models.ai import AIRun, AIRunStatus
+from app.services.budget_policy_service import BudgetPolicyService, BudgetUsage
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,8 @@ class RecentAIRunSummary:
 @dataclass(frozen=True)
 class CostSummary:
     workspace_id: UUID
+    budget_policy: object
+    budget_usage: BudgetUsage
     total_runs: int
     total_tokens: int
     total_estimated_cost: float
@@ -201,8 +204,13 @@ class CostService:
                 .limit(20)
             ).all()
         )
+        budget_service = BudgetPolicyService(self.db)
+        policy = budget_service.get_or_create(workspace_id=workspace_id)
+        usage = budget_service.current_month_usage(workspace_id=workspace_id)
         return CostSummary(
             workspace_id=workspace_id,
+            budget_policy=policy,
+            budget_usage=usage,
             total_runs=int(total_runs),
             total_tokens=int(total_tokens),
             total_estimated_cost=round(float(total_cost), 8),

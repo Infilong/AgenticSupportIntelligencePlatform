@@ -492,8 +492,45 @@ type AttentionSummary = {
   items: AttentionItem[];
 };
 
+type BudgetPolicySummary = {
+  monthly_token_budget: number;
+  monthly_cost_budget: number;
+  per_run_token_budget: number;
+  per_run_cost_budget: number;
+  rate_limit_requests_per_hour: number;
+  alert_threshold_percent: number;
+  tokens_used_this_month: number;
+  estimated_cost_this_month: number;
+  token_budget_used_percent: number;
+  cost_budget_used_percent: number;
+  alerting: boolean;
+};
+
+type BudgetPolicy = {
+  id: string;
+  workspace_id: string;
+  monthly_token_budget: number;
+  monthly_cost_budget: number;
+  per_run_token_budget: number;
+  per_run_cost_budget: number;
+  rate_limit_requests_per_hour: number;
+  alert_threshold_percent: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type BudgetPolicyDraft = {
+  monthly_token_budget: string;
+  monthly_cost_budget: string;
+  per_run_token_budget: string;
+  per_run_cost_budget: string;
+  rate_limit_requests_per_hour: string;
+  alert_threshold_percent: string;
+};
+
 type CostSummary = {
   workspace_id: string;
+  budget_policy: BudgetPolicySummary;
   total_runs: number;
   total_tokens: number;
   total_estimated_cost: number;
@@ -791,6 +828,17 @@ function formatNumber(value: number | null | undefined) {
   return (value ?? 0).toLocaleString();
 }
 
+function policyToDraft(policy: BudgetPolicy | BudgetPolicySummary): BudgetPolicyDraft {
+  return {
+    monthly_token_budget: String(policy.monthly_token_budget),
+    monthly_cost_budget: String(policy.monthly_cost_budget),
+    per_run_token_budget: String(policy.per_run_token_budget),
+    per_run_cost_budget: String(policy.per_run_cost_budget),
+    rate_limit_requests_per_hour: String(policy.rate_limit_requests_per_hour),
+    alert_threshold_percent: String(policy.alert_threshold_percent),
+  };
+}
+
 function formatDate(value: string | null) {
   if (!value) return "-";
   return new Date(value).toLocaleString();
@@ -895,6 +943,15 @@ export function App() {
   const [showArchivedEvaluations, setShowArchivedEvaluations] = useState(false);
 
   const [costSummary, setCostSummary] = useState<CostSummary | null>(null);
+  const [budgetPolicy, setBudgetPolicy] = useState<BudgetPolicy | null>(null);
+  const [budgetDraft, setBudgetDraft] = useState<BudgetPolicyDraft>({
+    monthly_token_budget: "100000",
+    monthly_cost_budget: "10",
+    per_run_token_budget: "4000",
+    per_run_cost_budget: "0.05",
+    rate_limit_requests_per_hour: "60",
+    alert_threshold_percent: "0.8",
+  });
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [attentionSummary, setAttentionSummary] = useState<AttentionSummary | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -939,6 +996,9 @@ export function App() {
   );
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const canManageResources = Boolean(workspaceMembership?.can_manage_resources);
+  const canManageBudgetPolicy = Boolean(
+    workspaceMembership?.permissions.includes("budget_policy:manage"),
+  );
   const canConfigureTools = Boolean(workspaceMembership?.permissions.includes("tools:configure"));
   const canConfigureGuardrails = Boolean(workspaceMembership?.permissions.includes("guardrails:configure"));
   const workspaceRole = !selectedWorkspaceId
@@ -1104,6 +1164,7 @@ export function App() {
       loadGuardrails(),
       loadEvaluations(),
       loadCosts(),
+      loadBudgetPolicy(),
       loadSystemHealth(),
       loadAuditLogs(),
       loadPromptTemplates(),
@@ -1133,6 +1194,10 @@ export function App() {
 
   function folderSelectionToFormValue(folderId: string) {
     return folderId === "all" || folderId === "unfiled" ? "" : folderId;
+  }
+
+  function updateBudgetDraft(field: keyof BudgetPolicyDraft, value: string) {
+    setBudgetDraft((current) => ({ ...current, [field]: value }));
   }
 
   function selectDataFolder(folderId: string) {
@@ -1954,6 +2019,37 @@ export function App() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<CostSummary>(workspacePath("/costs/summary"), { token });
     setCostSummary(data);
+    setBudgetDraft(policyToDraft(data.budget_policy));
+  }
+
+  async function loadBudgetPolicy() {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<BudgetPolicy>(workspacePath("/budget-policy"), { token });
+    setBudgetPolicy(data);
+    setBudgetDraft(policyToDraft(data));
+  }
+
+  async function saveBudgetPolicy(event: FormEvent) {
+    event.preventDefault();
+    await runAction("Budget policy saved", async () => {
+      const updated = await apiRequest<BudgetPolicy>(workspacePath("/budget-policy"), {
+        method: "PUT",
+        token,
+        body: {
+          monthly_token_budget: Number(budgetDraft.monthly_token_budget),
+          monthly_cost_budget: Number(budgetDraft.monthly_cost_budget),
+          per_run_token_budget: Number(budgetDraft.per_run_token_budget),
+          per_run_cost_budget: Number(budgetDraft.per_run_cost_budget),
+          rate_limit_requests_per_hour: Number(budgetDraft.rate_limit_requests_per_hour),
+          alert_threshold_percent: Number(budgetDraft.alert_threshold_percent),
+        },
+      });
+      setBudgetPolicy(updated);
+      setBudgetDraft(policyToDraft(updated));
+      await loadCosts();
+      await loadSystemHealth();
+      await loadAuditLogs();
+    });
   }
 
   async function loadSystemHealth() {
@@ -4572,8 +4668,12 @@ export function App() {
                 <strong>Provider and model routing</strong>
                 <span>{activeModelCount} active configs · {liveProviderCount} live routes</span>
               </button>
+              <button type="button" onClick={() => setActiveTab("costs")}>
+                <strong>Budgets and rate limits</strong>
+                <span>{costSummary ? `${formatPercent(costSummary.budget_policy.cost_budget_used_percent)} cost used · ${costSummary.budget_policy.rate_limit_requests_per_hour}/hour` : "load usage policy"}</span>
+              </button>
               <button type="button" onClick={() => setActiveTab("system")}>
-                <strong>Budgets, rate limits, and health</strong>
+                <strong>System health</strong>
                 <span>{systemHealth ? `${systemHealth.overall_status} · ${pendingHealthSignals} signals` : "load system health"}</span>
               </button>
               <button type="button" onClick={() => setActiveTab("tools")}>
@@ -4603,8 +4703,8 @@ export function App() {
           <div className="policy-list settings-boundary-list">
             <span>Workspace rename requires owner permission and backend authorization.</span>
             <span>Provider/model routes are configured in Models; missing API keys are reported in System Health.</span>
-            <span>Global monthly budgets and rate limits are intentionally marked not configured until backend enforcement exists.</span>
-            <span>Membership, resource deletion, and audit-sensitive actions remain owner-gated where required.</span>
+            <span>Workspace budget policy is configured in Usage & Costs and enforced by the backend runtime.</span>
+            <span>Membership, resource deletion, folder management, and audit-sensitive actions remain owner-gated where required.</span>
           </div>
         </section>
       </div>
@@ -4912,6 +5012,15 @@ export function App() {
             </section>
 
             <section className="queue-summary-grid">
+              <Metric label="Monthly token budget" value={formatNumber(costSummary.budget_policy.monthly_token_budget)} />
+              <Metric label="Token budget used" value={formatPercent(costSummary.budget_policy.token_budget_used_percent)} />
+              <Metric label="Monthly cost budget" value={formatCost(costSummary.budget_policy.monthly_cost_budget)} />
+              <Metric label="Cost budget used" value={formatPercent(costSummary.budget_policy.cost_budget_used_percent)} />
+              <Metric label="Per-run token cap" value={formatNumber(costSummary.budget_policy.per_run_token_budget)} />
+              <Metric label="Rate limit" value={`${costSummary.budget_policy.rate_limit_requests_per_hour}/hour`} />
+            </section>
+
+            <section className="queue-summary-grid">
               <Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} />
               <Metric label="P50 latency" value={`${costSummary.latency_p50_ms.toFixed(0)} ms`} />
               <Metric label="P95 latency" value={`${costSummary.latency_p95_ms.toFixed(0)} ms`} />
@@ -4949,8 +5058,80 @@ export function App() {
               </div>
 
               <aside className="panel stack cost-policy-panel">
-                <h3>Cost controls</h3>
-                <p className="muted">The workflow should reduce spend before calling larger models.</p>
+                <div className="row-head">
+                  <div>
+                    <h3>Budget policy</h3>
+                    <p className="muted">Backend-enforced monthly budgets, per-run caps, and hourly run limits.</p>
+                  </div>
+                  <Badge tone={costSummary.budget_policy.alerting ? "warn" : "good"}>
+                    {costSummary.budget_policy.alerting ? "alerting" : "within budget"}
+                  </Badge>
+                </div>
+
+                <form className="budget-policy-form" onSubmit={saveBudgetPolicy}>
+                  <label>
+                    Monthly token budget
+                    <input
+                      inputMode="numeric"
+                      value={budgetDraft.monthly_token_budget}
+                      disabled={!canManageBudgetPolicy || loading}
+                      onChange={(event) => updateBudgetDraft("monthly_token_budget", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Monthly cost budget
+                    <input
+                      inputMode="decimal"
+                      value={budgetDraft.monthly_cost_budget}
+                      disabled={!canManageBudgetPolicy || loading}
+                      onChange={(event) => updateBudgetDraft("monthly_cost_budget", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Per-run token cap
+                    <input
+                      inputMode="numeric"
+                      value={budgetDraft.per_run_token_budget}
+                      disabled={!canManageBudgetPolicy || loading}
+                      onChange={(event) => updateBudgetDraft("per_run_token_budget", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Per-run cost cap
+                    <input
+                      inputMode="decimal"
+                      value={budgetDraft.per_run_cost_budget}
+                      disabled={!canManageBudgetPolicy || loading}
+                      onChange={(event) => updateBudgetDraft("per_run_cost_budget", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Agent runs per hour
+                    <input
+                      inputMode="numeric"
+                      value={budgetDraft.rate_limit_requests_per_hour}
+                      disabled={!canManageBudgetPolicy || loading}
+                      onChange={(event) => updateBudgetDraft("rate_limit_requests_per_hour", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Alert threshold
+                    <input
+                      inputMode="decimal"
+                      value={budgetDraft.alert_threshold_percent}
+                      disabled={!canManageBudgetPolicy || loading}
+                      onChange={(event) => updateBudgetDraft("alert_threshold_percent", event.target.value)}
+                    />
+                  </label>
+                  <div className="settings-note">
+                    Owners can edit this policy. Members can inspect budget posture and run-level spend.
+                  </div>
+                  <div className="run-action-bar">
+                    <button className="primary" disabled={!canManageBudgetPolicy || loading}>Save policy</button>
+                    <button type="button" onClick={() => setActiveTab("models")}>Configure models</button>
+                  </div>
+                </form>
+
                 <div className="policy-list">
                   <span>Use cheaper model configs for classification</span>
                   <span>Retrieve and pack chunks instead of sending raw documents</span>
@@ -4958,7 +5139,7 @@ export function App() {
                   <span>Route high-cost cases to human review</span>
                   <span>Inspect cache hit rate and latency after every run</span>
                 </div>
-                <button type="button" onClick={() => setActiveTab("models")}>Configure models</button>
+                {budgetPolicy && <small className="muted">Last updated {formatDate(budgetPolicy.updated_at)}</small>}
               </aside>
             </section>
 

@@ -58,3 +58,7 @@ Known limitations:
 - Pricing values are estimates for portfolio/demo behavior, not billing-grade provider prices.
 - Existing embedding paths are not yet retrofitted into the AI run ledger; future provider wrappers should route through ledger-aware services.
 - Real model providers remain postponed until the ledger, budget planner, and tests are stable.
+
+
+## Workspace Budget Policy
+Workspace owners configure budget policy through backend-enforced settings, not UI-only hints. The policy includes monthly token budget, monthly cost budget, per-run token cap, per-run cost cap, hourly agent-run rate limit, and alert threshold. Cost summaries include current-month usage against the policy, and System Health reports warning status when budget usage crosses the configured alert threshold. Agent run creation enforces the hourly rate limit and the runtime uses the lower of the agent token budget and workspace per-run token cap.

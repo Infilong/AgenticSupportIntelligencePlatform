@@ -133,15 +133,19 @@ Current v1 behavior:
 - enforces workspace membership on create, list, and detail routes and workspace ownership on archive.
 - uses mock providers in tests; no test calls a real model provider.
 
-## Observability And Cost
+## Observability, Budget Policy, And Cost
 ```text
+GET /api/v1/workspaces/{workspace_id}/budget-policy
+PUT /api/v1/workspaces/{workspace_id}/budget-policy
 GET /api/v1/workspaces/{workspace_id}/costs/summary
 GET /api/v1/workspaces/{workspace_id}/audit-logs
 ```
 
 Current v1 behavior:
 - returns aggregate `AIRun` counts, token totals, estimated cost, average latency, cache hit rate, and purpose breakdown.
-- filters strictly by workspace membership and `workspace_id`.
+- returns monthly token/cost usage against the workspace budget policy.
+- lets workspace owners update monthly budgets, per-run caps, hourly run limit, and alert threshold.
+- filters strictly by workspace membership and `workspace_id`; budget policy updates require workspace owner access.
 - returns estimates only; pricing is demo/provider-config based and not billing-grade.
 
 

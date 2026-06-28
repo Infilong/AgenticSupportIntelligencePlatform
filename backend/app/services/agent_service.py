@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
 from app.models.ai import AIRun, ModelConfig
 from app.models.user import User
+from app.services.budget_policy_service import BudgetPolicyService
 from app.services.guardrails import GuardrailService, has_blocking_guardrail
 from app.services.human_review_service import HumanReviewService
 from app.services.model_config_service import ModelConfigService
@@ -23,6 +24,10 @@ class AgentNotFoundError(ValueError):
 
 
 class AgentUnavailableError(ValueError):
+    pass
+
+
+class AgentRateLimitExceededError(ValueError):
     pass
 
 
@@ -121,6 +126,12 @@ class AgentService:
             raise AgentNotFoundError("Agent was not found.")
         if not agent.active or agent.archived_at is not None:
             raise AgentUnavailableError("Agent is inactive or archived.")
+        budget_service = BudgetPolicyService(self.db)
+        if budget_service.rate_limit_exceeded(workspace_id=workspace_id):
+            raise AgentRateLimitExceededError("Workspace agent run rate limit exceeded.")
+        effective_token_budget = budget_service.effective_run_token_budget(
+            workspace_id=workspace_id, agent_token_budget=agent.token_budget
+        )
         graph_run = GraphRun(
             workspace_id=workspace_id,
             agent_config_id=agent.id,
@@ -138,7 +149,7 @@ class AgentService:
             "user_id": str(current_user.id),
             "graph_run_id": str(graph_run.id),
             "input_message": input_message.strip(),
-            "agent_token_budget": agent.token_budget,
+            "agent_token_budget": effective_token_budget,
             "agent_settings": _agent_settings(agent),
             "errors": [],
         }

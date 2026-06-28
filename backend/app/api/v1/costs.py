@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.dependencies.workspace import require_workspace_member
 from app.models.workspace import Workspace
 from app.schemas.costs import (
+    BudgetPolicySummaryResponse,
     CostAgentSummaryResponse,
     CostModelSummaryResponse,
     CostPurposeSummaryResponse,
@@ -26,6 +27,19 @@ def get_cost_summary(workspace: WorkspaceMemberAccess, db: DbSession) -> CostSum
     summary = CostService(db).summarize_workspace(workspace_id=workspace.id)
     return CostSummaryResponse(
         workspace_id=summary.workspace_id,
+        budget_policy=BudgetPolicySummaryResponse(
+            monthly_token_budget=summary.budget_policy.monthly_token_budget,
+            monthly_cost_budget=summary.budget_policy.monthly_cost_budget,
+            per_run_token_budget=summary.budget_policy.per_run_token_budget,
+            per_run_cost_budget=summary.budget_policy.per_run_cost_budget,
+            rate_limit_requests_per_hour=summary.budget_policy.rate_limit_requests_per_hour,
+            alert_threshold_percent=summary.budget_policy.alert_threshold_percent,
+            tokens_used_this_month=summary.budget_usage.tokens,
+            estimated_cost_this_month=summary.budget_usage.estimated_cost,
+            token_budget_used_percent=summary.budget_usage.token_budget_used_percent,
+            cost_budget_used_percent=summary.budget_usage.cost_budget_used_percent,
+            alerting=summary.budget_usage.alerting,
+        ),
         total_runs=summary.total_runs,
         total_tokens=summary.total_tokens,
         total_estimated_cost=summary.total_estimated_cost,

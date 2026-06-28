@@ -18,6 +18,7 @@ MEMBER_PERMISSIONS = [
     "prompts:write",
     "models:write",
     "costs:read",
+    "budget_policy:read",
     "audit:read",
 ]
 
@@ -29,6 +30,7 @@ OWNER_PERMISSIONS = [
     "agents:delete",
     "tools:configure",
     "guardrails:configure",
+    "budget_policy:manage",
 ]
 
 

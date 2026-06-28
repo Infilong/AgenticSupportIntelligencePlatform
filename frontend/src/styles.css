@@ -2436,6 +2436,12 @@ th {
   gap: 12px;
 }
 
+.evaluation-run-buttons {
+  max-height: 560px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
 .evaluation-toolbar {
   grid-template-columns: minmax(0, 1fr) minmax(130px, 180px);
 }
@@ -2757,6 +2763,9 @@ th {
 .model-config-list {
   display: grid;
   gap: 12px;
+  max-height: 640px;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .prompt-card,
@@ -3010,4 +3019,15 @@ th {
 
 .tool-config-grid input {
   min-width: 0;
+}
+
+.budget-policy-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.budget-policy-form .settings-note,
+.budget-policy-form .run-action-bar {
+  grid-column: 1 / -1;
 }
