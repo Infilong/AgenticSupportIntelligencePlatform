@@ -99,6 +99,14 @@ class GraphRunResponse(BaseModel):
     completed_at: datetime | None
 
 
+class GraphRunListResponse(BaseModel):
+    items: list[GraphRunResponse]
+    total: int
+    limit: int | None
+    offset: int
+    has_next: bool
+
+
 class AgentOperationalSummaryResponse(BaseModel):
     agent: AgentResponse
     assigned_model_config: ModelConfigResponse | None

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -993,6 +994,113 @@ def test_agent_archive_requires_owner_and_is_workspace_scoped(
     owner_body = owner_list.json()
     assert owner_body["total"] == 1
     assert [item["id"] for item in owner_body["items"]] == [agent["id"]]
+
+
+def test_agent_run_history_is_paginated_filterable_and_workspace_scoped(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "run-history-owner@example.com")
+    owner_token = login(client, "run-history-owner@example.com")
+    owner_workspace = create_workspace(client, owner_token, "Owner Run Workspace")
+    agent = create_agent(client, owner_token, owner_workspace["id"])
+    owner_user = db_session.scalar(
+        select(User).where(User.email == "run-history-owner@example.com")
+    )
+    assert owner_user is not None
+
+    base_time = datetime(2026, 1, 1, tzinfo=UTC)
+    runs = [
+        GraphRun(
+            workspace_id=UUID(owner_workspace["id"]),
+            agent_config_id=UUID(agent["id"]),
+            user_id=owner_user.id,
+            input_message="Refund policy run",
+            language="en",
+            status=GraphRunStatus.completed,
+            route_decision="finalize",
+            final_answer="Refunds are available within 30 days.",
+            created_at=base_time + timedelta(minutes=1),
+            completed_at=base_time + timedelta(minutes=2),
+        ),
+        GraphRun(
+            workspace_id=UUID(owner_workspace["id"]),
+            agent_config_id=UUID(agent["id"]),
+            user_id=owner_user.id,
+            input_message="Privacy complaint needs escalation",
+            language="en",
+            status=GraphRunStatus.needs_human_review,
+            route_decision="human_review",
+            created_at=base_time + timedelta(minutes=3),
+        ),
+        GraphRun(
+            workspace_id=UUID(owner_workspace["id"]),
+            agent_config_id=UUID(agent["id"]),
+            user_id=owner_user.id,
+            input_message="Model timeout failure",
+            language="ja",
+            status=GraphRunStatus.failed,
+            route_decision="failed",
+            created_at=base_time + timedelta(minutes=4),
+        ),
+    ]
+    db_session.add_all(runs)
+    db_session.commit()
+
+    first_page = client.get(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agent-runs",
+        headers=auth_headers(owner_token),
+        params={"limit": 2, "offset": 0},
+    )
+    second_page = client.get(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agent-runs",
+        headers=auth_headers(owner_token),
+        params={"limit": 2, "offset": 2},
+    )
+    review_filter = client.get(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agent-runs",
+        headers=auth_headers(owner_token),
+        params={"status": "needs_human_review"},
+    )
+    search_filter = client.get(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agent-runs",
+        headers=auth_headers(owner_token),
+        params={"search": "timeout"},
+    )
+
+    register(client, "run-history-other@example.com")
+    other_token = login(client, "run-history-other@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Run Workspace")
+    other_list = client.get(
+        f"/api/v1/workspaces/{other_workspace['id']}/agent-runs",
+        headers=auth_headers(other_token),
+    )
+
+    assert first_page.status_code == 200
+    first_body = first_page.json()
+    assert first_body["total"] == 3
+    assert first_body["limit"] == 2
+    assert first_body["offset"] == 0
+    assert first_body["has_next"] is True
+    assert [item["input_message"] for item in first_body["items"]] == [
+        "Model timeout failure",
+        "Privacy complaint needs escalation",
+    ]
+    assert second_page.status_code == 200
+    second_body = second_page.json()
+    assert second_body["total"] == 3
+    assert second_body["has_next"] is False
+    assert [item["input_message"] for item in second_body["items"]] == ["Refund policy run"]
+    assert review_filter.status_code == 200
+    review_body = review_filter.json()
+    assert review_body["total"] == 1
+    assert review_body["items"][0]["status"] == "needs_human_review"
+    assert search_filter.status_code == 200
+    search_body = search_filter.json()
+    assert search_body["total"] == 1
+    assert search_body["items"][0]["input_message"] == "Model timeout failure"
+    assert other_list.status_code == 200
+    assert other_list.json()["total"] == 0
+    assert other_list.json()["items"] == []
 
 
 def test_agent_routes_enforce_workspace_isolation(client: TestClient) -> None:

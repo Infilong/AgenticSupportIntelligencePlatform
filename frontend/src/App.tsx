@@ -22,6 +22,7 @@ const MAX_VISIBLE_EVALUATION_RUNS = 20;
 const MAX_VISIBLE_ADMIN_ASSETS = 30;
 const MAX_VISIBLE_AUDIT_EVENTS = 30;
 const MAX_VISIBLE_COST_ITEMS = 12;
+const MAX_VISIBLE_TRACE_RUNS = 20;
 const MAX_VISIBLE_REVIEWS = 30;
 const MAX_VISIBLE_MODEL_ROUTE_OPTIONS = 12;
 
@@ -206,6 +207,14 @@ type GraphRun = {
   final_answer: string | null;
   created_at: string;
   completed_at: string | null;
+};
+
+type GraphRunListResponse = {
+  items: GraphRun[];
+  total: number;
+  limit: number | null;
+  offset: number;
+  has_next: boolean;
 };
 
 type AgentOperationalSummary = {
@@ -1183,6 +1192,12 @@ export function App() {
   const [latestRun, setLatestRun] = useState<GraphRun | null>(null);
   const [trace, setTrace] = useState<GraphTrace | null>(null);
   const [traceRunId, setTraceRunId] = useState("");
+  const [traceRuns, setTraceRuns] = useState<GraphRun[]>([]);
+  const [traceSearch, setTraceSearch] = useState("");
+  const [traceStatusFilter, setTraceStatusFilter] = useState("all");
+  const [traceRunPage, setTraceRunPage] = useState(0);
+  const [traceRunTotal, setTraceRunTotal] = useState(0);
+  const [traceRunHasNext, setTraceRunHasNext] = useState(false);
   const [tools, setTools] = useState<ToolCatalogItem[]>([]);
   const [toolConfigDrafts, setToolConfigDrafts] = useState<Record<string, { enabled: boolean; timeout_ms: string; max_retries: string }>>({});
   const [toolSearch, setToolSearch] = useState("");
@@ -1488,6 +1503,12 @@ export function App() {
   }, [token, selectedWorkspaceId, activeTab, reviewFilter, reviewSort, reviewSearch, pendingReviewPage, resolvedReviewPage, permissionKey]);
 
   useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "trace") return;
+    if (!permissionList.includes("traces:read")) return;
+    void loadTraceRuns();
+  }, [token, selectedWorkspaceId, activeTab, traceSearch, traceStatusFilter, traceRunPage, permissionKey]);
+
+  useEffect(() => {
     if (!token || !selectedWorkspaceId || activeTab !== "costs") return;
     if (!permissionList.includes("costs:read")) return;
     void loadCosts();
@@ -1635,6 +1656,7 @@ export function App() {
       can("knowledge:read") ? loadDocuments() : Promise.resolve(clearKnowledgeState()),
       can("agents:read") ? loadAgents() : Promise.resolve(clearAgentState()),
       can("reviews:read") ? loadReviews() : Promise.resolve(clearReviewState()),
+      can("traces:read") ? loadTraceRuns() : Promise.resolve(clearTraceState()),
       can("tools:read") ? loadTools() : Promise.resolve(clearToolState()),
       can("guardrails:read") ? loadGuardrails() : Promise.resolve(clearGuardrailState()),
       can("evaluations:read") ? loadEvaluations() : Promise.resolve(clearEvaluationState()),
@@ -1912,6 +1934,14 @@ export function App() {
     setResolvedReviewTotal(0);
     setPendingReviewHasNext(false);
     setResolvedReviewHasNext(false);
+  }
+
+  function clearTraceState() {
+    setTraceRuns([]);
+    setTraceRunTotal(0);
+    setTraceRunHasNext(false);
+    setTrace(null);
+    setTraceRunId("");
   }
 
   function clearEvaluationState() {
@@ -2572,6 +2602,8 @@ export function App() {
       setLatestRun(run);
       setTraceRunId(run.id);
       await loadTrace(run.id);
+      setTraceRunPage(0);
+      await loadTraceRuns(0);
       await loadReviews();
       await loadCosts();
       await Promise.all([loadAgentSummary(selectedAgentId), loadAgentWorkflow(selectedAgentId)]);
@@ -2584,6 +2616,39 @@ export function App() {
     const data = await apiRequest<GraphTrace>(workspacePath(`/agent-runs/${runId}/trace`), { token });
     setTrace(data);
     setTraceRunId(runId);
+  }
+
+  function traceRunListParams(
+    page = traceRunPage,
+    search = traceSearch,
+    status = traceStatusFilter,
+  ) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      limit: MAX_VISIBLE_TRACE_RUNS,
+      offset: page * MAX_VISIBLE_TRACE_RUNS,
+    };
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    if (status !== "all") {
+      params.status = status;
+    }
+    return params;
+  }
+
+  async function loadTraceRuns(
+    page = traceRunPage,
+    search = traceSearch,
+    status = traceStatusFilter,
+  ) {
+    if (!selectedWorkspaceId) return;
+    const data = await apiRequest<GraphRunListResponse>(
+      workspaceListPath("/agent-runs", traceRunListParams(page, search, status)),
+      { token },
+    );
+    setTraceRuns(data.items);
+    setTraceRunTotal(data.total);
+    setTraceRunHasNext(data.has_next);
   }
 
   function reviewListParams(
@@ -5348,13 +5413,15 @@ export function App() {
   }
 
   function TracePanel() {
-    const summary = agentSummary?.agent.id === selectedAgentId ? agentSummary : null;
+    const showTraceShortcuts = traceRunPage === 0 && traceStatusFilter === "all" && !traceSearch.trim();
     const traceEntries = buildTraceEntries({
-      latestRun,
-      recentRuns: summary?.recent_runs ?? [],
-      reviews,
+      latestRun: showTraceShortcuts ? latestRun : null,
+      recentRuns: traceRuns,
+      reviews: showTraceShortcuts ? reviews : [],
     });
     const loadedTrace = trace?.run.id ?? null;
+    const traceRunPageStart = traceRunPage * MAX_VISIBLE_TRACE_RUNS + (traceRuns.length ? 1 : 0);
+    const traceRunPageEnd = traceRunPage * MAX_VISIBLE_TRACE_RUNS + traceRuns.length;
     const failedStepCount = trace?.steps.filter((step) => step.status === "failed" || step.error_message).length ?? 0;
     const modelCallCount = trace?.ai_runs.length ?? 0;
     const toolCallCount = trace?.steps.reduce((sum, step) => sum + step.tool_calls.length, 0) ?? 0;
@@ -5371,7 +5438,7 @@ export function App() {
           <div className="next-action-card">
             <span>Trace status</span>
             <strong>{trace ? "Trace loaded" : traceEntries.length ? "Select a trace" : "No runs yet"}</strong>
-            <p>{trace ? `${formatStepName(trace.run.route_decision ?? trace.run.status)} · ${trace.steps.length} graph nodes` : traceEntries.length ? "Start from a recent run instead of pasting an ID." : "Run an agent to create traceable execution records."}</p>
+            <p>{trace ? `${formatStepName(trace.run.route_decision ?? trace.run.status)} · ${trace.steps.length} graph nodes` : traceEntries.length ? "Start from the bounded run history instead of pasting an ID." : "Run an agent to create traceable execution records."}</p>
             <TabShortcut tab="agent">Run agent</TabShortcut>
           </div>
         </section>
@@ -5389,10 +5456,37 @@ export function App() {
           <aside className="panel stack trace-entry-panel">
             <div className="row-head">
               <div>
-                <h3>Trace entry points</h3>
-                <p className="muted">Recent agent runs and pending review cases from this workspace.</p>
+                <h3>Run history</h3>
+                <p className="muted">Workspace-scoped LangGraph runs with search, status filters, and bounded pagination.</p>
               </div>
-              <Badge>{traceEntries.length}</Badge>
+              <Badge>{traceRunTotal}</Badge>
+            </div>
+            <div className="filter-row">
+              <input
+                aria-label="Search trace runs"
+                placeholder="Search message, run id, trace id, language"
+                value={traceSearch}
+                onChange={(event) => { setTraceSearch(event.target.value); setTraceRunPage(0); }}
+              />
+              <select
+                aria-label="Trace run status"
+                value={traceStatusFilter}
+                onChange={(event) => { setTraceStatusFilter(event.target.value); setTraceRunPage(0); }}
+              >
+                <option value="all">All statuses</option>
+                <option value="completed">Completed</option>
+                <option value="needs_human_review">Needs human review</option>
+                <option value="failed">Failed</option>
+                <option value="running">Running</option>
+              </select>
+              <button type="button" onClick={() => void runAction("Trace history refreshed", () => loadTraceRuns())}>Refresh</button>
+            </div>
+            <div className="list-pagination-row">
+              <small>Showing {traceRunPageStart}-{traceRunPageEnd} of {traceRunTotal}</small>
+              <span>
+                <button type="button" disabled={traceRunPage === 0} onClick={() => setTraceRunPage((page) => Math.max(page - 1, 0))}>Previous</button>
+                <button type="button" disabled={!traceRunHasNext} onClick={() => setTraceRunPage((page) => page + 1)}>Next</button>
+              </span>
             </div>
             <div className="recent-run-list trace-entry-list">
               {traceEntries.map((entry) => (
@@ -5413,9 +5507,10 @@ export function App() {
                 </button>
               ))}
               {traceEntries.length === 0 && (
-                <EmptyState title="No traceable runs" detail="Create or run an agent to populate recent trace entry points." />
+                <EmptyState title="No traceable runs" detail="Create or run an agent, change the status filter, or clear the search query." />
               )}
             </div>
+            <p className="permission-note">Run history is loaded from a workspace-scoped backend endpoint. Large workspaces stay manageable through search, status filters, and pagination instead of one growing list.</p>
           </aside>
 
           <section className="panel stack trace-manual-loader">
@@ -7880,7 +7975,7 @@ function buildTraceEntries({
   for (const entry of entries) {
     if (!unique.has(entry.id)) unique.set(entry.id, entry);
   }
-  return [...unique.values()].slice(0, 8);
+  return [...unique.values()].slice(0, MAX_VISIBLE_TRACE_RUNS);
 }
 
 function summarizeAIRunPurposes(runs: AIRunTrace[]): AIRunPurposeSummary[] {

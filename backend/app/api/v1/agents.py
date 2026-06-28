@@ -1,5 +1,5 @@
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -25,6 +25,7 @@ from app.schemas.agent import (
     AgentWorkflowSummaryResponse,
     AIRunTraceResponse,
     CheckpointTraceResponse,
+    GraphRunListResponse,
     GraphRunResponse,
     GraphRuntimeResponse,
     GraphStepResponse,
@@ -68,6 +69,10 @@ ListOffset = Annotated[int, Query(ge=0)]
 UnfiledFilter = Annotated[bool, Query()]
 AgentId = Annotated[UUID, Path()]
 RunId = Annotated[UUID, Path()]
+GraphRunAgentFilter = Annotated[UUID | None, Query()]
+GraphRunStatusFilter = Annotated[
+    Literal["all", "running", "completed", "needs_human_review", "failed"], Query(alias="status")
+]
 
 
 @router.post("/agents", response_model=AgentResponse, status_code=status.HTTP_201_CREATED)
@@ -395,6 +400,40 @@ def run_agent(
         metadata={"agent_id": str(agent_id), "status": run.status},
     )
     return GraphRunResponse.model_validate(run)
+
+
+@router.get("/agent-runs", response_model=GraphRunListResponse)
+def list_agent_runs(
+    workspace: TraceReadAccess,
+    db: DbSession,
+    status_filter: GraphRunStatusFilter = "all",
+    agent_id: GraphRunAgentFilter = None,
+    search: SearchFilter = None,
+    limit: ListLimit = None,
+    offset: ListOffset = 0,
+) -> GraphRunListResponse:
+    service = AgentService(db)
+    runs = service.list_graph_runs(
+        workspace_id=workspace.id,
+        status=status_filter,
+        agent_id=agent_id,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
+    total = service.count_graph_runs(
+        workspace_id=workspace.id,
+        status=status_filter,
+        agent_id=agent_id,
+        search=search,
+    )
+    return GraphRunListResponse(
+        items=[GraphRunResponse.model_validate(run) for run in runs],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(runs) < total,
+    )
 
 
 @router.get("/agent-runs/{run_id}", response_model=GraphRunResponse)

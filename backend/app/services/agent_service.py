@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import String, case, cast, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
@@ -298,6 +298,72 @@ class AgentService:
             .order_by(GraphStep.created_at.desc())
             .limit(1)
         )
+
+    def list_graph_runs(
+        self,
+        *,
+        workspace_id: UUID,
+        status: str = "all",
+        search: str | None = None,
+        agent_id: UUID | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[GraphRun]:
+        filters = self._graph_run_filters(
+            workspace_id=workspace_id, status=status, search=search, agent_id=agent_id
+        )
+        statement = (
+            select(GraphRun)
+            .where(*filters)
+            .order_by(GraphRun.created_at.desc())
+            .offset(offset)
+        )
+        if limit is not None:
+            statement = statement.limit(limit)
+        return list(self.db.scalars(statement).all())
+
+    def count_graph_runs(
+        self,
+        *,
+        workspace_id: UUID,
+        status: str = "all",
+        search: str | None = None,
+        agent_id: UUID | None = None,
+    ) -> int:
+        filters = self._graph_run_filters(
+            workspace_id=workspace_id, status=status, search=search, agent_id=agent_id
+        )
+        total = self.db.scalar(select(func.count(GraphRun.id)).where(*filters))
+        return int(total or 0)
+
+    def _graph_run_filters(
+        self,
+        *,
+        workspace_id: UUID,
+        status: str,
+        search: str | None,
+        agent_id: UUID | None,
+    ) -> list:
+        filters = [GraphRun.workspace_id == workspace_id]
+        if agent_id is not None:
+            filters.append(GraphRun.agent_config_id == agent_id)
+        if status != "all":
+            filters.append(GraphRun.status == status)
+        normalized_search = (search or "").strip()
+        if normalized_search:
+            pattern = f"%{normalized_search}%"
+            filters.append(
+                or_(
+                    GraphRun.input_message.ilike(pattern),
+                    GraphRun.trace_id.ilike(pattern),
+                    GraphRun.route_decision.ilike(pattern),
+                    GraphRun.language.ilike(pattern),
+                    cast(GraphRun.id, String).ilike(pattern),
+                    cast(GraphRun.agent_config_id, String).ilike(pattern),
+                )
+            )
+        return filters
+
 
     def get_run(self, *, workspace_id: UUID, run_id: UUID) -> GraphRun:
         run = self.db.scalar(
