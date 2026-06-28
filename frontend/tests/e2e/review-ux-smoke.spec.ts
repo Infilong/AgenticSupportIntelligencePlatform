@@ -126,6 +126,18 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(folderInput).toHaveValue("Regional Policy QA");
   await expect(folderInput).toBeFocused();
 
+  await productNav.getByRole("button", { name: "Tools", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Configure and inspect agent tools outside individual traces" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tool operations board" })).toBeVisible();
+  const toolSearch = page.getByPlaceholder("Tool, permission, workflow node, schema, or runtime");
+  await toolSearch.fill("");
+  await toolSearch.type("documents");
+  await expect(toolSearch).toHaveValue("documents");
+  await expect(toolSearch).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Search documents" })).toBeVisible();
+  await expect(page.getByText("search_documents", { exact: true })).toBeVisible();
+  await expect(page.getByText("LangChain StructuredTool").first()).toBeVisible();
+
   await productNav.getByRole("button", { name: "Guardrails", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Inspect runtime guardrails and review routing" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Governance policy board" })).toBeVisible();

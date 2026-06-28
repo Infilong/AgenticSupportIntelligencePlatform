@@ -391,6 +391,7 @@ type ReviewDraft = {
 
 type ReviewFilter = "all" | "mine" | "unassigned" | "critical" | "evidence" | "model" | "language";
 type ReviewSort = "severity" | "newest" | "oldest";
+type ToolView = "all" | "enabled" | "disabled" | "failed" | "configured";
 type GuardrailView = "all" | "failed" | "configurable" | "fixed" | "routing";
 
 type EvaluationRun = {
@@ -935,6 +936,8 @@ export function App() {
   const [traceRunId, setTraceRunId] = useState("");
   const [tools, setTools] = useState<ToolCatalogItem[]>([]);
   const [toolConfigDrafts, setToolConfigDrafts] = useState<Record<string, { enabled: boolean; timeout_ms: string; max_retries: string }>>({});
+  const [toolSearch, setToolSearch] = useState("");
+  const [toolView, setToolView] = useState<ToolView>("all");
   const [guardrails, setGuardrails] = useState<GuardrailCatalogItem[]>([]);
   const [guardrailPolicyDrafts, setGuardrailPolicyDrafts] = useState<Record<string, GuardrailPolicyDraft>>({});
   const [guardrailSearch, setGuardrailSearch] = useState("");
@@ -3612,6 +3615,21 @@ export function App() {
     const totalCalls = tools.reduce((sum, tool) => sum + tool.usage.total_calls, 0);
     const failedCalls = tools.reduce((sum, tool) => sum + tool.usage.failed_calls, 0);
     const activeTools = tools.filter((tool) => tool.enabled).length;
+    const configuredTools = tools.filter((tool) => toolHasWorkspaceConfig(tool)).length;
+    const visibleTools = tools.filter((tool) => {
+      const matchesView = toolMatchesView(tool, toolView);
+      return matchesView && matchesSearch(
+        toolSearch,
+        tool.name,
+        friendlyToolName(tool.name),
+        tool.description,
+        tool.framework,
+        friendlyToolFramework(tool.framework),
+        tool.retry_policy,
+        ...tool.permissions,
+        ...tool.related_workflow_nodes.map(formatStepName),
+      );
+    });
     const lastUsedAt = tools
       .map((tool) => tool.usage.last_used_at)
       .filter((value): value is string => Boolean(value))
@@ -3637,13 +3655,51 @@ export function App() {
         <section className="queue-summary-grid">
           <Metric label="Tools" value={tools.length} />
           <Metric label="Enabled" value={activeTools} />
+          <Metric label="Configured" value={configuredTools} />
           <Metric label="Calls" value={totalCalls} />
           <Metric label="Failures" value={failedCalls} />
           <Metric label="Last used" value={formatDate(lastUsedAt)} />
         </section>
 
+        <section className="panel stack tool-toolbar">
+          <div className="row-head">
+            <div>
+              <h3>Tool operations board</h3>
+              <p className="muted">Filter backend-supported runtime tools by enabled state, failures, and workspace configuration before drilling into schemas or trace-linked executions.</p>
+            </div>
+            <Badge>{visibleTools.length}/{tools.length} shown</Badge>
+          </div>
+          <div className="tool-filter-row">
+            <div className="segmented tool-filter" aria-label="Tool catalog filter">
+              {toolViewOptions.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={toolView === option.id ? "selected" : ""}
+                  onClick={() => setToolView(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <label>
+              Search tools
+              <input
+                value={toolSearch}
+                onChange={(event) => setToolSearch(event.target.value)}
+                placeholder="Tool, permission, workflow node, schema, or runtime"
+              />
+            </label>
+            <div className="folder-scope-banner">
+              <span>Workspace overrides</span>
+              <strong>{configuredTools}</strong>
+              <small>Tools with saved timeout, retry, or enabled-state configuration.</small>
+            </div>
+          </div>
+        </section>
+
         <section className="tool-grid">
-          {tools.map((tool) => {
+          {visibleTools.map((tool) => {
             const draft = toolConfigDrafts[tool.name] ?? {
               enabled: tool.enabled,
               timeout_ms: tool.timeout_ms ? String(tool.timeout_ms) : "",
@@ -3653,8 +3709,9 @@ export function App() {
               <article className="panel stack tool-card" key={tool.name}>
                 <div className="row-head">
                   <div>
-                    <p className="eyebrow">{tool.framework}</p>
-                    <h3>{tool.name}</h3>
+                    <p className="eyebrow">{friendlyToolFramework(tool.framework)}</p>
+                    <h3>{friendlyToolName(tool.name)}</h3>
+                    <p className="muted compact-id">{tool.name}</p>
                   </div>
                   <Badge tone={tool.enabled ? "good" : "warn"}>{tool.enabled ? "enabled" : "disabled"}</Badge>
                 </div>
@@ -3760,6 +3817,7 @@ export function App() {
             );
           })}
           {tools.length === 0 && <EmptyState title="No tools loaded" detail="Refresh the workspace or run an agent to load runtime tool definitions." />}
+          {tools.length > 0 && visibleTools.length === 0 && <EmptyState title="No tools match this view" detail="Clear search or choose another tool filter." />}
         </section>
       </div>
     );
@@ -5684,6 +5742,14 @@ const reviewFilterOptions: Array<{ id: ReviewFilter; label: string }> = [
   { id: "language", label: "Language" },
 ];
 
+const toolViewOptions: Array<{ id: ToolView; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "enabled", label: "Enabled" },
+  { id: "disabled", label: "Disabled" },
+  { id: "failed", label: "Failures" },
+  { id: "configured", label: "Configured" },
+];
+
 const guardrailViewOptions: Array<{ id: GuardrailView; label: string }> = [
   { id: "all", label: "All" },
   { id: "failed", label: "Failures" },
@@ -5777,6 +5843,36 @@ function friendlyReviewReason(reason: string) {
     return "Language mismatch needs review";
   }
   return "Agent run needs human review";
+}
+
+function friendlyToolName(name: string) {
+  const labels: Record<string, string> = {
+    search_documents: "Search documents",
+    get_document_chunk: "Get document chunk",
+    compare_policy: "Compare policy",
+    draft_response: "Draft response",
+    calculate_cost: "Calculate cost",
+  };
+  return labels[name] ?? formatStepName(name);
+}
+
+function friendlyToolFramework(framework: string) {
+  if (framework.includes("StructuredTool")) return "LangChain StructuredTool";
+  if (framework.includes("LangGraph")) return "LangGraph runtime";
+  return framework.split(".").at(-1) ?? framework;
+}
+
+function toolHasWorkspaceConfig(tool: ToolCatalogItem) {
+  return !tool.enabled || tool.timeout_ms !== null || tool.max_retries > 0;
+}
+
+function toolMatchesView(tool: ToolCatalogItem, view: ToolView) {
+  if (view === "all") return true;
+  if (view === "enabled") return tool.enabled;
+  if (view === "disabled") return !tool.enabled;
+  if (view === "failed") return tool.usage.failed_calls > 0;
+  if (view === "configured") return toolHasWorkspaceConfig(tool);
+  return true;
 }
 
 function friendlyGuardrailName(reason: string) {

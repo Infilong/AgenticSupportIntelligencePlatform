@@ -2941,6 +2941,28 @@ th {
   align-items: start;
 }
 
+.tool-toolbar {
+  background: var(--surface-muted);
+}
+
+.tool-filter-row {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(260px, 0.75fr) minmax(220px, 0.45fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.tool-filter {
+  align-self: end;
+  flex-wrap: wrap;
+}
+
+.compact-id {
+  margin: -4px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
 .tool-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -2978,6 +3000,7 @@ th {
 
 @media (max-width: 900px) {
   .tool-hero,
+  .tool-filter-row,
   .tool-grid {
     grid-template-columns: 1fr;
   }
