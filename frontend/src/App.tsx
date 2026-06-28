@@ -6,6 +6,9 @@ type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" |
 type WorkspaceMemberRole = "owner" | "member";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin" | "Settings";
 
+const MAX_VISIBLE_EXAMPLES = 50;
+const MAX_VISIBLE_CHUNKS = 80;
+
 type CurrentUser = {
   id: string;
   email: string;
@@ -894,6 +897,7 @@ export function App() {
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
   const [selectedDataFolderId, setSelectedDataFolderId] = useState("all");
   const [datasetSearch, setDatasetSearch] = useState("");
+  const [exampleSearch, setExampleSearch] = useState("");
   const [dataFolderName, setDataFolderName] = useState("Training data");
   const [examples, setExamples] = useState<ConversationExample[]>([]);
   const [labelDrafts, setLabelDrafts] = useState<Record<string, { label_type: string; value: string }>>({});
@@ -906,6 +910,7 @@ export function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [selectedKnowledgeFolderId, setSelectedKnowledgeFolderId] = useState("all");
   const [documentSearch, setDocumentSearch] = useState("");
+  const [chunkSearch, setChunkSearch] = useState("");
   const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
   const [editingFolderId, setEditingFolderId] = useState("");
@@ -2828,6 +2833,19 @@ export function App() {
     );
     const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
     const selectedFolderLabel = selectedDataFolderId === "all" ? "All dataset folders" : selectedDataFolderId === "unfiled" ? "Unfiled datasets" : folderLabel("dataset", selectedDataFolderId);
+    const visibleExamples = examples.filter((example) =>
+      matchesSearch(
+        exampleSearch,
+        example.external_id,
+        example.id,
+        example.language,
+        example.status,
+        ...example.messages.map((message) => `${message.role} ${message.content}`),
+        ...example.labels.map((label) => `${label.label_type} ${label.value}`),
+      ),
+    );
+    const displayedExamples = visibleExamples.slice(0, MAX_VISIBLE_EXAMPLES);
+    const hiddenExampleCount = Math.max(visibleExamples.length - displayedExamples.length, 0);
 
     return (
       <div className="grid data-workbench-grid">
@@ -2919,10 +2937,34 @@ export function App() {
             />
           )}
         </section>
-        <section className="panel full-width">
-          <h3>Examples</h3>
-          <div className="example-list">
-            {examples.map((example) => (
+        <section className="panel stack full-width inspector-panel">
+          <div className="row-head">
+            <div>
+              <h3>Examples</h3>
+              <p className="muted">Inspect and label the selected dataset without letting large imports stretch the page.</p>
+            </div>
+            <Badge>{displayedExamples.length}/{examples.length} loaded</Badge>
+          </div>
+          <div className="library-toolbar inspector-toolbar">
+            <div className="folder-scope-banner">
+              <span>Selected dataset</span>
+              <strong>{selectedDataset?.name ?? "None selected"}</strong>
+              <small>{visibleExamples.length} examples match the current search. Use dataset folders to switch large import groups.</small>
+            </div>
+            <label>
+              Search loaded examples
+              <input
+                value={exampleSearch}
+                onChange={(event) => setExampleSearch(event.target.value)}
+                placeholder="External id, language, message, or label"
+              />
+            </label>
+            <p className="permission-note">
+              Large datasets stay folder-scoped above; this inspector shows the first {MAX_VISIBLE_EXAMPLES} matching examples to keep labeling usable.
+            </p>
+          </div>
+          <div className="example-list bounded-inspector-list">
+            {displayedExamples.map((example) => (
               <article key={example.id} className="example-row">
                 <div className="row-head"><strong>{example.external_id ?? example.id}</strong><Badge>{example.language}</Badge></div>
                 {example.messages.map((message) => <p key={message.id} className="message"><b>{message.role}</b>: {message.content}</p>)}
@@ -2937,7 +2979,9 @@ export function App() {
               </article>
             ))}
             {examples.length === 0 && <EmptyState title="No examples loaded" detail="Select a dataset to inspect messages and labels." />}
+            {examples.length > 0 && visibleExamples.length === 0 && <EmptyState title="No examples match this search" detail="Clear search or select another dataset folder." />}
           </div>
+          {hiddenExampleCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_EXAMPLES} of {visibleExamples.length} matching examples. Narrow the search before editing labels in very large imports.</p>}
         </section>
       </div>
     );
@@ -2960,6 +3004,20 @@ export function App() {
       ),
     );
     const selectedFolderLabel = selectedKnowledgeFolderId === "all" ? "All knowledge folders" : selectedKnowledgeFolderId === "unfiled" ? "Unfiled knowledge" : folderLabel("knowledge_document", selectedKnowledgeFolderId);
+    const visibleChunks = documentDetail
+      ? documentDetail.chunks.filter((chunk) =>
+          matchesSearch(
+            chunkSearch,
+            chunk.id,
+            `chunk ${chunk.chunk_index}`,
+            chunk.language,
+            String(chunk.token_count),
+            chunk.content,
+          ),
+        )
+      : [];
+    const displayedChunks = visibleChunks.slice(0, MAX_VISIBLE_CHUNKS);
+    const hiddenChunkCount = Math.max(visibleChunks.length - displayedChunks.length, 0);
 
     return (
       <div className="knowledge-console">
@@ -3107,8 +3165,26 @@ export function App() {
                 <Metric label="Language" value={documentDetail.document.language} />
                 <Metric label="Version" value={documentDetail.latest_version ? `v${documentDetail.latest_version.version}` : "-"} />
               </div>
-              <div className="chunk-list chunk-inspector-list">
-                {documentDetail.chunks.map((chunk) => (
+              <div className="library-toolbar inspector-toolbar">
+                <div className="folder-scope-banner">
+                  <span>Selected document</span>
+                  <strong>{selectedDocument?.title ?? "None selected"}</strong>
+                  <small>{visibleChunks.length} chunks match the current search. Document folders control the larger knowledge library above.</small>
+                </div>
+                <label>
+                  Search chunks
+                  <input
+                    value={chunkSearch}
+                    onChange={(event) => setChunkSearch(event.target.value)}
+                    placeholder="Chunk id, index, language, token count, or text"
+                  />
+                </label>
+                <p className="permission-note">
+                  The inspector is bounded to {MAX_VISIBLE_CHUNKS} matching chunks so long source files stay usable after indexing.
+                </p>
+              </div>
+              <div className="chunk-list chunk-inspector-list bounded-inspector-list">
+                {displayedChunks.map((chunk) => (
                   <article className="chunk" key={chunk.id}>
                     <div className="row-head">
                       <strong>Chunk {chunk.chunk_index}</strong>
@@ -3117,7 +3193,9 @@ export function App() {
                     <p>{chunk.content}</p>
                   </article>
                 ))}
+                {visibleChunks.length === 0 && <EmptyState title="No chunks match this search" detail="Clear search or select another document from a knowledge folder." />}
               </div>
+              {hiddenChunkCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_CHUNKS} of {visibleChunks.length} matching chunks. Use search to narrow large files before inspecting evidence.</p>}
             </>
           ) : <EmptyState title="No document selected" detail="Select a document to inspect indexed chunks and embeddings." />}
         </section>

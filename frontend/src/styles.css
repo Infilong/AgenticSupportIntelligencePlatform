@@ -1048,6 +1048,25 @@ small {
   font-weight: 700;
 }
 
+.inspector-panel {
+  min-width: 0;
+}
+
+.inspector-toolbar {
+  grid-template-columns: minmax(240px, 0.55fr) minmax(260px, 0.45fr) minmax(240px, 0.45fr);
+  align-items: stretch;
+}
+
+.bounded-inspector-list {
+  max-height: 680px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.bounded-inspector-list .empty {
+  min-height: 140px;
+}
+
 .member-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1815,7 +1834,8 @@ th {
     flex-direction: column;
   }
 
-  .workspace-create {
+  .workspace-create,
+  .inspector-toolbar {
     grid-template-columns: 1fr;
   }
 }
