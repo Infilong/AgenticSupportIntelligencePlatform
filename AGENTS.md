@@ -35,6 +35,7 @@ Codex loads this file automatically. Keep other context selective:
 - Every model call must create an AI run ledger record.
 - Every graph node execution must create graph trace data.
 - Every retrieval call must create retrieval trace data.
+- Uploaded/imported resources need permission-gated management paths, and growing resource lists must use folders, search, and bounded UI.
 
 ## AI And Token Rules
 - Token economy is a first-class requirement.

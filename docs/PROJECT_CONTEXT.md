@@ -48,6 +48,14 @@ V1 supports `en`, `ja`, and `zh`. Future languages must be added through languag
 - A user must not access, retrieve, evaluate, or view data from a workspace they do not belong to.
 - Permission denial must be tested for documents, datasets, examples, labels, graph runs, human reviews, evaluations, cost summaries, and audit logs.
 
+
+## Resource And File Management Rules
+- Upload/import is never a complete resource workflow by itself. User-owned resources must have permission-gated list, detail, edit or reindex, move, and delete paths where deletion is safe for the domain.
+- Growing collections such as knowledge documents, datasets, imports, and future file-backed resources must not render as unbounded flat lists in the frontend. Use folders, search, filters, bounded/paginated lists, and detail inspectors.
+- Folder IDs and resource IDs are workspace-scoped. Cross-workspace folder assignment, move, delete, and retrieval must be rejected by the backend.
+- Frontend permission states are explanatory only; the backend must enforce create, move, edit, delete, and folder-management permissions.
+- Large source content and indexed chunks belong in bounded inspectors or detail panels, not expanding page sections that grow with every file name or chunk.
+
 ## Human And Codex Roles
 The human engineer owns requirements, scope decisions, architecture approval, code review, test review, final merge decisions, project narrative, and quality bar.
 
