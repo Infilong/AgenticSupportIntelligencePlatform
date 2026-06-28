@@ -76,6 +76,7 @@ class GraphRunResponse(BaseModel):
     agent_config_id: UUID
     user_id: UUID
     input_message: str
+    trace_id: str | None
     language: str | None
     status: str
     route_decision: str | None
@@ -216,6 +217,8 @@ class GraphStepResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    span_id: str | None
+    parent_span_id: str | None
     step_name: str
     input_json: str
     output_json: str

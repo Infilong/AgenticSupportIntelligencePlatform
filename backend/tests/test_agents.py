@@ -152,6 +152,13 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
         "Document",
         "StructuredTool search_documents",
     }
+    assert trace_body["run"]["trace_id"]
+    span_ids = [step["span_id"] for step in trace_body["steps"]]
+    assert all(span_ids)
+    assert len(set(span_ids)) == len(span_ids)
+    assert trace_body["steps"][0]["parent_span_id"] is None
+    assert [step["parent_span_id"] for step in trace_body["steps"][1:]] == span_ids[:-1]
+
     step_names = [step["step_name"] for step in trace_body["steps"]]
     assert step_names == [
         "detect_language",
@@ -222,6 +229,9 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     graph_steps = db_session.scalars(select(GraphStep)).all()
     checkpoints = db_session.scalars(select(Checkpoint)).all()
     graph_run_id = UUID(run["id"])
+    stored_run = db_session.get(GraphRun, graph_run_id)
+    assert stored_run is not None
+    assert stored_run.trace_id == trace_body["run"]["trace_id"]
     assert len(tool_calls) == 1
     assert {ai_run.purpose for ai_run in ai_runs} >= {"classification", "draft_response"}
     assert all(ai_run.graph_run_id == graph_run_id for ai_run in ai_runs)
@@ -238,6 +248,7 @@ def test_support_agent_run_persists_trace_tool_calls_and_ai_runs(
     assert all(step.token_count and step.token_count > 0 for step in ai_steps)
     assert all(step.estimated_cost is not None for step in ai_steps)
     assert len(graph_steps) == 7
+    assert all(step.span_id for step in graph_steps)
     assert len(checkpoints) == 7
     assert all(checkpoint.graph_run_id == graph_run_id for checkpoint in checkpoints)
 

@@ -180,6 +180,7 @@ AgentConfig
 
 GraphRun
 - id
+- trace_id
 - workspace_id
 - agent_config_id
 - user_id
@@ -193,6 +194,8 @@ GraphRun
 
 GraphStep
 - id
+- span_id
+- parent_span_id
 - workspace_id
 - graph_run_id
 - step_name

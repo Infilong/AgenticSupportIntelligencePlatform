@@ -61,3 +61,8 @@ Show token usage, estimated cost, latency, model choice, cache hit rate, purpose
 - Browser evaluation dashboard for per-language, per-mode metrics and case results.
 - Browser cost dashboard for `AIRun` ledger aggregates and purpose breakdown.
 - Browser human-review queue with approve/edit/reject resolution.
+
+
+## Trace/span correlation
+
+Each `GraphRun` owns a stable `trace_id`. Each persisted `GraphStep` owns a `span_id` and records the previous step as `parent_span_id` for the linear LangGraph execution path. The trace API exposes these identifiers so frontend debugging, logs, model calls, tool calls, guardrails, and future OpenTelemetry exports can be correlated without relying only on database primary keys.

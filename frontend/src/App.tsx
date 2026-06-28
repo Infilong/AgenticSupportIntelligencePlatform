@@ -145,6 +145,7 @@ type Agent = {
 
 type GraphRun = {
   id: string;
+  trace_id: string | null;
   agent_config_id: string;
   input_message: string;
   language: string | null;
@@ -308,6 +309,8 @@ type CheckpointTrace = {
 
 type GraphStep = {
   id: string;
+  span_id: string | null;
+  parent_span_id: string | null;
   step_name: string;
   input_json: string;
   output_json: string;
@@ -6300,6 +6303,7 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
         <p className="message"><b>User</b>: {trace.run.input_message}</p>
         <p className="answer">{trace.run.final_answer ?? "No final answer. The run is blocked for review or has no supported source."}</p>
         <div className="metric-grid compact">
+          <Metric label="Trace ID" value={trace.run.trace_id ? shortId(trace.run.trace_id) : shortId(trace.run.id)} />
           <Metric label="Language" value={trace.run.language ?? "-"} />
           <Metric label="Route" value={trace.run.route_decision ? formatStepName(trace.run.route_decision) : "-"} />
           <Metric label="Completed" value={formatDate(trace.run.completed_at)} />
@@ -6499,7 +6503,7 @@ function TraceViewer({ trace }: { trace: GraphTrace }) {
               >
                 <span>{index + 1}</span>
                 <strong>{formatStepName(step.step_name)}</strong>
-                <small>{step.ai_run ? step.ai_run.model : step.tool_calls.length ? `${step.tool_calls.length} tools` : `${step.latency_ms} ms`}</small>
+                <small>{step.span_id ? `span ${shortId(step.span_id)}` : step.ai_run ? step.ai_run.model : step.tool_calls.length ? `${step.tool_calls.length} tools` : `${step.latency_ms} ms`}</small>
                 <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
               </button>
             ))}
@@ -6571,6 +6575,8 @@ function TraceStepInspector({
         </div>
       </div>
       <div className="trace-inspector-metrics">
+        <Metric label="Span" value={step.span_id ? shortId(step.span_id) : "-"} />
+        <Metric label="Parent span" value={step.parent_span_id ? shortId(step.parent_span_id) : "root"} />
         <Metric label="Latency" value={formatLatency(step.latency_ms)} />
         <Metric label="Tokens" value={step.ai_run?.total_tokens ?? step.token_count ?? 0} />
         <Metric label="Cost" value={formatCost(step.ai_run?.estimated_cost ?? step.estimated_cost)} />
@@ -6695,6 +6701,8 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
         </div>
       )}
       <div className="metric-grid compact">
+        <Metric label="Span" value={step.span_id ? shortId(step.span_id) : "-"} />
+        <Metric label="Parent" value={step.parent_span_id ? shortId(step.parent_span_id) : "root"} />
         <Metric label="Latency" value={`${step.latency_ms} ms`} />
         <Metric label="Tokens" value={step.ai_run?.total_tokens ?? step.token_count ?? 0} />
         <Metric label="Cost" value={formatCost(step.ai_run?.estimated_cost ?? step.estimated_cost)} />

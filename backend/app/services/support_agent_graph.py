@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from langgraph.graph import END, START, StateGraph
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage, detect_language_for_messages
@@ -383,9 +384,15 @@ class SupportAgentGraphRunner:
         status: GraphStepStatus = GraphStepStatus.succeeded,
         error_message: str | None = None,
     ) -> GraphStep:
+        workspace_id = UUID(input_state["workspace_id"])
+        graph_run_id = UUID(input_state["graph_run_id"])
+        parent_span_id = self._latest_span_id(
+            workspace_id=workspace_id, graph_run_id=graph_run_id
+        )
         step = GraphStep(
-            workspace_id=UUID(input_state["workspace_id"]),
-            graph_run_id=UUID(input_state["graph_run_id"]),
+            workspace_id=workspace_id,
+            graph_run_id=graph_run_id,
+            parent_span_id=parent_span_id,
             step_name=step_name,
             input_json=json.dumps(_compact_state(input_state), ensure_ascii=False, default=str),
             output_json=json.dumps(output, ensure_ascii=False, default=str),
@@ -447,6 +454,17 @@ class SupportAgentGraphRunner:
         step.estimated_cost = ai_run.estimated_cost
         self.db.commit()
         self.db.refresh(step)
+
+    def _latest_span_id(self, *, workspace_id: UUID, graph_run_id: UUID) -> str | None:
+        previous_step = self.db.scalar(
+            select(GraphStep)
+            .where(
+                GraphStep.workspace_id == workspace_id,
+                GraphStep.graph_run_id == graph_run_id,
+            )
+            .order_by(GraphStep.created_at.desc(), GraphStep.id.desc())
+        )
+        return previous_step.span_id if previous_step else None
 
 
 def _plan_model_call(
