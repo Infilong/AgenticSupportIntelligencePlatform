@@ -2087,29 +2087,96 @@ export function App() {
   }
 
   function EvaluationsPanel() {
+    const latestEvaluation = evaluationRuns[0] ?? null;
+    const selectedModes = evaluationModes.join(", ") || "none";
+    const runStatusCounts = evaluationRuns.reduce<Record<string, number>>((counts, run) => {
+      counts[run.status] = (counts[run.status] ?? 0) + 1;
+      return counts;
+    }, {});
+
     return (
-      <div className="grid two-wide-left">
-        <ActionGuide
-          title="Evaluation makes quality visible"
-          detail="Run the same cases through direct LLM, vector RAG, and system v1 to compare routing, citations, language preservation, latency, tokens, and cost."
-          action="Next: inspect token cost"
-          onAction={() => setActiveTab("costs")}
-        />
-        <form className="panel stack" onSubmit={runEvaluation}>
-          <h3>Run evaluation</h3>
-          <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} /></label>
-          <div className="check-row">{(["direct_llm", "vector_rag", "system_v1"] as Mode[]).map((mode) => <label key={mode}><input type="checkbox" checked={evaluationModes.includes(mode)} onChange={() => toggleMode(mode)} />{mode}</label>)}</div>
-          <label>JSONL cases<textarea rows={14} value={evaluationCases} onChange={(event) => setEvaluationCases(event.target.value)} /></label>
-          <button className="primary" disabled={loading || evaluationModes.length === 0}>Run evaluation</button>
-        </form>
-        <section className="panel stack">
-          <h3>Runs</h3>
-          {evaluationRuns.map((run) => <button key={run.id} className="list-button" onClick={() => void loadEvaluationDetail(run.id)}><strong>{run.name}</strong><span>{run.status} · {run.total_cases} cases</span></button>)}
-          {evaluationRuns.length === 0 && <EmptyState title="No evaluations" detail="Run JSONL cases to compare baselines and system v1." />}
+      <div className="evaluation-console">
+        <section className="panel evaluation-hero">
+          <div>
+            <p className="eyebrow">Evaluation lab</p>
+            <h2>Compare quality, routing, language, and cost</h2>
+            <p className="muted">Run the same JSONL cases through baseline and system modes to prove whether hybrid RAG, guardrails, and human review improve outcomes for English, Japanese, and Chinese.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Current experiment</span>
+            <strong>{selectedModes}</strong>
+            <p>{latestEvaluation ? `Latest run: ${latestEvaluation.name} · ${latestEvaluation.status}` : "Run the seeded multilingual cases to create a quality baseline."}</p>
+            <button type="button" onClick={() => void runAction("Evaluations refreshed", loadEvaluations)}>Refresh runs</button>
+          </div>
         </section>
-        <section className="panel full-width">
-          <h3>Metrics by mode and language</h3>
-          {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} /> : <EmptyState title="No evaluation selected" detail="Metrics will show language-specific quality and cost signals." />}
+
+        <section className="evaluation-workbench">
+          <form className="panel stack evaluation-run-panel" onSubmit={runEvaluation}>
+            <div className="row-head">
+              <div>
+                <h3>Run evaluation</h3>
+                <p className="muted">Use JSONL cases to compare direct LLM, vector RAG, and system v1 under the same expected route, citations, language, and cost constraints.</p>
+              </div>
+              <Badge tone={evaluationModes.length ? "good" : "warn"}>{evaluationModes.length} modes</Badge>
+            </div>
+            <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} /></label>
+            <div className="mode-card-grid">
+              {(["direct_llm", "vector_rag", "system_v1"] as Mode[]).map((mode) => (
+                <label className={evaluationModes.includes(mode) ? "mode-card selected" : "mode-card"} key={mode}>
+                  <input type="checkbox" checked={evaluationModes.includes(mode)} onChange={() => toggleMode(mode)} />
+                  <strong>{friendlyModeName(mode)}</strong>
+                  <span>{modeDescription(mode)}</span>
+                </label>
+              ))}
+            </div>
+            <label>
+              JSONL cases
+              <textarea rows={16} value={evaluationCases} onChange={(event) => setEvaluationCases(event.target.value)} />
+            </label>
+            <div className="run-action-bar">
+              <button className="primary" disabled={loading || evaluationModes.length === 0}>Run evaluation</button>
+              <button type="button" onClick={() => setActiveTab("costs")}>Inspect cost ledger</button>
+            </div>
+          </form>
+
+          <aside className="panel stack evaluation-run-list">
+            <div className="row-head">
+              <div>
+                <h3>Evaluation runs</h3>
+                <p className="muted">Select a run to inspect language-specific metrics and case failures.</p>
+              </div>
+              <Badge>{evaluationRuns.length} runs</Badge>
+            </div>
+            <div className="metric-grid compact">
+              <Metric label="Completed" value={runStatusCounts.completed ?? 0} />
+              <Metric label="Failed" value={runStatusCounts.failed ?? 0} />
+              <Metric label="Total cases" value={evaluationRuns.reduce((sum, run) => sum + run.total_cases, 0)} />
+            </div>
+            <div className="evaluation-run-buttons">
+              {evaluationRuns.map((run) => (
+                <button key={run.id} className="evaluation-run-button" onClick={() => void loadEvaluationDetail(run.id)}>
+                  <div className="row-head">
+                    <strong>{run.name}</strong>
+                    <Badge tone={toneForStatus(run.status)}>{run.status}</Badge>
+                  </div>
+                  <span>{run.total_cases} cases · {formatDate(run.created_at)}</span>
+                </button>
+              ))}
+              {evaluationRuns.length === 0 && <EmptyState title="No evaluations" detail="Run JSONL cases to compare baselines and system v1." />}
+            </div>
+          </aside>
+        </section>
+
+        <section className="panel stack full-width evaluation-dashboard-panel">
+          <div className="row-head">
+            <div>
+              <p className="eyebrow">Results dashboard</p>
+              <h3>Quality by mode and language</h3>
+              <p className="muted">This is the evidence you can show in an interview: pass rate, failed cases, route quality, cost, and prompt-token pressure.</p>
+            </div>
+            {evaluationDetail && <Badge tone={toneForStatus(evaluationDetail.run.status)}>{evaluationDetail.run.status}</Badge>}
+          </div>
+          {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} /> : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
         </section>
       </div>
     );
@@ -2355,20 +2422,127 @@ export function App() {
   }
 
   function CostsPanel() {
+    const topPurpose = costSummary && costSummary.by_purpose.length
+      ? costSummary.by_purpose.reduce((top, item) => item.estimated_cost > top.estimated_cost ? item : top)
+      : null;
+    const topModel = costSummary && costSummary.by_model.length
+      ? costSummary.by_model.reduce((top, item) => item.estimated_cost > top.estimated_cost ? item : top)
+      : null;
+    const estimatedCost = costSummary?.total_estimated_cost ?? 0;
+    const tokenPosture = !costSummary || costSummary.total_runs === 0
+      ? "No model calls yet"
+      : estimatedCost < 0.01
+        ? "Low demo spend"
+        : estimatedCost < 1
+          ? "Healthy monitored spend"
+          : "Review spend drivers";
+
     return (
-      <section className="panel stack">
-        <ActionGuide
-          title="Token economy is part of the product"
-          detail="This page summarizes model-call count, tokens, estimated cost, latency, cache hits, and purpose breakdown for the workspace."
-          action="Back to start"
-          onAction={() => setActiveTab("overview")}
-        />
-        <div className="row-head"><h3>Token and cost summary</h3><button onClick={() => void runAction("Costs refreshed", loadCosts)}>Refresh costs</button></div>
-        {costSummary ? <><div className="metric-grid"><Metric label="AI runs" value={costSummary.total_runs} /><Metric label="Tokens" value={formatNumber(costSummary.total_tokens)} /><Metric label="Estimated cost" value={formatCost(costSummary.total_estimated_cost)} /><Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} /><Metric label="Cache hit rate" value={`${(costSummary.cache_hit_rate * 100).toFixed(1)}%`} /></div><h3>By purpose</h3><table><thead><tr><th>Purpose</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr></thead><tbody>{costSummary.by_purpose.map((item) => <tr key={item.purpose}><td>{item.purpose}</td><td>{item.runs}</td><td>{formatNumber(item.tokens)}</td><td>{formatCost(item.estimated_cost)}</td></tr>)}</tbody></table><h3>By model</h3><table><thead><tr><th>Provider</th><th>Model</th><th>Runs</th><th>Tokens</th><th>Cost</th></tr></thead><tbody>{costSummary.by_model.map((item) => <tr key={`${item.provider}:${item.model}`}><td>{item.provider}</td><td>{item.model}</td><td>{item.runs}</td><td>{formatNumber(item.tokens)}</td><td>{formatCost(item.estimated_cost)}</td></tr>)}</tbody></table></> : <EmptyState title="No cost data" detail="Model calls create AI run ledger entries with token and latency estimates." />}
-      </section>
+      <div className="cost-console">
+        <section className="panel cost-hero">
+          <div>
+            <p className="eyebrow">Token economy</p>
+            <h2>Monitor every model call as product cost</h2>
+            <p className="muted">The AI run ledger records provider, model, purpose, tokens, estimated cost, latency, cache hit, language, graph run, and prompt version so the team can tune quality and budget together.</p>
+          </div>
+          <div className="next-action-card">
+            <span>Cost posture</span>
+            <strong>{tokenPosture}</strong>
+            <p>{topPurpose ? `${topPurpose.purpose} is the largest purpose driver at ${formatCost(topPurpose.estimated_cost)}.` : "Run an agent or evaluation to create ledger entries."}</p>
+            <button type="button" onClick={() => void runAction("Costs refreshed", loadCosts)}>Refresh costs</button>
+          </div>
+        </section>
+
+        {costSummary ? (
+          <>
+            <section className="queue-summary-grid">
+              <Metric label="AI runs" value={costSummary.total_runs} />
+              <Metric label="Tokens" value={formatNumber(costSummary.total_tokens)} />
+              <Metric label="Estimated cost" value={formatCost(costSummary.total_estimated_cost)} />
+              <Metric label="Avg latency" value={`${costSummary.average_latency_ms.toFixed(1)} ms`} />
+              <Metric label="Cache hit" value={`${(costSummary.cache_hit_rate * 100).toFixed(1)}%`} />
+              <Metric label="Top model" value={topModel ? `${topModel.provider}/${topModel.model}` : "-"} />
+            </section>
+
+            <section className="cost-workbench">
+              <div className="panel stack">
+                <div className="row-head">
+                  <div>
+                    <h3>Cost by AI purpose</h3>
+                    <p className="muted">Use this to decide where token-budget work matters most: classification, drafting, evaluation, or context compression.</p>
+                  </div>
+                  <Badge>{costSummary.by_purpose.length} purposes</Badge>
+                </div>
+                <div className="cost-card-list">
+                  {costSummary.by_purpose.map((item) => (
+                    <article className="cost-card" key={item.purpose}>
+                      <div className="row-head">
+                        <strong>{item.purpose}</strong>
+                        <Badge>{formatCost(item.estimated_cost)}</Badge>
+                      </div>
+                      <div className="metric-grid compact">
+                        <Metric label="Runs" value={item.runs} />
+                        <Metric label="Tokens" value={formatNumber(item.tokens)} />
+                        <Metric label="Avg tokens" value={item.runs ? formatNumber(Math.round(item.tokens / item.runs)) : 0} />
+                      </div>
+                    </article>
+                  ))}
+                  {costSummary.by_purpose.length === 0 && <EmptyState title="No purpose spend" detail="Purpose breakdown appears after model calls are recorded." />}
+                </div>
+              </div>
+
+              <aside className="panel stack cost-policy-panel">
+                <h3>Cost controls</h3>
+                <p className="muted">The workflow should reduce spend before calling larger models.</p>
+                <div className="policy-list">
+                  <span>Use cheaper model configs for classification</span>
+                  <span>Retrieve and pack chunks instead of sending raw documents</span>
+                  <span>Trim context when token budget is exceeded</span>
+                  <span>Route high-cost cases to human review</span>
+                  <span>Inspect cache hit rate and latency after every run</span>
+                </div>
+                <button type="button" onClick={() => setActiveTab("models")}>Configure models</button>
+              </aside>
+            </section>
+
+            <section className="panel stack full-width">
+              <div className="row-head">
+                <div>
+                  <h3>Cost by model</h3>
+                  <p className="muted">Provider and model attribution proves that cost tracking is connected to real model routing decisions.</p>
+                </div>
+                <Badge>{costSummary.by_model.length} models</Badge>
+              </div>
+              <div className="model-spend-grid">
+                {costSummary.by_model.map((item) => (
+                  <article className="model-spend-card" key={`${item.provider}:${item.model}`}>
+                    <div className="row-head">
+                      <div>
+                        <strong>{item.model}</strong>
+                        <p className="muted">{item.provider}</p>
+                      </div>
+                      <Badge>{formatCost(item.estimated_cost)}</Badge>
+                    </div>
+                    <div className="metric-grid compact">
+                      <Metric label="Runs" value={item.runs} />
+                      <Metric label="Tokens" value={formatNumber(item.tokens)} />
+                    </div>
+                  </article>
+                ))}
+                {costSummary.by_model.length === 0 && <EmptyState title="No model spend" detail="Model breakdown appears after AI run ledger entries are created." />}
+              </div>
+            </section>
+          </>
+        ) : (
+          <section className="panel stack">
+            <EmptyState title="No cost data" detail="Model calls create AI run ledger entries with token and latency estimates." />
+          </section>
+        )}
+      </div>
     );
   }
 }
+
 
 function toneForStatus(status: string): "neutral" | "good" | "warn" | "bad" {
   if (["completed", "succeeded", "indexed", "approved"].includes(status)) return "good";
@@ -2828,7 +3002,113 @@ function AIRunPanel({ aiRun }: { aiRun: AIRunTrace }) {
   );
 }
 
-function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
-  const metricRows = detail.metrics;
-  return <div className="stack"><div className="metric-grid"><Metric label="Run" value={detail.run.name} /><Metric label="Status" value={detail.run.status} /><Metric label="Cases" value={detail.run.total_cases} /><Metric label="Results" value={detail.results.length} /></div><table><thead><tr><th>Mode</th><th>Language</th><th>Metric</th><th>Value</th></tr></thead><tbody>{metricRows.map((metric) => <tr key={metric.id}><td>{metric.mode}</td><td>{metric.language}</td><td>{metric.metric_name}</td><td>{metric.metric_value.toFixed(4)}</td></tr>)}</tbody></table><h3>Case results</h3><div className="result-list">{detail.results.map((result) => <article className="result-row" key={result.id}><div className="row-head"><strong>{result.mode} · {result.language}</strong><Badge tone={result.passed ? "good" : "bad"}>{result.passed ? "passed" : "failed"}</Badge></div><div className="metric-grid compact"><Metric label="Route" value={result.actual_route} /><Metric label="Latency" value={`${result.latency_ms} ms`} /><Metric label="Prompt tokens" value={result.prompt_tokens} /><Metric label="Cost" value={formatCost(result.estimated_cost)} /></div><p>{result.answer ?? "No answer generated"}</p><details><summary>Scores and citations</summary><JsonBlock value={{ scores: safeJson(result.scores_json), citations: safeJson(result.citations_json), error: result.error_message }} /></details></article>)}</div></div>;
+function friendlyModeName(mode: Mode): string {
+  if (mode === "direct_llm") return "Direct LLM";
+  if (mode === "vector_rag") return "Vector RAG";
+  return "System v1";
 }
+
+function modeDescription(mode: Mode): string {
+  if (mode === "direct_llm") return "No retrieval baseline for cost and hallucination comparison.";
+  if (mode === "vector_rag") return "Retrieval baseline without the full guardrail workflow.";
+  return "Hybrid RAG plus guardrails, routing, and traceability.";
+}
+
+function EvaluationDashboard({ detail }: { detail: EvaluationDetail }) {
+  const passCount = detail.results.filter((result) => result.passed).length;
+  const failCount = detail.results.length - passCount;
+  const averageLatency = detail.results.length
+    ? Math.round(detail.results.reduce((sum, result) => sum + result.latency_ms, 0) / detail.results.length)
+    : 0;
+  const totalPromptTokens = detail.results.reduce((sum, result) => sum + result.prompt_tokens, 0);
+  const totalCost = detail.results.reduce((sum, result) => sum + result.estimated_cost, 0);
+  const languages = [...new Set(detail.results.map((result) => result.language))];
+  const modes = [...new Set(detail.results.map((result) => result.mode))];
+  const groupedMetrics = detail.metrics.reduce<Record<string, EvaluationMetric[]>>((groups, metric) => {
+    const key = `${metric.mode}:${metric.language}`;
+    groups[key] = [...(groups[key] ?? []), metric];
+    return groups;
+  }, {});
+
+  return (
+    <div className="evaluation-dashboard">
+      <div className="metric-grid">
+        <Metric label="Run" value={detail.run.name} />
+        <Metric label="Pass rate" value={detail.results.length ? `${Math.round((passCount / detail.results.length) * 100)}%` : "-"} />
+        <Metric label="Failed cases" value={failCount} />
+        <Metric label="Languages" value={languages.length ? languages.join(", ") : "-"} />
+        <Metric label="Avg latency" value={`${averageLatency} ms`} />
+        <Metric label="Prompt tokens" value={formatNumber(totalPromptTokens)} />
+        <Metric label="Estimated cost" value={formatCost(totalCost)} />
+      </div>
+
+      <section className="evaluation-matrix">
+        {modes.map((mode) => (
+          <article className="evaluation-mode-card" key={mode}>
+            <div className="row-head">
+              <div>
+                <strong>{friendlyModeName(mode)}</strong>
+                <p className="muted">{modeDescription(mode)}</p>
+              </div>
+              <Badge>{mode}</Badge>
+            </div>
+            <div className="language-metric-grid">
+              {languages.map((language) => {
+                const metrics = groupedMetrics[`${mode}:${language}`] ?? [];
+                const languageResults = detail.results.filter((result) => result.mode === mode && result.language === language);
+                const passed = languageResults.filter((result) => result.passed).length;
+                return (
+                  <div className="language-metric-card" key={`${mode}:${language}`}>
+                    <div className="row-head">
+                      <strong>{language.toUpperCase()}</strong>
+                      <Badge tone={languageResults.length > 0 && passed === languageResults.length ? "good" : "warn"}>{passed}/{languageResults.length}</Badge>
+                    </div>
+                    {metrics.slice(0, 4).map((metric) => (
+                      <div className="metric-line" key={metric.id}>
+                        <span>{metric.metric_name}</span>
+                        <strong>{metric.metric_value.toFixed(3)}</strong>
+                      </div>
+                    ))}
+                    {metrics.length === 0 && <p className="muted">No metrics recorded.</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="stack">
+        <div className="row-head">
+          <div>
+            <h3>Case results</h3>
+            <p className="muted">Failed cases expose where retrieval, routing, citations, or language preservation need work.</p>
+          </div>
+          <Badge tone={failCount ? "warn" : "good"}>{failCount ? `${failCount} failed` : "all passed"}</Badge>
+        </div>
+        <div className="result-list">
+          {detail.results.map((result) => (
+            <article className={result.passed ? "result-row evaluation-result-card" : "result-row evaluation-result-card failed"} key={result.id}>
+              <div className="row-head">
+                <div>
+                  <strong>{friendlyModeName(result.mode)} · {result.language.toUpperCase()}</strong>
+                  <p className="muted">Case {result.evaluation_case_id}</p>
+                </div>
+                <Badge tone={result.passed ? "good" : "bad"}>{result.passed ? "passed" : "failed"}</Badge>
+              </div>
+              <div className="metric-grid compact">
+                <Metric label="Route" value={result.actual_route} />
+                <Metric label="Latency" value={`${result.latency_ms} ms`} />
+                <Metric label="Prompt tokens" value={result.prompt_tokens} />
+                <Metric label="Cost" value={formatCost(result.estimated_cost)} />
+              </div>
+              <p>{result.answer ?? "No answer generated"}</p>
+              <details><summary>Scores and citations</summary><JsonBlock value={{ scores: safeJson(result.scores_json), citations: safeJson(result.citations_json), error: result.error_message }} /></details>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+

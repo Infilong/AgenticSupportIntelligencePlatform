@@ -1423,6 +1423,10 @@ th {
   .trace-workbench,
   .review-workbench,
   .review-hero,
+  .evaluation-hero,
+  .evaluation-workbench,
+  .cost-hero,
+  .cost-workbench,
   .review-context-grid,
   .review-editor {
     grid-template-columns: 1fr;
@@ -1432,6 +1436,8 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .evaluation-run-list,
+  .cost-policy-panel,
   .review-policy-panel {
     position: static;
   }
@@ -1474,6 +1480,153 @@ th {
 .guardrail-result.failed {
   border-color: #f3c968;
   background: #fffbeb;
+}
+
+
+.evaluation-console,
+.cost-console {
+  display: grid;
+  gap: 16px;
+}
+
+.evaluation-hero,
+.cost-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 18px;
+  align-items: stretch;
+  border-color: #b9d7d3;
+  background: #fbfefd;
+}
+
+.evaluation-workbench,
+.cost-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.evaluation-run-panel textarea {
+  min-height: 360px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+.mode-card-grid,
+.language-metric-grid,
+.model-spend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.mode-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 10px;
+  align-items: start;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 12px;
+  color: #344054;
+}
+
+.mode-card input {
+  width: auto;
+  margin-top: 3px;
+}
+
+.mode-card strong,
+.mode-card span {
+  grid-column: 2;
+}
+
+.mode-card span {
+  color: #526071;
+  line-height: 1.45;
+}
+
+.mode-card.selected {
+  border-color: #0f766e;
+  background: #f0fdfa;
+}
+
+.evaluation-run-list,
+.cost-policy-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.evaluation-run-buttons,
+.cost-card-list,
+.evaluation-dashboard,
+.evaluation-matrix {
+  display: grid;
+  gap: 12px;
+}
+
+.evaluation-run-button {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-height: 82px;
+  align-content: start;
+  text-align: left;
+}
+
+.evaluation-run-button span {
+  color: #657386;
+  font-size: 0.85rem;
+}
+
+.evaluation-dashboard-panel {
+  background: #fbfdff;
+}
+
+.evaluation-mode-card,
+.language-metric-card,
+.cost-card,
+.model-spend-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8dee7;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.language-metric-card {
+  background: #f8fafc;
+}
+
+.metric-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #e4eaf1;
+  padding-top: 8px;
+}
+
+.metric-line span {
+  color: #657386;
+  font-size: 0.82rem;
+}
+
+.metric-line strong {
+  color: #17202a;
+}
+
+.evaluation-result-card.failed {
+  border-color: #f3c968;
+  background: #fffbeb;
+}
+
+.cost-card,
+.model-spend-card {
+  background: #fbfdff;
 }
 
 .prompt-template-list,
