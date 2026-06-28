@@ -118,6 +118,20 @@ type DocumentChunk = {
   token_count: number;
 };
 
+type TraceRetrievedChunk = {
+  chunk_id?: string;
+  id?: string;
+  document_title?: string;
+  citation?: string;
+  language?: string;
+  chunk_index?: number;
+  content: string;
+  token_count?: number;
+  combined_score?: number;
+  vector_score?: number;
+  lexical_score?: number;
+};
+
 type DocumentVersion = {
   id: string;
   version: number;
@@ -6197,6 +6211,70 @@ function traceStepSignals(value: unknown): Array<{ label: string; value: string 
   return signals;
 }
 
+function traceRetrievedChunks(value: unknown): TraceRetrievedChunk[] {
+  const record = asRecord(value);
+  const chunks = record?.retrieved_chunks;
+  if (!Array.isArray(chunks)) return [];
+  return chunks
+    .map((chunk): TraceRetrievedChunk | null => {
+      const item = asRecord(chunk);
+      if (!item || typeof item.content !== "string") return null;
+      return {
+        chunk_id: typeof item.chunk_id === "string" ? item.chunk_id : undefined,
+        id: typeof item.id === "string" ? item.id : undefined,
+        document_title: typeof item.document_title === "string" ? item.document_title : undefined,
+        citation: typeof item.citation === "string" ? item.citation : undefined,
+        language: typeof item.language === "string" ? item.language : undefined,
+        chunk_index: typeof item.chunk_index === "number" ? item.chunk_index : undefined,
+        content: item.content,
+        token_count: typeof item.token_count === "number" ? item.token_count : undefined,
+        combined_score: typeof item.combined_score === "number" ? item.combined_score : undefined,
+        vector_score: typeof item.vector_score === "number" ? item.vector_score : undefined,
+        lexical_score: typeof item.lexical_score === "number" ? item.lexical_score : undefined,
+      };
+    })
+    .filter((chunk): chunk is TraceRetrievedChunk => chunk !== null);
+}
+
+function formatScore(value: number | undefined) {
+  return typeof value === "number" ? value.toFixed(3) : "-";
+}
+
+function TraceEvidenceCards({ chunks }: { chunks: TraceRetrievedChunk[] }) {
+  if (chunks.length === 0) return null;
+  const displayedChunks = chunks.slice(0, 3);
+  const hiddenCount = Math.max(chunks.length - displayedChunks.length, 0);
+  return (
+    <div className="trace-evidence-section">
+      <div className="row-head">
+        <strong>Retrieved evidence</strong>
+        <Badge>{chunks.length} chunks</Badge>
+      </div>
+      <div className="trace-evidence-card-grid">
+        {displayedChunks.map((chunk, index) => (
+          <article className="trace-retrieved-chunk" key={chunk.chunk_id ?? chunk.id ?? `${chunk.citation}-${index}`}>
+            <div className="row-head">
+              <strong>{chunk.document_title ?? chunk.citation ?? `Chunk ${chunk.chunk_index ?? index + 1}`}</strong>
+              <div className="review-actions">
+                {chunk.language && <Badge>{chunk.language.toUpperCase()}</Badge>}
+                {typeof chunk.token_count === "number" && <Badge>{chunk.token_count} tokens</Badge>}
+              </div>
+            </div>
+            {chunk.citation && <small>{chunk.citation}</small>}
+            <p>{chunk.content}</p>
+            <div className="trace-evidence-score-row">
+              <span>Combined {formatScore(chunk.combined_score)}</span>
+              <span>Vector {formatScore(chunk.vector_score)}</span>
+              <span>Lexical {formatScore(chunk.lexical_score)}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+      {hiddenCount > 0 && <p className="permission-note">Showing first 3 of {chunks.length} retrieved chunks. Open raw output for the full evidence payload.</p>}
+    </div>
+  );
+}
+
 type TraceStepFilter = "all" | "problems" | "models" | "tools" | "langchain";
 
 type TraceEntryPoint = {
@@ -6638,6 +6716,7 @@ function TraceStepInspector({
   const output = safeJson(step.output_json);
   const input = safeJson(step.input_json);
   const outputSignals = traceStepSignals(output);
+  const retrievedChunks = traceRetrievedChunks(output);
   const inputRecord = asRecord(input) ?? {};
   const checkpointState = checkpoint ? asRecord(safeJson(checkpoint.state_json)) : null;
   const checkpointMeta = asRecord(checkpointState?.checkpoint) ?? {};
@@ -6678,6 +6757,7 @@ function TraceStepInspector({
           </div>
         </div>
       )}
+      <TraceEvidenceCards chunks={retrievedChunks} />
       <div className="trace-inspector-grid">
         <div className="trace-evidence-box">
           <span>Input state</span>
@@ -6755,6 +6835,7 @@ function CheckpointCard({ checkpoint, index }: { checkpoint: CheckpointTrace; in
 function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
   const output = safeJson(step.output_json);
   const signals = traceStepSignals(output);
+  const retrievedChunks = traceRetrievedChunks(output);
   return (
     <article className="trace-step">
       <div className="row-head">
@@ -6781,6 +6862,7 @@ function TraceStepCard({ step, index }: { step: GraphStep; index: number }) {
           ))}
         </div>
       )}
+      <TraceEvidenceCards chunks={retrievedChunks} />
       <div className="metric-grid compact">
         <Metric label="Span" value={step.span_id ? shortId(step.span_id) : "-"} />
         <Metric label="Parent" value={step.parent_span_id ? shortId(step.parent_span_id) : "root"} />

@@ -2294,6 +2294,60 @@ th {
   line-height: 1.45;
 }
 
+.trace-evidence-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.trace-evidence-card-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.trace-retrieved-chunk {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 12px;
+}
+
+.trace-retrieved-chunk strong,
+.trace-retrieved-chunk small,
+.trace-retrieved-chunk p {
+  overflow-wrap: anywhere;
+}
+
+.trace-retrieved-chunk small {
+  color: var(--text-subtle);
+  line-height: 1.35;
+}
+
+.trace-retrieved-chunk p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.trace-evidence-score-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trace-evidence-score-row span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 760;
+  padding: 4px 8px;
+}
+
 .compact-guardrails {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
