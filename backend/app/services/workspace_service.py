@@ -9,15 +9,27 @@ from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 
 MEMBER_PERMISSIONS = [
     "workspace:read",
+    "tasks:read",
+    "data:read",
+    "knowledge:read",
+    "agents:read",
     "agents:run",
     "agents:configure",
-    "data:write",
-    "knowledge:write",
+    "tools:read",
+    "guardrails:read",
+    "traces:read",
+    "reviews:read",
     "reviews:resolve",
+    "evaluations:read",
     "evaluations:run",
     "costs:read",
     "budget_policy:read",
+    "members:read",
+    "prompts:read",
+    "models:read",
+    "system:read",
     "audit:read",
+    "settings:read",
 ]
 
 OWNER_PERMISSIONS = [

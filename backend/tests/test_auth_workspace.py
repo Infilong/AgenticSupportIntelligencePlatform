@@ -180,6 +180,11 @@ def test_workspace_membership_endpoint_returns_owner_permissions(client: TestCli
     assert body["role"] == "owner"
     assert body["can_manage_resources"] is True
     assert body["can_manage_workspace"] is True
+    assert "settings:read" in body["permissions"]
+    assert "prompts:write" in body["permissions"]
+    assert "models:write" in body["permissions"]
+    assert "tools:configure" in body["permissions"]
+    assert "guardrails:configure" in body["permissions"]
     assert "resources:delete" in body["permissions"]
     assert "resource_folders:manage" in body["permissions"]
 
@@ -215,7 +220,17 @@ def test_workspace_membership_endpoint_returns_member_permissions(
     assert body["can_manage_resources"] is False
     assert body["can_manage_workspace"] is False
     assert "workspace:read" in body["permissions"]
+    assert "tasks:read" in body["permissions"]
+    assert "knowledge:read" in body["permissions"]
+    assert "tools:read" in body["permissions"]
+    assert "reviews:read" in body["permissions"]
+    assert "prompts:read" in body["permissions"]
+    assert "models:read" in body["permissions"]
+    assert "settings:read" in body["permissions"]
     assert "resources:delete" not in body["permissions"]
+    assert "prompts:write" not in body["permissions"]
+    assert "models:write" not in body["permissions"]
+    assert "tools:configure" not in body["permissions"]
 
 
 def test_workspace_membership_endpoint_hides_other_workspaces(client: TestClient) -> None:

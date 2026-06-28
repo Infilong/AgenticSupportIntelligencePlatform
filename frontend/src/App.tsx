@@ -659,34 +659,36 @@ type ApiOptions = {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
-const tabs: Array<{ id: Tab; label: string; token: string; group: NavGroup; purpose: string }> = [
-  { id: "overview", label: "Dashboard", token: "DB", group: "Platform", purpose: "Workspace health, next action, and platform coverage." },
-  { id: "tasks", label: "My Tasks", token: "TK", group: "Platform", purpose: "Backend-ranked review, failure, guardrail, evaluation, and operations tasks." },
-  { id: "datasets", label: "Data", token: "DT", group: "Build", purpose: "Import and label multilingual examples for evaluation and routing." },
-  { id: "documents", label: "Knowledge", token: "KB", group: "Build", purpose: "Manage RAG policies, FAQs, versions, chunks, and citations." },
-  { id: "agent", label: "Agents", token: "AG", group: "Build", purpose: "Configure and run governed LangGraph agent workflows." },
-  { id: "tools", label: "Tools", token: "TL", group: "Build", purpose: "Inspect agent tools, schemas, permissions, usage, and errors." },
-  { id: "guardrails", label: "Guardrails", token: "GR", group: "Build", purpose: "Inspect governance checks, policy coverage, failures, and review routing." },
-  { id: "trace", label: "Runs & traces", token: "TR", group: "Operate", purpose: "Inspect graph state, tools, guardrails, evidence, and model calls." },
-  { id: "reviews", label: "Human review", token: "RV", group: "Operate", purpose: "Resolve blocked, risky, low-confidence, or unsupported runs." },
-  { id: "evaluations", label: "Evaluations", token: "EV", group: "Evaluate", purpose: "Compare quality, routing, language preservation, and baselines." },
-  { id: "costs", label: "Usage & costs", token: "US", group: "Evaluate", purpose: "Monitor tokens, latency, cache behavior, model purpose, and spend." },
-  { id: "members", label: "Members", token: "MB", group: "Admin", purpose: "Manage workspace members, owner rights, and available permissions." },
-  { id: "prompts", label: "Prompts", token: "PR", group: "Admin", purpose: "Version and activate LangChain prompt templates by language." },
-  { id: "models", label: "Models", token: "MO", group: "Admin", purpose: "Control provider, model purpose, context, and token pricing." },
-  { id: "system", label: "System health", token: "SH", group: "Admin", purpose: "Inspect provider readiness, limits, failures, data, and governance posture." },
-  { id: "audit", label: "Audit", token: "AU", group: "Admin", purpose: "Inspect accountable workspace and AI operations changes." },
-  { id: "settings", label: "Settings", token: "ST", group: "Settings", purpose: "Manage workspace identity and route to provider, permission, budget, and health settings." },
+type TabDefinition = {
+  id: Tab;
+  label: string;
+  token: string;
+  group: NavGroup;
+  purpose: string;
+  requiredPermissions: string[];
+};
+
+const tabs: TabDefinition[] = [
+  { id: "overview", label: "Dashboard", token: "DB", group: "Platform", purpose: "Workspace health, next action, and platform coverage.", requiredPermissions: ["workspace:read"] },
+  { id: "tasks", label: "My Tasks", token: "TK", group: "Platform", purpose: "Backend-ranked review, failure, guardrail, evaluation, and operations tasks.", requiredPermissions: ["tasks:read"] },
+  { id: "datasets", label: "Data", token: "DT", group: "Build", purpose: "Import and label multilingual examples for evaluation and routing.", requiredPermissions: ["data:read"] },
+  { id: "documents", label: "Knowledge", token: "KB", group: "Build", purpose: "Manage RAG policies, FAQs, versions, chunks, and citations.", requiredPermissions: ["knowledge:read"] },
+  { id: "agent", label: "Agents", token: "AG", group: "Build", purpose: "Configure and run governed LangGraph agent workflows.", requiredPermissions: ["agents:read"] },
+  { id: "tools", label: "Tools", token: "TL", group: "Build", purpose: "Inspect agent tools, schemas, permissions, usage, and errors.", requiredPermissions: ["tools:read"] },
+  { id: "guardrails", label: "Guardrails", token: "GR", group: "Build", purpose: "Inspect governance checks, policy coverage, failures, and review routing.", requiredPermissions: ["guardrails:read"] },
+  { id: "trace", label: "Runs & traces", token: "TR", group: "Operate", purpose: "Inspect graph state, tools, guardrails, evidence, and model calls.", requiredPermissions: ["traces:read"] },
+  { id: "reviews", label: "Human review", token: "RV", group: "Operate", purpose: "Resolve blocked, risky, low-confidence, or unsupported runs.", requiredPermissions: ["reviews:read"] },
+  { id: "evaluations", label: "Evaluations", token: "EV", group: "Evaluate", purpose: "Compare quality, routing, language preservation, and baselines.", requiredPermissions: ["evaluations:read"] },
+  { id: "costs", label: "Usage & costs", token: "US", group: "Evaluate", purpose: "Monitor tokens, latency, cache behavior, model purpose, and spend.", requiredPermissions: ["costs:read"] },
+  { id: "members", label: "Members", token: "MB", group: "Admin", purpose: "Manage workspace members, owner rights, and available permissions.", requiredPermissions: ["members:read"] },
+  { id: "prompts", label: "Prompts", token: "PR", group: "Admin", purpose: "Version and activate LangChain prompt templates by language.", requiredPermissions: ["prompts:read"] },
+  { id: "models", label: "Models", token: "MO", group: "Admin", purpose: "Control provider, model purpose, context, and token pricing.", requiredPermissions: ["models:read"] },
+  { id: "system", label: "System health", token: "SH", group: "Admin", purpose: "Inspect provider readiness, limits, failures, data, and governance posture.", requiredPermissions: ["system:read"] },
+  { id: "audit", label: "Audit", token: "AU", group: "Admin", purpose: "Inspect accountable workspace and AI operations changes.", requiredPermissions: ["audit:read"] },
+  { id: "settings", label: "Settings", token: "ST", group: "Settings", purpose: "Manage workspace identity and route to provider, permission, budget, and health settings.", requiredPermissions: ["settings:read"] },
 ];
 
-const navSections: Array<{ title: NavGroup; items: typeof tabs }> = [
-  { title: "Platform", items: tabs.filter((tab) => tab.group === "Platform") },
-  { title: "Build", items: tabs.filter((tab) => tab.group === "Build") },
-  { title: "Operate", items: tabs.filter((tab) => tab.group === "Operate") },
-  { title: "Evaluate", items: tabs.filter((tab) => tab.group === "Evaluate") },
-  { title: "Admin", items: tabs.filter((tab) => tab.group === "Admin") },
-  { title: "Settings", items: tabs.filter((tab) => tab.group === "Settings") },
-];
+const navGroups: NavGroup[] = ["Platform", "Build", "Operate", "Evaluate", "Admin", "Settings"];
 
 const agentPrompts: Array<{
   label: string;
@@ -998,7 +1000,18 @@ export function App() {
     () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
     [agents, selectedAgentId],
   );
-  const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const permissionList = workspaceMembership?.permissions ?? [];
+  const permissionKey = permissionList.join("|");
+  const canAccessTab = (tab: TabDefinition) => {
+    if (!selectedWorkspaceId || !workspaceMembership) return tab.id === "overview";
+    return tab.requiredPermissions.every((permission) => permissionList.includes(permission));
+  };
+  const availableTabs = tabs.filter((tab) => canAccessTab(tab));
+  const availableTabIds = new Set(availableTabs.map((tab) => tab.id));
+  const navSections = navGroups
+    .map((title) => ({ title, items: availableTabs.filter((tab) => tab.group === title) }))
+    .filter((section) => section.items.length > 0);
+  const activeTabInfo = availableTabs.find((tab) => tab.id === activeTab) ?? tabs[0];
   const canManageResources = Boolean(workspaceMembership?.can_manage_resources);
   const canManageBudgetPolicy = Boolean(
     workspaceMembership?.permissions.includes("budget_policy:manage"),
@@ -1023,7 +1036,7 @@ export function App() {
         : "Can inspect workspace data; owner-only cleanup and folder management are restricted.";
   const visiblePermissions = workspaceMembership?.permissions.slice(0, 4) ?? [];
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
-  const setupSteps = [
+  const allSetupSteps = [
     { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
     { label: "Tasks", done: Boolean(attentionSummary && attentionSummary.total_items === 0), tab: "tasks" as Tab },
     { label: "Data", done: datasets.length > 0, tab: "datasets" as Tab },
@@ -1042,6 +1055,7 @@ export function App() {
     { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
     { label: "Settings", done: Boolean(selectedWorkspaceId && workspaceMembership), tab: "settings" as Tab },
   ];
+  const setupSteps = allSetupSteps.filter((step) => canOpenTab(step.tab));
   const nextStep = setupSteps.find((step) => !step.done);
   const completedStepCount = setupSteps.filter((step) => step.done).length;
   const readinessPercent = Math.round((completedStepCount / setupSteps.length) * 100);
@@ -1051,6 +1065,24 @@ export function App() {
       ? `Ready for ${nextStep.label}`
       : "Operational";
   const latestRunTone = latestRun?.route_decision === "human_review" ? "warn" : latestRun ? "good" : "neutral";
+
+  function canOpenTab(tabId: Tab) {
+    return availableTabIds.has(tabId);
+  }
+
+  function goToTab(tabId: Tab) {
+    if (!canOpenTab(tabId)) {
+      const label = tabs.find((tab) => tab.id === tabId)?.label ?? tabId;
+      setNotice(`${label} is not available for your current workspace permission.`);
+      return;
+    }
+    setActiveTab(tabId);
+  }
+
+  useEffect(() => {
+    if (!selectedWorkspaceId || !workspaceMembership || availableTabIds.has(activeTab)) return;
+    setActiveTab("overview");
+  }, [activeTab, selectedWorkspaceId, workspaceMembership?.role, permissionKey]);
 
   useEffect(() => {
     if (!token) {
@@ -1788,7 +1820,7 @@ export function App() {
       await loadReviews();
       await loadCosts();
       await Promise.all([loadAgentSummary(selectedAgentId), loadAgentWorkflow(selectedAgentId)]);
-      setActiveTab("trace");
+      goToTab("trace");
     });
   }
 
@@ -2315,7 +2347,7 @@ export function App() {
                   className={activeTab === tab.id ? "active" : ""}
                   title={`${tab.label}: ${tab.purpose}`}
                   aria-label={tab.label}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => goToTab(tab.id)}
                 >
                   <span className="nav-token">{tab.token}</span>
                   <span className="nav-copy"><strong>{tab.label}</strong><small>{tab.purpose}</small></span>
@@ -2364,6 +2396,10 @@ export function App() {
   );
 
   function renderActiveTab() {
+    if (!canOpenTab(activeTab)) {
+      return <EmptyState title="Restricted area" detail="This page is not available for your current workspace permission." />;
+    }
+
     switch (activeTab) {
       case "tasks":
         return TasksPanel();
@@ -2410,7 +2446,7 @@ export function App() {
     const nextTask = criticalItems[0] ?? warningItems[0] ?? infoItems[0] ?? null;
 
     function openAttentionItem(item: AttentionItem) {
-      setActiveTab(item.target_tab);
+      goToTab(item.target_tab);
       if (item.target_tab === "trace" && item.target_id) {
         setTraceRunId(item.target_id);
         void loadTrace(item.target_id);
@@ -2471,7 +2507,7 @@ export function App() {
                   <p>{item.detail}</p>
                   <div className="run-action-bar">
                     <button type="button" className={item.severity === "critical" ? "primary" : "secondary"} onClick={() => openAttentionItem(item)}>{item.action_label}</button>
-                    <button type="button" onClick={() => setActiveTab(item.target_tab)}>Open {tabs.find((tab) => tab.id === item.target_tab)?.label ?? item.target_tab}</button>
+                    <button type="button" onClick={() => goToTab(item.target_tab)}>Open {tabs.find((tab) => tab.id === item.target_tab)?.label ?? item.target_tab}</button>
                   </div>
                 </article>
               ))}
@@ -2488,7 +2524,7 @@ export function App() {
               <span>Admins should watch guardrail blocks, evaluation failures, and cost anomalies</span>
               <span>Knowledge owners should fix failed indexing before relying on RAG citations</span>
             </div>
-            <button type="button" onClick={() => setActiveTab("overview")}>Back to dashboard</button>
+            <button type="button" onClick={() => goToTab("overview")}>Back to dashboard</button>
           </aside>
         </section>
       </div>
@@ -2623,7 +2659,7 @@ export function App() {
             <span>Recommended next action</span>
             <strong>{primaryAction.label}</strong>
             <p>{primaryAction.detail}</p>
-            <button className="primary" onClick={() => setActiveTab(primaryAction.tab)}>Open</button>
+            <button className="primary" onClick={() => goToTab(primaryAction.tab)}>Open</button>
           </div>
         </section>
 
@@ -2653,7 +2689,7 @@ export function App() {
             </div>
             <div className="attention-list">
               {attentionItems.length > 0 ? attentionItems.map((item) => (
-                <button key={item.label} className="attention-item" onClick={() => setActiveTab(item.tab)}>
+                <button key={item.label} className="attention-item" onClick={() => goToTab(item.tab)}>
                   <div>
                     <span>{item.label}</span>
                     <strong>{item.count}</strong>
@@ -2700,7 +2736,7 @@ export function App() {
                 <button
                   key={step.label}
                   className={`step-card ${step.done ? "done" : ""}`}
-                  onClick={() => setActiveTab(step.tab)}
+                  onClick={() => goToTab(step.tab)}
                 >
                   <span>{tabs.find((tab) => tab.id === step.tab)?.token ?? "OK"}</span>
                   <strong>{step.label}</strong>
@@ -2722,36 +2758,36 @@ export function App() {
             <Metric label="Evaluation runs" value={evaluationRuns.length} />
             <Metric label="Active models" value={activeModelCount} />
             <div className="overview-action-list">
-              <button onClick={() => setActiveTab("agent")}>Run agent</button>
-              <button onClick={() => setActiveTab("reviews")}>Human review</button>
-              <button onClick={() => setActiveTab("trace")} disabled={!traceRunId}>Runs & traces</button>
-              <button onClick={() => setActiveTab("costs")}>Usage & costs</button>
+              <button onClick={() => goToTab("agent")}>Run agent</button>
+              <button onClick={() => goToTab("reviews")}>Human review</button>
+              <button onClick={() => goToTab("trace")} disabled={!traceRunId}>Runs & traces</button>
+              <button onClick={() => goToTab("costs")}>Usage & costs</button>
             </div>
           </aside>
         </section>
 
         <section className="overview-admin-grid">
-          <button className="overview-admin-card" onClick={() => setActiveTab("documents")}>
+          <button className="overview-admin-card" onClick={() => goToTab("documents")}>
             <span>Knowledge base</span>
             <strong>{documents.length} documents</strong>
             <small>Upload, edit, reindex, and inspect chunks.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => setActiveTab("prompts")}>
+          <button className="overview-admin-card" onClick={() => goToTab("prompts")}>
             <span>Prompt registry</span>
             <strong>{promptTemplates.length} templates</strong>
             <small>Version LangChain prompts by language.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => setActiveTab("models")}>
+          <button className="overview-admin-card" onClick={() => goToTab("models")}>
             <span>Model routing</span>
             <strong>{activeModelCount} active</strong>
             <small>Configure model purpose, cost, and context limits.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => setActiveTab("tools")}>
+          <button className="overview-admin-card" onClick={() => goToTab("tools")}>
             <span>Tool catalog</span>
             <strong>{tools.length} tools</strong>
             <small>Inspect tool schemas, permissions, usage, and trace links.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => setActiveTab("audit")}>
+          <button className="overview-admin-card" onClick={() => goToTab("audit")}>
             <span>Governance audit</span>
             <strong>{auditLogs.length} events</strong>
             <small>Review workspace and AI operations changes.</small>
@@ -2759,12 +2795,12 @@ export function App() {
         </section>
 
         <section className="overview-admin-grid platform-coverage-grid">
-          <button className="overview-admin-card" onClick={() => setActiveTab("tools")}>
+          <button className="overview-admin-card" onClick={() => goToTab("tools")}>
             <span>Tools</span>
             <strong>{tools.some((tool) => tool.usage.total_calls > 0) ? "Runtime measured" : "Catalog ready"}</strong>
             <small>Tool contracts and recent executions are now visible outside individual traces.</small>
           </button>
-          <button className="overview-admin-card" onClick={() => setActiveTab("guardrails")}>
+          <button className="overview-admin-card" onClick={() => goToTab("guardrails")}>
             <span>Guardrails</span>
             <strong>{guardrails.some((item) => item.usage.failed_evaluations > 0) ? "Failures visible" : "Policy catalog"}</strong>
             <small>Runtime guardrail policies and failures are visible outside individual traces.</small>
@@ -2799,7 +2835,7 @@ export function App() {
           title="Data powers evaluation and routing"
           detail="Import real conversation examples in English, Japanese, and Chinese. Labels make the data useful for evaluation, routing, and safety checks."
           action="Next after import: upload knowledge documents"
-          onAction={() => setActiveTab("documents")}
+          onAction={() => goToTab("documents")}
         />
         {ResourceFolderPanel({
           resourceType: "dataset",
@@ -3049,7 +3085,7 @@ export function App() {
               <button className="primary" disabled={loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
               {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResources || loading}>Move only</button>}
               {selectedDocumentId && <button type="button" onClick={() => resetDocumentForm()}>Start new document</button>}
-              <button type="button" onClick={() => setActiveTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
+              <button type="button" onClick={() => goToTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
             </div>
           </form>
         </section>
@@ -3239,8 +3275,8 @@ export function App() {
               <p className="muted">No agent-specific model is assigned. This agent uses active workspace purpose routing, then deterministic mock fallback when no workspace route exists.</p>
             )}
             <div className="run-next-actions">
-              <button type="button" onClick={() => setActiveTab("models")}>Open model settings</button>
-              <button type="button" onClick={() => setActiveTab("costs")}>Inspect model spend</button>
+              <button type="button" onClick={() => goToTab("models")}>Open model settings</button>
+              <button type="button" onClick={() => goToTab("costs")}>Inspect model spend</button>
             </div>
           </article>
 
@@ -3259,7 +3295,7 @@ export function App() {
                     type="button"
                     className="recent-run-row"
                     key={run.id}
-                    onClick={() => { setTraceRunId(run.id); void loadTrace(run.id); setActiveTab("trace"); }}
+                    onClick={() => { setTraceRunId(run.id); void loadTrace(run.id); goToTab("trace"); }}
                   >
                     <span>
                       <strong>{run.route_decision ?? run.status}</strong>
@@ -3316,7 +3352,7 @@ export function App() {
                       <button
                         type="button"
                         className="node-failure-link"
-                        onClick={() => { setTraceRunId(node.recent_failures[0].graph_run_id); void loadTrace(node.recent_failures[0].graph_run_id); setActiveTab("trace"); }}
+                        onClick={() => { setTraceRunId(node.recent_failures[0].graph_run_id); void loadTrace(node.recent_failures[0].graph_run_id); goToTab("trace"); }}
                       >
                         Latest failure: {node.recent_failures[0].error_message ?? "unknown error"}
                       </button>
@@ -3374,8 +3410,8 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button className="primary" disabled={loading || !selectedAgentId}>Run agent</button>
-              <button type="button" onClick={() => setActiveTab("trace")} disabled={!traceRunId}>Open trace</button>
-              <button type="button" onClick={() => setActiveTab("reviews")}>Review queue</button>
+              <button type="button" onClick={() => goToTab("trace")} disabled={!traceRunId}>Open trace</button>
+              <button type="button" onClick={() => goToTab("reviews")}>Review queue</button>
             </div>
           </form>
 
@@ -3394,9 +3430,9 @@ export function App() {
             )}
             {latestRun && (
               <div className="run-next-actions">
-                <button type="button" onClick={() => { setTraceRunId(latestRun.id); void loadTrace(latestRun.id); setActiveTab("trace"); }}>Inspect trace</button>
-                {latestRun.route_decision === "human_review" && <button type="button" onClick={() => setActiveTab("reviews")}>Resolve review</button>}
-                <button type="button" onClick={() => setActiveTab("costs")}>Usage & costs</button>
+                <button type="button" onClick={() => { setTraceRunId(latestRun.id); void loadTrace(latestRun.id); goToTab("trace"); }}>Inspect trace</button>
+                {latestRun.route_decision === "human_review" && <button type="button" onClick={() => goToTab("reviews")}>Resolve review</button>}
+                <button type="button" onClick={() => goToTab("costs")}>Usage & costs</button>
               </div>
             )}
           </aside>
@@ -3556,7 +3592,7 @@ export function App() {
                   </div>
                   <div className="run-action-bar">
                     <button type="button" onClick={() => void saveToolConfig(tool)} disabled={!canConfigureTools || loading}>Save tool defaults</button>
-                    <button type="button" onClick={() => setActiveTab("trace")} disabled={tool.recent_calls.length === 0}>Open traces</button>
+                    <button type="button" onClick={() => goToTab("trace")} disabled={tool.recent_calls.length === 0}>Open traces</button>
                   </div>
                 </div>
                 <details>
@@ -3576,7 +3612,7 @@ export function App() {
                       type="button"
                       className="recent-run-row"
                       key={call.id}
-                      onClick={() => { setTraceRunId(call.graph_run_id); void loadTrace(call.graph_run_id); setActiveTab("trace"); }}
+                      onClick={() => { setTraceRunId(call.graph_run_id); void loadTrace(call.graph_run_id); goToTab("trace"); }}
                     >
                       <span>
                         <strong>{call.result_summary}</strong>
@@ -3742,7 +3778,7 @@ export function App() {
                     >
                       Save guardrail policy
                     </button>
-                    <button type="button" onClick={() => setActiveTab("trace")} disabled={guardrail.recent_failures.length === 0}>Open traces</button>
+                    <button type="button" onClick={() => goToTab("trace")} disabled={guardrail.recent_failures.length === 0}>Open traces</button>
                   </div>
                 </div>
                 <div className="tool-call-list">
@@ -3755,7 +3791,7 @@ export function App() {
                       type="button"
                       className="recent-run-row"
                       key={failure.id}
-                      onClick={() => { setTraceRunId(failure.graph_run_id); void loadTrace(failure.graph_run_id); setActiveTab("trace"); }}
+                      onClick={() => { setTraceRunId(failure.graph_run_id); void loadTrace(failure.graph_run_id); goToTab("trace"); }}
                     >
                       <span>
                         <strong>{failure.message}</strong>
@@ -3788,7 +3824,7 @@ export function App() {
                 type="button"
                 className="recent-run-row"
                 key={`${failure.guardrail_type}:${failure.id}`}
-                onClick={() => { setTraceRunId(failure.graph_run_id); void loadTrace(failure.graph_run_id); setActiveTab("trace"); }}
+                onClick={() => { setTraceRunId(failure.graph_run_id); void loadTrace(failure.graph_run_id); goToTab("trace"); }}
               >
                 <span>
                   <strong>{failure.label}</strong>
@@ -3815,7 +3851,7 @@ export function App() {
           title="Trace explains the workflow"
           detail="Use this page to see each LangGraph node, state transition, tool call, retrieved citation, guardrail, model call, token estimate, latency, and error."
           action="Next: resolve routed cases"
-          onAction={() => setActiveTab("reviews")}
+          onAction={() => goToTab("reviews")}
         />
         <section className="panel inline-form">
           <input placeholder="Graph run id" value={traceRunId} onChange={(event) => setTraceRunId(event.target.value)} />
@@ -4072,7 +4108,7 @@ export function App() {
                     </section>
 
                     <footer className="review-actions review-case-actions">
-                      <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
+                      <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); goToTab("trace"); }}>
                         Inspect trace
                       </button>
                       {unassigned && <button type="button" onClick={() => void claimReview(review)}>Claim</button>}
@@ -4159,7 +4195,7 @@ export function App() {
                 )}
                 <div className="answer-box"><span>Stored answer</span><p>{storedAnswer}</p></div>
                 {review.comments && <p className="muted">Comment: {review.comments}</p>}
-                <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); setActiveTab("trace"); }}>
+                <button type="button" onClick={() => { setTraceRunId(review.graph_run_id); void loadTrace(review.graph_run_id); goToTab("trace"); }}>
                   Inspect finalization trace
                 </button>
               </article>
@@ -4229,7 +4265,7 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button className="primary" disabled={loading || evaluationModes.length === 0}>Run evaluation</button>
-              <button type="button" onClick={() => setActiveTab("costs")}>Inspect cost ledger</button>
+              <button type="button" onClick={() => goToTab("costs")}>Inspect cost ledger</button>
             </div>
           </form>
 
@@ -4347,7 +4383,7 @@ export function App() {
             <div className="settings-note">V1 roles are intentionally simple: owners manage workspace membership and destructive actions; members can inspect and operate most platform workflows.</div>
             <div className="run-action-bar">
               <button className="primary" disabled={!canManageWorkspace || !memberEmail.trim() || loading}>Add member</button>
-              <button type="button" onClick={() => setActiveTab("audit")}>Open audit trail</button>
+              <button type="button" onClick={() => goToTab("audit")}>Open audit trail</button>
             </div>
           </form>
 
@@ -4602,8 +4638,8 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button className="primary" disabled={!canManagePrompts || loading}>Create version</button>
-              <button type="button" onClick={() => setActiveTab("agent")}>Run agent</button>
-              <button type="button" onClick={() => setActiveTab("trace")}>Inspect trace</button>
+              <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
+              <button type="button" onClick={() => goToTab("trace")}>Inspect trace</button>
             </div>
           </form>
 
@@ -4716,7 +4752,7 @@ export function App() {
             <div className="settings-note">Workspace identity changes are written through the backend and recorded as `workspace.updated` audit events.</div>
             <div className="run-action-bar">
               <button className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading}>Save workspace</button>
-              <button type="button" onClick={() => setActiveTab("audit")}>Open audit trail</button>
+              <button type="button" onClick={() => goToTab("audit")}>Open audit trail</button>
             </div>
           </form>
 
@@ -4724,31 +4760,31 @@ export function App() {
             <h3>Settings map</h3>
             <p className="muted">Advanced controls live on dedicated pages so this does not become one giant settings form.</p>
             <div className="settings-map-list">
-              <button type="button" onClick={() => setActiveTab("members")}>
+              <button type="button" onClick={() => goToTab("members")}>
                 <strong>Members and permissions</strong>
                 <span>{workspaceMembers.length} users · {workspaceRole}</span>
               </button>
-              <button type="button" onClick={() => setActiveTab("models")}>
+              <button type="button" onClick={() => goToTab("models")}>
                 <strong>Provider and model routing</strong>
                 <span>{activeModelCount} active configs · {liveProviderCount} live routes</span>
               </button>
-              <button type="button" onClick={() => setActiveTab("costs")}>
+              <button type="button" onClick={() => goToTab("costs")}>
                 <strong>Budgets and rate limits</strong>
                 <span>{costSummary ? `${formatPercent(costSummary.budget_policy.cost_budget_used_percent)} cost used · ${costSummary.budget_policy.rate_limit_requests_per_hour}/hour` : "load usage policy"}</span>
               </button>
-              <button type="button" onClick={() => setActiveTab("system")}>
+              <button type="button" onClick={() => goToTab("system")}>
                 <strong>System health</strong>
                 <span>{systemHealth ? `${systemHealth.overall_status} · ${pendingHealthSignals} signals` : "load system health"}</span>
               </button>
-              <button type="button" onClick={() => setActiveTab("tools")}>
+              <button type="button" onClick={() => goToTab("tools")}>
                 <strong>Tool defaults</strong>
                 <span>{tools.length} tools · {canConfigureTools ? "owner editable" : "read only"}</span>
               </button>
-              <button type="button" onClick={() => setActiveTab("guardrails")}>
+              <button type="button" onClick={() => goToTab("guardrails")}>
                 <strong>Guardrail policies</strong>
                 <span>{guardrails.filter((item) => item.configurable).length} configurable · {canConfigureGuardrails ? "owner editable" : "read only"}</span>
               </button>
-              <button type="button" onClick={() => setActiveTab("prompts")}>
+              <button type="button" onClick={() => goToTab("prompts")}>
                 <strong>Prompt versions</strong>
                 <span>{promptTemplates.length} versions · LangChain templates</span>
               </button>
@@ -4858,22 +4894,22 @@ export function App() {
             <Badge>{systemHealth.overall_status}</Badge>
           </div>
           <div className="overview-admin-grid">
-            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("models")}>
+            <button className="overview-admin-card" type="button" onClick={() => goToTab("models")}>
               <span>Provider routes</span>
               <strong>Models</strong>
               <small>Configure active provider, model, context, and pricing.</small>
             </button>
-            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("tasks")}>
+            <button className="overview-admin-card" type="button" onClick={() => goToTab("tasks")}>
               <span>Failures and queues</span>
               <strong>My Tasks</strong>
               <small>Review backend-ranked operational work.</small>
             </button>
-            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("costs")}>
+            <button className="overview-admin-card" type="button" onClick={() => goToTab("costs")}>
               <span>Token spend</span>
               <strong>Usage & costs</strong>
               <small>Inspect ledger cost, latency, and cache behavior.</small>
             </button>
-            <button className="overview-admin-card" type="button" onClick={() => setActiveTab("audit")}>
+            <button className="overview-admin-card" type="button" onClick={() => goToTab("audit")}>
               <span>Accountability</span>
               <strong>Audit</strong>
               <small>Inspect workspace changes and AI operations events.</small>
@@ -4967,8 +5003,8 @@ export function App() {
             </label>
             <div className="run-action-bar">
               <button className="primary" disabled={!canManageModels || loading}>Create config</button>
-              <button type="button" onClick={() => setActiveTab("agent")}>Run agent</button>
-              <button type="button" onClick={() => setActiveTab("costs")}>Inspect costs</button>
+              <button type="button" onClick={() => goToTab("agent")}>Run agent</button>
+              <button type="button" onClick={() => goToTab("costs")}>Inspect costs</button>
             </div>
           </form>
 
@@ -5206,7 +5242,7 @@ export function App() {
                   </div>
                   <div className="run-action-bar">
                     <button className="primary" disabled={!canManageBudgetPolicy || loading}>Save policy</button>
-                    <button type="button" onClick={() => setActiveTab("models")}>Configure models</button>
+                    <button type="button" onClick={() => goToTab("models")}>Configure models</button>
                   </div>
                 </form>
 
@@ -5232,7 +5268,7 @@ export function App() {
               <div className="cost-run-list">
                 {costSummary.recent_runs.map((run) => (
                   <article className="cost-run-row" key={run.graph_run_id}>
-                    <button type="button" className="resource-main-button" onClick={() => { setTraceRunId(run.graph_run_id); void loadTrace(run.graph_run_id); setActiveTab("trace"); }}>
+                    <button type="button" className="resource-main-button" onClick={() => { setTraceRunId(run.graph_run_id); void loadTrace(run.graph_run_id); goToTab("trace"); }}>
                       <span>
                         <strong>{run.agent_name}</strong>
                         <small>{shortId(run.graph_run_id)} · {formatDate(run.created_at)}</small>

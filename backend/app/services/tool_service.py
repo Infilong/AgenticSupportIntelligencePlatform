@@ -66,7 +66,7 @@ RUNTIME_TOOL_DEFINITIONS = [
         ),
         framework="langchain_core.tools.StructuredTool",
         enabled=True,
-        permissions=["workspace:read", "knowledge:write", "agents:run"],
+        permissions=["workspace:read", "knowledge:read", "agents:run"],
         timeout_ms=None,
         max_retries=0,
         retry_policy="No automatic retry in v1; failures are persisted in graph step/tool state.",
