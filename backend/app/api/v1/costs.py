@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -20,11 +20,37 @@ from app.services.cost_service import CostService
 router = APIRouter(prefix="/workspaces/{workspace_id}/costs", tags=["costs"])
 DbSession = Annotated[Session, Depends(get_db)]
 CostReadAccess = Annotated[Workspace, Depends(require_workspace_permission("costs:read"))]
+CostSearch = Annotated[str | None, Query(max_length=240)]
+GraphRunStatusFilter = Annotated[
+    Literal["all", "completed", "needs_human_review", "failed", "human_review"], Query()
+]
+AIRunStatusFilter = Annotated[Literal["all", "succeeded", "failed"], Query()]
+ListLimit = Annotated[int, Query(ge=1, le=100)]
+ListOffset = Annotated[int, Query(ge=0)]
 
 
 @router.get("/summary", response_model=CostSummaryResponse)
-def get_cost_summary(workspace: CostReadAccess, db: DbSession) -> CostSummaryResponse:
-    summary = CostService(db).summarize_workspace(workspace_id=workspace.id)
+def get_cost_summary(
+    workspace: CostReadAccess,
+    db: DbSession,
+    search: CostSearch = None,
+    graph_run_status: GraphRunStatusFilter = "all",
+    ai_run_status: AIRunStatusFilter = "all",
+    graph_run_limit: ListLimit = 20,
+    graph_run_offset: ListOffset = 0,
+    ai_run_limit: ListLimit = 20,
+    ai_run_offset: ListOffset = 0,
+) -> CostSummaryResponse:
+    summary = CostService(db).summarize_workspace(
+        workspace_id=workspace.id,
+        search=search,
+        graph_run_status=graph_run_status,
+        ai_run_status=ai_run_status,
+        graph_run_limit=graph_run_limit,
+        graph_run_offset=graph_run_offset,
+        ai_run_limit=ai_run_limit,
+        ai_run_offset=ai_run_offset,
+    )
     return CostSummaryResponse(
         workspace_id=summary.workspace_id,
         budget_policy=BudgetPolicySummaryResponse(

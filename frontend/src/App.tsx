@@ -1144,6 +1144,8 @@ export function App() {
   const [costSearch, setCostSearch] = useState("");
   const [costRunStatusFilter, setCostRunStatusFilter] = useState("all");
   const [aiLedgerStatusFilter, setAiLedgerStatusFilter] = useState("all");
+  const [costRunPage, setCostRunPage] = useState(0);
+  const [aiLedgerPage, setAiLedgerPage] = useState(0);
   const [budgetDraft, setBudgetDraft] = useState<BudgetPolicyDraft>({
     monthly_token_budget: "100000",
     monthly_cost_budget: "10",
@@ -1376,6 +1378,12 @@ export function App() {
     if (!permissionList.includes("reviews:read")) return;
     void loadReviews();
   }, [token, selectedWorkspaceId, activeTab, reviewFilter, reviewSort, reviewSearch, pendingReviewPage, resolvedReviewPage, permissionKey]);
+
+  useEffect(() => {
+    if (!token || !selectedWorkspaceId || activeTab !== "costs") return;
+    if (!permissionList.includes("costs:read")) return;
+    void loadCosts();
+  }, [token, selectedWorkspaceId, activeTab, costSearch, costRunStatusFilter, aiLedgerStatusFilter, costRunPage, aiLedgerPage, permissionKey]);
 
   useEffect(() => {
     if (!token || !selectedWorkspaceId || activeTab !== "evaluations") return;
@@ -2757,9 +2765,46 @@ export function App() {
     void loadEvaluations(value, 0);
   }
 
-  async function loadCosts() {
+  function costSummaryParams(
+    runPage = costRunPage,
+    aiPage = aiLedgerPage,
+    search = costSearch,
+    graphRunStatus = costRunStatusFilter,
+    aiRunStatus = aiLedgerStatusFilter,
+  ) {
+    const params: Record<string, string | number | boolean | null | undefined> = {
+      graph_run_limit: MAX_VISIBLE_COST_ITEMS,
+      graph_run_offset: runPage * MAX_VISIBLE_COST_ITEMS,
+      ai_run_limit: MAX_VISIBLE_COST_ITEMS,
+      ai_run_offset: aiPage * MAX_VISIBLE_COST_ITEMS,
+    };
+    if (search.trim()) {
+      params.search = search.trim();
+    }
+    if (graphRunStatus !== "all") {
+      params.graph_run_status = graphRunStatus;
+    }
+    if (aiRunStatus !== "all") {
+      params.ai_run_status = aiRunStatus;
+    }
+    return params;
+  }
+
+  async function loadCosts(
+    runPage = costRunPage,
+    aiPage = aiLedgerPage,
+    search = costSearch,
+    graphRunStatus = costRunStatusFilter,
+    aiRunStatus = aiLedgerStatusFilter,
+  ) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<CostSummary>(workspacePath("/costs/summary"), { token });
+    const data = await apiRequest<CostSummary>(
+      workspaceListPath(
+        "/costs/summary",
+        costSummaryParams(runPage, aiPage, search, graphRunStatus, aiRunStatus),
+      ),
+      { token },
+    );
     setCostSummary(data);
     setBudgetDraft(policyToDraft(data.budget_policy));
   }
@@ -6651,37 +6696,19 @@ export function App() {
     const filteredModelSpend = (costSummary?.by_model ?? []).filter((item) =>
       matchesSearch(costSearch, item.provider, item.model, String(item.tokens), String(item.estimated_cost)),
     );
-    const filteredRecentRuns = (costSummary?.recent_runs ?? []).filter((run) => {
-      const matchesStatus = costRunStatusFilter === "all" || run.status === costRunStatusFilter || run.route_decision === costRunStatusFilter;
-      return matchesStatus && matchesSearch(
-        costSearch,
-        run.agent_name,
-        run.graph_run_id,
-        run.status,
-        run.route_decision,
-        String(run.tokens),
-        String(run.estimated_cost),
-      );
-    });
-    const filteredAIRuns = (costSummary?.recent_ai_runs ?? []).filter((run) => {
-      const matchesStatus = aiLedgerStatusFilter === "all" || run.status === aiLedgerStatusFilter;
-      return matchesStatus && matchesSearch(
-        costSearch,
-        run.provider,
-        run.model,
-        run.purpose,
-        run.language,
-        run.status,
-        run.id,
-        run.graph_run_id,
-        run.error_message,
-      );
-    });
+    const displayedRecentRuns = costSummary?.recent_runs ?? [];
+    const displayedAIRuns = costSummary?.recent_ai_runs ?? [];
+    const costRunPageStart = costRunPage * MAX_VISIBLE_COST_ITEMS + (displayedRecentRuns.length ? 1 : 0);
+    const costRunPageEnd = costRunPage * MAX_VISIBLE_COST_ITEMS + displayedRecentRuns.length;
+    const aiLedgerPageStart = aiLedgerPage * MAX_VISIBLE_COST_ITEMS + (displayedAIRuns.length ? 1 : 0);
+    const aiLedgerPageEnd = aiLedgerPage * MAX_VISIBLE_COST_ITEMS + displayedAIRuns.length;
+    const canGoToPreviousCostRunPage = costRunPage > 0;
+    const canGoToNextCostRunPage = displayedRecentRuns.length === MAX_VISIBLE_COST_ITEMS;
+    const canGoToPreviousAiLedgerPage = aiLedgerPage > 0;
+    const canGoToNextAiLedgerPage = displayedAIRuns.length === MAX_VISIBLE_COST_ITEMS;
     const displayedAgentSpend = filteredAgentSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
     const displayedPurposeSpend = filteredPurposeSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
     const displayedModelSpend = filteredModelSpend.slice(0, MAX_VISIBLE_COST_ITEMS);
-    const displayedRecentRuns = filteredRecentRuns.slice(0, MAX_VISIBLE_COST_ITEMS);
-    const displayedAIRuns = filteredAIRuns.slice(0, MAX_VISIBLE_COST_ITEMS);
 
     return (
       <div className="cost-console">
@@ -6743,13 +6770,13 @@ export function App() {
                   Search cost evidence
                   <input
                     value={costSearch}
-                    onChange={(event) => setCostSearch(event.target.value)}
+                    onChange={(event) => { setCostRunPage(0); setAiLedgerPage(0); setCostSearch(event.target.value); }}
                     placeholder="Agent, model, purpose, run id, status, error, or language"
                   />
                 </label>
                 <label>
                   Graph-run status
-                  <select value={costRunStatusFilter} onChange={(event) => setCostRunStatusFilter(event.target.value)}>
+                  <select value={costRunStatusFilter} onChange={(event) => { setCostRunPage(0); setCostRunStatusFilter(event.target.value); }}>
                     <option value="all">All graph runs</option>
                     <option value="completed">Completed</option>
                     <option value="needs_human_review">Needs review</option>
@@ -6759,7 +6786,7 @@ export function App() {
                 </label>
                 <label>
                   AI call status
-                  <select value={aiLedgerStatusFilter} onChange={(event) => setAiLedgerStatusFilter(event.target.value)}>
+                  <select value={aiLedgerStatusFilter} onChange={(event) => { setAiLedgerPage(0); setAiLedgerStatusFilter(event.target.value); }}>
                     <option value="all">All AI calls</option>
                     <option value="succeeded">Succeeded</option>
                     <option value="failed">Failed</option>
@@ -6890,7 +6917,7 @@ export function App() {
                   <h3>Recent graph-run spend</h3>
                   <p className="muted">Each row links cost back to a trace so developers can inspect prompts, tools, guardrails, and routing decisions.</p>
                 </div>
-                <Badge>{displayedRecentRuns.length}/{filteredRecentRuns.length} runs</Badge>
+                <Badge>{displayedRecentRuns.length} runs shown</Badge>
               </div>
               <div className="cost-run-list">
                 {displayedRecentRuns.map((run) => (
@@ -6910,9 +6937,13 @@ export function App() {
                     </div>
                   </article>
                 ))}
-                {costSummary.recent_runs.length === 0 && <EmptyState title="No graph-run spend" detail="Run an agent to see run-level cost and trace links." />}
-                {costSummary.recent_runs.length > 0 && filteredRecentRuns.length === 0 && <EmptyState title="No graph-run spend matches" detail="Clear search or change graph-run status filter." />}
-                {filteredRecentRuns.length > displayedRecentRuns.length && <p className="permission-note">Showing first {MAX_VISIBLE_COST_ITEMS} of {filteredRecentRuns.length} matching graph runs.</p>}
+                {costSummary.recent_runs.length === 0 && <EmptyState title="No graph-run spend matches" detail={costRunPage > 0 ? "Move to the previous page or clear filters." : "Run an agent, clear search, or change graph-run status filter."} />}
+                <div className="pagination-bar">
+                  <button type="button" onClick={() => setCostRunPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousCostRunPage || loading}>Previous</button>
+                  <span>Page {costRunPage + 1} · {displayedRecentRuns.length ? `${costRunPageStart}-${costRunPageEnd}` : "0"} graph runs shown</span>
+                  <button type="button" onClick={() => setCostRunPage((page) => page + 1)} disabled={!canGoToNextCostRunPage || loading}>Next</button>
+                </div>
+                <p className="permission-note">Graph-run spend is loaded from the backend by search, status, offset, and limit so trace-linked cost history stays bounded.</p>
               </div>
             </section>
 
@@ -6982,7 +7013,7 @@ export function App() {
                   <h3>Recent AI run ledger</h3>
                   <p className="muted">The latest model calls expose status, token split, cache behavior, provider, model, and error messages.</p>
                 </div>
-                <Badge>{displayedAIRuns.length}/{filteredAIRuns.length} calls</Badge>
+                <Badge>{displayedAIRuns.length} calls shown</Badge>
               </div>
               <div className="ai-ledger-list">
                 {displayedAIRuns.map((run) => (
@@ -7008,9 +7039,13 @@ export function App() {
                     {run.error_message && <p className="permission-note">{run.error_message}</p>}
                   </article>
                 ))}
-                {costSummary.recent_ai_runs.length === 0 && <EmptyState title="No AI ledger rows" detail="Model calls create detailed ledger rows here." />}
-                {costSummary.recent_ai_runs.length > 0 && filteredAIRuns.length === 0 && <EmptyState title="No AI ledger rows match" detail="Clear search or change AI call status filter." />}
-                {filteredAIRuns.length > displayedAIRuns.length && <p className="permission-note">Showing first {MAX_VISIBLE_COST_ITEMS} of {filteredAIRuns.length} matching AI ledger rows.</p>}
+                {costSummary.recent_ai_runs.length === 0 && <EmptyState title="No AI ledger rows match" detail={aiLedgerPage > 0 ? "Move to the previous page or clear filters." : "Model calls create ledger rows here. Clear search or change AI call status filter if rows exist."} />}
+                <div className="pagination-bar">
+                  <button type="button" onClick={() => setAiLedgerPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousAiLedgerPage || loading}>Previous</button>
+                  <span>Page {aiLedgerPage + 1} · {displayedAIRuns.length ? `${aiLedgerPageStart}-${aiLedgerPageEnd}` : "0"} AI calls shown</span>
+                  <button type="button" onClick={() => setAiLedgerPage((page) => page + 1)} disabled={!canGoToNextAiLedgerPage || loading}>Next</button>
+                </div>
+                <p className="permission-note">AI ledger rows are loaded from the backend by search, status, offset, and limit; totals above remain full workspace accounting.</p>
               </div>
             </section>
           </>

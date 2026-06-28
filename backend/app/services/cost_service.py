@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import distinct, func, select
+from sqlalchemy import String, cast, distinct, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStepStatus, ToolCall
@@ -100,46 +100,81 @@ class CostService:
     def __init__(self, db: Session):
         self.db = db
 
-    def summarize_workspace(self, *, workspace_id: UUID) -> CostSummary:
-        total_runs = self.db.scalar(
-            select(func.count(AIRun.id)).where(AIRun.workspace_id == workspace_id)
-        ) or 0
-        total_tokens = self.db.scalar(
-            select(func.coalesce(func.sum(AIRun.total_tokens), 0)).where(
-                AIRun.workspace_id == workspace_id
+    def summarize_workspace(
+        self,
+        *,
+        workspace_id: UUID,
+        search: str | None = None,
+        graph_run_status: str = "all",
+        ai_run_status: str = "all",
+        graph_run_limit: int = 20,
+        graph_run_offset: int = 0,
+        ai_run_limit: int = 20,
+        ai_run_offset: int = 0,
+    ) -> CostSummary:
+        total_runs = (
+            self.db.scalar(select(func.count(AIRun.id)).where(AIRun.workspace_id == workspace_id))
+            or 0
+        )
+        total_tokens = (
+            self.db.scalar(
+                select(func.coalesce(func.sum(AIRun.total_tokens), 0)).where(
+                    AIRun.workspace_id == workspace_id
+                )
             )
-        ) or 0
-        total_cost = self.db.scalar(
-            select(func.coalesce(func.sum(AIRun.estimated_cost), 0.0)).where(
-                AIRun.workspace_id == workspace_id
+            or 0
+        )
+        total_cost = (
+            self.db.scalar(
+                select(func.coalesce(func.sum(AIRun.estimated_cost), 0.0)).where(
+                    AIRun.workspace_id == workspace_id
+                )
             )
-        ) or 0.0
-        average_latency = self.db.scalar(
-            select(func.coalesce(func.avg(AIRun.latency_ms), 0.0)).where(
-                AIRun.workspace_id == workspace_id
+            or 0.0
+        )
+        average_latency = (
+            self.db.scalar(
+                select(func.coalesce(func.avg(AIRun.latency_ms), 0.0)).where(
+                    AIRun.workspace_id == workspace_id
+                )
             )
-        ) or 0.0
-        cache_hits = self.db.scalar(
-            select(func.count(AIRun.id)).where(AIRun.workspace_id == workspace_id, AIRun.cache_hit)
-        ) or 0
-        failed_ai_runs = self.db.scalar(
-            select(func.count(AIRun.id)).where(
-                AIRun.workspace_id == workspace_id,
-                AIRun.status == AIRunStatus.failed,
+            or 0.0
+        )
+        cache_hits = (
+            self.db.scalar(
+                select(func.count(AIRun.id)).where(
+                    AIRun.workspace_id == workspace_id, AIRun.cache_hit
+                )
             )
-        ) or 0
-        failed_graph_runs = self.db.scalar(
-            select(func.count(GraphRun.id)).where(
-                GraphRun.workspace_id == workspace_id,
-                GraphRun.status == GraphRunStatus.failed,
+            or 0
+        )
+        failed_ai_runs = (
+            self.db.scalar(
+                select(func.count(AIRun.id)).where(
+                    AIRun.workspace_id == workspace_id,
+                    AIRun.status == AIRunStatus.failed,
+                )
             )
-        ) or 0
-        failed_tool_calls = self.db.scalar(
-            select(func.count(ToolCall.id)).where(
-                ToolCall.workspace_id == workspace_id,
-                ToolCall.status == GraphStepStatus.failed,
+            or 0
+        )
+        failed_graph_runs = (
+            self.db.scalar(
+                select(func.count(GraphRun.id)).where(
+                    GraphRun.workspace_id == workspace_id,
+                    GraphRun.status == GraphRunStatus.failed,
+                )
             )
-        ) or 0
+            or 0
+        )
+        failed_tool_calls = (
+            self.db.scalar(
+                select(func.count(ToolCall.id)).where(
+                    ToolCall.workspace_id == workspace_id,
+                    ToolCall.status == GraphStepStatus.failed,
+                )
+            )
+            or 0
+        )
         latency_values = list(
             self.db.scalars(
                 select(AIRun.latency_ms)
@@ -186,7 +221,7 @@ class CostService:
             .group_by(AgentConfig.id, AgentConfig.name)
             .order_by(func.coalesce(func.sum(AIRun.estimated_cost), 0.0).desc())
         ).all()
-        grouped_by_run = self.db.execute(
+        grouped_by_run_statement = (
             select(
                 GraphRun.id,
                 AgentConfig.name,
@@ -200,7 +235,7 @@ class CostService:
             )
             .join(GraphRun, GraphRun.id == AIRun.graph_run_id)
             .join(AgentConfig, AgentConfig.id == GraphRun.agent_config_id)
-            .where(AIRun.workspace_id == workspace_id)
+            .where(*_graph_run_cost_filters(workspace_id, search, graph_run_status))
             .group_by(
                 GraphRun.id,
                 AgentConfig.name,
@@ -209,16 +244,20 @@ class CostService:
                 GraphRun.created_at,
             )
             .order_by(GraphRun.created_at.desc())
-            .limit(20)
-        ).all()
-        recent_ai_runs = list(
-            self.db.scalars(
-                select(AIRun)
-                .where(AIRun.workspace_id == workspace_id)
-                .order_by(AIRun.created_at.desc())
-                .limit(20)
-            ).all()
+            .offset(max(graph_run_offset, 0))
+            .limit(_bounded_limit(graph_run_limit))
         )
+        grouped_by_run = self.db.execute(grouped_by_run_statement).all()
+        recent_ai_statement = (
+            select(AIRun)
+            .outerjoin(GraphRun, AIRun.graph_run_id == GraphRun.id)
+            .outerjoin(AgentConfig, GraphRun.agent_config_id == AgentConfig.id)
+            .where(*_ai_run_cost_filters(workspace_id, search, ai_run_status))
+            .order_by(AIRun.created_at.desc())
+            .offset(max(ai_run_offset, 0))
+            .limit(_bounded_limit(ai_run_limit))
+        )
+        recent_ai_runs = list(self.db.scalars(recent_ai_statement).all())
         budget_service = BudgetPolicyService(self.db)
         policy = budget_service.get_or_create(workspace_id=workspace_id)
         usage = budget_service.current_month_usage(workspace_id=workspace_id)
@@ -266,8 +305,15 @@ class CostService:
                     estimated_cost=round(float(cost), 8),
                     average_latency_ms=round(float(average_latency), 2),
                 )
-                for agent_id, agent_name, graph_runs, model_calls, tokens, cost, average_latency
-                in grouped_by_agent
+                for (
+                    agent_id,
+                    agent_name,
+                    graph_runs,
+                    model_calls,
+                    tokens,
+                    cost,
+                    average_latency,
+                ) in grouped_by_agent
             ],
             recent_runs=[
                 CostRunSummary(
@@ -324,3 +370,53 @@ def _percentile(values: list[int], percentile: int) -> float:
         return float(values[0])
     rank = round((percentile / 100) * (len(values) - 1))
     return float(values[min(max(rank, 0), len(values) - 1)])
+
+
+def _bounded_limit(limit: int) -> int:
+    return max(min(limit, 100), 1)
+
+
+def _graph_run_cost_filters(workspace_id: UUID, search: str | None, status_filter: str):
+    filters = [AIRun.workspace_id == workspace_id]
+    if status_filter != "all":
+        filters.append(
+            or_(
+                cast(GraphRun.status, String) == status_filter,
+                GraphRun.route_decision == status_filter,
+            )
+        )
+    search_term = (search or "").strip()
+    if search_term:
+        pattern = f"%{search_term}%"
+        filters.append(
+            or_(
+                cast(GraphRun.id, String).ilike(pattern),
+                AgentConfig.name.ilike(pattern),
+                cast(GraphRun.status, String).ilike(pattern),
+                GraphRun.route_decision.ilike(pattern),
+            )
+        )
+    return filters
+
+
+def _ai_run_cost_filters(workspace_id: UUID, search: str | None, status_filter: str):
+    filters = [AIRun.workspace_id == workspace_id]
+    if status_filter != "all":
+        filters.append(cast(AIRun.status, String) == status_filter)
+    search_term = (search or "").strip()
+    if search_term:
+        pattern = f"%{search_term}%"
+        filters.append(
+            or_(
+                cast(AIRun.id, String).ilike(pattern),
+                cast(AIRun.graph_run_id, String).ilike(pattern),
+                AIRun.provider.ilike(pattern),
+                AIRun.model.ilike(pattern),
+                AgentConfig.name.ilike(pattern),
+                AIRun.purpose.ilike(pattern),
+                cast(AIRun.language, String).ilike(pattern),
+                cast(AIRun.status, String).ilike(pattern),
+                AIRun.error_message.ilike(pattern),
+            )
+        )
+    return filters

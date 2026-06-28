@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -49,12 +50,15 @@ def create_workspace(client: TestClient, token: str, name: str = "Support Worksp
 def test_token_estimator_and_cost_calculator_are_deterministic() -> None:
     assert estimate_tokens("Refunds are available within 30 days.", SupportedLanguage.en) == 7
     assert estimate_tokens("返金は30日以内です。", SupportedLanguage.ja) >= 5
-    assert estimate_cost(
-        prompt_tokens=1000,
-        completion_tokens=500,
-        prompt_token_cost_per_1k=0.001,
-        completion_token_cost_per_1k=0.002,
-    ) == 0.002
+    assert (
+        estimate_cost(
+            prompt_tokens=1000,
+            completion_tokens=500,
+            prompt_token_cost_per_1k=0.001,
+            completion_token_cost_per_1k=0.002,
+        )
+        == 0.002
+    )
 
 
 def test_token_budget_planner_selects_cheaper_model_and_denies_over_budget() -> None:
@@ -380,3 +384,167 @@ def test_cost_summary_counts_failed_ai_runs(client: TestClient, db_session: Sess
     assert body["recent_ai_runs"][0]["status"] == "failed"
     assert body["recent_ai_runs"][0]["model_config_id"] is None
     assert body["recent_ai_runs"][0]["error_message"] == "mock provider failure"
+
+
+def test_cost_summary_filters_and_paginates_recent_drilldowns(
+    client: TestClient, db_session: Session
+) -> None:
+    owner = register(client, "cost-drilldown-owner@example.com")
+    token = login(client, "cost-drilldown-owner@example.com")
+    workspace = create_workspace(client, token)
+    workspace_id = UUID(workspace["id"])
+    user_id = UUID(owner["id"])
+    alpha_agent = AgentConfig(workspace_id=workspace_id, name="Alpha Cost Agent")
+    beta_agent = AgentConfig(workspace_id=workspace_id, name="Beta Cost Agent")
+    db_session.add_all([alpha_agent, beta_agent])
+    db_session.flush()
+    base_time = datetime.now(UTC)
+    runs = []
+    for index, (agent, message, status, route) in enumerate(
+        [
+            (alpha_agent, "Alpha refund run", GraphRunStatus.completed, "finalize"),
+            (beta_agent, "Beta review run", GraphRunStatus.needs_human_review, "human_review"),
+            (alpha_agent, "Alpha failed run", GraphRunStatus.failed, "failed"),
+        ]
+    ):
+        run = GraphRun(
+            workspace_id=workspace_id,
+            agent_config_id=agent.id,
+            user_id=user_id,
+            input_message=message,
+            language=SupportedLanguage.en,
+            status=status,
+            route_decision=route,
+            created_at=base_time + timedelta(seconds=index),
+        )
+        db_session.add(run)
+        db_session.flush()
+        db_session.add(
+            AIRun(
+                workspace_id=workspace_id,
+                graph_run_id=run.id,
+                graph_step_id=None,
+                provider="mock",
+                model="mock-standard" if agent.name.startswith("Alpha") else "mock-cheap",
+                purpose="draft_response" if index != 1 else "classification",
+                language=SupportedLanguage.en,
+                prompt_tokens=100 + index,
+                completion_tokens=50,
+                total_tokens=150 + index,
+                estimated_cost=0.001 + index,
+                latency_ms=10 + index,
+                cache_hit=False,
+                status=AIRunStatus.failed
+                if status == GraphRunStatus.failed
+                else AIRunStatus.succeeded,
+                error_message="provider failed" if status == GraphRunStatus.failed else None,
+                created_at=base_time + timedelta(seconds=index),
+            )
+        )
+        runs.append(run)
+    db_session.commit()
+
+    alpha_page = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/costs/summary",
+        headers=auth_headers(token),
+        params={"search": "Alpha", "graph_run_limit": 1, "ai_run_limit": 1},
+    )
+    alpha_next = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/costs/summary",
+        headers=auth_headers(token),
+        params={
+            "search": "Alpha",
+            "graph_run_limit": 1,
+            "graph_run_offset": 1,
+            "ai_run_limit": 1,
+            "ai_run_offset": 1,
+        },
+    )
+    review_route = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/costs/summary",
+        headers=auth_headers(token),
+        params={"graph_run_status": "human_review", "ai_run_status": "succeeded"},
+    )
+    failed_ai = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/costs/summary",
+        headers=auth_headers(token),
+        params={"ai_run_status": "failed"},
+    )
+
+    assert alpha_page.status_code == 200
+    assert alpha_page.json()["total_runs"] == 3
+    assert len(alpha_page.json()["recent_runs"]) == 1
+    assert alpha_page.json()["recent_runs"][0]["agent_name"] == "Alpha Cost Agent"
+    assert len(alpha_page.json()["recent_ai_runs"]) == 1
+    assert alpha_page.json()["recent_ai_runs"][0]["model"] == "mock-standard"
+    assert alpha_next.status_code == 200
+    assert len(alpha_next.json()["recent_runs"]) == 1
+    assert (
+        alpha_next.json()["recent_runs"][0]["graph_run_id"]
+        != alpha_page.json()["recent_runs"][0]["graph_run_id"]
+    )
+    assert len(alpha_next.json()["recent_ai_runs"]) == 1
+    assert (
+        alpha_next.json()["recent_ai_runs"][0]["id"] != alpha_page.json()["recent_ai_runs"][0]["id"]
+    )
+    assert review_route.status_code == 200
+    assert [run["route_decision"] for run in review_route.json()["recent_runs"]] == ["human_review"]
+    assert {row["status"] for row in review_route.json()["recent_ai_runs"]} == {"succeeded"}
+    assert failed_ai.status_code == 200
+    assert [row["status"] for row in failed_ai.json()["recent_ai_runs"]] == ["failed"]
+
+
+def test_cost_drilldown_filters_do_not_leak_other_workspaces(
+    client: TestClient, db_session: Session
+) -> None:
+    owner = register(client, "cost-drilldown-isolation-owner@example.com")
+    token = login(client, "cost-drilldown-isolation-owner@example.com")
+    workspace = create_workspace(client, token, "Owner Workspace")
+    workspace_id = UUID(workspace["id"])
+    agent = AgentConfig(workspace_id=workspace_id, name="Owner Secret Agent")
+    db_session.add(agent)
+    db_session.flush()
+    run = GraphRun(
+        workspace_id=workspace_id,
+        agent_config_id=agent.id,
+        user_id=UUID(owner["id"]),
+        input_message="owner secret run",
+        language=SupportedLanguage.en,
+        status=GraphRunStatus.completed,
+    )
+    db_session.add(run)
+    db_session.flush()
+    db_session.add(
+        AIRun(
+            workspace_id=workspace_id,
+            graph_run_id=run.id,
+            graph_step_id=None,
+            provider="mock",
+            model="mock-secret",
+            purpose="draft_response",
+            language=SupportedLanguage.en,
+            prompt_tokens=10,
+            completion_tokens=10,
+            total_tokens=20,
+            estimated_cost=0.001,
+            latency_ms=5,
+            cache_hit=False,
+            status=AIRunStatus.succeeded,
+        )
+    )
+
+    register(client, "cost-drilldown-isolation-other@example.com")
+    other_token = login(client, "cost-drilldown-isolation-other@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Workspace")
+    db_session.commit()
+
+    other_summary = client.get(
+        f"/api/v1/workspaces/{other_workspace['id']}/costs/summary",
+        headers=auth_headers(other_token),
+        params={"search": "secret"},
+    )
+
+    assert other_summary.status_code == 200
+    assert other_summary.json()["total_runs"] == 0
+    assert other_summary.json()["recent_runs"] == []
+    assert other_summary.json()["recent_ai_runs"] == []
