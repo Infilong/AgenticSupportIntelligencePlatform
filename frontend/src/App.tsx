@@ -1496,55 +1496,116 @@ export function App() {
   }
 
   function DocumentsPanel() {
+    const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
+    const totalChunkTokens = documentDetail?.chunks.reduce((sum, chunk) => sum + chunk.token_count, 0) ?? 0;
+    const selectedDocument = documentDetail?.document ?? documents.find((document) => document.id === selectedDocumentId) ?? null;
+
     return (
-      <div className="grid two-wide-left">
-        <ActionGuide
-          title="Knowledge powers RAG"
-          detail="Upload policies or FAQs, then select any document you own in this workspace to edit and reindex it as a new version."
-          action="Next after upload: create and run the agent"
-          onAction={() => setActiveTab("agent")}
-        />
-        <form className="panel stack" onSubmit={selectedDocumentId ? saveDocumentEdit : uploadDocument}>
-          <div className="row-head">
-            <div>
-              <h3>{selectedDocumentId ? "Edit selected knowledge" : "Upload knowledge"}</h3>
-              <p className="muted">
-                {selectedDocumentId
-                  ? "Saving creates a new indexed version; older versions remain in the database."
-                  : "Create a new policy or FAQ document for retrieval."}
-              </p>
-            </div>
-            <div className="review-actions">
-              {selectedDocumentId && <button type="button" onClick={resetDocumentForm}>New document</button>}
-              {selectedDocumentId && <button type="button" className="danger-button" onClick={() => void deleteSelectedDocument()}>Delete</button>}
-            </div>
+      <div className="knowledge-console">
+        <section className="panel knowledge-hero">
+          <div>
+            <p className="eyebrow">Knowledge base</p>
+            <h2>Manage retrieval evidence</h2>
+            <p className="muted">Upload, edit, reindex, and inspect the exact chunks the LangChain retrieval tool can cite during a LangGraph run.</p>
           </div>
-          <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
-          <label>Language<select value={documentLanguage} onChange={(event) => setDocumentLanguage(event.target.value as Language)}><option value="en">English</option><option value="ja">Japanese</option><option value="zh">Chinese</option></select></label>
-          <label>Content<textarea rows={14} value={documentContent} onChange={(event) => setDocumentContent(event.target.value)} /></label>
-          <div className="inline-form">
-            <button className="primary" disabled={loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
-            {documentDetail?.latest_version && <span className="muted">Current version: v{documentDetail.latest_version.version}</span>}
+          <div className="knowledge-health-grid">
+            <Metric label="Documents" value={documents.length} />
+            <Metric label="Indexed" value={indexedDocumentCount} />
+            <Metric label="Selected chunks" value={documentDetail?.chunks.length ?? 0} />
+            <Metric label="Embeddings" value={documentDetail?.embedding_count ?? 0} />
           </div>
-        </form>
-        <section className="panel stack">
-          <h3>Your workspace documents</h3>
-          {documents.map((document) => (
-            <button key={document.id} className={`list-button ${selectedDocumentId === document.id ? "selected-list-item" : ""}`} onClick={() => void loadDocumentDetail(document.id)}>
-              <strong>{document.title}</strong><span>{document.language} · {document.status}</span>
-            </button>
-          ))}
-          {documents.length === 0 && <EmptyState title="No documents" detail="Upload policy or FAQ text to build retrieval evidence." />}
         </section>
-        <section className="panel full-width">
+
+        <section className="knowledge-workbench">
+          <aside className="panel stack document-library-panel">
+            <div className="row-head">
+              <div>
+                <h3>Document library</h3>
+                <p className="muted">Workspace-owned policies and FAQs available to retrieval.</p>
+              </div>
+              <button type="button" onClick={resetDocumentForm}>New</button>
+            </div>
+            <div className="document-list">
+              {documents.map((document) => (
+                <button
+                  key={document.id}
+                  className={`document-card ${selectedDocumentId === document.id ? "selected" : ""}`}
+                  onClick={() => void loadDocumentDetail(document.id)}
+                >
+                  <div className="row-head">
+                    <strong>{document.title}</strong>
+                    <Badge tone={document.status === "indexed" ? "good" : document.status === "failed" ? "bad" : "warn"}>{document.status}</Badge>
+                  </div>
+                  <span>{document.language.toUpperCase()} · updated {formatDate(document.updated_at)}</span>
+                  {document.error_message && <small>{document.error_message}</small>}
+                </button>
+              ))}
+              {documents.length === 0 && <EmptyState title="No documents" detail="Upload a policy or FAQ to give the agent cited evidence." />}
+            </div>
+          </aside>
+
+          <form className="panel stack knowledge-editor-panel" onSubmit={selectedDocumentId ? saveDocumentEdit : uploadDocument}>
+            <div className="row-head">
+              <div>
+                <h3>{selectedDocumentId ? "Edit and reindex" : "Create knowledge document"}</h3>
+                <p className="muted">Saving creates an indexed document version. The agent only answers from retrieved chunks.</p>
+              </div>
+              <div className="review-actions">
+                {selectedDocument && <Badge tone={selectedDocument.status === "indexed" ? "good" : "warn"}>{selectedDocument.status}</Badge>}
+                {selectedDocumentId && <button type="button" className="danger-button" onClick={() => void deleteSelectedDocument()}>Delete</button>}
+              </div>
+            </div>
+            <div className="knowledge-meta-grid">
+              <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
+              <label>Language<select value={documentLanguage} onChange={(event) => setDocumentLanguage(event.target.value as Language)}><option value="en">English</option><option value="ja">Japanese</option><option value="zh">Chinese</option></select></label>
+              <div className="version-card">
+                <span>Version</span>
+                <strong>{documentDetail?.latest_version ? `v${documentDetail.latest_version.version}` : "new"}</strong>
+                <small>{documentDetail?.latest_version ? formatDate(documentDetail.latest_version.created_at) : "Not indexed yet"}</small>
+              </div>
+            </div>
+            <label>
+              Source content
+              <textarea rows={16} value={documentContent} onChange={(event) => setDocumentContent(event.target.value)} />
+            </label>
+            <div className="run-action-bar">
+              <button className="primary" disabled={loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
+              {selectedDocumentId && <button type="button" onClick={resetDocumentForm}>Start new document</button>}
+              <button type="button" onClick={() => setActiveTab("agent")} disabled={indexedDocumentCount === 0}>Run agent</button>
+            </div>
+          </form>
+        </section>
+
+        <section className="panel stack full-width chunk-inspector-panel">
           <div className="row-head">
             <div>
-              <h3>Indexed chunks</h3>
-              <p className="muted">These are the exact chunks retrieval can cite after indexing.</p>
+              <p className="eyebrow">Retrieval inspector</p>
+              <h3>{selectedDocument ? selectedDocument.title : "No document selected"}</h3>
+              <p className="muted">These chunks are the evidence units stored for citation and token budgeting.</p>
             </div>
             {documentDetail && <Badge>{documentDetail.embedding_count} embeddings</Badge>}
           </div>
-          {documentDetail ? <div className="chunk-list">{documentDetail.chunks.map((chunk) => <article className="chunk" key={chunk.id}><div className="row-head"><strong>Chunk {chunk.chunk_index}</strong><span>{chunk.token_count} tokens</span></div><p>{chunk.content}</p></article>)}</div> : <EmptyState title="No document selected" detail="Select a document to inspect or edit its indexed content." />}
+          {documentDetail ? (
+            <>
+              <div className="metric-grid compact">
+                <Metric label="Chunks" value={documentDetail.chunks.length} />
+                <Metric label="Total tokens" value={totalChunkTokens} />
+                <Metric label="Language" value={documentDetail.document.language} />
+                <Metric label="Version" value={documentDetail.latest_version ? `v${documentDetail.latest_version.version}` : "-"} />
+              </div>
+              <div className="chunk-list chunk-inspector-list">
+                {documentDetail.chunks.map((chunk) => (
+                  <article className="chunk" key={chunk.id}>
+                    <div className="row-head">
+                      <strong>Chunk {chunk.chunk_index}</strong>
+                      <div className="review-actions"><Badge>{chunk.language.toUpperCase()}</Badge><span>{chunk.token_count} tokens</span></div>
+                    </div>
+                    <p>{chunk.content}</p>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : <EmptyState title="No document selected" detail="Select a document to inspect indexed chunks and embeddings." />}
         </section>
       </div>
     );
