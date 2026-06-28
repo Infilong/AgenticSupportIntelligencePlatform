@@ -197,6 +197,22 @@ class GuardrailCatalogService:
         limit: int = 30,
         offset: int = 0,
     ) -> list[GuardrailCatalogItem]:
+        filtered = self._filtered_guardrails(workspace_id=workspace_id, search=search, view=view)
+        start = max(offset, 0)
+        return filtered[start : start + _bounded_limit(limit)]
+
+    def count_guardrails(
+        self,
+        *,
+        workspace_id: UUID,
+        search: str | None = None,
+        view: str = "all",
+    ) -> int:
+        return len(self._filtered_guardrails(workspace_id=workspace_id, search=search, view=view))
+
+    def _filtered_guardrails(
+        self, *, workspace_id: UUID, search: str | None, view: str
+    ) -> list[GuardrailCatalogItem]:
         definitions_by_type = {
             definition.guardrail_type: definition for definition in RUNTIME_GUARDRAIL_DEFINITIONS
         }
@@ -228,13 +244,11 @@ class GuardrailCatalogService:
             )
             for definition in sorted(definitions_by_type.values(), key=lambda item: item.label)
         ]
-        filtered = [
+        return [
             item
             for item in items
             if _guardrail_matches_view(item, view) and _guardrail_matches_search(item, search)
         ]
-        start = max(offset, 0)
-        return filtered[start : start + _bounded_limit(limit)]
 
     def effective_policies(self, *, workspace_id: UUID) -> dict[str, GuardrailEffectivePolicy]:
         definitions = {

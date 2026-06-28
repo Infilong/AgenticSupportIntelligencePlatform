@@ -306,6 +306,14 @@ type ToolCatalogItem = {
   recent_calls: ToolCatalogCall[];
 };
 
+type ToolCatalogListResponse = {
+  items: ToolCatalogItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_next: boolean;
+};
+
 type AIRunTrace = {
   id: string;
   provider: string;
@@ -521,6 +529,14 @@ type GuardrailCatalogItem = {
     last_failed_at: string | null;
   };
   recent_failures: GuardrailFailure[];
+};
+
+type GuardrailCatalogListResponse = {
+  items: GuardrailCatalogItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_next: boolean;
 };
 
 type EvaluationMetric = {
@@ -1117,11 +1133,15 @@ export function App() {
   const [toolSearch, setToolSearch] = useState("");
   const [toolView, setToolView] = useState<ToolView>("all");
   const [toolPage, setToolPage] = useState(0);
+  const [toolTotal, setToolTotal] = useState(0);
+  const [toolHasNext, setToolHasNext] = useState(false);
   const [guardrails, setGuardrails] = useState<GuardrailCatalogItem[]>([]);
   const [guardrailPolicyDrafts, setGuardrailPolicyDrafts] = useState<Record<string, GuardrailPolicyDraft>>({});
   const [guardrailSearch, setGuardrailSearch] = useState("");
   const [guardrailView, setGuardrailView] = useState<GuardrailView>("all");
   const [guardrailPage, setGuardrailPage] = useState(0);
+  const [guardrailTotal, setGuardrailTotal] = useState(0);
+  const [guardrailHasNext, setGuardrailHasNext] = useState(false);
 
   const [reviews, setReviews] = useState<HumanReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
@@ -1541,8 +1561,8 @@ export function App() {
       can("knowledge:read") ? loadDocuments() : Promise.resolve(clearKnowledgeState()),
       can("agents:read") ? loadAgents() : Promise.resolve(clearAgentState()),
       can("reviews:read") ? loadReviews() : Promise.resolve(clearReviewState()),
-      can("tools:read") ? loadTools() : Promise.resolve(setTools([])),
-      can("guardrails:read") ? loadGuardrails() : Promise.resolve(setGuardrails([])),
+      can("tools:read") ? loadTools() : Promise.resolve(clearToolState()),
+      can("guardrails:read") ? loadGuardrails() : Promise.resolve(clearGuardrailState()),
       can("evaluations:read") ? loadEvaluations() : Promise.resolve(clearEvaluationState()),
       can("costs:read") ? loadCosts() : Promise.resolve(setCostSummary(null)),
       can("budget_policy:read") ? loadBudgetPolicy() : Promise.resolve(setBudgetPolicy(null)),
@@ -1764,6 +1784,18 @@ export function App() {
     setSelectedAgentId("");
     setAgentSummary(null);
     setAgentWorkflowSummary(null);
+  }
+
+  function clearToolState() {
+    setTools([]);
+    setToolTotal(0);
+    setToolHasNext(false);
+  }
+
+  function clearGuardrailState() {
+    setGuardrails([]);
+    setGuardrailTotal(0);
+    setGuardrailHasNext(false);
   }
 
   function clearReviewState() {
@@ -2501,14 +2533,16 @@ export function App() {
 
   async function loadTools(page = toolPage, view = toolView, search = toolSearch) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<ToolCatalogItem[]>(
+    const data = await apiRequest<ToolCatalogListResponse>(
       workspaceListPath("/tools", toolListParams(page, view, search)),
       { token },
     );
-    setTools(data);
+    setTools(data.items);
+    setToolTotal(data.total);
+    setToolHasNext(data.has_next);
     setToolConfigDrafts((current) => {
       const next = { ...current };
-      for (const tool of data) {
+      for (const tool of data.items) {
         if (!next[tool.name]) {
           next[tool.name] = {
             enabled: tool.enabled,
@@ -2564,14 +2598,16 @@ export function App() {
 
   async function loadGuardrails(page = guardrailPage, view = guardrailView, search = guardrailSearch) {
     if (!selectedWorkspaceId) return;
-    const data = await apiRequest<GuardrailCatalogItem[]>(
+    const data = await apiRequest<GuardrailCatalogListResponse>(
       workspaceListPath("/guardrails", guardrailListParams(page, view, search)),
       { token },
     );
-    setGuardrails(data);
+    setGuardrails(data.items);
+    setGuardrailTotal(data.total);
+    setGuardrailHasNext(data.has_next);
     setGuardrailPolicyDrafts((current) => {
       const next = { ...current };
-      for (const guardrail of data) {
+      for (const guardrail of data.items) {
         if (!next[guardrail.guardrail_type]) {
           next[guardrail.guardrail_type] = {
             enabled: guardrail.enabled,
@@ -3542,7 +3578,7 @@ export function App() {
       {
         tab: "tools",
         label: "Tool catalog",
-        value: `${tools.length} tools`,
+        value: `${toolTotal} tools`,
         detail: "Inspect tool schemas, permissions, usage, and trace links.",
       },
       {
@@ -4662,7 +4698,7 @@ export function App() {
     const toolPageStart = toolPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedTools.length ? 1 : 0);
     const toolPageEnd = toolPage * MAX_VISIBLE_ADMIN_ASSETS + displayedTools.length;
     const canGoToPreviousToolPage = toolPage > 0;
-    const canGoToNextToolPage = displayedTools.length === MAX_VISIBLE_ADMIN_ASSETS;
+    const canGoToNextToolPage = toolHasNext;
     const lastUsedAt = tools
       .map((tool) => tool.usage.last_used_at)
       .filter((value): value is string => Boolean(value))
@@ -4686,7 +4722,7 @@ export function App() {
         </section>
 
         <section className="queue-summary-grid">
-          <Metric label="Tools" value={tools.length} />
+          <Metric label="Matching tools" value={toolTotal} />
           <Metric label="Enabled" value={activeTools} />
           <Metric label="Configured" value={configuredTools} />
           <Metric label="Calls" value={totalCalls} />
@@ -4700,7 +4736,7 @@ export function App() {
               <h3>Tool operations board</h3>
               <p className="muted">Filter backend-supported runtime tools by enabled state, failures, and workspace configuration before drilling into schemas or trace-linked executions.</p>
             </div>
-            <Badge>{displayedTools.length} shown</Badge>
+            <Badge>{displayedTools.length} of {toolTotal} shown</Badge>
           </div>
           <div className="tool-filter-row">
             <div className="segmented tool-filter" aria-label="Tool catalog filter">
@@ -4865,7 +4901,7 @@ export function App() {
           {displayedTools.length === 0 && <EmptyState title="No tools match this view" detail={toolPage > 0 ? "Move to the previous page or clear filters." : "Refresh the workspace, clear search, or choose another tool filter."} />}
           <div className="pagination-bar">
             <button type="button" onClick={() => setToolPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousToolPage || loading}>Previous</button>
-            <span>Page {toolPage + 1} · {displayedTools.length ? `${toolPageStart}-${toolPageEnd}` : "0"} tools shown</span>
+            <span>Page {toolPage + 1} · {displayedTools.length ? `${toolPageStart}-${toolPageEnd}` : "0"} of {toolTotal} tools</span>
             <button type="button" onClick={() => setToolPage((page) => page + 1)} disabled={!canGoToNextToolPage || loading}>Next</button>
           </div>
           <p className="permission-note">Tool catalog rows are loaded from the backend by search, view, offset, and limit. Recent executions stay attached to each loaded tool.</p>
@@ -4886,7 +4922,7 @@ export function App() {
     const guardrailPageStart = guardrailPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedGuardrails.length ? 1 : 0);
     const guardrailPageEnd = guardrailPage * MAX_VISIBLE_ADMIN_ASSETS + displayedGuardrails.length;
     const canGoToPreviousGuardrailPage = guardrailPage > 0;
-    const canGoToNextGuardrailPage = displayedGuardrails.length === MAX_VISIBLE_ADMIN_ASSETS;
+    const canGoToNextGuardrailPage = guardrailHasNext;
     const recentFailures = guardrails.flatMap((item) =>
       item.recent_failures.map((failure) => ({ ...failure, label: item.label, guardrail_type: item.guardrail_type })),
     ).sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 8);
@@ -4909,7 +4945,7 @@ export function App() {
         </section>
 
         <section className="queue-summary-grid">
-          <Metric label="Guardrails" value={guardrails.length} />
+          <Metric label="Matching guardrails" value={guardrailTotal} />
           <Metric label="Enabled" value={enabledGuardrails} />
           <Metric label="Configurable" value={configurableGuardrails} />
           <Metric label="Fixed" value={fixedGuardrails} />
@@ -4924,7 +4960,7 @@ export function App() {
               <h3>Governance policy board</h3>
               <p className="muted">Filter implemented runtime policies without losing the backend truth: fixed safety checks, owner-configurable routing checks, and failed evaluations are all shown from the same catalog.</p>
             </div>
-            <Badge>{displayedGuardrails.length} shown</Badge>
+            <Badge>{displayedGuardrails.length} of {guardrailTotal} shown</Badge>
           </div>
           <div className="guardrail-filter-row">
             <div className="segmented guardrail-filter" aria-label="Guardrail policy filter">
@@ -5095,7 +5131,7 @@ export function App() {
             {displayedGuardrails.length === 0 && <EmptyState title="No guardrails match this view" detail={guardrailPage > 0 ? "Move to the previous page or clear filters." : "Refresh the workspace, clear search, or choose another guardrail filter."} />}
             <div className="pagination-bar">
               <button type="button" onClick={() => setGuardrailPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousGuardrailPage || loading}>Previous</button>
-              <span>Page {guardrailPage + 1} · {displayedGuardrails.length ? `${guardrailPageStart}-${guardrailPageEnd}` : "0"} guardrails shown</span>
+              <span>Page {guardrailPage + 1} · {displayedGuardrails.length ? `${guardrailPageStart}-${guardrailPageEnd}` : "0"} of {guardrailTotal} guardrails</span>
               <button type="button" onClick={() => setGuardrailPage((page) => page + 1)} disabled={!canGoToNextGuardrailPage || loading}>Next</button>
             </div>
             <p className="permission-note">Guardrail catalog rows are loaded from the backend by search, view, offset, and limit. Recent failures stay attached to each loaded policy.</p>
@@ -6384,7 +6420,7 @@ export function App() {
               </TabShortcut>
               <TabShortcut tab="tools">
                 <strong>Tool defaults</strong>
-                <span>{tools.length} tools · {canConfigureTools ? "owner editable" : "read only"}</span>
+                <span>{toolTotal} tools · {canConfigureTools ? "owner editable" : "read only"}</span>
               </TabShortcut>
               <TabShortcut tab="guardrails">
                 <strong>Guardrail policies</strong>

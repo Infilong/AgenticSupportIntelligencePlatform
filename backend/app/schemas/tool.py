@@ -48,3 +48,11 @@ class ToolCatalogItemResponse(BaseModel):
     related_workflow_nodes: list[str]
     usage: ToolUsageSummaryResponse
     recent_calls: list[ToolCallSummaryResponse]
+
+
+class ToolCatalogListResponse(BaseModel):
+    items: list[ToolCatalogItemResponse]
+    total: int
+    limit: int
+    offset: int
+    has_next: bool

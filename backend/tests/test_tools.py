@@ -88,7 +88,10 @@ def test_tools_catalog_exposes_runtime_tool_and_usage_from_graph_runs(client: Te
     )
 
     assert response.status_code == 200
-    tools = response.json()
+    tools_body = response.json()
+    assert tools_body["total"] == 1
+    assert tools_body["has_next"] is False
+    tools = tools_body["items"]
     assert [tool["name"] for tool in tools] == ["search_documents"]
     tool = tools[0]
     assert tool["framework"] == "langchain_core.tools.StructuredTool"
@@ -133,7 +136,9 @@ def test_tools_catalog_is_workspace_scoped(client: TestClient) -> None:
     )
 
     assert other_response.status_code == 200
-    other_tool = other_response.json()[0]
+    other_body = other_response.json()
+    assert other_body["total"] == 1
+    other_tool = other_body["items"][0]
     assert other_tool["name"] == "search_documents"
     assert other_tool["usage"]["total_calls"] == 0
     assert other_tool["recent_calls"] == []
@@ -162,8 +167,10 @@ def test_owner_can_configure_tool_defaults(client: TestClient) -> None:
     assert body["max_retries"] == 2
     assert "2 automatic retries" in body["retry_policy"]
     assert listed.status_code == 200
-    assert listed.json()[0]["enabled"] is False
-    assert listed.json()[0]["timeout_ms"] == 2500
+    listed_body = listed.json()
+    assert listed_body["total"] == 1
+    assert listed_body["items"][0]["enabled"] is False
+    assert listed_body["items"][0]["timeout_ms"] == 2500
 
 
 def test_tool_configuration_requires_owner_and_is_workspace_scoped(
@@ -239,7 +246,9 @@ def test_disabled_retrieval_tool_routes_agent_to_review_and_records_failed_tool_
     assert run.status_code == 201
     assert run.json()["route_decision"] == "human_review"
     assert tools.status_code == 200
-    tool = tools.json()[0]
+    tools_body = tools.json()
+    assert tools_body["total"] == 1
+    tool = tools_body["items"][0]
     assert tool["enabled"] is False
     assert tool["usage"]["failed_calls"] == 1
     failed_call = tool["recent_calls"][0]
@@ -316,8 +325,17 @@ def test_tools_catalog_supports_backend_search_view_and_pagination(
     )
 
     assert failed.status_code == 200
-    assert [tool["name"] for tool in failed.json()] == ["custom_search_tool"]
-    assert failed.json()[0]["usage"]["failed_calls"] == 1
-    assert failed.json()[0]["recent_calls"][0]["error_message"] == "custom tool timeout"
+    failed_body = failed.json()
+    assert failed_body["total"] == 1
+    assert failed_body["limit"] == 1
+    assert failed_body["offset"] == 0
+    assert failed_body["has_next"] is False
+    assert [tool["name"] for tool in failed_body["items"]] == ["custom_search_tool"]
+    assert failed_body["items"][0]["usage"]["failed_calls"] == 1
+    assert failed_body["items"][0]["recent_calls"][0]["error_message"] == "custom tool timeout"
     assert next_page.status_code == 200
-    assert next_page.json() == []
+    next_body = next_page.json()
+    assert next_body["total"] == 1
+    assert next_body["offset"] == 1
+    assert next_body["has_next"] is False
+    assert next_body["items"] == []

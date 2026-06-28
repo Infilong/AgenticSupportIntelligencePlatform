@@ -114,6 +114,22 @@ class ToolService:
         limit: int = 30,
         offset: int = 0,
     ) -> list[ToolCatalogItem]:
+        filtered = self._filtered_tools(workspace_id=workspace_id, search=search, view=view)
+        start = max(offset, 0)
+        return filtered[start : start + _bounded_limit(limit)]
+
+    def count_tools(
+        self,
+        *,
+        workspace_id: UUID,
+        search: str | None = None,
+        view: str = "all",
+    ) -> int:
+        return len(self._filtered_tools(workspace_id=workspace_id, search=search, view=view))
+
+    def _filtered_tools(
+        self, *, workspace_id: UUID, search: str | None, view: str
+    ) -> list[ToolCatalogItem]:
         definitions_by_name = self._definitions_for_workspace(workspace_id=workspace_id)
         items = [
             ToolCatalogItem(
@@ -125,13 +141,11 @@ class ToolService:
             )
             for definition in sorted(definitions_by_name.values(), key=lambda item: item.name)
         ]
-        filtered = [
+        return [
             item
             for item in items
             if _tool_matches_view(item, view) and _tool_matches_search(item, search)
         ]
-        start = max(offset, 0)
-        return filtered[start : start + _bounded_limit(limit)]
 
     def get_tool_definition(self, *, workspace_id: UUID, tool_name: str) -> ToolDefinition:
         definition = self._definitions_for_workspace(workspace_id=workspace_id).get(tool_name)

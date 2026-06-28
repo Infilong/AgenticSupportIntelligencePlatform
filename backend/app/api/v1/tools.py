@@ -11,6 +11,7 @@ from app.models.workspace import Workspace
 from app.schemas.tool import (
     ToolCallSummaryResponse,
     ToolCatalogItemResponse,
+    ToolCatalogListResponse,
     ToolConfigUpdateRequest,
     ToolUsageSummaryResponse,
 )
@@ -29,7 +30,7 @@ ListLimit = Annotated[int, Query(ge=1, le=100)]
 ListOffset = Annotated[int, Query(ge=0)]
 
 
-@router.get("/tools", response_model=list[ToolCatalogItemResponse])
+@router.get("/tools", response_model=ToolCatalogListResponse)
 def list_tools(
     workspace: ToolReadAccess,
     db: DbSession,
@@ -37,11 +38,19 @@ def list_tools(
     view: ToolViewFilter = "all",
     limit: ListLimit = 30,
     offset: ListOffset = 0,
-) -> list[ToolCatalogItemResponse]:
-    tools = ToolService(db).list_tools(
+) -> ToolCatalogListResponse:
+    service = ToolService(db)
+    tools = service.list_tools(
         workspace_id=workspace.id, search=search, view=view, limit=limit, offset=offset
     )
-    return [_tool_response(tool) for tool in tools]
+    total = service.count_tools(workspace_id=workspace.id, search=search, view=view)
+    return ToolCatalogListResponse(
+        items=[_tool_response(tool) for tool in tools],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(tools) < total,
+    )
 
 
 @router.patch("/tools/{tool_name}/config", response_model=ToolCatalogItemResponse)

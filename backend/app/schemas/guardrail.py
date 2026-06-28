@@ -57,3 +57,11 @@ class GuardrailCatalogItemResponse(BaseModel):
     related_workflow_nodes: list[str]
     usage: GuardrailUsageSummaryResponse
     recent_failures: list[GuardrailFailureResponse]
+
+
+class GuardrailCatalogListResponse(BaseModel):
+    items: list[GuardrailCatalogItemResponse]
+    total: int
+    limit: int
+    offset: int
+    has_next: bool

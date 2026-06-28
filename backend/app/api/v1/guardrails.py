@@ -10,6 +10,7 @@ from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.guardrail import (
     GuardrailCatalogItemResponse,
+    GuardrailCatalogListResponse,
     GuardrailFailureResponse,
     GuardrailPolicyUpdateRequest,
     GuardrailUsageSummaryResponse,
@@ -38,7 +39,7 @@ ListLimit = Annotated[int, Query(ge=1, le=100)]
 ListOffset = Annotated[int, Query(ge=0)]
 
 
-@router.get("/guardrails", response_model=list[GuardrailCatalogItemResponse])
+@router.get("/guardrails", response_model=GuardrailCatalogListResponse)
 def list_guardrails(
     workspace: GuardrailReadAccess,
     db: DbSession,
@@ -46,11 +47,19 @@ def list_guardrails(
     view: GuardrailViewFilter = "all",
     limit: ListLimit = 30,
     offset: ListOffset = 0,
-) -> list[GuardrailCatalogItemResponse]:
-    guardrails = GuardrailCatalogService(db).list_guardrails(
+) -> GuardrailCatalogListResponse:
+    service = GuardrailCatalogService(db)
+    guardrails = service.list_guardrails(
         workspace_id=workspace.id, search=search, view=view, limit=limit, offset=offset
     )
-    return [_guardrail_response(guardrail) for guardrail in guardrails]
+    total = service.count_guardrails(workspace_id=workspace.id, search=search, view=view)
+    return GuardrailCatalogListResponse(
+        items=[_guardrail_response(guardrail) for guardrail in guardrails],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_next=offset + len(guardrails) < total,
+    )
 
 
 @router.patch("/guardrails/{guardrail_type}/policy", response_model=GuardrailCatalogItemResponse)

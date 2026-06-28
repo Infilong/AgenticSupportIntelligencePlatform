@@ -78,7 +78,10 @@ def test_guardrail_catalog_exposes_runtime_policies_and_failures(client: TestCli
     )
 
     assert response.status_code == 200
-    guardrails = response.json()
+    guardrails_body = response.json()
+    assert guardrails_body["total"] >= 5
+    assert guardrails_body["has_next"] is False
+    guardrails = guardrails_body["items"]
     guardrail_types = {item["guardrail_type"] for item in guardrails}
     assert guardrail_types >= {
         "prompt_injection",
@@ -121,7 +124,9 @@ def test_guardrail_catalog_is_workspace_scoped(client: TestClient) -> None:
     )
 
     assert other_response.status_code == 200
-    citation = guardrail_by_type(other_response.json(), "citation_required")
+    other_body = other_response.json()
+    assert other_body["total"] >= 5
+    citation = guardrail_by_type(other_body["items"], "citation_required")
     assert citation["usage"]["total_evaluations"] == 0
     assert citation["recent_failures"] == []
 
@@ -156,7 +161,9 @@ def test_owner_can_update_guardrail_policy_and_catalog_shows_effective_values(
         headers=auth_headers(token),
     )
     assert catalog.status_code == 200
-    citation = guardrail_by_type(catalog.json(), "citation_required")
+    catalog_body = catalog.json()
+    assert catalog_body["total"] >= 5
+    citation = guardrail_by_type(catalog_body["items"], "citation_required")
     assert citation["enabled"] is False
     assert citation["action_on_fail"] == "record_only"
 
@@ -277,9 +284,20 @@ def test_guardrail_catalog_supports_backend_search_view_and_pagination(
     )
 
     assert failed.status_code == 200
-    assert [item["guardrail_type"] for item in failed.json()] == ["unsupported_answer"]
-    assert failed.json()[0]["recent_failures"]
+    failed_body = failed.json()
+    assert failed_body["total"] == 1
+    assert failed_body["limit"] == 1
+    assert failed_body["offset"] == 0
+    assert failed_body["has_next"] is False
+    assert [item["guardrail_type"] for item in failed_body["items"]] == ["unsupported_answer"]
+    assert failed_body["items"][0]["recent_failures"]
     assert next_page.status_code == 200
-    assert next_page.json() == []
+    next_body = next_page.json()
+    assert next_body["total"] == 1
+    assert next_body["offset"] == 1
+    assert next_body["has_next"] is False
+    assert next_body["items"] == []
     assert fixed.status_code == 200
-    assert [item["guardrail_type"] for item in fixed.json()] == ["prompt_injection"]
+    fixed_body = fixed.json()
+    assert fixed_body["total"] == 1
+    assert [item["guardrail_type"] for item in fixed_body["items"]] == ["prompt_injection"]
