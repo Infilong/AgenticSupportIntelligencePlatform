@@ -1,38 +1,3 @@
-# gstack
-
-Use the /browse skill from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
-
-Available gstack skills:
-/office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /design-shotgun, /design-html, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /connect-chrome, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade, /learn
-
-## Codex-best-practice
-
-## Answering Best Practice Questions
-
-When the user asks a Codex best practice question, **always search `~/.Codex/` first** (`best-practice/`, `reports/`, `tips/`, `implementation/`) before relying on training knowledge or external sources.
-
-## Workflow Best Practices
-
-- Keep AGENTS.md under 200 lines per file for reliable adherence
-- Use commands for workflows instead of standalone agents
-- Create feature-specific subagents with skills (progressive disclosure) rather than general-purpose agents
-- Perform manual `/compact` at ~50% context usage
-- Start with plan mode for complex tasks
-- Use human-gated task list workflow for multi-step tasks
-- Break subtasks small enough to complete in under 50% context
-
-## Subagent Orchestration
-
-Subagents **cannot** invoke other subagents via bash commands. Use the Agent tool:
-```
-Agent(subagent_type="agent-name", description="...", prompt="...", model="haiku")
-```
-
-## Debugging Tips
-
-- Use `/doctor` for diagnostics
-- Run long-running terminal commands as background tasks for better log visibility
-
 You are acting as a senior software engineer in a production codebase.
 
 Primary concern:
@@ -40,28 +5,28 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 
 Core rules:
 
-- Keep each file focused on one responsibility.
-- Do not put UI, API calls, validation, state management, business logic, and data mapping into one large file.
-- Do not create “god files”, “god components”, “god services”, or large utility dumps.
-- Prefer several small, cohesive files over one huge file.
-- Keep functions small and purpose-specific.
-- Keep components focused on rendering and user interaction.
-- Keep business logic outside UI components when practical.
-- Keep API/network code outside UI components.
-- Keep validation schemas separate from route handlers and UI code when practical.
-- Keep authorization checks server-side and close to backend boundary logic.
-- Keep database access separate from route/controller code unless the project style clearly does otherwise.
-- Do not duplicate large blocks of logic. Extract shared logic only when reuse is real and clear.
-- Do not introduce premature abstractions, factories, registries, or complex patterns unless there is a concrete need.
+* Keep each file focused on one responsibility.
+* Do not put UI, API calls, validation, state management, business logic, and data mapping into one large file.
+* Do not create “god files”, “god components”, “god services”, or large utility dumps.
+* Prefer several small, cohesive files over one huge file.
+* Keep functions small and purpose-specific.
+* Keep components focused on rendering and user interaction.
+* Keep business logic outside UI components when practical.
+* Keep API/network code outside UI components.
+* Keep validation schemas separate from route handlers and UI code when practical.
+* Keep authorization checks server-side and close to backend boundary logic.
+* Keep database access separate from route/controller code unless the project style clearly does otherwise.
+* Do not duplicate large blocks of logic. Extract shared logic only when reuse is real and clear.
+* Do not introduce premature abstractions, factories, registries, or complex patterns unless there is a concrete need.
 
 File size and structure constraints:
 
-- Avoid creating or expanding any single source file beyond 300 lines unless explicitly justified.
-- If a file would exceed 300 lines, stop and propose a split before continuing.
-- If a component/service grows beyond one clear responsibility, split it.
-- If a diff touches more than 5 files or exceeds 300 lines, explain why before implementing.
-- If the task requires a larger change, break it into milestones and stop after one milestone.
-- Prefer vertical feature slices: frontend UI, API client, backend route/service, tests — only as needed for the current behavior.
+* Avoid creating or expanding any single source file beyond 300 lines unless explicitly justified.
+* If a file would exceed 300 lines, stop and propose a split before continuing.
+* If a component/service grows beyond one clear responsibility, split it.
+* If a diff touches more than 5 files or exceeds 300 lines, explain why before implementing.
+* If the task requires a larger change, break it into milestones and stop after one milestone.
+* Prefer vertical feature slices: frontend UI, API client, backend route/service, tests — only as needed for the current behavior.
 
 Before editing:
 
@@ -71,71 +36,71 @@ Before editing:
 4. Propose a modular implementation plan.
 5. Explicitly state where each responsibility will live:
 
-   - UI/component
-   - state/hook
-   - API/client
-   - validation/schema
-   - backend route/controller
-   - service/business logic
-   - database/repository
-   - tests
+   * UI/component
+   * state/hook
+   * API client
+   * validation/schema
+   * backend route/controller
+   * service/business logic
+   * database/repository
+   * tests
 6. Identify any file that risks becoming too large or too coupled.
 7. Wait for approval if the change is large, ambiguous, or crosses multiple layers.
 
 During implementation:
 
-- Implement only the approved scope.
-- Do not refactor unrelated code.
-- Do not change unrelated formatting.
-- Do not introduce new dependencies without approval.
-- Do not weaken existing tests, validation, authorization, or error handling.
-- Do not move code just to make it look cleaner unless it reduces real coupling.
-- Preserve existing naming, architecture, and conventions.
-- Add clear types/schemas at boundaries.
-- Make invalid states hard to represent.
-- Keep error handling explicit and meaningful.
-- Prefer readable, boring code over clever code.
+* Implement only the approved scope.
+* Do not refactor unrelated code.
+* Do not change unrelated formatting.
+* Do not introduce new dependencies without approval.
+* Do not weaken existing tests, validation, authorization, or error handling.
+* Do not move code just to make it look cleaner unless it reduces real coupling.
+* Preserve existing naming, architecture, and conventions.
+* Add clear types/schemas at boundaries.
+* Make invalid states hard to represent.
+* Keep error handling explicit and meaningful.
+* Prefer readable, boring code over clever code.
 
 Frontend-specific rules:
 
-- Components should not directly contain complex API orchestration.
-- Extract reusable API calls into API/client modules.
-- Extract non-trivial stateful behavior into hooks.
-- Extract validation into schema files where appropriate.
-- Keep presentational components separate from data-fetching/container logic when the component becomes large.
-- Do not create one giant page component that handles layout, fetching, validation, mutation, error handling, and rendering all at once.
+* Components should not directly contain complex API orchestration.
+* Extract reusable API calls into API/client modules.
+* Extract non-trivial stateful behavior into hooks.
+* Extract validation into schema files where appropriate.
+* Keep presentational components separate from data-fetching/container logic when the component becomes large.
+* Do not create one giant page component that handles layout, fetching, validation, mutation, error handling, and rendering all at once.
 
 Backend-specific rules:
 
-- Routes/controllers should be thin.
-- Business logic should live in service-layer functions/classes.
-- Database access should be isolated in repositories/helpers when the project pattern supports it.
-- Authorization and workspace/user scoping must be explicit.
-- Never trust frontend-provided identity, role, ownership, or permission fields.
-- Use transactions when multiple writes must succeed or fail together.
-- Validate request bodies and external inputs at the boundary.
-- Return correct HTTP semantics: 400/401/403/404/409/422/500 as appropriate.
+* Routes/controllers should be thin.
+* Business logic should live in service-layer functions/classes.
+* Database access should be isolated in repositories/helpers when the project pattern supports it.
+* Authorization and workspace/user scoping must be explicit.
+* Never trust frontend-provided identity, role, ownership, or permission fields.
+* Use transactions when multiple writes must succeed or fail together.
+* Validate request bodies and external inputs at the boundary.
+* Return correct HTTP semantics: 400/401/403/404/409/422/500 as appropriate.
 
 Testing requirements:
 
-- Add or update tests that prove the behavior.
-- Include permission, invalid input, and regression tests where relevant.
-- Do not add superficial tests that only check implementation details.
-- Run the most relevant tests first.
-- Then run broader tests if practical.
-- Report exact commands and results.
+* Add or update tests that prove the behavior.
+* Include permission, invalid input, and regression tests where relevant.
+* Do not add superficial tests that only check implementation details.
+* Run the most relevant tests first.
+* Then run broader tests if practical.
+* Report exact commands and results.
 
 Self-review before finishing:
 
-- Did I create or expand any file too much?
-- Did I mix unrelated responsibilities?
-- Did I add unnecessary abstraction?
-- Did I touch unrelated files?
-- Is the diff small enough for human review?
-- Can a reviewer understand the data flow quickly?
-- Are important failure paths handled?
-- Are tests meaningful evidence?
-- Would this code still be readable six months later?
+* Did I create or expand any file too much?
+* Did I mix unrelated responsibilities?
+* Did I add unnecessary abstraction?
+* Did I touch unrelated files?
+* Is the diff small enough for human review?
+* Can a reviewer understand the data flow quickly?
+* Are important failure paths handled?
+* Are tests meaningful evidence?
+* Would this code still be readable six months later?
 
 Final response format:
 
@@ -146,13 +111,3 @@ Final response format:
 5. Tests run and results
 6. Manual verification steps
 7. Anything intentionally not changed
-
-## Source-of-truth rule
-
-When there is ambiguity, follow this order before coding:
-
-1. `codingRules.md` (this file)
-2. `/home/infilong/project/AgenticSupportIntelligencePlatform/AGENTS.md`
-3. Relevant docs in `docs/`
-
-Do not proceed with feature implementation unless these rules have been reviewed.
