@@ -25,6 +25,7 @@ from app.schemas.agent import (
     AgentWorkflowSummaryResponse,
     AIRunTraceResponse,
     CheckpointTraceResponse,
+    GraphRunListItemResponse,
     GraphRunListResponse,
     GraphRunResponse,
     GraphRuntimeResponse,
@@ -73,6 +74,8 @@ GraphRunAgentFilter = Annotated[UUID | None, Query()]
 GraphRunStatusFilter = Annotated[
     Literal["all", "running", "completed", "needs_human_review", "failed"], Query(alias="status")
 ]
+GraphRunCostViewFilter = Annotated[Literal["all", "high_cost"], Query(alias="cost_view")]
+GraphRunCostThreshold = Annotated[float, Query(ge=0, le=100000)]
 
 
 @router.post("/agents", response_model=AgentResponse, status_code=status.HTTP_201_CREATED)
@@ -408,6 +411,8 @@ def list_agent_runs(
     db: DbSession,
     status_filter: GraphRunStatusFilter = "all",
     agent_id: GraphRunAgentFilter = None,
+    cost_view: GraphRunCostViewFilter = "all",
+    min_estimated_cost: GraphRunCostThreshold = 0.001,
     search: SearchFilter = None,
     limit: ListLimit = None,
     offset: ListOffset = 0,
@@ -417,6 +422,8 @@ def list_agent_runs(
         workspace_id=workspace.id,
         status=status_filter,
         agent_id=agent_id,
+        cost_view=cost_view,
+        min_estimated_cost=min_estimated_cost,
         search=search,
         limit=limit,
         offset=offset,
@@ -425,10 +432,12 @@ def list_agent_runs(
         workspace_id=workspace.id,
         status=status_filter,
         agent_id=agent_id,
+        cost_view=cost_view,
+        min_estimated_cost=min_estimated_cost,
         search=search,
     )
     return GraphRunListResponse(
-        items=[GraphRunResponse.model_validate(run) for run in runs],
+        items=[GraphRunListItemResponse.model_validate(run) for run in runs],
         total=total,
         limit=limit,
         offset=offset,

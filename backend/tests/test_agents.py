@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.language import SupportedLanguage
 from app.models.agent import (
     Checkpoint,
     GraphRun,
@@ -13,7 +14,7 @@ from app.models.agent import (
     GraphStepStatus,
     ToolCall,
 )
-from app.models.ai import AIRun, PromptTemplate
+from app.models.ai import AIRun, AIRunStatus, PromptTemplate
 from app.models.review import HumanReview
 from app.models.user import User
 from app.models.workspace import WorkspaceMember, WorkspaceRole
@@ -1044,6 +1045,60 @@ def test_agent_run_history_is_paginated_filterable_and_workspace_scoped(
         ),
     ]
     db_session.add_all(runs)
+    db_session.flush()
+    db_session.add_all(
+        [
+            AIRun(
+                workspace_id=UUID(owner_workspace["id"]),
+                graph_run_id=runs[0].id,
+                graph_step_id=None,
+                provider="mock",
+                model="mock-cheap",
+                purpose="classification",
+                language=SupportedLanguage.en,
+                prompt_tokens=100,
+                completion_tokens=20,
+                total_tokens=120,
+                estimated_cost=0.0005,
+                latency_ms=10,
+                cache_hit=False,
+                status=AIRunStatus.succeeded,
+            ),
+            AIRun(
+                workspace_id=UUID(owner_workspace["id"]),
+                graph_run_id=runs[1].id,
+                graph_step_id=None,
+                provider="mock",
+                model="mock-standard",
+                purpose="draft_response",
+                language=SupportedLanguage.en,
+                prompt_tokens=600,
+                completion_tokens=120,
+                total_tokens=720,
+                estimated_cost=0.004,
+                latency_ms=80,
+                cache_hit=False,
+                status=AIRunStatus.succeeded,
+            ),
+            AIRun(
+                workspace_id=UUID(owner_workspace["id"]),
+                graph_run_id=runs[2].id,
+                graph_step_id=None,
+                provider="mock",
+                model="mock-large",
+                purpose="draft_response",
+                language=SupportedLanguage.ja,
+                prompt_tokens=2000,
+                completion_tokens=500,
+                total_tokens=2500,
+                estimated_cost=0.025,
+                latency_ms=300,
+                cache_hit=False,
+                status=AIRunStatus.failed,
+                error_message="provider timeout",
+            ),
+        ]
+    )
     db_session.commit()
 
     first_page = client.get(
@@ -1066,6 +1121,11 @@ def test_agent_run_history_is_paginated_filterable_and_workspace_scoped(
         headers=auth_headers(owner_token),
         params={"search": "timeout"},
     )
+    high_cost_filter = client.get(
+        f"/api/v1/workspaces/{owner_workspace['id']}/agent-runs",
+        headers=auth_headers(owner_token),
+        params={"cost_view": "high_cost", "min_estimated_cost": 0.01},
+    )
 
     register(client, "run-history-other@example.com")
     other_token = login(client, "run-history-other@example.com")
@@ -1085,6 +1145,10 @@ def test_agent_run_history_is_paginated_filterable_and_workspace_scoped(
         "Model timeout failure",
         "Privacy complaint needs escalation",
     ]
+    assert first_body["items"][0]["model_calls"] == 1
+    assert first_body["items"][0]["total_tokens"] == 2500
+    assert first_body["items"][0]["estimated_cost"] == 0.025
+    assert first_body["items"][0]["latency_ms"] == 300
     assert second_page.status_code == 200
     second_body = second_page.json()
     assert second_body["total"] == 3
@@ -1098,6 +1162,11 @@ def test_agent_run_history_is_paginated_filterable_and_workspace_scoped(
     search_body = search_filter.json()
     assert search_body["total"] == 1
     assert search_body["items"][0]["input_message"] == "Model timeout failure"
+    assert high_cost_filter.status_code == 200
+    high_cost_body = high_cost_filter.json()
+    assert high_cost_body["total"] == 1
+    assert high_cost_body["items"][0]["input_message"] == "Model timeout failure"
+    assert high_cost_body["items"][0]["estimated_cost"] == 0.025
     assert other_list.status_code == 200
     assert other_list.json()["total"] == 0
     assert other_list.json()["items"] == []

@@ -306,21 +306,22 @@ class AgentService:
         status: str = "all",
         search: str | None = None,
         agent_id: UUID | None = None,
+        cost_view: str = "all",
+        min_estimated_cost: float = 0.001,
         limit: int | None = None,
         offset: int = 0,
-    ) -> list[GraphRun]:
-        filters = self._graph_run_filters(
-            workspace_id=workspace_id, status=status, search=search, agent_id=agent_id
-        )
-        statement = (
-            select(GraphRun)
-            .where(*filters)
-            .order_by(GraphRun.created_at.desc())
-            .offset(offset)
-        )
+    ) -> list[dict[str, Any]]:
+        statement = self._graph_run_list_statement(
+            workspace_id=workspace_id,
+            status=status,
+            search=search,
+            agent_id=agent_id,
+            cost_view=cost_view,
+            min_estimated_cost=min_estimated_cost,
+        ).order_by(GraphRun.created_at.desc()).offset(offset)
         if limit is not None:
             statement = statement.limit(limit)
-        return list(self.db.scalars(statement).all())
+        return [_graph_run_list_item(row) for row in self.db.execute(statement).all()]
 
     def count_graph_runs(
         self,
@@ -329,12 +330,52 @@ class AgentService:
         status: str = "all",
         search: str | None = None,
         agent_id: UUID | None = None,
+        cost_view: str = "all",
+        min_estimated_cost: float = 0.001,
     ) -> int:
+        statement = self._graph_run_list_statement(
+            workspace_id=workspace_id,
+            status=status,
+            search=search,
+            agent_id=agent_id,
+            cost_view=cost_view,
+            min_estimated_cost=min_estimated_cost,
+        ).subquery()
+        total = self.db.scalar(select(func.count()).select_from(statement))
+        return int(total or 0)
+
+    def _graph_run_list_statement(
+        self,
+        *,
+        workspace_id: UUID,
+        status: str,
+        search: str | None,
+        agent_id: UUID | None,
+        cost_view: str,
+        min_estimated_cost: float,
+    ):
         filters = self._graph_run_filters(
             workspace_id=workspace_id, status=status, search=search, agent_id=agent_id
         )
-        total = self.db.scalar(select(func.count(GraphRun.id)).where(*filters))
-        return int(total or 0)
+        total_cost = func.coalesce(func.sum(AIRun.estimated_cost), 0.0)
+        statement = (
+            select(
+                GraphRun,
+                func.count(AIRun.id).label("model_calls"),
+                func.coalesce(func.sum(AIRun.total_tokens), 0).label("total_tokens"),
+                total_cost.label("estimated_cost"),
+                func.coalesce(func.sum(AIRun.latency_ms), 0).label("latency_ms"),
+            )
+            .outerjoin(
+                AIRun,
+                (AIRun.graph_run_id == GraphRun.id) & (AIRun.workspace_id == workspace_id),
+            )
+            .where(*filters)
+            .group_by(GraphRun.id)
+        )
+        if cost_view == "high_cost":
+            statement = statement.having(total_cost >= min_estimated_cost)
+        return statement
 
     def _graph_run_filters(
         self,
@@ -582,6 +623,28 @@ class AgentService:
         if model_config is None:
             raise AgentModelConfigNotFoundError("Model config was not found.")
         return model_config
+
+
+def _graph_run_list_item(row) -> dict[str, Any]:
+    graph_run = row[0]
+    return {
+        "id": graph_run.id,
+        "workspace_id": graph_run.workspace_id,
+        "agent_config_id": graph_run.agent_config_id,
+        "user_id": graph_run.user_id,
+        "input_message": graph_run.input_message,
+        "trace_id": graph_run.trace_id,
+        "language": str(graph_run.language) if graph_run.language is not None else None,
+        "status": str(graph_run.status),
+        "route_decision": graph_run.route_decision,
+        "final_answer": graph_run.final_answer,
+        "created_at": graph_run.created_at,
+        "completed_at": graph_run.completed_at,
+        "model_calls": int(row.model_calls or 0),
+        "total_tokens": int(row.total_tokens or 0),
+        "estimated_cost": round(float(row.estimated_cost or 0.0), 8),
+        "latency_ms": int(row.latency_ms or 0),
+    }
 
 
 def _workflow_nodes() -> list[dict[str, Any]]:

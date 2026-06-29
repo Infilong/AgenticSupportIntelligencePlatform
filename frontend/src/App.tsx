@@ -207,6 +207,10 @@ type GraphRun = {
   final_answer: string | null;
   created_at: string;
   completed_at: string | null;
+  model_calls?: number;
+  total_tokens?: number;
+  estimated_cost?: number;
+  latency_ms?: number;
 };
 
 type GraphRunListResponse = {
@@ -1197,6 +1201,8 @@ export function App() {
   const [traceRuns, setTraceRuns] = useState<GraphRun[]>([]);
   const [traceSearch, setTraceSearch] = useState("");
   const [traceStatusFilter, setTraceStatusFilter] = useState("all");
+  const [traceCostView, setTraceCostView] = useState("all");
+  const [traceCostThreshold, setTraceCostThreshold] = useState(0.001);
   const [traceRunPage, setTraceRunPage] = useState(0);
   const [traceRunTotal, setTraceRunTotal] = useState(0);
   const [traceRunHasNext, setTraceRunHasNext] = useState(false);
@@ -1508,7 +1514,7 @@ export function App() {
     if (!token || !selectedWorkspaceId || activeTab !== "trace") return;
     if (!permissionList.includes("traces:read")) return;
     void loadTraceRuns();
-  }, [token, selectedWorkspaceId, activeTab, traceSearch, traceStatusFilter, traceRunPage, permissionKey]);
+  }, [token, selectedWorkspaceId, activeTab, traceSearch, traceStatusFilter, traceCostView, traceCostThreshold, traceRunPage, permissionKey]);
 
   useEffect(() => {
     if (!token || !selectedWorkspaceId || activeTab !== "costs") return;
@@ -2624,6 +2630,8 @@ export function App() {
     page = traceRunPage,
     search = traceSearch,
     status = traceStatusFilter,
+    costView = traceCostView,
+    costThreshold = traceCostThreshold,
   ) {
     const params: Record<string, string | number | boolean | null | undefined> = {
       limit: MAX_VISIBLE_TRACE_RUNS,
@@ -2635,6 +2643,10 @@ export function App() {
     if (status !== "all") {
       params.status = status;
     }
+    if (costView !== "all") {
+      params.cost_view = costView;
+      params.min_estimated_cost = costThreshold;
+    }
     return params;
   }
 
@@ -2642,10 +2654,12 @@ export function App() {
     page = traceRunPage,
     search = traceSearch,
     status = traceStatusFilter,
+    costView = traceCostView,
+    costThreshold = traceCostThreshold,
   ) {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<GraphRunListResponse>(
-      workspaceListPath("/agent-runs", traceRunListParams(page, search, status)),
+      workspaceListPath("/agent-runs", traceRunListParams(page, search, status, costView, costThreshold)),
       { token },
     );
     setTraceRuns(data.items);
@@ -5415,7 +5429,7 @@ export function App() {
   }
 
   function TracePanel() {
-    const showTraceShortcuts = traceRunPage === 0 && traceStatusFilter === "all" && !traceSearch.trim();
+    const showTraceShortcuts = traceRunPage === 0 && traceStatusFilter === "all" && traceCostView === "all" && !traceSearch.trim();
     const traceEntries = buildTraceEntries({
       latestRun: showTraceShortcuts ? latestRun : null,
       recentRuns: traceRuns,
@@ -5459,7 +5473,7 @@ export function App() {
             <div className="row-head">
               <div>
                 <h3>Run history</h3>
-                <p className="muted">Workspace-scoped LangGraph runs with search, status filters, and bounded pagination.</p>
+                <p className="muted">Workspace-scoped LangGraph runs with search, status, cost filters, and bounded pagination.</p>
               </div>
               <Badge>{traceRunTotal}</Badge>
             </div>
@@ -5481,6 +5495,23 @@ export function App() {
                 <option value="failed">Failed</option>
                 <option value="running">Running</option>
               </select>
+              <select
+                aria-label="Trace run cost view"
+                value={traceCostView}
+                onChange={(event) => { setTraceCostView(event.target.value); setTraceRunPage(0); }}
+              >
+                <option value="all">All costs</option>
+                <option value="high_cost">High cost</option>
+              </select>
+              <input
+                aria-label="High-cost threshold"
+                type="number"
+                min="0"
+                step="0.001"
+                value={traceCostThreshold}
+                onChange={(event) => { setTraceCostThreshold(Number(event.target.value) || 0); setTraceRunPage(0); }}
+                disabled={traceCostView === "all"}
+              />
               <button type="button" onClick={() => void runAction("Trace history refreshed", () => loadTraceRuns())}>Refresh</button>
             </div>
             <div className="list-pagination-row">
@@ -5505,6 +5536,7 @@ export function App() {
                   <span className="recent-run-meta">
                     <Badge tone={toneForStatus(entry.status)}>{entry.statusLabel}</Badge>
                     <small>{entry.source} · {formatDate(entry.created_at)}</small>
+                    {entry.costLabel && <small>{entry.costLabel}</small>}
                   </span>
                 </button>
               ))}
@@ -5512,7 +5544,7 @@ export function App() {
                 <EmptyState title="No traceable runs" detail="Create or run an agent, change the status filter, or clear the search query." />
               )}
             </div>
-            <p className="permission-note">Run history is loaded from a workspace-scoped backend endpoint. Large workspaces stay manageable through search, status filters, and pagination instead of one growing list.</p>
+            <p className="permission-note">Run history is loaded from a workspace-scoped backend endpoint. Large workspaces stay manageable through search, status, high-cost filters, and pagination instead of one growing list.</p>
           </aside>
 
           <section className="panel stack trace-manual-loader">
@@ -7908,6 +7940,7 @@ type TraceEntryPoint = {
   statusLabel: string;
   created_at: string;
   source: string;
+  costLabel?: string;
 };
 
 type AIRunPurposeSummary = {
@@ -7930,6 +7963,16 @@ type PromptTemplateSummary = {
   hasSource: boolean;
 };
 
+
+function traceRunCostLabel(run: GraphRun): string | undefined {
+  const modelCalls = run.model_calls ?? 0;
+  const tokens = run.total_tokens ?? 0;
+  const cost = run.estimated_cost ?? 0;
+  const latency = run.latency_ms ?? 0;
+  if (!modelCalls && !tokens && !cost && !latency) return undefined;
+  return `${modelCalls} model calls · ${formatNumber(tokens)} tokens · ${formatCost(cost)} · ${formatLatency(latency)}`;
+}
+
 function buildTraceEntries({
   latestRun,
   recentRuns,
@@ -7949,6 +7992,7 @@ function buildTraceEntries({
       statusLabel: formatStepName(latestRun.status),
       created_at: latestRun.created_at,
       source: "Latest run",
+      costLabel: traceRunCostLabel(latestRun),
     });
   }
   for (const run of recentRuns) {
@@ -7960,6 +8004,7 @@ function buildTraceEntries({
       statusLabel: formatStepName(run.status),
       created_at: run.created_at,
       source: "Agent history",
+      costLabel: traceRunCostLabel(run),
     });
   }
   for (const review of reviews.filter((item) => item.reviewer_decision === "pending")) {

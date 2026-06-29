@@ -99,8 +99,15 @@ class GraphRunResponse(BaseModel):
     completed_at: datetime | None
 
 
+class GraphRunListItemResponse(GraphRunResponse):
+    model_calls: int
+    total_tokens: int
+    estimated_cost: float
+    latency_ms: int
+
+
 class GraphRunListResponse(BaseModel):
-    items: list[GraphRunResponse]
+    items: list[GraphRunListItemResponse]
     total: int
     limit: int | None
     offset: int
