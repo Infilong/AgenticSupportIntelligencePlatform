@@ -1,7 +1,11 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { Badge, EmptyState, Metric } from "./shared/Primitives";
 import { TasksPage } from "../pages/TasksPage";
+import { DatasetsPage } from "../pages/DatasetsPage";
+import { DocumentsPage } from "../pages/DocumentsPage";
 import { MembersPage } from "../pages/MembersPage";
+import { AuditPage } from "../pages/AuditPage";
+import { OverviewPage } from "../pages/OverviewPage";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
@@ -3728,10 +3732,154 @@ export function App() {
             onRefresh={() => runAction("Tasks refreshed", loadAttentionSummary)}
           />
         );
-      case "datasets":
-        return DatasetsPanel();
-      case "documents":
-        return DocumentsPanel();
+      case "datasets": {
+          const selectedDatasetFolderLabel = selectedDataFolderId === "all"
+            ? "All dataset folders"
+            : selectedDataFolderId === "unfiled"
+              ? "Unfiled datasets"
+              : folderLabel("dataset", selectedDataFolderId);
+          const selectedDatasetFolderCount = resourceItemCount("dataset", selectedDataFolderId);
+          return (
+            <DatasetsPage
+              datasetName={datasetName}
+              onDatasetNameChange={setDatasetName}
+              datasetFolders={foldersFor("dataset")}
+              datasetFolderId={datasetFolderId}
+              onDatasetFolderIdChange={setDatasetFolderId}
+              selectedDataFolderId={selectedDataFolderId}
+              selectedFolderLabel={selectedDatasetFolderLabel}
+              selectedFolderDatasetCount={selectedDatasetFolderCount}
+              onSelectDataFolder={selectDataFolder}
+              dataFolderName={dataFolderName}
+              onDataFolderNameChange={setDataFolderName}
+              datasetSearch={datasetSearch}
+              onDatasetSearchChange={setDatasetSearch}
+              datasetContent={datasetContent}
+              onDatasetContentChange={setDatasetContent}
+              examples={examples}
+              exampleSearch={exampleSearch}
+              onExampleSearchChange={setExampleSearch}
+              datasetPage={datasetPage}
+              datasetTotal={datasetTotal}
+              datasetHasNext={datasetHasNext}
+              onDatasetPageChange={setDatasetPage}
+              setDatasetSearch={setDatasetSearch}
+              setExampleSearch={setExampleSearch}
+              datasets={datasets}
+              selectedDatasetId={selectedDatasetId}
+              onSelectDataset={(datasetId) => {
+                setSelectedDatasetId(datasetId);
+                void loadExamples(datasetId);
+              }}
+              onLoadExamples={(datasetId) => void loadExamples(datasetId)}
+              canWriteData={canWriteData}
+              canManageResourceFolders={canManageResourceFolders}
+              canManageResources={canManageResources}
+              loading={loading}
+              onImportDataset={importDataset}
+              onMoveDatasetFolder={moveDatasetFolder}
+              onDeleteDataset={deleteDataset}
+              matchesSearch={matchesSearch}
+              resourceItemCount={resourceItemCount}
+              folderLabel={folderLabel}
+              onGoToTab={(tab) => goToTab(tab)}
+              labelDrafts={labelDrafts}
+              onSetLabelDrafts={setLabelDrafts}
+              onSaveLabel={saveLabel}
+              formatDate={formatDate}
+              goToTab={(tab) => goToTab(tab)}
+              maxVisibleResources={MAX_VISIBLE_RESOURCES}
+              maxVisibleExamples={MAX_VISIBLE_EXAMPLES}
+              onResetDatasetState={clearDatasetState}
+              onRefreshDatasets={() => void loadDatasets()}
+              resourceFolderPanel={ResourceFolderPanel}
+              actionGuide={ActionGuide}
+              folderPicker={FolderPicker}
+            />
+          );
+        }
+      case "documents": {
+          const selectedFolderLabel = selectedKnowledgeFolderId === "all"
+            ? "All knowledge folders"
+            : selectedKnowledgeFolderId === "unfiled"
+              ? "Unfiled knowledge"
+              : folderLabel("knowledge_document", selectedKnowledgeFolderId);
+          const selectedFolderDocumentCount = resourceItemCount("knowledge_document", selectedKnowledgeFolderId);
+          const selectedDocument = documentDetail?.document ?? documents.find((document) => document.id === selectedDocumentId) ?? null;
+          const totalKnowledgeDocumentCount = resourceItemCount("knowledge_document", "all");
+          const totalChunkTokens = documentDetail?.chunks.reduce((sum, chunk) => sum + chunk.token_count, 0) ?? 0;
+          const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
+          return (
+            <DocumentsPage
+              documents={documents}
+              totalKnowledgeDocumentCount={totalKnowledgeDocumentCount}
+              selectedDocumentId={selectedDocumentId}
+              selectedKnowledgeFolderId={selectedKnowledgeFolderId}
+              documentFolderId={documentFolderId}
+              documentSearch={documentSearch}
+              documentPage={documentPage}
+              documentTotal={documentTotal}
+              documentHasNext={documentHasNext}
+              maxVisibleChunks={MAX_VISIBLE_CHUNKS}
+              maxVisibleResources={MAX_VISIBLE_RESOURCES}
+              chunkSearch={chunkSearch}
+              documentLanguage={documentLanguage}
+              documentTitle={documentTitle}
+              documentContent={documentContent}
+              selectedDocument={selectedDocument}
+              documentDetail={documentDetail}
+              knowledgeFolders={foldersFor("knowledge_document")}
+              datasetName={datasetName}
+              selectedFolderLabel={selectedFolderLabel}
+              selectedFolderDocumentCount={selectedFolderDocumentCount}
+              selectedFolderName={selectedFolderLabel}
+              canWriteKnowledge={canWriteKnowledge}
+              canRunAgent={canRunAgent}
+              canManageResourceFolders={canManageResourceFolders}
+              canManageResources={canManageResources}
+              loading={loading}
+              onDocumentSearchChange={setDocumentSearch}
+              onDocumentPageChange={setDocumentPage}
+              onChunkSearchChange={setChunkSearch}
+              onSelectKnowledgeFolder={selectKnowledgeFolder}
+              knowledgeFolderName={knowledgeFolderName}
+              onKnowledgeFolderNameChange={setKnowledgeFolderName}
+              onDocumentFolderIdChange={setDocumentFolderId}
+              onUploadDocument={uploadDocument}
+              onSaveDocumentEdit={saveDocumentEdit}
+              onMoveDocumentFolder={moveDocumentFolder}
+              onDeleteDocument={deleteDocument}
+              onDeleteSelectedDocument={() => deleteSelectedDocument()}
+              onResetDocumentForm={(folderId?: string) => {
+                resetDocumentForm(folderId);
+              }}
+              onMoveSelectedDocumentFolder={() => void moveSelectedDocumentFolder()}
+              onLoadDocumentDetail={(documentId) => loadDocumentDetail(documentId)}
+              onLoadDocuments={() => void loadDocuments()}
+              onChangeDocumentLanguage={changeDocumentLanguage}
+              onLoadDocumentLanguage={() => documentLanguage}
+              onSetDocumentTitle={setDocumentTitle}
+              onSetDocumentContent={setDocumentContent}
+              onSetDocumentLanguage={changeDocumentLanguage}
+              onGoToTab={(tab) => goToTab(tab)}
+              matchesSearch={matchesSearch}
+              folderLabel={folderLabel}
+              documentFolders={foldersFor("knowledge_document")}
+              resourceItemCount={resourceItemCount}
+              formatDate={formatDate}
+              formatCost={formatCost}
+              onTabShortcut={() => goToTab("agent")}
+              goToTab={(tab) => goToTab(tab)}
+              indexedDocumentCount={indexedDocumentCount}
+              totalChunkTokens={totalChunkTokens}
+              chunkVisibleCount={MAX_VISIBLE_CHUNKS}
+              hiddenChunkCount={Math.max((documentDetail?.chunks.length ?? 0) - MAX_VISIBLE_CHUNKS, 0)}
+              canUploadToWorkspace={canWriteKnowledge}
+              resourceFolderPanel={ResourceFolderPanel}
+              folderPicker={FolderPicker}
+            />
+          );
+        }
       case "agent":
         return AgentPanel();
       case "tools":
@@ -3769,7 +3917,25 @@ export function App() {
           />
         );
       case "audit":
-        return AuditPanel();
+        return (
+          <AuditPage
+            auditLogs={auditLogs}
+            auditTotal={auditTotal}
+            auditHasNext={auditHasNext}
+            auditSearch={auditSearch}
+            auditImpactFilter={auditImpactFilter}
+            auditActorFilter={auditActorFilter}
+            auditPage={auditPage}
+            loading={loading}
+            maxVisibleAuditEvents={MAX_VISIBLE_AUDIT_EVENTS}
+            onRefresh={(page) => runAction("Audit logs refreshed", () => loadAuditLogs(page))}
+            onSetAuditPage={(page) => setAuditPage(page)}
+            onSearchChange={(value) => setAuditSearch(value)}
+            onImpactFilterChange={(impact) => setAuditImpactFilter(impact)}
+            onActorFilterChange={(actor) => setAuditActorFilter(actor)}
+            formatDate={formatDate}
+          />
+        );
       case "prompts":
         return PromptsPanel();
       case "models":
@@ -3779,8 +3945,72 @@ export function App() {
       case "settings":
         return SettingsPanel();
       default:
-        return OverviewPanel();
+        return (
+          <OverviewPage
+            selectedWorkspaceName={selectedWorkspace?.name ?? "Agentic workspace"}
+            readinessPercent={readinessPercent}
+            completedStepCount={completedStepCount}
+            totalSetupSteps={setupSteps.length}
+            setupSteps={setupSteps.map((step) => ({
+              label: step.label,
+              done: step.done,
+              tab: step.tab,
+              token: tabs.find((item) => item.id === step.tab)?.token,
+            }))}
+            nextStep={
+              nextStep
+                ? {
+                  label: nextStep.label,
+                  tab: nextStep.tab,
+                }
+                : null
+            }
+            latestRoute={latestRun?.route_decision ?? latestRun?.status ?? "No run"}
+            attentionItems={(attentionSummary?.items ?? []).map((item) => ({
+              id: item.id,
+              category: item.category,
+              severity: item.severity,
+              title: item.title,
+              detail: item.detail,
+              count: item.count,
+              action_label: item.action_label,
+              target_tab: item.target_tab,
+              target_id: item.target_id,
+              target_context: item.target_context,
+              created_at: item.created_at,
+            }))}
+            pendingReviews={pendingReviews}
+            evaluationRunCount={evaluationRuns.length}
+            costSummaryRuns={costSummary?.total_runs ?? 0}
+            costSummaryEstimatedCostLabel={formatCost(costSummary?.total_estimated_cost)}
+            traceRunId={traceRunId}
+            documentsCount={documents.length}
+            indexedDocumentCount={documents.filter((document) => document.status === "indexed").length}
+            datasetsCount={datasets.length}
+            promptTemplateCount={promptTemplates.length}
+            activeModelCount={modelConfigs.filter((config) => config.active && !config.archived_at).length}
+            toolTotal={toolTotal}
+            auditCount={auditLogs.length}
+            canRunAgent={canRunAgent}
+            canManageResources={canManageResources}
+            canManageWorkspace={Boolean(workspaceMembership?.can_manage_workspace)}
+            canOpenTab={canOpenTab}
+            canOpenOverviewAction={(tab) => canOpenTab(tab)}
+            workspaceRole={workspaceRole}
+            workspacePermissions={workspaceMembership?.permissions ?? []}
+            toolsHaveRuntime={tools.some((tool) => tool.usage.total_calls > 0)}
+            guardrailsHaveFailures={guardrails.some((item) => item.usage.failed_evaluations > 0)}
+            onGoToTab={(tab) => goToTab(tab)}
+            onOpenAttentionItem={(item) => openAttentionItem(item)}
+          />
+        );
+      }
     }
+
+  function attentionTone(severity: AttentionItem["severity"]): "neutral" | "good" | "warn" | "bad" {
+    if (severity === "critical") return "bad";
+    if (severity === "warning") return "warn";
+    return "neutral";
   }
 
   function openAttentionItem(item: AttentionItem) {
@@ -3795,682 +4025,6 @@ export function App() {
     }
   }
 
-  function attentionTone(severity: AttentionItem["severity"]): "neutral" | "good" | "warn" | "bad" {
-    if (severity === "critical") return "bad";
-    if (severity === "warning") return "warn";
-    return "neutral";
-  }
-
-  function OverviewPanel() {
-    const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
-    const activeModelCount = modelConfigs.filter((config) => config.active && !config.archived_at).length;
-    const latestRoute = latestRun?.route_decision ?? latestRun?.status ?? "No run";
-    const overviewAttentionItems = attentionSummary?.items ?? [];
-    const backendNextTask = overviewAttentionItems[0] ?? null;
-    const primaryAction = backendNextTask
-      ? { label: backendNextTask.title, tab: backendNextTask.target_tab, detail: backendNextTask.detail }
-      : nextStep
-        ? { label: `Continue setup: ${nextStep.label}`, tab: nextStep.tab, detail: "Complete the next required workspace capability." }
-        : { label: "Run agent", tab: "agent" as Tab, detail: "Workspace is ready for an end-to-end workflow run." };
-    const healthCards: Array<{
-      label: string;
-      value: string | number;
-      tone: "neutral" | "good" | "warn" | "bad";
-      detail: string;
-    }> = [
-      {
-        label: "Readiness",
-        value: `${readinessPercent}%`,
-        tone: readinessPercent === 100 ? "good" : "warn",
-        detail: `${completedStepCount}/${setupSteps.length} checks complete`,
-      },
-      {
-        label: "Knowledge",
-        value: `${indexedDocumentCount}/${documents.length}`,
-        tone: indexedDocumentCount > 0 ? "good" : "warn",
-        detail: "indexed documents",
-      },
-      {
-        label: "Pending reviews",
-        value: pendingReviews,
-        tone: pendingReviews > 0 ? "warn" : "good",
-        detail: pendingReviews > 0 ? "operator action needed" : "queue clear",
-      },
-      {
-        label: "AI runs",
-        value: costSummary?.total_runs ?? 0,
-        tone: costSummary?.total_runs ? "good" : "neutral",
-        detail: `${formatCost(costSummary?.total_estimated_cost)} estimated`,
-      },
-    ];
-    const operationActionOptions: Array<{ tab: Tab; label: string; disabled?: boolean }> = [
-      { tab: "agent", label: canRunAgent ? "Run agent" : "View agents" },
-      { tab: "reviews", label: "Human review" },
-      { tab: "trace", label: "Runs & traces", disabled: !traceRunId },
-      { tab: "costs", label: "Usage & costs" },
-    ];
-    const operationActions = operationActionOptions.filter((action) => canOpenTab(action.tab));
-    const overviewShortcutCardOptions: Array<{ tab: Tab; label: string; value: string; detail: string }> = [
-      {
-        tab: "documents",
-        label: "Knowledge base",
-        value: `${documents.length} documents`,
-        detail: "Upload, edit, reindex, and inspect chunks.",
-      },
-      {
-        tab: "datasets",
-        label: "Data library",
-        value: `${datasets.length} datasets`,
-        detail: "Import and label multilingual examples in foldered collections.",
-      },
-      {
-        tab: "prompts",
-        label: "Prompt registry",
-        value: `${promptTemplates.length} active`,
-        detail: "Version LangChain prompts by language.",
-      },
-      {
-        tab: "models",
-        label: "Model routing",
-        value: `${activeModelCount} active`,
-        detail: "Configure model purpose, cost, and context limits.",
-      },
-      {
-        tab: "tools",
-        label: "Tool catalog",
-        value: `${toolTotal} tools`,
-        detail: "Inspect tool schemas, permissions, usage, and trace links.",
-      },
-      {
-        tab: "audit",
-        label: "Governance audit",
-        value: `${auditLogs.length} events`,
-        detail: "Review workspace and AI operations changes.",
-      },
-    ];
-    const overviewShortcutCards = overviewShortcutCardOptions.filter((card) => canOpenTab(card.tab));
-    const platformCoverageCardOptions: Array<{ tab: Tab; label: string; value: string; detail: string }> = [
-      {
-        tab: "tools",
-        label: "Tools",
-        value: tools.some((tool) => tool.usage.total_calls > 0) ? "Runtime measured" : "Catalog ready",
-        detail: "Tool contracts and recent executions are visible outside individual traces.",
-      },
-      {
-        tab: "guardrails",
-        label: "Guardrails",
-        value: guardrails.some((item) => item.usage.failed_evaluations > 0) ? "Failures visible" : "Policy catalog",
-        detail: "Runtime guardrail policies and failures are visible outside individual traces.",
-      },
-    ];
-    const platformCoverageCards = platformCoverageCardOptions.filter((card) => canOpenTab(card.tab));
-
-    return (
-      <div className="overview-console">
-        <section className="panel overview-hero">
-          <div>
-            <p className="eyebrow">Platform dashboard</p>
-            <h2>{selectedWorkspace?.name ?? "Agentic workspace"}</h2>
-            <p className="muted">Build and operate multilingual, stateful AI agents with governed RAG, LangGraph traces, human review, evaluation, prompt/model controls, and token-cost accounting.</p>
-          </div>
-          <div className="next-action-card">
-            <span>Recommended next action</span>
-            <strong>{primaryAction.label}</strong>
-            <p>{primaryAction.detail}</p>
-            <button type="button" className="primary" onClick={() => backendNextTask ? openAttentionItem(backendNextTask) : goToTab(primaryAction.tab)}>Open</button>
-          </div>
-        </section>
-
-        <section className="overview-health-grid">
-          {healthCards.map((card) => (
-            <article className="overview-health-card" key={card.label}>
-              <div className="row-head">
-                <span>{card.label}</span>
-                <Badge tone={card.tone}>{card.tone === "good" ? "ok" : card.tone === "warn" ? "attention" : "idle"}</Badge>
-              </div>
-              <strong>{card.value}</strong>
-              <p>{card.detail}</p>
-            </article>
-          ))}
-        </section>
-
-        <section className="overview-attention-grid">
-          <section className="panel stack attention-panel">
-            <div className="row-head">
-              <div>
-                <h3>Needs attention</h3>
-                <p className="muted">Backend-ranked operational tasks from the workspace attention service.</p>
-              </div>
-              <Badge tone={overviewAttentionItems.length > 0 ? "warn" : "good"}>
-                {overviewAttentionItems.length > 0 ? `${overviewAttentionItems.length} items` : "clear"}
-              </Badge>
-            </div>
-            <div className="attention-list">
-              {overviewAttentionItems.length > 0 ? overviewAttentionItems.map((item) => (
-                <button type="button" key={item.id} className="attention-item" onClick={() => openAttentionItem(item)}>
-                  <div>
-                    <span>{item.title}</span>
-                    <strong>{item.count}</strong>
-                  </div>
-                  <p>{item.detail}</p>
-                  <Badge tone={attentionTone(item.severity)}>{item.severity}</Badge>
-                </button>
-              )) : <EmptyState title="No urgent workspace tasks" detail="Pending reviews, failed runs, model failures, tool errors, guardrail blocks, indexing failures, and evaluation regressions will appear here." />}
-            </div>
-          </section>
-
-          <aside className="panel stack permission-panel">
-            <div className="row-head">
-              <div>
-                <h3>My permissions</h3>
-                <p className="muted">Loaded from the workspace membership API.</p>
-              </div>
-              <Badge>{workspaceRole}</Badge>
-            </div>
-            <div className="permission-summary-grid">
-              <Metric label="Role" value={workspaceRole} />
-              <Metric label="Resource cleanup" value={canManageResources ? "Allowed" : "Restricted"} />
-              <Metric label="Workspace admin" value={workspaceMembership?.can_manage_workspace ? "Allowed" : "Restricted"} />
-            </div>
-            <div className="permission-chip-row expanded">
-              {(workspaceMembership?.permissions ?? []).map((permission) => <span key={permission}>{permission}</span>)}
-              {!workspaceMembership && <span>loading</span>}
-            </div>
-          </aside>
-        </section>
-
-        <section className="overview-layout">
-          <section className="panel stack setup-path-panel">
-            <div className="row-head">
-              <div>
-                <h3>Platform readiness</h3>
-                <p className="muted">Complete the core capabilities once, then operate from Agents, Runs & traces, Human review, Evaluations, and Usage.</p>
-              </div>
-              <Badge tone={readinessPercent === 100 ? "good" : "warn"}>{readinessPercent}%</Badge>
-            </div>
-            <div className="progress-track large"><span style={{ width: `${readinessPercent}%` }} /></div>
-            <div className="step-grid compact-steps">
-              {setupSteps.map((step) => (
-                <button type="button"
-                  key={step.label}
-                  className={`step-card ${step.done ? "done" : ""}`}
-                  onClick={() => goToTab(step.tab)}
-                >
-                  <span>{tabs.find((tab) => tab.id === step.tab)?.token ?? "OK"}</span>
-                  <strong>{step.label}</strong>
-                  <small>{step.done ? "Ready" : "Open"}</small>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <aside className="panel stack operations-panel">
-            <div className="row-head">
-              <div>
-                <h3>Live operations</h3>
-                <p className="muted">Current routing and queue state.</p>
-              </div>
-              <Badge tone={pendingReviews > 0 ? "warn" : "good"}>{pendingReviews > 0 ? "review" : "clear"}</Badge>
-            </div>
-            <Metric label="Latest route" value={latestRoute} />
-            <Metric label="Evaluation runs" value={evaluationRuns.length} />
-            <Metric label="Active models" value={activeModelCount} />
-            <div className="overview-action-list">
-              {operationActions.map((action) => (
-                <button
-                  type="button"
-                  key={action.tab}
-                  onClick={() => goToTab(action.tab)}
-                  disabled={Boolean(action.disabled)}
-                >
-                  {action.label}
-                </button>
-              ))}
-              {operationActions.length === 0 && <p className="permission-note">No operational shortcuts are available for this role.</p>}
-            </div>
-          </aside>
-        </section>
-
-        {overviewShortcutCards.length > 0 && (
-          <section className="overview-admin-grid">
-            {overviewShortcutCards.map((card) => (
-              <button type="button" className="overview-admin-card" key={card.tab} onClick={() => goToTab(card.tab)}>
-                <span>{card.label}</span>
-                <strong>{card.value}</strong>
-                <small>{card.detail}</small>
-              </button>
-            ))}
-          </section>
-        )}
-
-        <section className="overview-admin-grid platform-coverage-grid">
-          {platformCoverageCards.map((card) => (
-            <button type="button" className="overview-admin-card" key={card.tab} onClick={() => goToTab(card.tab)}>
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-              <small>{card.detail}</small>
-            </button>
-          ))}
-          <article className="overview-admin-card">
-            <span>Permissions</span>
-            <strong>Workspace scoped</strong>
-            <small>All product data is routed through workspace-scoped APIs and audit records.</small>
-          </article>
-          <article className="overview-admin-card">
-            <span>Scale path</span>
-            <strong>Local-first MVP</strong>
-            <small>This build is for a small team; docs describe the path to managed cloud services.</small>
-          </article>
-        </section>
-      </div>
-    );
-  }
-
-  function DatasetsPanel() {
-    const datasetFolders = foldersFor("dataset");
-    const displayedDatasets = datasets;
-    const selectedDataset = datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null;
-    const selectedFolderLabel = selectedDataFolderId === "all" ? "All dataset folders" : selectedDataFolderId === "unfiled" ? "Unfiled datasets" : folderLabel("dataset", selectedDataFolderId);
-    const selectedFolderDatasetCount = resourceItemCount("dataset", selectedDataFolderId);
-    const datasetPageStart = datasetPage * MAX_VISIBLE_RESOURCES + (datasets.length ? 1 : 0);
-    const datasetPageEnd = datasetPage * MAX_VISIBLE_RESOURCES + datasets.length;
-    const canGoToPreviousDatasetPage = datasetPage > 0;
-    const canGoToNextDatasetPage = datasetHasNext;
-    const visibleExamples = examples.filter((example) =>
-      matchesSearch(
-        exampleSearch,
-        example.external_id,
-        example.id,
-        example.language,
-        example.status,
-        ...example.messages.map((message) => `${message.role} ${message.content}`),
-        ...example.labels.map((label) => `${label.label_type} ${label.value}`),
-      ),
-    );
-    const displayedExamples = visibleExamples.slice(0, MAX_VISIBLE_EXAMPLES);
-    const hiddenExampleCount = Math.max(visibleExamples.length - displayedExamples.length, 0);
-
-    return (
-      <div className="grid data-workbench-grid">
-        <ActionGuide
-          title="Data powers evaluation and routing"
-          detail="Import real conversation examples in English, Japanese, and Chinese. Labels make the data useful for evaluation, routing, and safety checks."
-          action="Next after import: upload knowledge documents"
-          onAction={() => goToTab("documents")}
-        />
-        {ResourceFolderPanel({
-          resourceType: "dataset",
-          title: "Dataset folders",
-          detail: "Keep imports grouped by product, client, language, or test purpose as the workspace grows.",
-          selectedFolderId: selectedDataFolderId,
-          onSelectFolder: selectDataFolder,
-          folderName: dataFolderName,
-          onFolderNameChange: setDataFolderName,
-        })}
-        <form className="panel stack" onSubmit={importDataset}>
-          <h3>Import multilingual data</h3>
-          <label>Dataset name<input value={datasetName} onChange={(event) => setDatasetName(event.target.value)} /></label>
-          <FolderPicker
-            label="Import target folder"
-            value={datasetFolderId}
-            folders={datasetFolders}
-            onChange={setDatasetFolderId}
-            disabled={loading}
-            resourceLabel="dataset"
-          />
-          <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => setDatasetContent(event.target.value)} /></label>
-          <button type="submit" className="primary" disabled={!canWriteData || loading}>Import JSONL</button>
-        </form>
-        <section className="panel stack dataset-library-panel">
-          <div className="row-head">
-            <div>
-              <h3>Datasets</h3>
-              <p className="muted">{selectedDataset ? `Selected: ${selectedDataset.name}` : "Select a dataset to inspect examples."}</p>
-            </div>
-            <Badge>{datasets.length} of {datasetTotal} shown</Badge>
-          </div>
-          <div className="library-toolbar">
-            <div className="folder-scope-banner">
-              <span>Current folder</span>
-              <strong>{selectedFolderLabel}</strong>
-              <small>{datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} shown from {datasetTotal} matching this view.</small>
-            </div>
-            <div className="folder-scope-banner">
-              <span>Import target</span>
-              <strong>{folderLabel("dataset", datasetFolderId || null)}</strong>
-              <small>New JSONL imports are saved into this folder so the dataset list stays organized as it grows.</small>
-            </div>
-            <label>
-              Search current folder
-              <input
-                value={datasetSearch}
-                onChange={(event) => { setDatasetPage(0); setDatasetSearch(event.target.value); }}
-                placeholder="Dataset name, folder, or id"
-              />
-            </label>
-            <p className="permission-note">
-              Role-aware controls: data writers can import, folder managers can organize, and resource cleanup requires owner permission.
-            </p>
-          </div>
-          <div className="resource-list">
-            {displayedDatasets.map((dataset) => (
-              <article key={dataset.id} className={`resource-row ${selectedDatasetId === dataset.id ? "selected-list-item" : ""}`}>
-                <button type="button" className="resource-main-button" onClick={() => { setSelectedDatasetId(dataset.id); void loadExamples(dataset.id); }}>
-                  <strong>{dataset.name}</strong>
-                  <span>{formatDate(dataset.created_at)}</span>
-                </button>
-                <div className="resource-meta">
-                  <Badge>{folderLabel("dataset", dataset.folder_id)}</Badge>
-                </div>
-                <div className="resource-actions">
-                  <FolderPicker
-                    label={`Move ${dataset.name}`}
-                    value={dataset.folder_id ?? ""}
-                    folders={datasetFolders}
-                    onChange={(folderId) => void moveDatasetFolder(dataset.id, folderId)}
-                    disabled={!canManageResourceFolders || loading}
-                    resourceLabel="dataset"
-                    compact
-                  />
-                  <button type="button" className="danger-button" onClick={() => void deleteDataset(dataset.id)} disabled={!canManageResources || loading}>Delete</button>
-                </div>
-              </article>
-            ))}
-          </div>
-          {datasets.length === 0 && (
-            <EmptyState
-              title="No datasets match this view"
-              detail={datasetTotal === 0 && selectedFolderDatasetCount === 0 ? "Import data here or switch folders." : "Clear search, move to the previous page, or try another folder."}
-            />
-          )}
-          <div className="pagination-bar">
-            <button type="button" onClick={() => setDatasetPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousDatasetPage || loading}>Previous</button>
-            <span>Page {datasetPage + 1} · {datasets.length ? `${datasetPageStart}-${datasetPageEnd}` : "0"} of {datasetTotal}</span>
-            <button type="button" onClick={() => setDatasetPage((page) => page + 1)} disabled={!canGoToNextDatasetPage || loading}>Next</button>
-          </div>
-          <p className="permission-note">Dataset history is loaded from the backend by folder, search, offset, and limit so large import libraries stay navigable without loading every dataset into the browser.</p>
-        </section>
-        <section className="panel stack full-width inspector-panel">
-          <div className="row-head">
-            <div>
-              <h3>Examples</h3>
-              <p className="muted">Inspect and label the selected dataset without letting large imports stretch the page.</p>
-            </div>
-            <Badge>{displayedExamples.length}/{examples.length} loaded</Badge>
-          </div>
-          <div className="library-toolbar inspector-toolbar">
-            <div className="folder-scope-banner">
-              <span>Selected dataset</span>
-              <strong>{selectedDataset?.name ?? "None selected"}</strong>
-              <small>{visibleExamples.length} examples match the current search. Use dataset folders to switch large import groups.</small>
-            </div>
-            <label>
-              Search loaded examples
-              <input
-                value={exampleSearch}
-                onChange={(event) => setExampleSearch(event.target.value)}
-                placeholder="External id, language, message, or label"
-              />
-            </label>
-            <p className="permission-note">
-              Large datasets stay folder-scoped above; this inspector shows the first {MAX_VISIBLE_EXAMPLES} matching examples to keep labeling usable.
-            </p>
-          </div>
-          <div className="example-list bounded-inspector-list">
-            {displayedExamples.map((example) => (
-              <article key={example.id} className="example-row">
-                <div className="row-head"><strong>{example.external_id ?? example.id}</strong><Badge>{example.language}</Badge></div>
-                {example.messages.map((message) => <p key={message.id} className="message"><b>{message.role}</b>: {message.content}</p>)}
-                <div className="label-list">{example.labels.map((label) => <Badge key={label.id} tone="good">{label.label_type}: {label.value}</Badge>)}</div>
-                <div className="inline-form">
-                  <select value={labelDrafts[example.id]?.label_type ?? "intent"} onChange={(event) => setLabelDrafts((current) => ({ ...current, [example.id]: { label_type: event.target.value, value: current[example.id]?.value ?? "" } }))}>
-                    <option value="intent">intent</option><option value="sentiment">sentiment</option><option value="product_area">product_area</option><option value="safety_risk">safety_risk</option><option value="escalation_needed">escalation_needed</option>
-                  </select>
-                  <input placeholder="label value" value={labelDrafts[example.id]?.value ?? ""} onChange={(event) => setLabelDrafts((current) => ({ ...current, [example.id]: { label_type: current[example.id]?.label_type ?? "intent", value: event.target.value } }))} />
-                  <button type="button" onClick={() => void saveLabel(example.id)}>Save label</button>
-                </div>
-              </article>
-            ))}
-            {examples.length === 0 && <EmptyState title="No examples loaded" detail="Select a dataset to inspect messages and labels." />}
-            {examples.length > 0 && visibleExamples.length === 0 && <EmptyState title="No examples match this search" detail="Clear search or select another dataset folder." />}
-          </div>
-          {hiddenExampleCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_EXAMPLES} of {visibleExamples.length} matching examples. Narrow the search before editing labels in very large imports.</p>}
-        </section>
-      </div>
-    );
-  }
-
-  function DocumentsPanel() {
-    const indexedDocumentCount = documents.filter((document) => document.status === "indexed").length;
-    const totalChunkTokens = documentDetail?.chunks.reduce((sum, chunk) => sum + chunk.token_count, 0) ?? 0;
-    const selectedDocument = documentDetail?.document ?? documents.find((document) => document.id === selectedDocumentId) ?? null;
-    const knowledgeFolders = foldersFor("knowledge_document");
-    const displayedDocuments = documents;
-    const selectedFolderLabel = selectedKnowledgeFolderId === "all" ? "All knowledge folders" : selectedKnowledgeFolderId === "unfiled" ? "Unfiled knowledge" : folderLabel("knowledge_document", selectedKnowledgeFolderId);
-    const selectedFolderDocumentCount = resourceItemCount("knowledge_document", selectedKnowledgeFolderId);
-    const totalKnowledgeDocumentCount = resourceItemCount("knowledge_document", "all");
-    const documentPageStart = documentPage * MAX_VISIBLE_RESOURCES + (documents.length ? 1 : 0);
-    const documentPageEnd = documentPage * MAX_VISIBLE_RESOURCES + documents.length;
-    const canGoToPreviousDocumentPage = documentPage > 0;
-    const canGoToNextDocumentPage = documentHasNext;
-    const visibleChunks = documentDetail
-      ? documentDetail.chunks.filter((chunk) =>
-          matchesSearch(
-            chunkSearch,
-            chunk.id,
-            `chunk ${chunk.chunk_index}`,
-            chunk.language,
-            String(chunk.token_count),
-            chunk.content,
-          ),
-        )
-      : [];
-    const displayedChunks = visibleChunks.slice(0, MAX_VISIBLE_CHUNKS);
-    const hiddenChunkCount = Math.max(visibleChunks.length - displayedChunks.length, 0);
-
-    return (
-      <div className="knowledge-console">
-        <section className="panel knowledge-hero">
-          <div>
-            <p className="eyebrow">Knowledge base</p>
-            <h2>Manage retrieval evidence</h2>
-            <p className="muted">Upload, edit, reindex, and inspect the exact chunks the LangChain retrieval tool can cite during a LangGraph run.</p>
-          </div>
-          <div className="knowledge-health-grid">
-            <Metric label="Documents" value={totalKnowledgeDocumentCount} />
-            <Metric label="Page indexed" value={indexedDocumentCount} />
-            <Metric label="Selected chunks" value={documentDetail?.chunks.length ?? 0} />
-            <Metric label="Embeddings" value={documentDetail?.embedding_count ?? 0} />
-          </div>
-        </section>
-
-        <section className="knowledge-workbench">
-          {ResourceFolderPanel({
-            resourceType: "knowledge_document",
-            title: "Knowledge folders",
-            detail: "Organize uploaded policies, FAQs, release notes, and manuals before the library becomes large.",
-            selectedFolderId: selectedKnowledgeFolderId,
-            onSelectFolder: selectKnowledgeFolder,
-            folderName: knowledgeFolderName,
-            onFolderNameChange: setKnowledgeFolderName,
-          })}
-          <aside className="panel stack document-library-panel">
-            <div className="row-head">
-              <div>
-                <h3>Document library</h3>
-                <p className="muted">Workspace-owned policies and FAQs available to retrieval.</p>
-              </div>
-              <button type="button" onClick={() => resetDocumentForm()}>New</button>
-            </div>
-            <div className="library-toolbar">
-              <div className="folder-scope-banner">
-                <span>Current folder</span>
-                <strong>{selectedFolderLabel}</strong>
-                <small>{documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} shown from {documentTotal} matching this view.</small>
-              </div>
-              <div className="folder-scope-banner">
-                <span>Upload target</span>
-                <strong>{folderLabel("knowledge_document", documentFolderId || null)}</strong>
-                <small>New knowledge files and edits stay attached to this folder unless you choose another target.</small>
-              </div>
-              <label>
-                Search current folder
-                <input
-                  value={documentSearch}
-                  onChange={(event) => { setDocumentPage(0); setDocumentSearch(event.target.value); }}
-                  placeholder="Document title, language, status, or id"
-                />
-              </label>
-              <p className="permission-note">
-                Role-aware controls: knowledge writers can upload and reindex, folder managers can organize, and deletion requires owner permission.
-              </p>
-            </div>
-            <div className="document-list">
-              {displayedDocuments.map((document) => (
-                <article
-                  key={document.id}
-                  className={`document-card ${selectedDocumentId === document.id ? "selected" : ""}`}
-                >
-                  <button type="button" className="resource-main-button document-select-button" onClick={() => void loadDocumentDetail(document.id)}>
-                    <strong>{document.title}</strong>
-                    <Badge tone={document.status === "indexed" ? "good" : document.status === "failed" ? "bad" : "warn"}>{document.status}</Badge>
-                  </button>
-                  <span>{document.language.toUpperCase()} · {folderLabel("knowledge_document", document.folder_id)} · updated {formatDate(document.updated_at)}</span>
-                  {document.error_message && <small>{document.error_message}</small>}
-                  <div className="resource-actions">
-                    <FolderPicker
-                      label={`Move ${document.title}`}
-                      value={document.folder_id ?? ""}
-                      folders={knowledgeFolders}
-                      onChange={(folderId) => void moveDocumentFolder(document.id, folderId)}
-                      disabled={!canManageResourceFolders || loading}
-                      resourceLabel="knowledge"
-                      compact
-                    />
-                    <button type="button" className="danger-button" onClick={() => void deleteDocument(document.id)} disabled={!canManageResources || loading}>Delete</button>
-                  </div>
-                </article>
-              ))}
-              {documents.length === 0 && (
-                <EmptyState
-                  title="No documents match this view"
-                  detail={documentTotal === 0 && selectedFolderDocumentCount === 0 ? "Upload a policy or FAQ here, or switch folders." : "Clear search, move to the previous page, or try another folder."}
-                />
-              )}
-            </div>
-            <div className="pagination-bar">
-              <button type="button" onClick={() => setDocumentPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousDocumentPage || loading}>Previous</button>
-              <span>Page {documentPage + 1} · {documents.length ? `${documentPageStart}-${documentPageEnd}` : "0"} of {documentTotal}</span>
-              <button type="button" onClick={() => setDocumentPage((page) => page + 1)} disabled={!canGoToNextDocumentPage || loading}>Next</button>
-            </div>
-            <p className="permission-note">This library is loaded from the backend by folder, search, offset, and limit so large knowledge bases stay navigable without loading every file into the browser.</p>
-          </aside>
-
-          <form className="panel stack knowledge-editor-panel" onSubmit={selectedDocumentId ? saveDocumentEdit : uploadDocument}>
-            <div className="row-head">
-              <div>
-                <h3>{selectedDocumentId ? "Edit and reindex" : "Create knowledge document"}</h3>
-                <p className="muted">Saving creates an indexed document version. The agent only answers from retrieved chunks.</p>
-              </div>
-              <div className="review-actions">
-                {selectedDocument && <Badge tone={selectedDocument.status === "indexed" ? "good" : "warn"}>{selectedDocument.status}</Badge>}
-                {selectedDocumentId && <button type="button" className="danger-button" onClick={() => void deleteSelectedDocument()} disabled={!canManageResources || loading}>Delete</button>}
-              </div>
-            </div>
-            <div className="knowledge-meta-grid">
-              <label>Title<input value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /></label>
-              <label>
-                Language
-                <select
-                  value={documentLanguage}
-                  onChange={(event) => changeDocumentLanguage(event.target.value as Language)}
-                >
-                  <option value="en">English</option>
-                  <option value="ja">Japanese</option>
-                  <option value="zh">Chinese</option>
-                </select>
-              </label>
-              <FolderPicker
-                label="Knowledge target folder"
-                value={documentFolderId}
-                folders={knowledgeFolders}
-                onChange={setDocumentFolderId}
-                disabled={loading}
-                resourceLabel="knowledge"
-              />
-              <div className="version-card">
-                <span>Version</span>
-                <strong>{documentDetail?.latest_version ? `v${documentDetail.latest_version.version}` : "new"}</strong>
-                <small>{documentDetail?.latest_version ? formatDate(documentDetail.latest_version.created_at) : "Not indexed yet"}</small>
-              </div>
-            </div>
-            <label>
-              Source content
-              <textarea rows={16} value={documentContent} onChange={(event) => setDocumentContent(event.target.value)} />
-            </label>
-            <div className="run-action-bar">
-              <button type="submit" className="primary" disabled={!canWriteKnowledge || loading}>{selectedDocumentId ? "Save edits and reindex" : "Upload and index"}</button>
-              {selectedDocumentId && <button type="button" onClick={() => void moveSelectedDocumentFolder()} disabled={!canManageResourceFolders || loading}>Move only</button>}
-              {selectedDocumentId && <button type="button" onClick={() => resetDocumentForm()}>Start new document</button>}
-              <TabShortcut tab="agent" disabled={canRunAgent && indexedDocumentCount === 0}>{canRunAgent ? "Run agent" : "View agents"}</TabShortcut>
-            </div>
-          </form>
-        </section>
-
-        <section className="panel stack full-width chunk-inspector-panel">
-          <div className="row-head">
-            <div>
-              <p className="eyebrow">Retrieval inspector</p>
-              <h3>{selectedDocument ? selectedDocument.title : "No document selected"}</h3>
-              <p className="muted">These chunks are the evidence units stored for citation and token budgeting.</p>
-            </div>
-            {documentDetail && <Badge>{documentDetail.embedding_count} embeddings</Badge>}
-          </div>
-          {documentDetail ? (
-            <>
-              <div className="metric-grid compact">
-                <Metric label="Chunks" value={documentDetail.chunks.length} />
-                <Metric label="Total tokens" value={totalChunkTokens} />
-                <Metric label="Language" value={documentDetail.document.language} />
-                <Metric label="Version" value={documentDetail.latest_version ? `v${documentDetail.latest_version.version}` : "-"} />
-              </div>
-              <div className="library-toolbar inspector-toolbar">
-                <div className="folder-scope-banner">
-                  <span>Selected document</span>
-                  <strong>{selectedDocument?.title ?? "None selected"}</strong>
-                  <small>{visibleChunks.length} chunks match the current search. Document folders control the larger knowledge library above.</small>
-                </div>
-                <label>
-                  Search chunks
-                  <input
-                    value={chunkSearch}
-                    onChange={(event) => setChunkSearch(event.target.value)}
-                    placeholder="Chunk id, index, language, token count, or text"
-                  />
-                </label>
-                <p className="permission-note">
-                  The inspector is bounded to {MAX_VISIBLE_CHUNKS} matching chunks so long source files stay usable after indexing.
-                </p>
-              </div>
-              <div className="chunk-list chunk-inspector-list bounded-inspector-list">
-                {displayedChunks.map((chunk) => (
-                  <article className="chunk" key={chunk.id}>
-                    <div className="row-head">
-                      <strong>Chunk {chunk.chunk_index}</strong>
-                      <div className="review-actions"><Badge>{chunk.language.toUpperCase()}</Badge><span>{chunk.token_count} tokens</span></div>
-                    </div>
-                    <p>{chunk.content}</p>
-                  </article>
-                ))}
-                {visibleChunks.length === 0 && <EmptyState title="No chunks match this search" detail="Clear search or select another document from a knowledge folder." />}
-              </div>
-              {hiddenChunkCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_CHUNKS} of {visibleChunks.length} matching chunks. Use search to narrow large files before inspecting evidence.</p>}
-            </>
-          ) : <EmptyState title="No document selected" detail="Select a document to inspect indexed chunks and embeddings." />}
-        </section>
-      </div>
-    );
-  }
 
   function AgentPanel() {
     const selectedScenario = agentPrompts.find((prompt) => prompt.text === agentMessage) ?? null;
@@ -6364,157 +5918,6 @@ export function App() {
               onOpenTrace={(runId) => { setTraceRunId(runId); void loadTrace(runId); goToTab("trace"); }}
             />
           ) : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
-        </section>
-      </div>
-    );
-  }
-
-  function AuditPanel() {
-    const resourceCounts = auditLogs.reduce<Record<string, number>>((counts, log) => {
-      counts[log.resource_type] = (counts[log.resource_type] ?? 0) + 1;
-      return counts;
-    }, {});
-    const actorCounts = auditLogs.reduce<Record<string, number>>((counts, log) => {
-      const actor = log.actor_user_id ? "user" : "system";
-      counts[actor] = (counts[actor] ?? 0) + 1;
-      return counts;
-    }, {});
-    const highImpactLogs = auditLogs.filter((log) => auditImpact(log.action) === "high");
-    const latestLog = auditLogs[0] ?? null;
-    const resourceBreakdown = Object.entries(resourceCounts).sort((left, right) => right[1] - left[1]);
-    const displayedAuditLogs = auditLogs;
-    const auditPageStart = auditPage * MAX_VISIBLE_AUDIT_EVENTS + (auditLogs.length ? 1 : 0);
-    const auditPageEnd = auditPage * MAX_VISIBLE_AUDIT_EVENTS + auditLogs.length;
-    const canGoToPreviousAuditPage = auditPage > 0;
-    const canGoToNextAuditPage = auditHasNext;
-
-    return (
-      <div className="audit-console">
-        <section className="panel audit-hero">
-          <div>
-            <p className="eyebrow">Audit trail</p>
-            <h2>Review accountable workspace operations</h2>
-            <p className="muted">Every sensitive AI platform action should say who acted, what changed, when it happened, and which workspace resource was affected.</p>
-          </div>
-          <div className="next-action-card">
-            <span>Loaded activity</span>
-            <strong>{latestLog ? friendlyAuditAction(latestLog.action) : "No audit events"}</strong>
-            <p>{latestLog ? `${latestLog.resource_type} · ${formatDate(latestLog.created_at)}` : "Create or update agents, knowledge, prompts, models, or reviews to produce audit records."}</p>
-            <button type="button" onClick={() => void runAction("Audit logs refreshed", () => loadAuditLogs(auditPage))}>Refresh audit logs</button>
-          </div>
-        </section>
-
-        <section className="settings-summary-grid">
-          <Metric label="Matching events" value={auditTotal} />
-          <Metric label="Loaded high impact" value={highImpactLogs.length} />
-          <Metric label="Loaded user actions" value={actorCounts.user ?? 0} />
-          <Metric label="Loaded system actions" value={actorCounts.system ?? 0} />
-        </section>
-
-        <section className="audit-workbench">
-          <div className="panel stack audit-timeline-panel">
-            <div className="row-head">
-              <div>
-                <h3>Operations timeline</h3>
-                <p className="muted">Recent workspace-scoped changes across agents, knowledge, prompts, models, and human review.</p>
-              </div>
-              <Badge tone={auditTotal ? "good" : "neutral"}>{auditLogs.length} of {auditTotal} shown</Badge>
-            </div>
-
-            <div className="library-toolbar audit-toolbar">
-              <label>
-                Search audit events
-                <input
-                  value={auditSearch}
-                  onChange={(event) => { setAuditPage(0); setAuditSearch(event.target.value); }}
-                  placeholder="Action, resource, actor, metadata, or id"
-                />
-              </label>
-              <label>
-                Impact
-                <select value={auditImpactFilter} onChange={(event) => { setAuditPage(0); setAuditImpactFilter(event.target.value); }}>
-                  <option value="all">All impacts</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </label>
-              <label>
-                Actor
-                <select value={auditActorFilter} onChange={(event) => { setAuditPage(0); setAuditActorFilter(event.target.value); }}>
-                  <option value="all">All actors</option>
-                  <option value="user">User actions</option>
-                  <option value="system">System actions</option>
-                </select>
-              </label>
-              <p className="permission-note">The backend filters by search, impact, actor, offset, and limit so audit review stays usable as event history grows.</p>
-            </div>
-
-            {displayedAuditLogs.length ? (
-              <div className="audit-timeline">
-                {displayedAuditLogs.map((log) => {
-                  const metadata = safeJson(log.metadata_json);
-                  const impact = auditImpact(log.action);
-                  return (
-                    <article className={`audit-event audit-${impact}`} key={log.id}>
-                      <div className="audit-event-marker" />
-                      <div className="audit-event-body">
-                        <div className="row-head">
-                          <div>
-                            <strong>{friendlyAuditAction(log.action)}</strong>
-                            <p className="muted">{log.resource_type}{log.resource_id ? ` · ${shortId(log.resource_id)}` : ""}</p>
-                          </div>
-                          <div className="review-actions">
-                            <Badge tone={toneForAuditImpact(impact)}>{impact}</Badge>
-                            <Badge>{formatDate(log.created_at)}</Badge>
-                          </div>
-                        </div>
-                        <div className="metric-grid compact">
-                          <Metric label="Actor" value={log.actor_user_id ? shortId(log.actor_user_id) : "system"} />
-                          <Metric label="Resource" value={log.resource_type} />
-                          <Metric label="Action" value={log.action} />
-                        </div>
-                        <details><summary>Metadata</summary><JsonBlock value={metadata} /></details>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <EmptyState
-                title="No audit events match this view"
-                detail={auditPage > 0 ? "Move to the previous page or clear filters." : "Create or update an agent, model config, prompt, document, or review to create audit records, or clear filters."}
-              />
-            )}
-            <div className="pagination-bar">
-              <button type="button" onClick={() => setAuditPage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousAuditPage || loading}>Previous</button>
-              <span>Page {auditPage + 1} · {auditLogs.length ? `${auditPageStart}-${auditPageEnd}` : "0"} of {auditTotal} events</span>
-              <button type="button" onClick={() => setAuditPage((page) => page + 1)} disabled={!canGoToNextAuditPage || loading}>Next</button>
-            </div>
-            <p className="permission-note">Audit events are loaded from the backend by search, impact, actor, offset, and limit. Backend totals decide whether another page exists.</p>
-          </div>
-
-          <aside className="panel stack audit-side-panel">
-            <h3>Audit coverage</h3>
-            <p className="muted">These event families prove the portfolio has operational accountability, not only AI responses.</p>
-            <div className="policy-list">
-              <span>Agent configuration and run completion</span>
-              <span>Knowledge upload, reindex, and deletion</span>
-              <span>Human review claim, release, and resolution</span>
-              <span>Prompt version creation and activation</span>
-              <span>Model config creation and activation</span>
-            </div>
-            <h3>By resource</h3>
-            <div className="audit-breakdown-list">
-              {resourceBreakdown.map(([resource, count]) => (
-                <div className="metric-line" key={resource}>
-                  <span>{resource}</span>
-                  <strong>{count}</strong>
-                </div>
-              ))}
-              {resourceBreakdown.length === 0 && <p className="muted">No resources recorded yet.</p>}
-            </div>
-          </aside>
         </section>
       </div>
     );
