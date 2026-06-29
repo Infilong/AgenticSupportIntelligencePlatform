@@ -214,6 +214,21 @@ def test_evaluation_api_runs_baselines_and_system_v1(client: TestClient) -> None
     baseline_results = [result for result in body["results"] if result["mode"] != "system_v1"]
     assert all(result["graph_run_id"] for result in system_results)
     assert all(result["graph_run_id"] is None for result in baseline_results)
+    assert all(result["prompt_versions"] for result in system_results)
+    assert all(result["prompt_versions"] == [] for result in baseline_results)
+    prompt_names = {
+        evidence["prompt_template_name"]
+        for result in system_results
+        for evidence in result["prompt_versions"]
+    }
+    assert {"support_intent_classifier", "support_response_drafter"}.issubset(prompt_names)
+    assert all(
+        evidence["prompt_version"] is not None
+        and evidence["total_tokens"] > 0
+        and evidence["ai_run_count"] > 0
+        for result in system_results
+        for evidence in result["prompt_versions"]
+    )
     trace_response = client.get(
         f"/api/v1/workspaces/{workspace['id']}/agent-runs/{system_results[0]['graph_run_id']}/trace",
         headers=auth_headers(token),
@@ -232,6 +247,10 @@ def test_evaluation_api_runs_baselines_and_system_v1(client: TestClient) -> None
         headers=auth_headers(token),
     )
     assert detail.status_code == 200
+    detail_system_results = [
+        result for result in detail.json()["results"] if result["mode"] == "system_v1"
+    ]
+    assert all(result["prompt_versions"] for result in detail_system_results)
     assert listed.status_code == 200
     assert listed.json()[0]["id"] == body["run"]["id"]
 

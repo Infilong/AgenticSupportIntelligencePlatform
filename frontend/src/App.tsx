@@ -517,6 +517,21 @@ type EvaluationRun = {
   archived_at: string | null;
 };
 
+type EvaluationPromptVersion = {
+  prompt_template_id: string | null;
+  prompt_template_name: string | null;
+  prompt_version: number | null;
+  language: Language;
+  purpose: string;
+  provider: string;
+  model: string;
+  ai_run_count: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  estimated_cost: number;
+};
+
 type EvaluationResult = {
   id: string;
   evaluation_case_id: string;
@@ -533,6 +548,7 @@ type EvaluationResult = {
   estimated_cost: number;
   error_message: string | null;
   created_at: string;
+  prompt_versions: EvaluationPromptVersion[];
 };
 
 type GuardrailFailure = {
@@ -9066,8 +9082,26 @@ function EvaluationDashboard({
                 <Metric label="Prompt tokens" value={result.prompt_tokens} />
                 <Metric label="Cost" value={formatCost(result.estimated_cost)} />
               </div>
+              {result.prompt_versions.length > 0 && (
+                <section className="evaluation-prompt-evidence" aria-label="Prompt evidence">
+                  <div className="row-head compact-row-head">
+                    <strong>Prompt evidence</strong>
+                    <Badge>{result.prompt_versions.length} ledger groups</Badge>
+                  </div>
+                  <div className="evaluation-prompt-grid">
+                    {result.prompt_versions.slice(0, 4).map((prompt) => (
+                      <article className="evaluation-prompt-chip" key={`${prompt.prompt_template_id ?? prompt.purpose}-${prompt.prompt_version ?? "none"}-${prompt.model}`}>
+                        <strong>{prompt.prompt_template_name ?? prompt.purpose}</strong>
+                        <span>v{prompt.prompt_version ?? "-"} · {prompt.purpose} · {prompt.language.toUpperCase()}</span>
+                        <small>{prompt.provider}/{prompt.model} · {prompt.total_tokens} tokens · {formatCost(prompt.estimated_cost)}</small>
+                      </article>
+                    ))}
+                  </div>
+                  {result.prompt_versions.length > 4 && <small className="folder-picker-note">Showing first 4 prompt groups. Open trace for every model call.</small>}
+                </section>
+              )}
               <p>{result.answer ?? "No answer generated"}</p>
-              <details><summary>Scores, citations, and trace</summary><JsonBlock value={{ scores: safeJson(result.scores_json), citations: safeJson(result.citations_json), graph_run_id: result.graph_run_id, error: result.error_message }} /></details>
+              <details><summary>Scores, citations, prompt evidence, and trace</summary><JsonBlock value={{ scores: safeJson(result.scores_json), citations: safeJson(result.citations_json), prompt_versions: result.prompt_versions, graph_run_id: result.graph_run_id, error: result.error_message }} /></details>
             </article>
           ))}
         </div>

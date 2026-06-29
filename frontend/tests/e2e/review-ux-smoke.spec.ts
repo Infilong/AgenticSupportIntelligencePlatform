@@ -274,6 +274,8 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await page.locator(".evaluation-run-buttons").getByRole("button", { name: new RegExp(systemEvaluationName) }).click();
   await expect(page.getByText(systemEvaluationName).first()).toBeVisible();
   const systemResultCard = page.locator(".evaluation-result-card").filter({ hasText: "System v1" });
+  await expect(systemResultCard.getByText("Prompt evidence", { exact: true })).toBeVisible();
+  await expect(systemResultCard.getByText("support_intent_classifier").first()).toBeVisible();
   await expect(systemResultCard.getByRole("button", { name: "Open trace" })).toBeVisible();
   await systemResultCard.getByRole("button", { name: "Open trace" }).click();
   await expect(page.getByRole("heading", { name: "Debug LangGraph executions" })).toBeVisible();

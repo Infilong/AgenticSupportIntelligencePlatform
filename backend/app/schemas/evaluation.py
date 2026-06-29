@@ -48,6 +48,21 @@ class EvaluationCaseResponse(BaseModel):
     created_at: datetime
 
 
+class EvaluationPromptVersionResponse(BaseModel):
+    prompt_template_id: UUID | None
+    prompt_template_name: str | None
+    prompt_version: int | None
+    language: str
+    purpose: str
+    provider: str
+    model: str
+    ai_run_count: int
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    estimated_cost: float
+
+
 class EvaluationResultResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,6 +81,7 @@ class EvaluationResultResponse(BaseModel):
     estimated_cost: float
     error_message: str | None
     created_at: datetime
+    prompt_versions: list[EvaluationPromptVersionResponse] = Field(default_factory=list)
 
 
 class EvaluationMetricResponse(BaseModel):
