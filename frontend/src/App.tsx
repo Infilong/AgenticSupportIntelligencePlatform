@@ -1098,9 +1098,10 @@ function FolderPicker({
   });
   const displayedFolders = matchingFolders.slice(0, MAX_VISIBLE_FOLDERS);
   const selectedFolder = folders.find((folder) => folder.id === value);
+  const selectedFolderLabel = selectedFolder?.name ?? "Unfiled";
   const hiddenCount = Math.max(matchingFolders.length - displayedFolders.length, 0);
   const body = (
-    <>
+    <div className="folder-picker-body">
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
@@ -1133,7 +1134,7 @@ function FolderPicker({
       </div>
       {hiddenCount > 0 && <small className="folder-picker-note">Showing first {MAX_VISIBLE_FOLDERS} of {matchingFolders.length}. Search to narrow.</small>}
       {folders.length === 0 && <small className="folder-picker-note">No folders yet. New resources will be saved as Unfiled.</small>}
-    </>
+    </div>
   );
 
   if (compact) {
@@ -1141,7 +1142,7 @@ function FolderPicker({
       <details className="folder-picker folder-picker-compact" aria-label={`${label} to folder`}>
         <summary>
           <span>{label}</span>
-          <strong>{selectedFolder?.name ?? "Unfiled"}</strong>
+          <strong>{selectedFolderLabel}</strong>
         </summary>
         {body}
       </details>
@@ -1149,13 +1150,14 @@ function FolderPicker({
   }
 
   return (
-    <div className="folder-picker">
-      <div className="folder-picker-head">
+    <details className="folder-picker folder-picker-disclosure" aria-label={`${label} folder picker`}>
+      <summary className="folder-picker-head">
         <span>{label}</span>
-        <strong>{selectedFolder?.name ?? "Unfiled"}</strong>
-      </div>
+        <strong>{selectedFolderLabel}</strong>
+        <small>{folders.length ? `${folders.length} folder${folders.length === 1 ? "" : "s"} available; search to narrow` : "No folders yet"}</small>
+      </summary>
       {body}
-    </div>
+    </details>
   );
 }
 

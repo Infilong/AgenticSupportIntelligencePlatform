@@ -199,6 +199,12 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
 
   await productNav.getByRole("button", { name: "Data", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Datasets" })).toBeVisible();
+  const importTargetPicker = page.locator('details.folder-picker-disclosure[aria-label="Import target folder folder picker"]');
+  await expect(importTargetPicker).toBeVisible();
+  await expect(importTargetPicker.getByPlaceholder("Search dataset folders")).toBeHidden();
+  await importTargetPicker.locator("summary").click();
+  await expect(importTargetPicker.getByPlaceholder("Search dataset folders")).toBeVisible();
+  await expect(importTargetPicker.locator(".folder-picker-options")).toBeVisible();
   const dataFolderSearch = page.locator(".folder-panel").getByPlaceholder("Search folder name or id");
   await dataFolderSearch.fill("");
   await dataFolderSearch.type("Dataset QA");
@@ -220,6 +226,12 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
 
   await productNav.getByRole("button", { name: "Knowledge", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Manage retrieval evidence" })).toBeVisible();
+  const knowledgeTargetPicker = page.locator('details.folder-picker-disclosure[aria-label="Knowledge target folder folder picker"]');
+  await expect(knowledgeTargetPicker).toBeVisible();
+  await expect(knowledgeTargetPicker.getByPlaceholder("Search knowledge folders")).toBeHidden();
+  await knowledgeTargetPicker.locator("summary").click();
+  await expect(knowledgeTargetPicker.getByPlaceholder("Search knowledge folders")).toBeVisible();
+  await expect(knowledgeTargetPicker.locator(".folder-picker-options")).toBeVisible();
   const knowledgeFolderSearch = page.locator(".folder-panel").getByPlaceholder("Search folder name or id");
   await knowledgeFolderSearch.fill("");
   await knowledgeFolderSearch.type("Policy QA");
@@ -258,6 +270,12 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await productNav.getByRole("button", { name: "Evaluations", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Compare quality, routing, language, and cost" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Evaluation operations board" })).toBeVisible();
+  const evaluationTargetPicker = page.locator('details.folder-picker-disclosure[aria-label="Evaluation target folder folder picker"]');
+  await expect(evaluationTargetPicker).toBeVisible();
+  await expect(evaluationTargetPicker.getByPlaceholder("Search evaluation folders")).toBeHidden();
+  await evaluationTargetPicker.locator("summary").click();
+  await expect(evaluationTargetPicker.getByPlaceholder("Search evaluation folders")).toBeVisible();
+  await expect(evaluationTargetPicker.locator(".folder-picker-options")).toBeVisible();
   const evaluationSearchInput = page.getByPlaceholder("Run name, mode, or status");
   await evaluationSearchInput.fill("");
   await evaluationSearchInput.type("E2E Evaluation");

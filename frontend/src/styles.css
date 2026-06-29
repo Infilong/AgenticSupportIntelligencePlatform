@@ -3652,20 +3652,46 @@ th {
   min-width: 0;
 }
 
+.folder-picker-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
 .folder-picker-head {
   display: grid;
   gap: 3px;
+  min-width: 0;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 9px 10px;
+  list-style: none;
+}
+
+.folder-picker-head::-webkit-details-marker {
+  display: none;
 }
 
 .folder-picker-head span {
   color: var(--text-subtle);
-  font-size: 0.84rem;
-  font-weight: 720;
+  font-size: 0.72rem;
+  font-weight: 820;
+  text-transform: uppercase;
 }
 
 .folder-picker-head strong {
   min-width: 0;
-  overflow-wrap: anywhere;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-picker-head small {
+  color: var(--text-subtle);
+  font-size: 0.76rem;
 }
 
 .folder-picker-options {
@@ -3709,6 +3735,7 @@ th {
 .folder-picker-compact summary {
   display: grid;
   gap: 3px;
+  min-width: 0;
   cursor: pointer;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -3730,7 +3757,10 @@ th {
 
 .folder-picker-compact summary strong {
   min-width: 0;
-  overflow-wrap: anywhere;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .answer-required-callout {
