@@ -101,6 +101,52 @@ def test_guardrail_catalog_exposes_runtime_policies_and_failures(client: TestCli
     assert unsupported["recent_failures"][0]["severity"] == "high"
 
 
+def test_privacy_safety_and_escalation_guardrails_are_recorded_in_trace_and_catalog(
+    client: TestClient,
+) -> None:
+    register(client, "guardrails-privacy-owner@example.com")
+    token = login(client, "guardrails-privacy-owner@example.com")
+    workspace = create_workspace(client, token)
+    upload_document(client, token, workspace["id"])
+    agent = create_agent(client, token, workspace["id"])
+
+    run = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/agents/{agent['id']}/runs",
+        headers=auth_headers(token),
+        json={"input_message": "我要投诉，你们泄露了我的个人信息。"},
+    )
+    assert run.status_code == 201
+    assert run.json()["route_decision"] == "human_review"
+
+    trace = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{run.json()['id']}/trace",
+        headers=auth_headers(token),
+    )
+    catalog = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails",
+        headers=auth_headers(token),
+    )
+
+    assert trace.status_code == 200
+    trace_guardrails = {item["guardrail_type"]: item for item in trace.json()["guardrails"]}
+    for guardrail_type in ["privacy_complaint", "high_safety_risk", "escalation_needed"]:
+        assert guardrail_type in trace_guardrails
+        assert trace_guardrails[guardrail_type]["passed"] is False
+        assert trace_guardrails[guardrail_type]["graph_step_id"] is not None
+
+    assert catalog.status_code == 200
+    catalog_guardrails = catalog.json()["items"]
+    privacy = guardrail_by_type(catalog_guardrails, "privacy_complaint")
+    safety = guardrail_by_type(catalog_guardrails, "high_safety_risk")
+    escalation = guardrail_by_type(catalog_guardrails, "escalation_needed")
+    assert privacy["usage"]["failed_evaluations"] == 1
+    assert safety["usage"]["failed_evaluations"] == 1
+    assert escalation["usage"]["failed_evaluations"] == 1
+    assert privacy["recent_failures"][0]["graph_run_id"] == run.json()["id"]
+    assert safety["recent_failures"][0]["severity"] == "high"
+    assert escalation["recent_failures"][0]["severity"] == "medium"
+
+
 def test_guardrail_catalog_is_workspace_scoped(client: TestClient) -> None:
     register(client, "guardrails-scope-owner@example.com")
     owner_token = login(client, "guardrails-scope-owner@example.com")

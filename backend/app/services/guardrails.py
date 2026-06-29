@@ -105,6 +105,46 @@ def evaluate_guardrails(
             else "No prompt injection pattern detected."
         ),
     )
+    intent = state.get("intent")
+    privacy_complaint = intent == "privacy_complaint"
+    _append_decision(
+        decisions,
+        policies,
+        guardrail_type="privacy_complaint",
+        passed=not privacy_complaint,
+        fallback_severity="high" if privacy_complaint else "low",
+        message=(
+            "Privacy complaint requires human review."
+            if privacy_complaint
+            else "No privacy complaint classification detected."
+        ),
+    )
+    high_safety_risk = state.get("safety_risk") == "high"
+    _append_decision(
+        decisions,
+        policies,
+        guardrail_type="high_safety_risk",
+        passed=not high_safety_risk,
+        fallback_severity="high" if high_safety_risk else "low",
+        message=(
+            "High safety risk classification requires human review."
+            if high_safety_risk
+            else "No high safety risk classification detected."
+        ),
+    )
+    escalation_needed = bool(state.get("escalation_needed"))
+    _append_decision(
+        decisions,
+        policies,
+        guardrail_type="escalation_needed",
+        passed=not escalation_needed,
+        fallback_severity="medium" if escalation_needed else "low",
+        message=(
+            "Escalation classification requires human review."
+            if escalation_needed
+            else "No escalation classification detected."
+        ),
+    )
     _append_decision(
         decisions,
         policies,
