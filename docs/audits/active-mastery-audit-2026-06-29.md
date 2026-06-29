@@ -1,259 +1,293 @@
-# Active Platform Audit Report: Frontend/Backend Polishment
+# Active Platform Audit (Pre-Implementation Gate)
 
-Date: 2026-06-29  
+Date: 2026-06-29
 Scope: `/home/infilong/project/AgenticSupportIntelligencePlatform`
+Status: **Audit complete. No implementation changes beyond governance/docs yet in this gate.**
 
-Status source references:
-- `frontend/src/app/AppShell.tsx`
-- `frontend/src/pages/*`
-- `backend/app/*`
-- `docs/*`
-- `npm run -C frontend build`
+## 1) Current product assessment
 
-## 1) Current Product Assessment
-Backend is substantially implemented as a real multilingual AI platform:
-- Auth/workspace/membership model with role checks
-- Dataset import + label support for English/Japanese/Chinese
-- Knowledge ingestion + chunking + vector retrieval + citations
-- LangChain abstractions and LangGraph workflow orchestration
-- Guardrails, human review routing, model-call accounting, traceability, cost summary, audit logs
+### Backend strengths
+- Real multilingual AI platform foundation is present: auth/workspace/membership, dataset curation, multilingual knowledge ingestion, LangChain abstractions, LangGraph orchestration, graph traces, tool calls, guardrails, human-review routing, evaluation runs, AI run ledger, token/cost accounting, audit logs.
+- Permissions and role-aware endpoints exist in FastAPI dependency layer and domain routes.
+- Existing operational scaffolding for folders, archive states, attention counters, run history, and evaluation summaries is in place.
 
-Frontend has meaningful functional breadth but is not yet organized as a professional console by architecture quality:
-- One file still drives most orchestration (`frontend/src/app/AppShell.tsx`: 8,623 lines)
-- Only part of the page ecosystem is cleanly split into component modules
-- Build currently fails from extraction mistakes in migrated page files.
+### Frontend strengths
+- UI is already split into `pages` and `AppShell` composition, and has functional flows for overview/tasks/members/datasets/knowledge/agents/runs/reviews/evals/costs/admin.
+- Backend wiring and API contracts are mostly reachable from UI paths.
+
+### Main implementation risk
+- Core execution and trace logic exists, but frontend architecture and page composition are still concentrated in oversized modules, which undermines “professional platform” credibility.
 
 ## 2) What feels toy-like now
-- Workflow is powerful but visually dense and hard to parse.
-- Action order is not yet communicated as a mandatory operations sequence.
-- Some core tasks feel "feature inventory" rather than guided operations.
+
+- Feature islands are present, but not organized as explicit first-class workflows.
+- High-signal actions (review, trace, cost anomalies, failed runs) are present but not consistently prioritized as guided operations.
+- In some places, user flow looks “feature inventory” rather than “operational runbook”.
 
 ## 3) What is confusing now
-- New users cannot infer next action from first view.
-- Multiple advanced operations are mixed with setup flows.
-- Role context exists but is not always used as workflow framing.
-- Page extraction is incomplete, leaving technical debt visible.
 
-## 4) What does not match professional style
-- Inconsistent page rhythm and state patterns.
-- Dense shell-level responsibilities in `AppShell` create fragility.
-- Build-blocking UI extraction issues signal an incomplete architecture transition.
+- New users do not get one obvious operational order from workspace selection → permission context → active tasks → action → resolution.
+- Some high-impact actions are mixed with utility controls.
+- “What changed / why / next step” is uneven across pages.
+- Sidebar groups are more feature-oriented than workflow-oriented.
 
-## 5) Navigation / sidebar problems
-- Sidebar exists but currently emphasizes tabs rather than a workflow-first operations map.
-- Feature visibility is grouped but not fully stable by role intent.
-- Collapsed/expanded behavior needs to enforce role/path clarity with stronger active-state affordances.
+## 4) What does not match a professional black-and-white admin style
+
+- Current styling is serviceable but does not yet enforce a consistent layout system with clear action hierarchy.
+- Visual rhythm varies per page and per section because ownership patterns differ across extracted and inline sections.
+- The architecture signals prototype-style coupling more than a console-grade structure.
+
+## 5) Navigation/sidebar problems
+
+- Sidebar is collapsible and role-filtered in parts, but not yet architecturally stable as a route-first workflow map.
+- Current selection/panel mapping is clear, but transition language and quick-link conventions are inconsistent.
+- Some critical destinations are hidden inside large mixed panels, not surfaced as dedicated “next action” destinations.
 
 ## 6) Missing permission-aware UX
-- Backend permission checks are present and used; frontend UX still needs role-first defaults.
-- Destructive and admin-level actions should appear as gated by role, with explicit rationale.
 
-## 7) Missing task / attention workflow
-- Backend attention data exists, but “what I should do now” is not the dominant surface.
-- Review/trace/cost actions are available but not arranged as a strict operating loop.
+- Backend enforcement is strong and explicit.
+- Frontend permission narration (who can do what now) is incomplete: controls are often present but role path framing is still weak.
+- Restricted actions should be shown with explicit reason and actionable alternatives, not just hidden or implicit.
+
+## 7) Missing task/attention workflow
+
+- Attention data exists and APIs expose task-like states.
+- The attention model is not yet the default top-level operating loop for all roles; users still need to infer sequence.
+- Priority-to-action links are present in practice but not consistently first-class in layout.
 
 ## 8) Missing backend support for professional UI
-- Core product surfaces are available in backend APIs and models.
-- For polished first-run workflow, need better backend summary endpoints to reduce client-side orchestration.
 
-## 9) Data/tool organization problems
-- Folders for datasets and documents are present, but list-heavy surfaces still feel list-first, not operations-first.
-- Tool/guardrail governance is visible in traces but not fully first-class as navigable catalog products.
+- No blocking schema/API gaps for audit-tied UX recovery.
+- Backend endpoints are mostly present, but frontend currently does extra client-side orchestration for summaries and cross-surface navigation metadata.
+- Improvement opportunity: concise summary payloads for dashboard attention cards and deterministic jump metadata for run/review/cost flow.
+
+## 9) Data and tool organization problems
+
+- Foldering exists for large collections.
+- Tooling/tool-policy surfaces and guardrail/product governance remain distributed across monolithic shell rendering paths.
+- As dataset/knowledge/tool volume grows, current cross-surface list ownership will become harder to scan and test.
 
 ## 10) UI/UX gaps
-- Shared primitives and error/loading states are inconsistent across pages.
-- Not all high-signal pages are route-like modules with standardized composition.
-- Review state and evidence flow are operationally present but visually under-prioritized.
 
-## 11) Backend/data-model gaps
-- No immediate blocking gaps for current frontend recovery.
-- Useful near-term additions:
-  - stronger run-route->trace/span metadata for cross-page drilldown UX
-  - richer `AgentConfig` metadata (`owner`, `description`, `use_case`) for catalog UX
-  - clearer audit linkage for folder/move/archive lifecycle actions
+- No explicit route-level navigation yet (tab/panel orchestration is in use).
+- Shared primitives and interaction contracts are inconsistent between older and newer page modules.
+- Empty/loading/error/permission-empty states are still inconsistent across surfaces.
+
+## 11) Backend / data-model gaps
+
+- No urgent migration blockers for the next UX-0 ticket.
+- Optional but useful additions for UX quality:
+  - richer operational metadata on mutable resources (archived/deactivated context + actor audit fields where needed),
+  - indices supporting bounded list sorting/filtering by `workspace_id/status/folder_id/created_at`,
+  - stable cross-entity reference fields for trace → run → review links where currently inferred.
 
 ## 12) Agent workflow gaps
-- Graph workflow logic exists, but end-to-end product story should be rendered as:
-  input → evidence retrieval → policy/checks → routing → answer/cost → review → trace.
-- Tool and policy surfaces need first-class pages and summaries.
+
+- Runtime workflow is robust: LangGraph nodes, checkpoints, retriever/guardrail/tool branches, confidence routing, and human-review hooks are implemented.
+- UI gap is the operational narrative (input → steps → checks → routing → final answer/cost → trace/review).
 
 ## 13) Traceability gaps
-- Trace and guardrail data are implemented.
-- Need standardized trace navigator and dashboard entry points that explain decisions as first-class operations.
+
+- Trace tables/events are present and recorded.
+- Missing piece is navigation UX coherence: easier movement from attention/dashboard to exact node/guardrail/model-call detail with stable drill-down path.
 
 ## 14) Guardrail/governance gaps
-- Guardrails are present; governance UI is still secondary.
-- Need policy intent pages with reason, severity, action and remediation.
+
+- Guardrail coverage is implemented.
+- Governance UX still reads less like operator controls and more like diagnostics, especially for policy lifecycle, severity, and remediation suggestions.
 
 ## 15) Evaluation gaps
-- Evaluations exist by JSONL suite/case flow and metric outputs.
-- Need clearer suite-level organization and regression posture at dashboard level.
+
+- Evaluation run and metrics framework exists.
+- Product-grade UX needs better case-level regression framing, failed-case drill-down, and baseline comparison surfaced as operator action cards.
 
 ## 16) Cost/token observability gaps
-- Token, cost and latency data exist.
-- Outlier signaling, model-level comparisons, and budget-risk actioning are not yet the default view.
 
-## 17) Admin / developer experience gaps
-- Backend has role scope but frontend still mixes admin/developer/reviewer paths.
-- Settings and operations surfaces need explicit role pathways.
+- Token/cost accounting and summaries exist.
+- Missing clarity layer: outlier highlights and contextual actions (what to do with high-cost/failing routes).
 
-## 18) Best-practice findings (applied/relevant)
-- React architecture: split large modules into typed components and stable prop boundaries.
+## 17) Admin/developer experience gaps
+
+- Admin surfaces and developer surfaces are present but not yet arranged by workflow and role-first priorities.
+- Reviewer workflow is present but could be clearly separated with reduced cognitive noise.
+
+## 18) Best-practice findings (applicable)
+
+- React guidance strongly favors decomposition by responsibility and data flow boundaries.
   - https://react.dev/learn/thinking-in-react
-- FastAPI: domain routers/services + explicit dependency-based authorization.
-  - https://fastapi.tiangolo.com/tutorial/bigger-applications/
+  - https://react.dev/learn/passing-props-to-a-component
+- FastAPI recommends dependency-based authorization and modular domain routers.
   - https://fastapi.tiangolo.com/tutorial/dependencies/
-- Authorization/least-privilege from backend-to-UI.
+  - https://fastapi.tiangolo.com/tutorial/bigger-applications/
+- OWASP authorization principles support explicit, enforced permission checks.
   - https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
-- Accessibility and contrast.
+- WCAG contrast/focus guidance aligns with high-clarity admin dashboards.
   - https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
   - https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html
-- Sidebar and navigation hierarchy guidance for grouped destination-first layouts.
-  - Material Design drawer/navigation guidance
-- Observability model for traces/spans.
+- OpenTelemetry trace semantics are useful for conceptual flow design.
   - https://opentelemetry.io/docs/concepts/signals/traces/
 
 ## 19) Recommended information architecture
-- Overview
-- Build: data, knowledge, agents, tools, guardrails
-- Operate: runs, traces, reviews
-- Evaluate: evaluation suites, runs, comparisons
-- Costs: budget, latency, model cost posture
-- Admin: workspace, members, prompts, models, audit, system
 
-## 20) Recommended sidebar structure
-- Collapsible left nav with two states: expanded labels and compact mode.
-- Workspace + role is always visible.
-- High-frequency quick links on top:
-  - Overview, My tasks, Active reviews, Last run trace, High-cost runs
-- Permission-aware visibility (hide disabled actions rather than rendering broken UI).
+```text
+Overview / Operations First
+├─ Overview dashboard
+├─ My tasks / attention
+
+Build
+├─ Data
+├─ Knowledge
+├─ Agents
+├─ Tools
+└─ Guardrails
+
+Operate
+├─ Runs
+├─ Trace
+├─ Human review
+└─ Costs
+
+Evaluate
+├─ Evaluation suites
+├─ Evaluation runs
+└─ Regression / baseline
+
+Admin
+├─ Workspace / members
+├─ Roles / permissions
+├─ Prompts / models
+├─ Settings
+└─ Audit logs
+```
+
+## 20) Recommended sidebar/navigation plan
+
+- Keep sidebar collapsible with two stable visual states.
+- Show quick links at top: Overview, My Tasks, Active Reviews, Latest Trace, High-cost runs.
+- Keep current workspace/role visible and stable.
+- Permission-aware visibility and disabled-with-reason patterns.
+- Ensure one-click jump paths from cards to the right page surfaces.
 
 ## 21) Recommended dashboard plan
-- Top section: workspace, role, permission summary.
-- Middle: attention queue (pending review, failed/high-cost runs, indexing errors).
-- Lower: recent traces, latest evaluation status, cost posture.
-- Each card: what happened + impact + next action + direct jump destination.
+
+- Header row: workspace, selected role, permission posture.
+- Middle row: attention cards (pending reviews, failed runs, high-cost, guardrail blocks, indexing issues).
+- Lower row: recent traces/evals with direct links.
+- Every card includes: what happened, why it matters, next action, destination page.
 
 ## 22) Role/permission-aware UX plan
-- Owner/admin: default entry to members/workspace/policies/cost/audit controls.
-- Developer: default entry to agents/tools/traces/evaluation/cost reliability.
-- Reviewer: default entry to review queue + evidence + citations + answer edits.
-- Viewer: read-only insight surfaces + clear restriction explanation.
+
+- **Owner/Admin:** workspace settings, members, budget/provider policy, audit, cost controls.
+- **Developer:** agents/tools/models/prompts, trace/cost guardrail diagnostics, eval posture.
+- **Reviewer:** review queue, evidence cards, citations, decisions.
+- **Viewer:** read-only observability with clear limitation messaging.
 
 ## 23) Agent / Tool / Guardrail / Evaluation / Cost page plan
-- Agents: catalog, metrics, recent failures, run history links, model policy.
-- Tools: catalog, schema, run history, permission profile.
-- Guardrails: policy list, policy runs, severity outcomes, route effects.
-- Evaluations: per-language and baseline comparison, failed-case drilldown.
-- Costs: workspace/agent/run/model summaries, outliers, budget posture.
+
+- **Agents:** agent catalog + health + run/step linkage + model/provider usage.
+- **Tools:** catalog, input/output schema, permissions, usage/error history.
+- **Guardrails:** policy list + severity + pass/fail + routing outcome + trace linkage.
+- **Evaluations:** language-aware suites, baseline mode view, failed-case drill-down.
+- **Costs:** workspace/agent/model/run views, budget risk flags, cost trend cards.
 
 ## 24) Backend/API gap list
-- Add/strengthen summary endpoints for:
-  - dashboard attention cards by role
-  - workflow jump targets
-  - high-cost/failure hotspots
-  - trace summary cards for quick navigation
-- Preserve backward compatibility; do not delay UI recovery by introducing API debt.
+
+- No hard blockers for UX-0.
+- Optional high-value shaping tasks:
+  - compact role/workspace attention summary endpoints,
+  - deterministic action-link metadata in list APIs,
+  - stable trace-card summary endpoint for dashboard and navigation.
 
 ## 25) Database/model gap list
-- Add lifecycle metadata as needed on mutable resources (`archived`, `archived_by`).
-- Keep workspace + folder indexes current; add stronger cross-resource dashboard indexes as needed.
-- No blocking schema change for immediate UX-0 recovery.
+
+- No mandatory schema changes required for first UX-0 refactor.
+- Likely additions in later phases: richer actor/lifecycle metadata for mutable admin objects and stronger trace-to-review foreign-link integrity where currently inferred.
 
 ## 26) Prioritized implementation roadmap
-### Phase 1 (stability first)
-1. Repair page extraction build blockers in `OverviewPage`, `DocumentsPage`, and any migrated page.
-2. Finish route-like wiring for existing pages and standardize panel patterns.
-3. Keep backend behavior unchanged while reducing shell ownership.
-4. Add deterministic browser smoke checks for overview → review → trace.
+
+### Phase 1 (stability + architectural cleanup)
+1. Complete frontend extraction so no heavy operational surface logic remains in `AppShell`.
+2. Stabilize shared page primitives and workflow cards.
+3. Standardize role-aware context and permissions messaging.
+4. Add deterministic cross-page links and consistent attention flow.
 
 ### Phase 2 (professional structure)
-1. Introduce shared primitives (`PageHeader`, `SectionPanel`, `WorkflowCard`, `StatusBanner`).
-2. Convert Overview/Tasks to explicit attention-first workflow.
-3. Add explicit role/action ribbon and quick-links.
-4. Standardize load/error/no-permission states across pages.
+1. Route-like page architecture (`AppShell` + page modules + components/hook boundaries).
+2. Folder-first list handling and bounded pagination/search.
+3. Introduce shared loading/error/empty/permission states.
+4. Dashboard action model with role-specific defaults.
 
-### Phase 3 (mature platform UX)
-1. Route-level navigation migration (React Router) after module stability.
-2. Expand backend summary API support for role-scoped attention cards.
-3. Advance governance catalogs (tool/guardrail) and policy lifecycle UX.
+### Phase 3 (advanced platform quality)
+1. Route migration to real route layer if needed.
+2. Expand governance + evaluation + policy lifecycle surfaces.
+3. Add stronger cost anomaly/risk workflows and observability signals.
 
 ## 27) Phase 1 quick wins
-- Fix `AppShell.tsx` and page extraction compile integrity.
-- Make role/context and "what to do next" visible in Overview.
-- Make review/trace/cost high-signal cards action-linked.
-- Keep changes confined to shell/page composition and shared primitives.
+
+1. Finish extraction of remaining in-shell page blocks.
+2. Add consistent header + quick-link patterns across Overview/Tasks/agents/cost/eval/review areas.
+3. Unify role/permission disabled-state messaging.
+4. Add smoke-check path: overview → task/review → trace → run details.
 
 ## 28) Phase 2 structural improvements
-- Shared component library growth by page type.
-- Consistent permissions messaging and disabled-state explanations.
-- Pagination/search/filter with stable folder paths on data-heavy resources.
-- Workflow trace links from attention cards to run detail.
+
+1. Introduce shared component modules and avoid monolithic functions.
+2. Add API client/service boundaries on frontend (fetch + state separated).
+3. Improve folder/list controls for large collections.
+4. Expand traceability navigation with stable IDs and deep links.
 
 ## 29) Phase 3 advanced features
-- OpenTelemetry-grade trace IDs in UI context.
-- Enterprise RBAC/ABAC extension.
-- Additional scale-ready deployment and observability layers.
 
-## 30) Risks if UI is improved before backend alignment
-- Professional look without strong role-aware controls weakens credibility.
-- Action ambiguity remains if backend summaries are inferred rather than supported.
-- Monolithic shell + partial extraction increases maintenance/review risk.
+1. Backend API summary endpoints for role-aware dashboard cards.
+2. Full cost/actionability workflows and remediation actions.
+3. Optional router migration and deeper admin operations.
+
+## 30) Risks if UI improved without backend alignment
+
+- High visual polish would not fix incorrect decision flow if backend semantics are not surfaced cleanly.
+- Monolithic UI ownership can still hide missing permission failures and regressions.
+- Workflow confidence drops if users cannot move from summary card directly to evidence and decision surface.
 
 ## Severity-ranked gap list
-- **P0**
-  1. `frontend/src/app/AppShell.tsx` remains monolithic (8,623 lines).
-  2. Page extraction currently breaks build:
-     - `frontend/src/pages/OverviewPage.tsx` has `const primaryAction` syntax break
-     - `frontend/src/pages/DocumentsPage.tsx` has unclosed `<aside>`
-  3. Workflow-first entry path is not enforced in first-view.
-- **P1**
-  1. Permission/routing clarity and role path defaults need stronger UX framing.
-  2. Dashboard does not yet prioritize attention actions as default flow.
-  3. Trace and review actionability requires clearer route architecture.
-- **P2**
-  1. Visual tone/spacing consistency across pages.
-  2. Shared componentization and reusable patterns incomplete.
-- **P3**
-  1. Full cloud observability, ABAC/enterprise RBAC, OpenTelemetry export.
 
-## Current evidence snapshot
-- `npm run -C frontend build` fails:
-  - `frontend/src/pages/OverviewPage.tsx(125,48)` syntax issue
-  - `frontend/src/pages/DocumentsPage.tsx(327,11)` missing closing tag
-- Frontend file status:
-  - `AppShell.tsx`: 8,623 lines
-  - `OverviewPage.tsx`: 398 lines
-  - `DocumentsPage.tsx`: 436 lines
-  - `DatasetsPage.tsx`: 371 lines
-- Extracted pages exist for `Overview`, `Tasks`, `Members`, `Audit`, `Datasets`, `Documents`.
-- Shell currently imports only those modules plus many inline handlers.
+### P0 (critical for professional credibility)
+1. `frontend/src/app/AppShell.tsx` remains oversized and high-coupling (8,182 lines).
+2. Large in-shell feature rendering still concentrates orchestration, fetching, state, and composition.
+3. Lack of stable workflow-first entry model for all user roles.
 
-## First 5 implementation tickets (post-audit gate)
+### P1 (important)
+1. Permission-aware UX messaging is inconsistent across pages.
+2. Attention/first-action flow not consistently dominant from Overview.
+3. Traceability navigation between task, trace, review, and cost surfaces can still require extra user reasoning.
 
-### Ticket 1 — UX-0A: Stabilize shell-page extraction without behavior change (blocking)
-**Scope**
-- Fix page extraction compile breakages and remove migrated page render logic from `AppShell` sections.
-**Acceptance**
-- Frontend build passes.
-- Existing user behaviors are preserved.
+### P2 (polish)
+1. Visual hierarchy and spacing still vary across modules.
+2. Shared component reuse incomplete.
+3. No route-level navigation yet.
 
-### Ticket 2 — UX-0B: Shared page layout primitives
-**Scope**
-- Add shared primitives (`PageHeader`, `SectionPanel`, `StatusBanner`, `WorkflowStep`).
-- Standardize empty/loading/error/permission visuals.
+### P3 (future)
+1. Enterprise RBAC/SSO and advanced cloud observability scope.
+2. OpenTelemetry exporter/dashboard stack beyond current scope.
 
-### Ticket 3 — UX-1: Overview-first workflow
-**Scope**
-- Make overview explicit: workspace context, role, permission posture, attention queue, direct action links.
+## First 5 implementation tickets (post-audit)
 
-### Ticket 4 — UX-2: Role-aware navigation and data/knowledge organization
-**Scope**
-- Collapsible sidebar with explicit route-like workflow groups.
-- Strong role-based visibility and clear disabled explanations.
-- Folder + list controls consistency for Datasets/Knowledge.
+### Ticket 1 — UX-0A: App shell extraction hardening (no behavior change)
+- Scope: move major in-shell inline sections into dedicated page-level modules already present in `frontend/src/pages` while preserving behavior.
+- Focus: reduce operational coupling in `frontend/src/app/AppShell.tsx` under 300 lines target; no API logic/behavior changes.
+- Files: `frontend/src/app/AppShell.tsx` and page modules.
 
-### Ticket 5 — UX-3: Trace/Review/Cost integration
-**Scope**
-- Unify actions from attention cards into trace review, human review, and cost drill-down paths.
-- Ensure one-click transition between overview card and corresponding resource pages.
+### Ticket 2 — UX-0B: Shared workflow presentation shell
+- Scope: standardize page scaffold (`PageHeader`, quick actions, status banner, empty/loading/error, permission reason states).
+- Focus: consistent visual hierarchy and role-aware affordances.
+
+### Ticket 3 — UX-1: Attention-first dashboard
+- Scope: make Overview role-aware and task-driven.
+- Focus: workspace/role context first, then attention list, then direct action links.
+
+### Ticket 4 — UX-0C: Collapsible navigation restructure
+- Scope: stabilize sidebar with explicit grouped workflow map and quick-jump links.
+- Focus: predictable route-like identity and collapsed-state behavior.
+
+### Ticket 5 — UX-2: Review/Trace/Cost flow integration
+- Scope: from each attention card, deterministic jump to review or run trace, then to cost/action context.
+- Focus: traceability-first issue resolution loop.
