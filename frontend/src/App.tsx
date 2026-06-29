@@ -25,6 +25,7 @@ const MAX_VISIBLE_COST_ITEMS = 12;
 const MAX_VISIBLE_TRACE_RUNS = 20;
 const MAX_VISIBLE_REVIEWS = 30;
 const MAX_VISIBLE_MODEL_ROUTE_OPTIONS = 12;
+const MAX_VISIBLE_AGENT_PICKER_OPTIONS = 12;
 
 type CurrentUser = {
   id: string;
@@ -3005,7 +3006,7 @@ export function App() {
     }
     const data = await apiRequest<AgentListResponse>(
       workspaceListPath("/agents", {
-        limit: MAX_VISIBLE_EVALUATION_RUNS,
+        limit: MAX_VISIBLE_AGENT_PICKER_OPTIONS,
         search: search.trim() || null,
       }),
       { token },
@@ -5978,6 +5979,10 @@ export function App() {
         ?? agents.find((agent) => agent.id === effectiveEvaluationAgentId)
         ?? (agentSummary?.agent.id === effectiveEvaluationAgentId ? agentSummary.agent : null)
       : null;
+    const evaluationAgentPickerOptions = selectedEvaluationAgentOption
+      && !evaluationAgentOptions.some((agent) => agent.id === selectedEvaluationAgentOption.id)
+      ? [selectedEvaluationAgentOption, ...evaluationAgentOptions]
+      : evaluationAgentOptions;
 
     return (
       <div className="evaluation-console">
@@ -6024,19 +6029,47 @@ export function App() {
                   placeholder="Agent name or runtime settings"
                 />
               </label>
-              <label>
-                Evaluation target agent
-                <select value={effectiveEvaluationAgentId} onChange={(event) => setEvaluationAgentId(event.target.value)}>
-                  <option value="">Default evaluation agent</option>
-                  {selectedEvaluationAgentOption && !evaluationAgentOptions.some((agent) => agent.id === selectedEvaluationAgentOption.id) && (
-                    <option value={selectedEvaluationAgentOption.id}>{selectedEvaluationAgentOption.name}{selectedEvaluationAgentOption.archived_at ? " (archived)" : ""}</option>
-                  )}
-                  {evaluationAgentOptions.map((agent) => (
-                    <option key={agent.id} value={agent.id}>{agent.name}{agent.archived_at ? " (archived)" : ""}</option>
+              <div className="model-route-picker evaluation-agent-picker">
+                <span>Evaluation target agent</span>
+                <div className="model-route-options" role="listbox" aria-label="Evaluation target agent">
+                  <button
+                    type="button"
+                    className={!effectiveEvaluationAgentId ? "model-route-option selected-list-item" : "model-route-option"}
+                    onClick={() => setEvaluationAgentId("")}
+                    disabled={loading}
+                  >
+                    <span>
+                      <strong>Default evaluation agent</strong>
+                      <small>Use the system-v1 default evaluation workflow when no agent is linked.</small>
+                    </span>
+                    <Badge tone="neutral">default</Badge>
+                  </button>
+                  {evaluationAgentPickerOptions.slice(0, MAX_VISIBLE_AGENT_PICKER_OPTIONS).map((agent) => (
+                    <button
+                      type="button"
+                      className={effectiveEvaluationAgentId === agent.id ? "model-route-option selected-list-item" : "model-route-option"}
+                      key={agent.id}
+                      onClick={() => setEvaluationAgentId(agent.id)}
+                      disabled={loading || Boolean(agent.archived_at)}
+                    >
+                      <span>
+                        <strong>{agent.name}</strong>
+                        <small>
+                          budget {agent.token_budget.toLocaleString()} · {agent.active ? "active" : "inactive"} · {shortId(agent.id)}
+                        </small>
+                      </span>
+                      <span className="model-route-badges">
+                        {agent.active && !agent.archived_at && <Badge tone="good">active</Badge>}
+                        {agent.archived_at && <Badge tone="warn">archived</Badge>}
+                      </span>
+                    </button>
                   ))}
-                </select>
-                <small>{evaluationAgentOptions.length} agent options loaded from backend search. Leave blank to use the system-v1 default evaluation agent.</small>
-              </label>
+                </div>
+                <small>
+                  {evaluationAgentOptions.length} agent options loaded from backend search
+                  {evaluationAgentOptions.length >= MAX_VISIBLE_AGENT_PICKER_OPTIONS ? "; search to narrow before assigning" : ""}.
+                </small>
+              </div>
               {selectedAgentId && (
                 <button type="button" onClick={() => setEvaluationAgentId(selectedAgentId)} disabled={!selectedAgent || loading}>Use selected operational agent</button>
               )}
