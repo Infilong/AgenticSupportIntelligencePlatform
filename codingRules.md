@@ -103,3 +103,36 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 5. Tests run and results
 6. Manual verification steps
 7. Anything intentionally not changed
+
+## Additional Operating Constraints
+
+### gstack / browsing
+
+When web browsing is needed in this project scope, prefer the `gstack` `/browse` workflow.
+Do not use `mcp__claude-in-chrome__*` tools.
+
+### Codex best-practice lookup
+
+When the request is about Codex best-practice guidance, search `~/.Codex/` first in this order:
+`best-practice/`, `reports/`, `tips/`, `implementation/`.
+Do not rely on training knowledge before checking these local references.
+
+### Workflow best practices
+
+- Keep `AGENTS.md` under 200 lines.
+- Prefer commands over standalone agents.
+- Create feature-specific subagents through dedicated tools, not broad general-purpose agents.
+- Run manual compaction around half-context usage.
+- Start with plan mode for complex tasks.
+- Use human-gated task lists for multi-step work.
+- Break subtasks into pieces that can complete under 50% of context.
+
+### Subagent orchestration
+
+Subagents cannot execute other subagents through shell calls. Use the project toolchain’s
+`Agent(subagent_type="agent-name", ...)` mechanism for escalation.
+
+### Debugging workflow
+
+- Use `/doctor` for diagnostics when behavior is unclear.
+- Run long-running terminal commands as background sessions to keep visibility while working.
