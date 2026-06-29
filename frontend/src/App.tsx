@@ -3236,7 +3236,7 @@ export function App() {
   async function loadPromptTemplates() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<PromptTemplateListResponse>(
-      workspaceListPath("/prompt-templates", { status: "all", limit: 500 }),
+      workspaceListPath("/prompt-templates", { status: "active", limit: MAX_VISIBLE_ADMIN_ASSETS }),
       { token },
     );
     setPromptTemplates(data.items);
@@ -3338,7 +3338,7 @@ export function App() {
   async function loadModelConfigs() {
     if (!selectedWorkspaceId) return;
     const data = await apiRequest<ModelConfigListResponse>(
-      workspaceListPath("/model-configs", { status: "all", limit: 500 }),
+      workspaceListPath("/model-configs", { status: "active", limit: MAX_VISIBLE_ADMIN_ASSETS }),
       { token },
     );
     setModelConfigs(data.items);
@@ -3845,7 +3845,7 @@ export function App() {
       {
         tab: "prompts",
         label: "Prompt registry",
-        value: `${promptTemplates.length} templates`,
+        value: `${promptTemplates.length} active`,
         detail: "Version LangChain prompts by language.",
       },
       {
@@ -6642,7 +6642,7 @@ export function App() {
 
         <section className="settings-summary-grid">
           <Metric label="Active prompts" value={activeTemplates.length} />
-          <Metric label="Summary versions" value={promptTemplates.length} />
+          <Metric label="Active summary" value={promptTemplates.length} />
           <Metric label="Loaded archived" value={loadedArchivedPromptCount} />
           <Metric label="Classifier" value={classifierActive ? `v${classifierActive.version}` : "missing"} />
           <Metric label="Drafter" value={drafterActive ? `v${drafterActive.version}` : "missing"} />
@@ -6698,7 +6698,7 @@ export function App() {
                   {active ? <Badge tone="good">v{active.version}</Badge> : <Badge tone="warn">missing</Badge>}
                 </div>
                 <small>{active ? `${active.language.toUpperCase()} · ${formatDate(active.created_at)}` : "No active workspace version"}</small>
-                <small>{versions.length} total versions</small>
+                <small>{versions.length} active language routes loaded</small>
               </article>
             ))}
           </aside>
@@ -6866,7 +6866,7 @@ export function App() {
               </TabShortcut>
               <TabShortcut tab="prompts">
                 <strong>Prompt versions</strong>
-                <span>{promptTemplates.length} versions · LangChain templates</span>
+                <span>{promptTemplates.length} active prompts · LangChain templates</span>
               </TabShortcut>
               {!availableTabs.some((tab) => tab.group === "Admin" || tab.id === "costs" || tab.id === "system") && (
                 <p className="permission-note">No advanced administration shortcuts are available for this role.</p>
