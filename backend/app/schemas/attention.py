@@ -13,6 +13,7 @@ class AttentionItemResponse(BaseModel):
     action_label: str
     target_tab: str
     target_id: str | None = None
+    target_context: dict[str, str] | None = None
     created_at: datetime | None = None
 
 

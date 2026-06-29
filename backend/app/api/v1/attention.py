@@ -43,6 +43,7 @@ def get_attention_summary(
                 action_label=item.action_label,
                 target_tab=item.target_tab,
                 target_id=item.target_id,
+                target_context=item.target_context,
                 created_at=item.created_at,
             )
             for item in summary.items

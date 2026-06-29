@@ -37,6 +37,7 @@ class AttentionItem:
     action_label: str
     target_tab: str
     target_id: str | None = None
+    target_context: dict[str, str] | None = None
     created_at: datetime | None = None
 
 
@@ -374,6 +375,10 @@ class AttentionService:
             action_label="Compare evaluation",
             target_tab="evaluations",
             target_id=str(current_run.id),
+            target_context={
+                "baseline_run_id": str(baseline_run.id),
+                "baseline_run_name": baseline_run.name,
+            },
             created_at=current_run.completed_at or current_run.created_at,
         )
 

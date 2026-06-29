@@ -320,5 +320,9 @@ def test_attention_summary_reports_latest_evaluation_regressions(
     assert item["count"] == 2
     assert item["target_tab"] == "evaluations"
     assert item["target_id"] == str(current_run.id)
+    assert item["target_context"] == {
+        "baseline_run_id": str(baseline_run.id),
+        "baseline_run_name": "Baseline release check",
+    }
     assert item["action_label"] == "Compare evaluation"
     assert "Baseline release check" in item["detail"]

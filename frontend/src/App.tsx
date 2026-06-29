@@ -623,6 +623,7 @@ type AttentionItem = {
   action_label: string;
   target_tab: Tab;
   target_id: string | null;
+  target_context: Record<string, string> | null;
   created_at: string | null;
 };
 
@@ -3021,12 +3022,19 @@ export function App() {
     });
   }
 
-  async function loadEvaluationDetail(runId: string) {
+  async function loadEvaluationDetail(runId: string, baselineRunId?: string) {
     const detail = await apiRequest<EvaluationDetail>(workspacePath(`/evaluations/${runId}`), { token });
     setEvaluationDetail(detail);
     setEvaluationComparison(null);
-    setEvaluationBaselineId("");
+    setEvaluationBaselineId(baselineRunId ?? "");
     setEvaluationBaselineSearch("");
+    if (baselineRunId) {
+      const comparison = await apiRequest<EvaluationComparison>(
+        workspacePath(`/evaluations/${runId}/compare/${baselineRunId}`),
+        { token },
+      );
+      setEvaluationComparison(comparison);
+    }
   }
 
   async function loadEvaluationComparison() {
@@ -3677,7 +3685,7 @@ export function App() {
     }
     if (item.target_tab === "evaluations" && item.target_id) {
       setEvaluationRunView("selected");
-      void loadEvaluationDetail(item.target_id);
+      void loadEvaluationDetail(item.target_id, item.target_context?.baseline_run_id);
     }
   }
 
