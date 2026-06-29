@@ -181,6 +181,17 @@ RUNTIME_GUARDRAIL_DEFINITIONS = [
         action_on_fail="route_to_human_review",
         related_workflow_nodes=["classify_intent", "draft_response"],
     ),
+    GuardrailDefinition(
+        guardrail_type="unsafe_tool_call",
+        label="Tool call blocked",
+        description="Blocks disabled or unsafe tool execution before external action or retrieval.",
+        stage="tool execution governance",
+        enabled=True,
+        configurable=False,
+        default_severity="high",
+        action_on_fail="route_to_human_review",
+        related_workflow_nodes=["retrieve_evidence", "route_review_or_finalize"],
+    ),
 ]
 
 

@@ -771,6 +771,7 @@ def _route_reasons(
     checks = {
         "model_provider_failure": bool(state.get("model_provider_failure")),
         "model_budget_failure": bool(state.get("model_budget_failure")),
+        "unsafe_tool_call": bool(state.get("tool_disabled")),
         "confidence_threshold": state.get("confidence_score", 0) < confidence_threshold,
         "prompt_injection": state.get("intent") == "prompt_injection",
         "privacy_complaint": state.get("intent") == "privacy_complaint",

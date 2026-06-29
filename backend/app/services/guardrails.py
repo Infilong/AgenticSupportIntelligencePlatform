@@ -93,6 +93,19 @@ def evaluate_guardrails(
             fallback_severity="high",
             message=f"Model budget failure requires human review: {budget_failure}",
         )
+    blocked_tool = state.get("tool_disabled")
+    _append_decision(
+        decisions,
+        policies,
+        guardrail_type="unsafe_tool_call",
+        passed=not bool(blocked_tool),
+        fallback_severity="high" if blocked_tool else "low",
+        message=(
+            f"Tool call blocked by workspace configuration: {blocked_tool}."
+            if blocked_tool
+            else "No blocked tool call detected."
+        ),
+    )
     _append_decision(
         decisions,
         policies,

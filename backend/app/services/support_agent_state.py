@@ -23,6 +23,7 @@ class SupportAgentState(TypedDict, total=False):
     packed_context_citations: list[str]
     retrieval_trace_id: str | None
     langchain_tool: str
+    tool_disabled: str | None
     draft_answer: str | None
     confidence_score: float
     confidence_threshold: float

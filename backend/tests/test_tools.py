@@ -242,6 +242,10 @@ def test_disabled_retrieval_tool_routes_agent_to_review_and_records_failed_tool_
         f"/api/v1/workspaces/{workspace['id']}/agent-runs/{run.json()['id']}/trace",
         headers=auth_headers(token),
     )
+    guardrails = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/guardrails",
+        headers=auth_headers(token),
+    )
 
     assert run.status_code == 201
     assert run.json()["route_decision"] == "human_review"
@@ -262,9 +266,24 @@ def test_disabled_retrieval_tool_routes_agent_to_review_and_records_failed_tool_
     retrieve_step = next(
         step for step in trace.json()["steps"] if step["step_name"] == "retrieve_evidence"
     )
+    route_step = next(
+        step for step in trace.json()["steps"] if step["step_name"] == "route_review_or_finalize"
+    )
+    route_output = json.loads(route_step["output_json"])
+    trace_guardrails = {item["guardrail_type"]: item for item in trace.json()["guardrails"]}
     assert retrieve_step["status"] == "failed"
     assert retrieve_step["tool_calls"][0]["status"] == "failed"
     assert "disabled" in retrieve_step["error_message"]
+    assert "unsafe_tool_call" in route_output["route_reasons"]
+    assert trace_guardrails["unsafe_tool_call"]["passed"] is False
+    assert trace_guardrails["unsafe_tool_call"]["severity"] == "high"
+    assert "search_documents" in trace_guardrails["unsafe_tool_call"]["message"]
+    assert guardrails.status_code == 200
+    blocked_tool = next(
+        item for item in guardrails.json()["items"] if item["guardrail_type"] == "unsafe_tool_call"
+    )
+    assert blocked_tool["usage"]["failed_evaluations"] == 1
+    assert blocked_tool["recent_failures"][0]["graph_run_id"] == run.json()["id"]
 
 
 def test_tools_catalog_supports_backend_search_view_and_pagination(
