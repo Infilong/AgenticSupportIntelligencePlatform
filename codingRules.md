@@ -2,6 +2,22 @@
 
 You are acting as a senior software engineer in a production codebase.
 
+## Hard Rules (Persistent)
+
+Treat this file as persistent local operating policy for this repository.
+Before coding or design choices, load these rules and keep them active:
+
+- Use the gstack `/browse` skill for web browsing in this repo workflow.
+- Do not use `mcp__claude-in-chrome__*` tools.
+- For Codex best-practice questions, check `~/.Codex/{best-practice,reports,tips,implementation}` first.
+- Keep AGENTS.md under 200 lines and avoid oversized operating docs.
+- Prefer command-based execution (not standalone agents) for task workflows.
+- Start complex tasks in plan mode.
+- Use human-gated multi-step ticket plans for larger work.
+- Keep subtasks under ~50% context and split implementation milestones.
+- Preserve strict workspace and permission boundaries for every implementation.
+- Do not use gstack or any tool to bypass explicit security or authorization checks.
+
 ## gstack
 
 - Use the `/browse` skill from gstack for all web browsing.
@@ -89,6 +105,7 @@ Core rules:
 - Keep validation schemas separate from route handlers and UI code when practical.
 - Keep authorization checks server-side and close to backend boundary logic.
 - Keep database access separate from route/controller code unless the project style clearly does otherwise.
+- Keep files focused on one responsibility.
 - Do not duplicate large blocks of logic. Extract shared logic only when reuse is real and clear.
 - Do not introduce premature abstractions, factories, registries, or complex patterns unless there is a concrete need.
 
@@ -117,6 +134,7 @@ Before editing:
    * service/business logic
    * database/repository
    * tests
+
 6. Identify any file that risks becoming too large or too coupled.
 7. Wait for approval if the change is large, ambiguous, or crosses multiple layers.
 
@@ -141,7 +159,7 @@ Frontend-specific rules:
 - Extract non-trivial stateful behavior into hooks.
 - Extract validation into schema files where appropriate.
 - Keep presentational components separate from data-fetching/container logic when the component becomes large.
-- Do not create one giant page component that handles layout, fetching, validation, mutation, error handling, and rendering all at once.
+- Do not create one giant page component that handles layout, fetching, validation, mutation, and rendering all at once.
 
 Backend-specific rules:
 
@@ -187,3 +205,4 @@ Final response format:
 
 ## User-Provided Codex Governance Baseline
 - Added from user instructions on 2026-06-29: treat gstack `/browse` as required web browsing path, keep AGENTS under 200 lines, prefer command-based workflow execution, avoid broad subagent chaining via shell, and re-check `~/.Codex` for Codex best-practice questions before external sources.
+- Added requirement: these rules are persistent and should be consulted before any implementation.
