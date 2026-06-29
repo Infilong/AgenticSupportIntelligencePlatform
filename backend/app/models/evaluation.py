@@ -91,6 +91,9 @@ class EvaluationResult(Base):
     evaluation_case_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("evaluation_cases.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    graph_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("graph_runs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     mode: Mapped[EvaluationMode] = mapped_column(String(40), nullable=False, index=True)
     language: Mapped[SupportedLanguage] = mapped_column(String(8), nullable=False, index=True)
     actual_route: Mapped[str] = mapped_column(String(80), nullable=False)

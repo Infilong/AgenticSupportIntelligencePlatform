@@ -520,6 +520,7 @@ type EvaluationRun = {
 type EvaluationResult = {
   id: string;
   evaluation_case_id: string;
+  graph_run_id: string | null;
   mode: Mode;
   language: Language;
   actual_route: string;
@@ -6309,7 +6310,14 @@ export function App() {
               </div>
             </section>
           )}
-          {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} agents={agents} comparison={evaluationComparison} /> : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
+          {evaluationDetail ? (
+            <EvaluationDashboard
+              detail={evaluationDetail}
+              agents={agents}
+              comparison={evaluationComparison}
+              onOpenTrace={(runId) => { setTraceRunId(runId); void loadTrace(runId); goToTab("trace"); }}
+            />
+          ) : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
         </section>
       </div>
     );
@@ -8809,10 +8817,12 @@ function EvaluationDashboard({
   detail,
   agents,
   comparison,
+  onOpenTrace,
 }: {
   detail: EvaluationDetail;
   agents: Agent[];
   comparison: EvaluationComparison | null;
+  onOpenTrace?: (runId: string) => void;
 }) {
   const passCount = detail.results.filter((result) => result.passed).length;
   const failCount = detail.results.length - passCount;
@@ -8932,7 +8942,10 @@ function EvaluationDashboard({
                   <strong>{friendlyModeName(result.mode)} · {result.language.toUpperCase()}</strong>
                   <p className="muted">Case {result.evaluation_case_id}</p>
                 </div>
-                <Badge tone={result.passed ? "good" : "bad"}>{result.passed ? "passed" : "failed"}</Badge>
+                <div className="review-actions">
+                  {result.graph_run_id && <button type="button" onClick={() => onOpenTrace?.(result.graph_run_id!)}>Open trace</button>}
+                  <Badge tone={result.passed ? "good" : "bad"}>{result.passed ? "passed" : "failed"}</Badge>
+                </div>
               </div>
               <div className="metric-grid compact">
                 <Metric label="Route" value={result.actual_route} />
@@ -8941,7 +8954,7 @@ function EvaluationDashboard({
                 <Metric label="Cost" value={formatCost(result.estimated_cost)} />
               </div>
               <p>{result.answer ?? "No answer generated"}</p>
-              <details><summary>Scores and citations</summary><JsonBlock value={{ scores: safeJson(result.scores_json), citations: safeJson(result.citations_json), error: result.error_message }} /></details>
+              <details><summary>Scores, citations, and trace</summary><JsonBlock value={{ scores: safeJson(result.scores_json), citations: safeJson(result.citations_json), graph_run_id: result.graph_run_id, error: result.error_message }} /></details>
             </article>
           ))}
         </div>

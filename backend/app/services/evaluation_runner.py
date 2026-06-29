@@ -343,6 +343,7 @@ class EvaluationRunner:
         error_message = None
         actual_tool_calls: list[str] = []
         actual_guardrail_failures: list[str] = []
+        graph_run_id: UUID | None = None
         try:
             if mode == EvaluationMode.direct_llm:
                 response = MockModelProvider(self.db).complete(
@@ -375,6 +376,7 @@ class EvaluationRunner:
                     input_message=loaded_case.input_message,
                     current_user=current_user,
                 )
+                graph_run_id = graph_run.id
                 actual_route = (
                     "finalize" if graph_run.status == GraphRunStatus.completed else "human_review"
                 )
@@ -405,6 +407,7 @@ class EvaluationRunner:
             workspace_id=workspace_id,
             evaluation_run_id=run_id,
             evaluation_case_id=case.id,
+            graph_run_id=graph_run_id,
             mode=mode,
             language=loaded_case.language,
             actual_route=actual_route,

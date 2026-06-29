@@ -53,6 +53,7 @@ class EvaluationResultResponse(BaseModel):
 
     id: UUID
     evaluation_case_id: UUID
+    graph_run_id: UUID | None
     mode: str
     language: str
     actual_route: str

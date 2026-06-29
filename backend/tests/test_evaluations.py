@@ -210,6 +210,15 @@ def test_evaluation_api_runs_baselines_and_system_v1(client: TestClient) -> None
     languages = {result["language"] for result in body["results"]}
     assert modes == {"direct_llm", "vector_rag", "system_v1"}
     assert languages == {"en", "ja", "zh"}
+    system_results = [result for result in body["results"] if result["mode"] == "system_v1"]
+    baseline_results = [result for result in body["results"] if result["mode"] != "system_v1"]
+    assert all(result["graph_run_id"] for result in system_results)
+    assert all(result["graph_run_id"] is None for result in baseline_results)
+    trace_response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/agent-runs/{system_results[0]['graph_run_id']}/trace",
+        headers=auth_headers(token),
+    )
+    assert trace_response.status_code == 200
     metric_keys = {(metric["mode"], metric["language"]) for metric in body["metrics"]}
     assert ("system_v1", "en") in metric_keys
     assert ("vector_rag", "zh") in metric_keys
