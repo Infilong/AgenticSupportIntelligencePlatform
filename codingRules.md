@@ -146,3 +146,13 @@ Final response format:
 5. Tests run and results
 6. Manual verification steps
 7. Anything intentionally not changed
+
+## Source-of-truth rule
+
+When there is ambiguity, follow this order before coding:
+
+1. `codingRules.md` (this file)
+2. `/home/infilong/project/AgenticSupportIntelligencePlatform/AGENTS.md`
+3. Relevant docs in `docs/`
+
+Do not proceed with feature implementation unless these rules have been reviewed.
