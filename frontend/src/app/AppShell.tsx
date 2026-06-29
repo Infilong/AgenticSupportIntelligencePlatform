@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { Badge, EmptyState, Metric } from "./shared/Primitives";
 import { TasksPage } from "../pages/TasksPage";
+import { MembersPage } from "../pages/MembersPage";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
@@ -3746,7 +3747,27 @@ export function App() {
       case "costs":
         return CostsPanel();
       case "members":
-        return MembersPanel();
+        return (
+          <MembersPage
+            workspaceRole={workspaceRole}
+            permissionSummary={permissionSummary}
+            currentUserId={currentUser?.id ?? null}
+            members={workspaceMembers}
+            memberEmail={memberEmail}
+            memberRole={memberRole}
+            canManageWorkspace={Boolean(workspaceMembership?.can_manage_workspace)}
+            loading={loading}
+            formatWorkspaceRole={formatWorkspaceRole}
+            formatDate={formatDate}
+            onMemberEmailChange={setMemberEmail}
+            onMemberRoleChange={(role) => setMemberRole(role)}
+            onSubmitAddMember={addWorkspaceMember}
+            onRefreshMembers={() => runAction("Workspace members refreshed", loadWorkspaceMembers)}
+            onOpenAudit={() => goToTab("audit")}
+            onUpdateMemberRole={(member, role) => updateWorkspaceMemberRole(member, role)}
+            onRemoveMember={removeWorkspaceMember}
+          />
+        );
       case "audit":
         return AuditPanel();
       case "prompts":
@@ -6343,147 +6364,6 @@ export function App() {
               onOpenTrace={(runId) => { setTraceRunId(runId); void loadTrace(runId); goToTab("trace"); }}
             />
           ) : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
-        </section>
-      </div>
-    );
-  }
-
-  function MembersPanel() {
-    const ownerCount = workspaceMembers.filter((member) => member.role === "owner").length;
-    const developerCount = workspaceMembers.filter((member) => member.role === "developer" || member.role === "member").length;
-    const reviewerCount = workspaceMembers.filter((member) => member.role === "reviewer").length;
-    const viewerCount = workspaceMembers.filter((member) => member.role === "viewer").length;
-    const canManageWorkspace = Boolean(workspaceMembership?.can_manage_workspace);
-    const currentMember = workspaceMembers.find((member) => member.user_id === currentUser?.id) ?? null;
-
-    return (
-      <div className="settings-console member-console">
-        <section className="panel settings-hero">
-          <div>
-            <p className="eyebrow">Workspace administration</p>
-            <h2>Manage members and permissions</h2>
-            <p className="muted">Membership is backend-enforced. Owners assign role presets for platform owners, developers, reviewers, and viewers while the workspace keeps at least one owner.</p>
-          </div>
-          <div className="next-action-card">
-            <span>Your access</span>
-            <strong>{workspaceRole}</strong>
-            <p>{currentMember ? `${currentMember.email} has ${currentMember.permissions.length} permissions in this workspace.` : permissionSummary}</p>
-            <button type="button" onClick={() => void runAction("Workspace members refreshed", loadWorkspaceMembers)}>Refresh members</button>
-          </div>
-        </section>
-
-        <section className="settings-summary-grid">
-          <Metric label="Members" value={workspaceMembers.length} />
-          <Metric label="Owners" value={ownerCount} />
-          <Metric label="Developers" value={developerCount} />
-          <Metric label="Reviewers" value={reviewerCount} />
-          <Metric label="Viewers" value={viewerCount} />
-          <Metric label="Manage workspace" value={canManageWorkspace ? "allowed" : "restricted"} />
-        </section>
-
-        <section className="settings-workbench">
-          <form className="panel stack settings-editor-panel" onSubmit={addWorkspaceMember}>
-            <div className="row-head">
-              <div>
-                <h3>Add registered user</h3>
-                <p className="muted">Use this for local-team collaboration. The user must already have an account in this app.</p>
-              </div>
-              <Badge tone={canManageWorkspace ? "good" : "warn"}>{canManageWorkspace ? "owner action" : "restricted"}</Badge>
-            </div>
-            <div className="settings-meta-grid">
-              <label>
-                User email
-                <input value={memberEmail} onChange={(event) => setMemberEmail(event.target.value)} placeholder="engineer@example.com" />
-              </label>
-              <label>
-                Initial role
-                <select value={memberRole} onChange={(event) => setMemberRole(event.target.value as WorkspaceMemberRole)}>
-                  <option value="developer">Developer</option>
-                  <option value="reviewer">Reviewer</option>
-                  <option value="viewer">Viewer</option>
-                  <option value="owner">Owner</option>
-                  <option value="member">Legacy member</option>
-                </select>
-              </label>
-            </div>
-            <div className="settings-note">Role presets are enforced by backend permissions. Legacy members keep operational build and review access for existing workspaces.</div>
-            <div className="run-action-bar">
-              <button type="submit" className="primary" disabled={!canManageWorkspace || !memberEmail.trim() || loading}>Add member</button>
-              <TabShortcut tab="audit">Open audit trail</TabShortcut>
-            </div>
-          </form>
-
-          <aside className="panel stack settings-side-panel">
-            <h3>Permission model</h3>
-            <p className="muted">This is role-preset RBAC, not custom enterprise policy yet. Backend permissions gate write, operate, review, and destructive actions.</p>
-            <div className="policy-list">
-              <span>Owners: manage members, budgets, models, guardrails, destructive cleanup, and agent archive actions</span>
-              <span>Developers: import data, manage knowledge, configure/run agents, tools, prompts, folders, and evaluations</span>
-              <span>Reviewers: inspect traces and resolve human-review tasks without build/admin controls</span>
-              <span>Viewers: read-only inspection across allowed workspace pages</span>
-              <span>Non-members: receive workspace-not-found responses for scoped APIs</span>
-            </div>
-          </aside>
-        </section>
-
-        <section className="panel full-width stack settings-history-panel">
-          <div className="row-head">
-            <div>
-              <h3>Workspace members</h3>
-              <p className="muted">Role changes and removals are owner-only and recorded in the audit log.</p>
-            </div>
-            <Badge>{workspaceMembers.length} users</Badge>
-          </div>
-          <div className="member-card-grid">
-            {workspaceMembers.map((member) => {
-              const isCurrentUser = member.user_id === currentUser?.id;
-              const visibleMemberPermissions = member.permissions.slice(0, 6);
-              return (
-                <article className="member-card" key={member.id}>
-                  <div className="row-head">
-                    <div>
-                      <strong>{member.display_name}</strong>
-                      <p className="muted">{member.email}</p>
-                    </div>
-                    <div className="review-actions">
-                      {isCurrentUser && <Badge tone="good">you</Badge>}
-                      <Badge tone={member.role === "owner" ? "good" : member.role === "reviewer" ? "warn" : "neutral"}>{formatWorkspaceRole(member.role)}</Badge>
-                    </div>
-                  </div>
-                  <div className="settings-meta-grid compact-member-controls">
-                    <label>
-                      Role
-                      <select
-                        value={member.role}
-                        onChange={(event) => void updateWorkspaceMemberRole(member, event.target.value as WorkspaceMemberRole)}
-                        disabled={!canManageWorkspace || isCurrentUser || loading}
-                      >
-                        <option value="developer">Developer</option>
-                        <option value="reviewer">Reviewer</option>
-                        <option value="viewer">Viewer</option>
-                        <option value="owner">Owner</option>
-                        <option value="member">Legacy member</option>
-                      </select>
-                    </label>
-                    <button
-                      type="button"
-                      className="danger-button"
-                      onClick={() => void removeWorkspaceMember(member)}
-                      disabled={!canManageWorkspace || isCurrentUser || loading}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <div className="permission-chip-row member-permissions">
-                    {visibleMemberPermissions.map((permission) => <span key={permission}>{permission}</span>)}
-                    {member.permissions.length > visibleMemberPermissions.length && <span>+{member.permissions.length - visibleMemberPermissions.length}</span>}
-                  </div>
-                  <small>Joined {formatDate(member.created_at)}</small>
-                </article>
-              );
-            })}
-          </div>
-          {workspaceMembers.length === 0 && <EmptyState title="No members loaded" detail="Refresh members or check workspace access." />}
         </section>
       </div>
     );
