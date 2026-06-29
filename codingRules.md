@@ -1,11 +1,83 @@
-# Coding Rules
+# codingRules.md
 
 You are acting as a senior software engineer in a production codebase.
 
-## Primary Concern
+## gstack
+
+- Use the `/browse` skill from gstack for all web browsing.
+- Do **not** use `mcp__claude-in-chrome__*` tools.
+
+Available gstack skills:
+
+- `/office-hours`
+- `/plan-ceo-review`
+- `/plan-eng-review`
+- `/plan-design-review`
+- `/design-consultation`
+- `/design-shotgun`
+- `/design-html`
+- `/review`
+- `/ship`
+- `/land-and-deploy`
+- `/canary`
+- `/benchmark`
+- `/browse`
+- `/connect-chrome`
+- `/qa`
+- `/qa-only`
+- `/design-review`
+- `/setup-browser-cookies`
+- `/setup-deploy`
+- `/retro`
+- `/investigate`
+- `/document-release`
+- `/codex`
+- `/cso`
+- `/autoplan`
+- `/careful`
+- `/freeze`
+- `/guard`
+- `/unfreeze`
+- `/gstack-upgrade`
+- `/learn`
+
+## Codex-best-practice
+
+### Answering Best Practice Questions
+
+- When the user asks a Codex best-practice question, always search `~/.Codex/` first (`best-practice/`, `reports/`, `tips/`, `implementation/`) before using training knowledge or external sources.
+
+### Workflow Best Practices
+
+- Keep AGENTS.md under 200 lines per file for reliable adherence.
+- Use commands for workflows instead of standalone agents.
+- Create feature-specific subagents with skills (progressive disclosure) rather than general-purpose agents.
+- Perform manual `/compact` at ~50% context usage.
+- Start with plan mode for complex tasks.
+- Use human-gated task list workflow for multi-step tasks.
+- Break subtasks into units that can finish in under 50% context.
+
+### Subagent Orchestration
+
+- Subagents **cannot** invoke other subagents via bash commands.
+- Use the Agent tool:
+
+```text
+Agent(subagent_type="agent-name", description="...", prompt="...", model="haiku")
+```
+
+### Debugging Tips
+
+- Use `/doctor` for diagnostics.
+- Run long-running terminal commands as background tasks for better log visibility.
+
+## Core Architecture Principles
+
+Primary concern:
 Do not generate large, tightly coupled, hard-to-review files. Prioritize modularity, separation of concerns, small diffs, and maintainable architecture.
 
-## Core Rules
+Core rules:
+
 - Keep each file focused on one responsibility.
 - Do not put UI, API calls, validation, state management, business logic, and data mapping into one large file.
 - Do not create "god files", "god components", "god services", or large utility dumps.
@@ -20,32 +92,36 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 - Do not duplicate large blocks of logic. Extract shared logic only when reuse is real and clear.
 - Do not introduce premature abstractions, factories, registries, or complex patterns unless there is a concrete need.
 
-## File Size And Structure Constraints
+## File Size and Structure Constraints
+
 - Avoid creating or expanding any single source file beyond 300 lines unless explicitly justified.
 - If a file would exceed 300 lines, stop and propose a split before continuing.
 - If a component/service grows beyond one clear responsibility, split it.
 - If a diff touches more than 5 files or exceeds 300 lines, explain why before implementing.
 - If the task requires a larger change, break it into milestones and stop after one milestone.
-- Prefer vertical feature slices: frontend UI, API client, backend route/service, tests - only as needed for the current behavior.
+- Prefer vertical feature slices: frontend UI, API client, backend route/service, tests — only as needed for the current behavior.
 
-## Before Editing
+Before editing:
+
 1. Inspect the existing project structure.
 2. Identify the intended feature/data flow.
 3. Identify the minimal files that need to change.
 4. Propose a modular implementation plan.
 5. Explicitly state where each responsibility will live:
-   - UI/component
-   - state/hook
-   - API client
-   - validation/schema
-   - backend route/controller
-   - service/business logic
-   - database/repository
-   - tests
+
+   * UI/component
+   * state/hook
+   * API client
+   * validation/schema
+   * backend route/controller
+   * service/business logic
+   * database/repository
+   * tests
 6. Identify any file that risks becoming too large or too coupled.
 7. Wait for approval if the change is large, ambiguous, or crosses multiple layers.
 
-## During Implementation
+During implementation:
+
 - Implement only the approved scope.
 - Do not refactor unrelated code.
 - Do not change unrelated formatting.
@@ -58,7 +134,8 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 - Keep error handling explicit and meaningful.
 - Prefer readable, boring code over clever code.
 
-## Frontend-Specific Rules
+Frontend-specific rules:
+
 - Components should not directly contain complex API orchestration.
 - Extract reusable API calls into API/client modules.
 - Extract non-trivial stateful behavior into hooks.
@@ -66,7 +143,8 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 - Keep presentational components separate from data-fetching/container logic when the component becomes large.
 - Do not create one giant page component that handles layout, fetching, validation, mutation, error handling, and rendering all at once.
 
-## Backend-Specific Rules
+Backend-specific rules:
+
 - Routes/controllers should be thin.
 - Business logic should live in service-layer functions/classes.
 - Database access should be isolated in repositories/helpers when the project pattern supports it.
@@ -76,7 +154,8 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 - Validate request bodies and external inputs at the boundary.
 - Return correct HTTP semantics: 400/401/403/404/409/422/500 as appropriate.
 
-## Testing Requirements
+Testing requirements:
+
 - Add or update tests that prove the behavior.
 - Include permission, invalid input, and regression tests where relevant.
 - Do not add superficial tests that only check implementation details.
@@ -84,7 +163,8 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 - Then run broader tests if practical.
 - Report exact commands and results.
 
-## Self-Review Before Finishing
+Self-review before finishing:
+
 - Did I create or expand any file too much?
 - Did I mix unrelated responsibilities?
 - Did I add unnecessary abstraction?
@@ -95,7 +175,8 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 - Are tests meaningful evidence?
 - Would this code still be readable six months later?
 
-## Final Response Format
+Final response format:
+
 1. Behavior implemented
 2. Files changed and why each file was necessary
 3. Responsibility split: where UI/state/API/business/db/test logic lives
@@ -104,35 +185,5 @@ Do not generate large, tightly coupled, hard-to-review files. Prioritize modular
 6. Manual verification steps
 7. Anything intentionally not changed
 
-## Additional Operating Constraints
-
-### gstack / browsing
-
-When web browsing is needed in this project scope, prefer the `gstack` `/browse` workflow.
-Do not use `mcp__claude-in-chrome__*` tools.
-
-### Codex best-practice lookup
-
-When the request is about Codex best-practice guidance, search `~/.Codex/` first in this order:
-`best-practice/`, `reports/`, `tips/`, `implementation/`.
-Do not rely on training knowledge before checking these local references.
-
-### Workflow best practices
-
-- Keep `AGENTS.md` under 200 lines.
-- Prefer commands over standalone agents.
-- Create feature-specific subagents through dedicated tools, not broad general-purpose agents.
-- Run manual compaction around half-context usage.
-- Start with plan mode for complex tasks.
-- Use human-gated task lists for multi-step work.
-- Break subtasks into pieces that can complete under 50% of context.
-
-### Subagent orchestration
-
-Subagents cannot execute other subagents through shell calls. Use the project toolchain’s
-`Agent(subagent_type="agent-name", ...)` mechanism for escalation.
-
-### Debugging workflow
-
-- Use `/doctor` for diagnostics when behavior is unclear.
-- Run long-running terminal commands as background sessions to keep visibility while working.
+## User-Provided Codex Governance Baseline
+- Added from user instructions on 2026-06-29: treat gstack `/browse` as required web browsing path, keep AGENTS under 200 lines, prefer command-based workflow execution, avoid broad subagent chaining via shell, and re-check `~/.Codex` for Codex best-practice questions before external sources.
