@@ -37,6 +37,14 @@ class EvaluationRunNotArchivedError(ValueError):
     pass
 
 
+LOWER_IS_BETTER_METRICS = {
+    "average_latency_ms",
+    "average_prompt_tokens",
+    "estimated_cost_per_run",
+}
+METRIC_DELTA_TOLERANCE = 0.000001
+
+
 class EvaluationRunner:
     def __init__(self, db: Session):
         self.db = db
@@ -206,6 +214,45 @@ class EvaluationRunner:
             key=lambda metric: (str(metric.mode), str(metric.language), metric.metric_name)
         )
         return run
+
+    def compare_runs(
+        self, *, workspace_id: UUID, current_run_id: UUID, baseline_run_id: UUID
+    ) -> tuple[EvaluationRun, EvaluationRun, list[dict[str, object]]]:
+        current_run = self.get_run_detail(workspace_id=workspace_id, run_id=current_run_id)
+        baseline_run = self.get_run_detail(workspace_id=workspace_id, run_id=baseline_run_id)
+        current_metrics = {
+            (str(metric.mode), str(metric.language), metric.metric_name): metric.metric_value
+            for metric in current_run.metrics
+        }
+        baseline_metrics = {
+            (str(metric.mode), str(metric.language), metric.metric_name): metric.metric_value
+            for metric in baseline_run.metrics
+        }
+        keys = sorted(
+            set(current_metrics) | set(baseline_metrics),
+            key=lambda item: (item[0], item[1], _metric_sort_key(item[2])),
+        )
+        deltas: list[dict[str, object]] = []
+        for mode, language, metric_name in keys:
+            current_value = current_metrics.get((mode, language, metric_name))
+            baseline_value = baseline_metrics.get((mode, language, metric_name))
+            delta = (
+                current_value - baseline_value
+                if current_value is not None and baseline_value is not None
+                else None
+            )
+            deltas.append(
+                {
+                    "mode": mode,
+                    "language": language,
+                    "metric_name": metric_name,
+                    "current_value": current_value,
+                    "baseline_value": baseline_value,
+                    "delta": delta,
+                    "direction": _metric_direction(metric_name, current_value, baseline_value),
+                }
+            )
+        return current_run, baseline_run, deltas
 
     def delete_archived_run(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
         run = self.db.scalar(
@@ -486,3 +533,37 @@ def _rag_answer(language) -> str:
     if str(language) == "zh":
         return "根据相关资料，退款可以在30天内申请。"
     return "According to the retrieved policy, refunds can be requested within 30 days."
+
+
+def _metric_sort_key(metric_name: str) -> tuple[int, str]:
+    order = [
+        "case_pass_rate",
+        "human_review_routing_accuracy",
+        "tool_call_correctness",
+        "guardrail_failure_detection_rate",
+        "groundedness_pass_rate",
+        "citation_accuracy",
+        "language_preservation_pass_rate",
+        "average_prompt_tokens",
+        "estimated_cost_per_run",
+        "average_latency_ms",
+    ]
+    try:
+        return order.index(metric_name), metric_name
+    except ValueError:
+        return len(order), metric_name
+
+
+def _metric_direction(
+    metric_name: str, current_value: float | None, baseline_value: float | None
+) -> str:
+    if current_value is None:
+        return "missing"
+    if baseline_value is None:
+        return "new"
+    delta = current_value - baseline_value
+    if abs(delta) <= METRIC_DELTA_TOLERANCE:
+        return "unchanged"
+    if metric_name in LOWER_IS_BETTER_METRICS:
+        return "improved" if delta < 0 else "regressed"
+    return "improved" if delta > 0 else "regressed"

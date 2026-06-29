@@ -1,6 +1,7 @@
 import json
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -662,3 +663,75 @@ def test_evaluation_folders_reject_wrong_type_and_foreign_workspace(client: Test
     assert foreign_folder_create.json()["detail"]["code"] == "resource_folder_not_found"
     assert foreign_folder_list.status_code == 404
     assert foreign_folder_list.json()["detail"]["code"] == "resource_folder_not_found"
+
+
+def test_evaluation_compare_reports_metric_deltas_and_workspace_scope(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "eval-compare-owner@example.com")
+    token = login(client, "eval-compare-owner@example.com")
+    workspace = create_workspace(client, token)
+    baseline_run = run_simple_evaluation(client, token, workspace["id"], "Baseline Quality")
+    current_run = run_simple_evaluation(client, token, workspace["id"], "Candidate Quality")
+
+    for run_id in [baseline_run["id"], current_run["id"]]:
+        for metric in db_session.scalars(
+            select(EvaluationMetric).where(EvaluationMetric.evaluation_run_id == UUID(run_id))
+        ).all():
+            db_session.delete(metric)
+    db_session.flush()
+
+    metric_rows = [
+        (baseline_run["id"], "case_pass_rate", 0.7),
+        (current_run["id"], "case_pass_rate", 0.9),
+        (baseline_run["id"], "average_latency_ms", 200.0),
+        (current_run["id"], "average_latency_ms", 250.0),
+        (baseline_run["id"], "estimated_cost_per_run", 0.02),
+        (current_run["id"], "estimated_cost_per_run", 0.01),
+        (current_run["id"], "tool_call_correctness", 1.0),
+        (baseline_run["id"], "guardrail_failure_detection_rate", 1.0),
+    ]
+    for run_id, metric_name, value in metric_rows:
+        db_session.add(
+            EvaluationMetric(
+                workspace_id=UUID(workspace["id"]),
+                evaluation_run_id=UUID(run_id),
+                mode="direct_llm",
+                language="en",
+                metric_name=metric_name,
+                metric_value=value,
+            )
+        )
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/evaluations/{current_run['id']}/compare/{baseline_run['id']}",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["current_run"]["id"] == current_run["id"]
+    assert body["baseline_run"]["id"] == baseline_run["id"]
+    assert body["improvement_count"] == 2
+    assert body["regression_count"] == 1
+    assert body["new_metric_count"] == 1
+    assert body["missing_metric_count"] == 1
+    deltas = {item["metric_name"]: item for item in body["deltas"]}
+    assert deltas["case_pass_rate"]["direction"] == "improved"
+    assert deltas["case_pass_rate"]["delta"] == pytest.approx(0.2)
+    assert deltas["average_latency_ms"]["direction"] == "regressed"
+    assert deltas["estimated_cost_per_run"]["direction"] == "improved"
+    assert deltas["tool_call_correctness"]["direction"] == "new"
+    assert deltas["guardrail_failure_detection_rate"]["direction"] == "missing"
+
+    register(client, "eval-compare-other@example.com")
+    other_token = login(client, "eval-compare-other@example.com")
+    other_workspace = create_workspace(client, other_token, "Other Compare Workspace")
+    cross_workspace = client.get(
+        f"/api/v1/workspaces/{other_workspace['id']}/evaluations/{current_run['id']}/compare/{baseline_run['id']}",
+        headers=auth_headers(other_token),
+    )
+
+    assert cross_workspace.status_code == 404
+    assert cross_workspace.json()["detail"]["code"] == "evaluation_not_found"

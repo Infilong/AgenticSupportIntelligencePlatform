@@ -26,6 +26,7 @@ const MAX_VISIBLE_TRACE_RUNS = 20;
 const MAX_VISIBLE_REVIEWS = 30;
 const MAX_VISIBLE_MODEL_ROUTE_OPTIONS = 12;
 const MAX_VISIBLE_AGENT_PICKER_OPTIONS = 12;
+const MAX_VISIBLE_BASELINE_OPTIONS = 8;
 
 type CurrentUser = {
   id: string;
@@ -590,6 +591,26 @@ type EvaluationDetail = {
   run: EvaluationRun;
   results: EvaluationResult[];
   metrics: EvaluationMetric[];
+};
+
+type EvaluationMetricDelta = {
+  mode: Mode;
+  language: Language;
+  metric_name: string;
+  current_value: number | null;
+  baseline_value: number | null;
+  delta: number | null;
+  direction: "improved" | "regressed" | "unchanged" | "new" | "missing" | string;
+};
+
+type EvaluationComparison = {
+  current_run: EvaluationRun;
+  baseline_run: EvaluationRun;
+  deltas: EvaluationMetricDelta[];
+  improvement_count: number;
+  regression_count: number;
+  new_metric_count: number;
+  missing_metric_count: number;
 };
 
 type AttentionItem = {
@@ -1237,6 +1258,9 @@ export function App() {
 
   const [evaluationRuns, setEvaluationRuns] = useState<EvaluationRun[]>([]);
   const [evaluationDetail, setEvaluationDetail] = useState<EvaluationDetail | null>(null);
+  const [evaluationComparison, setEvaluationComparison] = useState<EvaluationComparison | null>(null);
+  const [evaluationBaselineId, setEvaluationBaselineId] = useState("");
+  const [evaluationBaselineSearch, setEvaluationBaselineSearch] = useState("");
   const [evaluationName, setEvaluationName] = useState("Smoke Evaluation");
   const [evaluationAgentId, setEvaluationAgentId] = useState("");
   const [evaluationAgentOptions, setEvaluationAgentOptions] = useState<Agent[]>([]);
@@ -2988,6 +3012,9 @@ export function App() {
       setEvaluationPage(0);
       setEvaluationSearch("");
       setEvaluationDetail(detail);
+      setEvaluationComparison(null);
+      setEvaluationBaselineId("");
+      setEvaluationBaselineSearch("");
       await loadEvaluations(showArchivedEvaluations, 0, targetFolderId, "");
       await loadResourceFolders();
       await loadCosts();
@@ -2997,6 +3024,18 @@ export function App() {
   async function loadEvaluationDetail(runId: string) {
     const detail = await apiRequest<EvaluationDetail>(workspacePath(`/evaluations/${runId}`), { token });
     setEvaluationDetail(detail);
+    setEvaluationComparison(null);
+    setEvaluationBaselineId("");
+    setEvaluationBaselineSearch("");
+  }
+
+  async function loadEvaluationComparison() {
+    if (!evaluationDetail || !evaluationBaselineId) return;
+    const comparison = await apiRequest<EvaluationComparison>(
+      workspacePath(`/evaluations/${evaluationDetail.run.id}/compare/${evaluationBaselineId}`),
+      { token },
+    );
+    setEvaluationComparison(comparison);
   }
 
   async function loadEvaluationAgentOptions(search = evaluationAgentSearch) {
@@ -5974,6 +6013,12 @@ export function App() {
     const selectedLanguages = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.language))] : [];
     const selectedResultModes = evaluationDetail ? [...new Set(evaluationDetail.results.map((result) => result.mode))] : [];
     const selectedEvaluationAgentName = evaluationDetail ? evaluationAgentLabel(evaluationDetail.run.agent_config_id) : "No run selected";
+    const baselineRunOptions = evaluationDetail
+      ? evaluationRuns.filter((run) => run.id !== evaluationDetail.run.id && run.status === "completed")
+      : [];
+    const displayedBaselineRunOptions = baselineRunOptions
+      .filter((run) => matchesSearch(evaluationBaselineSearch, run.name, run.id, run.modes_json))
+      .slice(0, MAX_VISIBLE_BASELINE_OPTIONS);
     const selectedEvaluationAgentOption = effectiveEvaluationAgentId
       ? evaluationAgentOptions.find((agent) => agent.id === effectiveEvaluationAgentId)
         ?? agents.find((agent) => agent.id === effectiveEvaluationAgentId)
@@ -6210,7 +6255,49 @@ export function App() {
             </div>
             {evaluationDetail && <Badge tone={toneForStatus(evaluationDetail.run.status)}>{evaluationDetail.run.status}</Badge>}
           </div>
-          {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} agents={agents} /> : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
+          {evaluationDetail && (
+            <section className="model-route-picker evaluation-baseline-picker">
+              <div className="row-head">
+                <div>
+                  <strong>Regression baseline</strong>
+                  <p className="muted">Compare this run against another completed run in the current folder/search scope. Search keeps long experiment histories bounded.</p>
+                </div>
+                {evaluationComparison && <Badge tone={evaluationComparison.regression_count ? "warn" : "good"}>{evaluationComparison.regression_count} regressions</Badge>}
+              </div>
+              <label>
+                Search baseline runs
+                <input
+                  value={evaluationBaselineSearch}
+                  onChange={(event) => setEvaluationBaselineSearch(event.target.value)}
+                  placeholder="Run name, mode, or id"
+                />
+              </label>
+              <div className="model-route-options" role="listbox" aria-label="Regression baseline run">
+                {displayedBaselineRunOptions.map((run) => (
+                  <button
+                    type="button"
+                    className={evaluationBaselineId === run.id ? "model-route-option selected-list-item" : "model-route-option"}
+                    key={run.id}
+                    onClick={() => { setEvaluationBaselineId(run.id); setEvaluationComparison(null); }}
+                    disabled={loading}
+                  >
+                    <span>
+                      <strong>{run.name}</strong>
+                      <small>{run.total_cases} cases · {parseEvaluationModes(run.modes_json).map(friendlyModeName).join(" · ") || "No modes"} · {shortId(run.id)}</small>
+                    </span>
+                    <Badge tone={toneForStatus(run.status)}>{run.status}</Badge>
+                  </button>
+                ))}
+                {baselineRunOptions.length === 0 && <EmptyState title="No baseline run in this view" detail="Load a folder or page that contains another completed evaluation run to compare." />}
+                {baselineRunOptions.length > 0 && displayedBaselineRunOptions.length === 0 && <EmptyState title="No baseline matches search" detail="Clear the baseline search or load another evaluation folder." />}
+              </div>
+              <div className="run-action-bar">
+                <button type="button" onClick={() => void loadEvaluationComparison()} disabled={!evaluationBaselineId || loading}>Compare selected baseline</button>
+                <small>{baselineRunOptions.length} candidate baselines loaded from the current bounded run list.</small>
+              </div>
+            </section>
+          )}
+          {evaluationDetail ? <EvaluationDashboard detail={evaluationDetail} agents={agents} comparison={evaluationComparison} /> : <EmptyState title="No evaluation selected" detail="Run or select an evaluation to inspect language-specific quality and cost signals." />}
         </section>
       </div>
     );
@@ -8676,6 +8763,24 @@ function evaluationMetricPriority(metricName: string): number {
   return index === -1 ? order.length : index;
 }
 
+function evaluationDeltaTone(direction: string): "neutral" | "good" | "warn" | "bad" {
+  if (direction === "improved" || direction === "new") return "good";
+  if (direction === "regressed") return "bad";
+  if (direction === "missing") return "warn";
+  return "neutral";
+}
+
+function formatMetricValue(value: number | null): string {
+  if (value === null) return "-";
+  return Number.isInteger(value) ? String(value) : value.toFixed(3);
+}
+
+function formatMetricDelta(value: number | null): string {
+  if (value === null) return "-";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatMetricValue(value)}`;
+}
+
 function modeDescription(mode: Mode): string {
   if (mode === "direct_llm") return "No retrieval baseline for cost and hallucination comparison.";
   if (mode === "vector_rag") return "Retrieval baseline without the full guardrail workflow.";
@@ -8688,7 +8793,15 @@ function parseEvaluationModes(value: string): Mode[] {
   return parsed.filter((mode): mode is Mode => mode === "direct_llm" || mode === "vector_rag" || mode === "system_v1");
 }
 
-function EvaluationDashboard({ detail, agents }: { detail: EvaluationDetail; agents: Agent[] }) {
+function EvaluationDashboard({
+  detail,
+  agents,
+  comparison,
+}: {
+  detail: EvaluationDetail;
+  agents: Agent[];
+  comparison: EvaluationComparison | null;
+}) {
   const passCount = detail.results.filter((result) => result.passed).length;
   const failCount = detail.results.length - passCount;
   const averageLatency = detail.results.length
@@ -8718,6 +8831,40 @@ function EvaluationDashboard({ detail, agents }: { detail: EvaluationDetail; age
         <Metric label="Prompt tokens" value={formatNumber(totalPromptTokens)} />
         <Metric label="Estimated cost" value={formatCost(totalCost)} />
       </div>
+
+      {comparison && (
+        <section className="evaluation-matrix">
+          <article className="evaluation-mode-card">
+            <div className="row-head">
+              <div>
+                <strong>Regression comparison</strong>
+                <p className="muted">Current run compared with {comparison.baseline_run.name}. Lower is better for prompt tokens, latency, and estimated cost.</p>
+              </div>
+              <div className="model-route-badges">
+                <Badge tone="good">{comparison.improvement_count} improved</Badge>
+                <Badge tone={comparison.regression_count ? "warn" : "neutral"}>{comparison.regression_count} regressed</Badge>
+                <Badge>{comparison.new_metric_count} new</Badge>
+                <Badge>{comparison.missing_metric_count} missing</Badge>
+              </div>
+            </div>
+            <div className="language-metric-grid">
+              {comparison.deltas.slice(0, 12).map((delta) => (
+                <div className="language-metric-card" key={`${delta.mode}:${delta.language}:${delta.metric_name}`}>
+                  <div className="row-head">
+                    <strong>{friendlyEvaluationMetricName(delta.metric_name)}</strong>
+                    <Badge tone={evaluationDeltaTone(delta.direction)}>{delta.direction}</Badge>
+                  </div>
+                  <div className="metric-line"><span>Mode/language</span><strong>{friendlyModeName(delta.mode)} · {delta.language.toUpperCase()}</strong></div>
+                  <div className="metric-line"><span>Current</span><strong>{formatMetricValue(delta.current_value)}</strong></div>
+                  <div className="metric-line"><span>Baseline</span><strong>{formatMetricValue(delta.baseline_value)}</strong></div>
+                  <div className="metric-line"><span>Delta</span><strong>{formatMetricDelta(delta.delta)}</strong></div>
+                </div>
+              ))}
+            </div>
+            {comparison.deltas.length > 12 && <p className="permission-note">Showing first 12 of {comparison.deltas.length} metric deltas. Narrow the run modes or inspect the API response for the full comparison.</p>}
+          </article>
+        </section>
+      )}
 
       <section className="evaluation-matrix">
         {modes.map((mode) => (

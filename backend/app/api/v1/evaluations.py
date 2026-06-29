@@ -11,6 +11,7 @@ from app.models.evaluation import EvaluationRunStatus
 from app.models.user import User
 from app.models.workspace import Workspace
 from app.schemas.evaluation import (
+    EvaluationComparisonResponse,
     EvaluationDetailResponse,
     EvaluationMetricResponse,
     EvaluationResultResponse,
@@ -121,6 +122,35 @@ def list_evaluations(
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
     return [EvaluationRunResponse.model_validate(run) for run in runs]
+
+
+@router.get("/{evaluation_id}/compare/{baseline_id}", response_model=EvaluationComparisonResponse)
+def compare_evaluations(
+    evaluation_id: EvaluationId,
+    baseline_id: UUID,
+    workspace: EvaluationReadAccess,
+    db: DbSession,
+) -> EvaluationComparisonResponse:
+    try:
+        current_run, baseline_run, deltas = EvaluationRunner(db).compare_runs(
+            workspace_id=workspace.id,
+            current_run_id=evaluation_id,
+            baseline_run_id=baseline_id,
+        )
+    except EvaluationRunNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "evaluation_not_found", "message": "Evaluation was not found."},
+        ) from exc
+    return EvaluationComparisonResponse(
+        current_run=EvaluationRunResponse.model_validate(current_run),
+        baseline_run=EvaluationRunResponse.model_validate(baseline_run),
+        deltas=deltas,
+        improvement_count=sum(1 for delta in deltas if delta["direction"] == "improved"),
+        regression_count=sum(1 for delta in deltas if delta["direction"] == "regressed"),
+        new_metric_count=sum(1 for delta in deltas if delta["direction"] == "new"),
+        missing_metric_count=sum(1 for delta in deltas if delta["direction"] == "missing"),
+    )
 
 
 @router.get("/{evaluation_id}", response_model=EvaluationDetailResponse)

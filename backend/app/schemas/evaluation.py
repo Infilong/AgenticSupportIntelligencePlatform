@@ -99,3 +99,23 @@ class EvaluationDetailResponse(BaseModel):
     run: EvaluationRunResponse
     results: list[EvaluationResultResponse]
     metrics: list[EvaluationMetricResponse]
+
+
+class EvaluationMetricDeltaResponse(BaseModel):
+    mode: str
+    language: str
+    metric_name: str
+    current_value: float | None
+    baseline_value: float | None
+    delta: float | None
+    direction: str
+
+
+class EvaluationComparisonResponse(BaseModel):
+    current_run: EvaluationRunResponse
+    baseline_run: EvaluationRunResponse
+    deltas: list[EvaluationMetricDeltaResponse]
+    improvement_count: int
+    regression_count: int
+    new_metric_count: int
+    missing_metric_count: int
