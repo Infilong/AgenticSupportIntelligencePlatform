@@ -3191,6 +3191,38 @@ th {
   color: var(--text-subtle);
 }
 
+.prompt-diff-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 10px;
+}
+
+.prompt-diff-lines {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.prompt-diff-line {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.prompt-diff-line span {
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.prompt-diff-line code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .compact-toggle {
   margin: 0;
   min-width: max-content;

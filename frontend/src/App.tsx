@@ -798,6 +798,21 @@ type PromptTemplate = {
   created_at: string;
 };
 
+type PromptDiffLine = {
+  lineNumber: number;
+  status: "added" | "removed" | "changed";
+  activeLine: string;
+  candidateLine: string;
+};
+
+type PromptDiffSummary = {
+  addedLines: number;
+  removedLines: number;
+  changedLines: number;
+  unchangedLines: number;
+  previewLines: PromptDiffLine[];
+};
+
 type PromptTemplateListResponse = {
   items: PromptTemplate[];
   total: number;
@@ -6621,6 +6636,9 @@ export function App() {
     const classifierActive = activeTemplates.find((template) => template.name === "support_intent_classifier");
     const drafterActive = activeTemplates.find((template) => template.name === "support_response_drafter");
     const activeLanguages = [...new Set(activeTemplates.map((template) => template.language))];
+    const activeTemplateByFamily = new Map(
+      activeTemplates.map((template) => [promptTemplateFamilyKey(template), template]),
+    );
     const promptGroups = ["support_intent_classifier", "support_response_drafter"].map((name) => {
       const versions = promptTemplates.filter((template) => template.name === name && !template.archived_at);
       const active = versions.find((template) => template.active);
@@ -6751,26 +6769,53 @@ export function App() {
             <p className="permission-note">Prompt history is loaded from the backend by status, archived visibility, search, offset, and limit. Source stays collapsed so long version history remains scannable.</p>
           </div>
           <div className="prompt-template-list settings-card-grid">
-            {displayedPromptTemplates.map((template) => (
-              <article className={template.active ? "prompt-card active-prompt" : template.archived_at ? "prompt-card archived-card" : "prompt-card"} key={template.id}>
-                <div className="row-head">
-                  <div>
-                    <strong>{template.name}</strong>
-                    <p className="muted">{template.language.toUpperCase()} · version {template.version} · {formatDate(template.created_at)}</p>
+            {displayedPromptTemplates.map((template) => {
+              const activeTemplate = activeTemplateByFamily.get(promptTemplateFamilyKey(template));
+              const promptDiff = activeTemplate && activeTemplate.id !== template.id
+                ? comparePromptTemplates(template.template_text, activeTemplate.template_text)
+                : null;
+              return (
+                <article className={template.active ? "prompt-card active-prompt" : template.archived_at ? "prompt-card archived-card" : "prompt-card"} key={template.id}>
+                  <div className="row-head">
+                    <div>
+                      <strong>{template.name}</strong>
+                      <p className="muted">{template.language.toUpperCase()} · version {template.version} · {formatDate(template.created_at)}</p>
+                    </div>
+                    <div className="review-actions">
+                      {template.active && <Badge tone="good">active</Badge>}
+                      {template.archived_at && <Badge>archived</Badge>}
+                      <button type="button" disabled={template.active || Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void activatePromptTemplate(template.id)}>Activate</button>
+                      <button type="button" className="danger-button" disabled={Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void archivePromptTemplate(template)}>Archive</button>
+                    </div>
                   </div>
-                  <div className="review-actions">
-                    {template.active && <Badge tone="good">active</Badge>}
-                    {template.archived_at && <Badge>archived</Badge>}
-                    <button type="button" disabled={template.active || Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void activatePromptTemplate(template.id)}>Activate</button>
-                    <button type="button" className="danger-button" disabled={Boolean(template.archived_at) || !canManagePrompts || loading} onClick={() => void archivePromptTemplate(template)}>Archive</button>
-                  </div>
-                </div>
-                <details>
-                  <summary>Prompt source</summary>
-                  <JsonBlock value={template.template_text} />
-                </details>
-              </article>
-            ))}
+                  {promptDiff && activeTemplate && (
+                    <details className="prompt-diff-panel">
+                      <summary>Compare with active v{activeTemplate.version}</summary>
+                      <div className="metric-grid compact">
+                        <Metric label="Added lines" value={promptDiff.addedLines} />
+                        <Metric label="Removed lines" value={promptDiff.removedLines} />
+                        <Metric label="Changed lines" value={promptDiff.changedLines} />
+                        <Metric label="Unchanged" value={promptDiff.unchangedLines} />
+                      </div>
+                      <div className="prompt-diff-lines">
+                        {promptDiff.previewLines.map((line) => (
+                          <div className="prompt-diff-line" key={line.lineNumber}>
+                            <span>Line {line.lineNumber} · {line.status}</span>
+                            <code>Active: {compactPromptLine(line.activeLine)}</code>
+                            <code>This version: {compactPromptLine(line.candidateLine)}</code>
+                          </div>
+                        ))}
+                        {promptDiff.previewLines.length === 0 && <p className="muted">No source changes against the active version.</p>}
+                      </div>
+                    </details>
+                  )}
+                  <details>
+                    <summary>Prompt source</summary>
+                    <JsonBlock value={template.template_text} />
+                  </details>
+                </article>
+              );
+            })}
           </div>
           {displayedPromptTemplates.length === 0 && (
             <EmptyState
@@ -8742,6 +8787,48 @@ function AIRunPanel({ aiRun }: { aiRun: AIRunTrace }) {
       {aiRun.error_message && <div className="status error">{aiRun.error_message}</div>}
     </section>
   );
+}
+
+function promptTemplateFamilyKey(template: Pick<PromptTemplate, "name" | "language">): string {
+  return `${template.name}:${template.language}`;
+}
+
+function comparePromptTemplates(candidateText: string, activeText: string): PromptDiffSummary {
+  const candidateLines = candidateText.split("\n");
+  const activeLines = activeText.split("\n");
+  const maxLines = Math.max(candidateLines.length, activeLines.length);
+  const previewLines: PromptDiffLine[] = [];
+  let addedLines = 0;
+  let removedLines = 0;
+  let changedLines = 0;
+  let unchangedLines = 0;
+
+  for (let index = 0; index < maxLines; index += 1) {
+    const candidateLine = candidateLines[index] ?? "";
+    const activeLine = activeLines[index] ?? "";
+    if (candidateLine === activeLine) {
+      unchangedLines += 1;
+      continue;
+    }
+    const status = !activeLine && candidateLine
+      ? "added"
+      : activeLine && !candidateLine
+        ? "removed"
+        : "changed";
+    if (status === "added") addedLines += 1;
+    if (status === "removed") removedLines += 1;
+    if (status === "changed") changedLines += 1;
+    if (previewLines.length < 6) {
+      previewLines.push({ lineNumber: index + 1, status, activeLine, candidateLine });
+    }
+  }
+
+  return { addedLines, removedLines, changedLines, unchangedLines, previewLines };
+}
+
+function compactPromptLine(value: string): string {
+  const normalized = value.trim() || "empty line";
+  return normalized.length > 140 ? `${normalized.slice(0, 140)}...` : normalized;
 }
 
 function friendlyModeName(mode: Mode): string {
