@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -14,6 +15,7 @@ from app.models.agent import (
     ToolCall,
 )
 from app.models.ai import AIRun, AIRunStatus
+from app.models.evaluation import EvaluationMetric, EvaluationRun, EvaluationRunStatus
 from app.models.review import GuardrailResult
 from app.models.user import User
 
@@ -117,7 +119,7 @@ def test_attention_summary_counts_assigned_reviews(client: TestClient) -> None:
     reviews = client.get(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews",
         headers=auth_headers(token),
-    ).json()
+    ).json()["items"]
     claim = client.post(
         f"/api/v1/workspaces/{workspace['id']}/human-reviews/{reviews[0]['id']}/claim",
         headers=auth_headers(token),
@@ -251,3 +253,72 @@ def test_attention_summary_is_workspace_scoped(client: TestClient) -> None:
 
     assert forbidden.status_code == 404
     assert forbidden.json()["detail"]["code"] == "workspace_not_found"
+
+
+def test_attention_summary_reports_latest_evaluation_regressions(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "attention-eval-regression@example.com")
+    token = login(client, "attention-eval-regression@example.com")
+    workspace = create_workspace(client, token)
+    user = db_session.scalar(
+        select(User).where(User.email == "attention-eval-regression@example.com")
+    )
+    assert user is not None
+    baseline_completed_at = datetime.now(UTC) - timedelta(hours=2)
+    current_completed_at = datetime.now(UTC) - timedelta(hours=1)
+    baseline_run = EvaluationRun(
+        workspace_id=UUID(workspace["id"]),
+        name="Baseline release check",
+        modes_json='["system_v1"]',
+        status=EvaluationRunStatus.completed,
+        total_cases=2,
+        created_by_user_id=user.id,
+        completed_at=baseline_completed_at,
+    )
+    current_run = EvaluationRun(
+        workspace_id=UUID(workspace["id"]),
+        name="Candidate release check",
+        modes_json='["system_v1"]',
+        status=EvaluationRunStatus.completed,
+        total_cases=2,
+        created_by_user_id=user.id,
+        completed_at=current_completed_at,
+    )
+    db_session.add_all([baseline_run, current_run])
+    db_session.flush()
+    metric_rows = [
+        (baseline_run.id, "case_pass_rate", 0.9),
+        (current_run.id, "case_pass_rate", 0.7),
+        (baseline_run.id, "estimated_cost_per_run", 0.01),
+        (current_run.id, "estimated_cost_per_run", 0.02),
+        (baseline_run.id, "average_latency_ms", 250.0),
+        (current_run.id, "average_latency_ms", 200.0),
+    ]
+    for run_id, metric_name, metric_value in metric_rows:
+        db_session.add(
+            EvaluationMetric(
+                workspace_id=UUID(workspace["id"]),
+                evaluation_run_id=run_id,
+                mode="system_v1",
+                language="en",
+                metric_name=metric_name,
+                metric_value=metric_value,
+            )
+        )
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/attention",
+        headers=auth_headers(token),
+    )
+
+    assert response.status_code == 200
+    items = {item["id"]: item for item in response.json()["items"]}
+    assert "evaluation_regressions" in items
+    item = items["evaluation_regressions"]
+    assert item["count"] == 2
+    assert item["target_tab"] == "evaluations"
+    assert item["target_id"] == str(current_run.id)
+    assert item["action_label"] == "Compare evaluation"
+    assert "Baseline release check" in item["detail"]

@@ -9,9 +9,21 @@ from sqlalchemy.orm import Session
 
 from app.models.agent import GraphRun, GraphRunStatus, GraphStepStatus, ToolCall
 from app.models.ai import AIRun, AIRunStatus
-from app.models.evaluation import EvaluationResult, EvaluationRun, EvaluationRunStatus
+from app.models.evaluation import (
+    EvaluationMetric,
+    EvaluationResult,
+    EvaluationRun,
+    EvaluationRunStatus,
+)
 from app.models.knowledge import DocumentStatus, KnowledgeDocument
 from app.models.review import GuardrailResult, HumanReview, ReviewDecision
+
+LOWER_IS_BETTER_EVALUATION_METRICS = {
+    "average_latency_ms",
+    "average_prompt_tokens",
+    "estimated_cost_per_run",
+}
+EVALUATION_DELTA_TOLERANCE = 0.000001
 
 
 @dataclass(frozen=True)
@@ -77,6 +89,7 @@ class AttentionService:
                 self._tool_failures(workspace_id=workspace_id),
                 self._guardrail_failures(workspace_id=workspace_id),
                 self._failed_documents(workspace_id=workspace_id),
+                self._evaluation_regressions(workspace_id=workspace_id),
                 self._evaluation_failures(workspace_id=workspace_id),
             ]
             if item is not None
@@ -316,6 +329,54 @@ class AttentionService:
             created_at=latest,
         )
 
+    def _evaluation_regressions(self, *, workspace_id: UUID) -> AttentionItem | None:
+        runs = list(
+            self.db.scalars(
+                select(EvaluationRun)
+                .where(
+                    EvaluationRun.workspace_id == workspace_id,
+                    EvaluationRun.status == EvaluationRunStatus.completed,
+                )
+                .order_by(EvaluationRun.completed_at.desc(), EvaluationRun.created_at.desc())
+                .limit(2)
+            ).all()
+        )
+        if len(runs) < 2:
+            return None
+        current_run, baseline_run = runs[0], runs[1]
+        current_metrics = self._evaluation_metric_map(
+            workspace_id=workspace_id, run_id=current_run.id
+        )
+        baseline_metrics = self._evaluation_metric_map(
+            workspace_id=workspace_id, run_id=baseline_run.id
+        )
+        regression_count = sum(
+            1
+            for key, current_value in current_metrics.items()
+            if _is_evaluation_metric_regression(
+                metric_name=key[2],
+                current_value=current_value,
+                baseline_value=baseline_metrics.get(key),
+            )
+        )
+        if regression_count == 0:
+            return None
+        return AttentionItem(
+            id="evaluation_regressions",
+            category="evaluations",
+            severity="warning",
+            title="Evaluation regressions",
+            detail=(
+                f"Latest evaluation regressed on {regression_count} metric"
+                f"{'s' if regression_count != 1 else ''} versus {baseline_run.name}."
+            ),
+            count=regression_count,
+            action_label="Compare evaluation",
+            target_tab="evaluations",
+            target_id=str(current_run.id),
+            created_at=current_run.completed_at or current_run.created_at,
+        )
+
     def _evaluation_failures(self, *, workspace_id: UUID) -> AttentionItem | None:
         failed_results = self._count(
             select(func.count(EvaluationResult.id)).where(
@@ -332,11 +393,29 @@ class AttentionService:
         count = failed_results + failed_runs
         if count == 0:
             return None
-        latest = self.db.scalar(
-            select(func.max(EvaluationResult.created_at)).where(
+        latest_failed_result = self.db.scalar(
+            select(EvaluationResult)
+            .where(
                 EvaluationResult.workspace_id == workspace_id,
                 EvaluationResult.passed.is_(False),
             )
+            .order_by(EvaluationResult.created_at.desc())
+        )
+        latest_failed_run = self.db.scalar(
+            select(EvaluationRun)
+            .where(
+                EvaluationRun.workspace_id == workspace_id,
+                EvaluationRun.status == EvaluationRunStatus.failed,
+            )
+            .order_by(EvaluationRun.created_at.desc())
+        )
+        target_id = latest_failed_result.evaluation_run_id if latest_failed_result else None
+        if target_id is None and latest_failed_run is not None:
+            target_id = latest_failed_run.id
+        latest = (
+            latest_failed_result.created_at
+            if latest_failed_result is not None
+            else latest_failed_run.created_at if latest_failed_run is not None else None
         )
         return AttentionItem(
             id="evaluation_failures",
@@ -350,8 +429,23 @@ class AttentionService:
             count=count,
             action_label="Open evaluations",
             target_tab="evaluations",
+            target_id=str(target_id) if target_id else None,
             created_at=latest,
         )
+
+    def _evaluation_metric_map(
+        self, *, workspace_id: UUID, run_id: UUID
+    ) -> dict[tuple[str, str, str], float]:
+        metrics = self.db.scalars(
+            select(EvaluationMetric).where(
+                EvaluationMetric.workspace_id == workspace_id,
+                EvaluationMetric.evaluation_run_id == run_id,
+            )
+        ).all()
+        return {
+            (str(metric.mode), str(metric.language), metric.metric_name): metric.metric_value
+            for metric in metrics
+        }
 
     def _count(self, statement) -> int:
         return int(self.db.scalar(statement) or 0)
@@ -359,3 +453,16 @@ class AttentionService:
 
 def _severity_rank(severity: str) -> int:
     return {"critical": 3, "warning": 2, "info": 1}.get(severity, 0)
+
+
+def _is_evaluation_metric_regression(
+    *, metric_name: str, current_value: float, baseline_value: float | None
+) -> bool:
+    if baseline_value is None:
+        return False
+    delta = current_value - baseline_value
+    if abs(delta) <= EVALUATION_DELTA_TOLERANCE:
+        return False
+    if metric_name in LOWER_IS_BETTER_EVALUATION_METRICS:
+        return delta > 0
+    return delta < 0

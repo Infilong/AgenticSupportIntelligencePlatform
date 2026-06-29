@@ -3675,6 +3675,10 @@ export function App() {
       setTraceRunId(item.target_id);
       void loadTrace(item.target_id);
     }
+    if (item.target_tab === "evaluations" && item.target_id) {
+      setEvaluationRunView("selected");
+      void loadEvaluationDetail(item.target_id);
+    }
   }
 
   function attentionTone(severity: AttentionItem["severity"]): "neutral" | "good" | "warn" | "bad" {
