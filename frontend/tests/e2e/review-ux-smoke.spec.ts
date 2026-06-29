@@ -117,6 +117,9 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   });
   expect(evaluation.status()).toBe(201);
 
+  const systemEvaluationName = `E2E System Trace Evaluation ${runId}`;
+  let systemEvaluationTraceRunId = "";
+
   await page.addInitScript((sessionToken) => {
     window.localStorage.setItem("asi_token", sessionToken);
     window.localStorage.setItem("asi_sidebar_collapsed", "false");
@@ -138,6 +141,28 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByText("Regression comparison", { exact: true })).toBeVisible();
   await expect(page.getByText(baselineEvaluationName).first()).toBeVisible();
   await expect(page.getByText(/Case pass rate/i).first()).toBeVisible();
+
+  const systemEvaluation = await api.post(`/api/v1/workspaces/${workspaceBody.id}/evaluations`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      name: systemEvaluationName,
+      modes: ["system_v1"],
+      agent_id: agentBody.id,
+      jsonl_cases: JSON.stringify({
+        id: `system-trace-eval-${runId}`,
+        language: "en",
+        input_message: "Can I get a refund within 30 days?",
+        expected_route: "finalize",
+        must_include: ["30 days"],
+        must_not_include: ["unconditional"],
+      }),
+    },
+  });
+  expect(systemEvaluation.status()).toBe(201);
+  const systemEvaluationBody = await systemEvaluation.json();
+  const systemEvaluationResult = systemEvaluationBody.results.find((result: { mode: string; graph_run_id: string | null }) => result.mode === "system_v1");
+  expect(systemEvaluationResult?.graph_run_id).toBeTruthy();
+  systemEvaluationTraceRunId = systemEvaluationResult?.graph_run_id ?? "";
 
   const appShell = page.locator(".app-shell");
   await expect(page.getByRole("button", { name: "Hide navigation" })).toBeVisible();
@@ -233,6 +258,20 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await page.locator(".evaluation-run-buttons").getByRole("button", { name: new RegExp(evaluationName) }).click();
   await expect(page.getByText("Selected run", { exact: true })).toBeVisible();
   await expect(page.getByText(evaluationName).first()).toBeVisible();
+
+  await page.getByLabel("Evaluation run filter").getByRole("button", { name: "All" }).click();
+  await evaluationSearchInput.fill("");
+  await evaluationSearchInput.type("System Trace");
+  await expect(evaluationSearchInput).toHaveValue("System Trace");
+  await page.locator(".evaluation-run-buttons").getByRole("button", { name: new RegExp(systemEvaluationName) }).click();
+  await expect(page.getByText(systemEvaluationName).first()).toBeVisible();
+  const systemResultCard = page.locator(".evaluation-result-card").filter({ hasText: "System v1" });
+  await expect(systemResultCard.getByRole("button", { name: "Open trace" })).toBeVisible();
+  await systemResultCard.getByRole("button", { name: "Open trace" }).click();
+  await expect(page.getByRole("heading", { name: "Debug LangGraph executions" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Execution navigator" })).toBeVisible();
+  await expect(page.getByLabel("Graph run id")).toHaveValue(systemEvaluationTraceRunId);
+  await expect(page.getByText("Model and prompt decisions", { exact: true })).toBeVisible();
 
   await productNav.getByRole("button", { name: "Guardrails", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Inspect runtime guardrails and review routing" })).toBeVisible();
