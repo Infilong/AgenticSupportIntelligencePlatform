@@ -849,6 +849,9 @@ type ModelConfig = {
   active: boolean;
   archived_at: string | null;
   created_at: string;
+  runtime_kind: string;
+  credential_status: string;
+  readiness_label: string;
 };
 
 type ModelConfigListResponse = {
@@ -1071,6 +1074,30 @@ function formatDate(value: string | null) {
 
 function Badge({ tone = "neutral", children }: { tone?: "neutral" | "good" | "warn" | "bad"; children: ReactNode }) {
   return <span className={`badge badge-${tone}`}>{children}</span>;
+}
+
+function toneForCredentialStatus(status: string): "neutral" | "good" | "warn" | "bad" {
+  if (status === "configured" || status === "not_required") return "good";
+  if (status === "missing" || status === "integration_required") return "warn";
+  if (status === "not_applicable") return "neutral";
+  return "neutral";
+}
+
+function friendlyCredentialStatus(status: string): string {
+  if (status === "not_required") return "no key required";
+  if (status === "configured") return "credentials configured";
+  if (status === "missing") return "missing credentials";
+  if (status === "integration_required") return "integration required";
+  if (status === "not_applicable") return "not applicable";
+  return status.replaceAll("_", " ");
+}
+
+function friendlyRuntimeKind(kind: string): string {
+  if (kind === "mock") return "mock runtime";
+  if (kind === "live") return "live runtime";
+  if (kind === "archived") return "archived";
+  if (kind === "custom") return "custom route";
+  return kind.replaceAll("_", " ");
 }
 
 function FolderPicker({
@@ -7108,7 +7135,9 @@ export function App() {
       return { purpose, active };
     });
     const configuredPurposeCount = purposeSummary.filter(({ active }) => Boolean(active)).length;
-    const liveProviderCount = activeConfigs.filter((config) => config.provider !== "mock").length;
+    const liveProviderCount = activeConfigs.filter((config) => config.runtime_kind === "live").length;
+    const missingCredentialCount = activeConfigs.filter((config) => config.credential_status === "missing" || config.credential_status === "integration_required").length;
+    const readyProviderCount = activeConfigs.filter((config) => config.credential_status === "configured" || config.credential_status === "not_required").length;
     const maxContext = activeConfigs.length ? Math.max(...activeConfigs.map((config) => config.max_context_tokens)) : 0;
     const displayedModelConfigs = modelConfigHistory;
     const modelHistoryPageStart = modelHistoryPage * MAX_VISIBLE_ADMIN_ASSETS + (displayedModelConfigs.length ? 1 : 0);
@@ -7127,7 +7156,7 @@ export function App() {
           <div className="next-action-card">
             <span>Routing readiness</span>
             <strong>{configuredPurposeCount}/{modelPurposes.length} purposes configured</strong>
-            <p>{liveProviderCount ? `${liveProviderCount} live provider routes active.` : "Mock routing is active for deterministic local testing."}</p>
+            <p>{missingCredentialCount ? `${missingCredentialCount} active route(s) need backend credentials.` : liveProviderCount ? `${liveProviderCount} live provider routes active.` : "Mock routing is active for deterministic local testing."}</p>
             <button type="button" onClick={() => void runAction("Model configs refreshed", async () => { await loadModelConfigs(); await loadModelConfigHistory(showArchivedModels, modelHistoryPage); })}>Refresh models</button>
           </div>
         </section>
@@ -7137,6 +7166,8 @@ export function App() {
           <Metric label="Loaded archived" value={loadedArchivedModelCount} />
           <Metric label="Configured purposes" value={`${configuredPurposeCount}/${modelPurposes.length}`} />
           <Metric label="Live providers" value={liveProviderCount} />
+          <Metric label="Ready routes" value={readyProviderCount} />
+          <Metric label="Credential gaps" value={missingCredentialCount} />
           <Metric label="Max context" value={maxContext ? formatNumber(maxContext) : "mock default"} />
         </section>
 
@@ -7202,7 +7233,8 @@ export function App() {
                   {active ? <Badge tone="good">active</Badge> : <Badge tone="warn">default</Badge>}
                 </div>
                 <small>{active ? `${active.provider} / ${active.model}` : "Fallback mock pricing"}</small>
-                <small>{active ? `${formatNumber(active.max_context_tokens)} context tokens` : "No workspace override"}</small>
+                <small>{active ? `${formatNumber(active.max_context_tokens)} context tokens · ${friendlyCredentialStatus(active.credential_status)}` : "No workspace override"}</small>
+                {active && <small>{active.readiness_label}</small>}
               </article>
             ))}
           </aside>
@@ -7257,6 +7289,8 @@ export function App() {
                   <div className="review-actions">
                     {config.active && <Badge tone="good">active</Badge>}
                     {config.archived_at && <Badge>archived</Badge>}
+                    <Badge>{friendlyRuntimeKind(config.runtime_kind)}</Badge>
+                    <Badge tone={toneForCredentialStatus(config.credential_status)}>{friendlyCredentialStatus(config.credential_status)}</Badge>
                     <button type="button" disabled={config.active || Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void activateModelConfig(config.id)}>Activate</button>
                     <button type="button" className="danger-button" disabled={Boolean(config.archived_at) || !canManageModels || loading} onClick={() => void archiveModelConfig(config)}>Archive</button>
                   </div>
@@ -7267,6 +7301,7 @@ export function App() {
                   <Metric label="Context" value={formatNumber(config.max_context_tokens)} />
                   <Metric label="Created" value={formatDate(config.created_at)} />
                 </div>
+                <p className="permission-note">{config.readiness_label}</p>
               </article>
             ))}
           </div>

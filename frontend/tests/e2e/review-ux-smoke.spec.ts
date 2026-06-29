@@ -120,6 +120,20 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   const systemEvaluationName = `E2E System Trace Evaluation ${runId}`;
   let systemEvaluationTraceRunId = "";
 
+  const customModelConfig = await api.post(`/api/v1/workspaces/${workspaceBody.id}/model-configs`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      provider: "custom-gateway",
+      model: "gateway-support-model",
+      purpose: "evaluation",
+      prompt_token_cost_per_1k: 0.001,
+      completion_token_cost_per_1k: 0.002,
+      max_context_tokens: 8192,
+      active: true,
+    },
+  });
+  expect(customModelConfig.status()).toBe(201);
+
   await page.addInitScript((sessionToken) => {
     window.localStorage.setItem("asi_token", sessionToken);
     window.localStorage.setItem("asi_sidebar_collapsed", "false");
@@ -322,6 +336,13 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(costSearch).toHaveValue("E2E Support Agent");
   await expect(costSearch).toBeFocused();
   await expect(page.getByRole("heading", { name: "Recent AI run ledger" })).toBeVisible();
+
+  await productNav.getByRole("button", { name: "Models", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Control provider, model, price, and context by AI purpose" })).toBeVisible();
+  await expect(page.getByText("Credential gaps", { exact: true })).toBeVisible();
+  await expect(page.getByText("custom route").first()).toBeVisible();
+  await expect(page.getByText("integration required").first()).toBeVisible();
+  await expect(page.getByText("Custom provider route falls back to mock execution until integrated.").first()).toBeVisible();
 
   await productNav.getByRole("button", { name: "Audit", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Review accountable workspace operations" })).toBeVisible();

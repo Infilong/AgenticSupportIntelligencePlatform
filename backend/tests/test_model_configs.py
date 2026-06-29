@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.language import SupportedLanguage
 from app.models.agent import AgentConfig
 from app.models.ai import AIRun, ModelConfig
@@ -134,6 +135,59 @@ def test_model_config_admin_can_create_list_and_activate_configs(
     assert active_models == ["mock-admin-classifier"]
     stored = db_session.scalars(select(ModelConfig)).all()
     assert {config.model for config in stored} == {"mock-cheap", "mock-admin-classifier"}
+
+
+def test_model_config_responses_expose_non_secret_provider_readiness(
+    client: TestClient, monkeypatch
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    get_settings.cache_clear()
+    register(client, "model-readiness-owner@example.com")
+    token = login(client, "model-readiness-owner@example.com")
+    workspace = create_workspace(client, token)
+    path = f"/api/v1/workspaces/{workspace['id']}/model-configs"
+
+    mock_config = client.post(
+        path,
+        headers=auth_headers(token),
+        json={
+            "provider": "mock",
+            "model": "mock-cheap",
+            "purpose": "classification",
+            "prompt_token_cost_per_1k": 0.0001,
+            "completion_token_cost_per_1k": 0.0002,
+            "max_context_tokens": 4096,
+            "active": True,
+        },
+    )
+    openai_config = client.post(
+        path,
+        headers=auth_headers(token),
+        json={
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "purpose": "draft_response",
+            "prompt_token_cost_per_1k": 0.00015,
+            "completion_token_cost_per_1k": 0.0006,
+            "max_context_tokens": 128000,
+            "active": True,
+        },
+    )
+    listed = client.get(path, headers=auth_headers(token))
+
+    assert mock_config.status_code == 201
+    assert mock_config.json()["runtime_kind"] == "mock"
+    assert mock_config.json()["credential_status"] == "not_required"
+    assert "API key" in mock_config.json()["readiness_label"]
+    assert openai_config.status_code == 201
+    assert openai_config.json()["runtime_kind"] == "live"
+    assert openai_config.json()["credential_status"] == "missing"
+    assert "OPENAI_API_KEY" in openai_config.json()["readiness_label"]
+    assert listed.status_code == 200
+    readiness_by_provider = {item["provider"]: item for item in listed.json()["items"]}
+    assert readiness_by_provider["mock"]["credential_status"] == "not_required"
+    assert readiness_by_provider["openai"]["credential_status"] == "missing"
+    get_settings.cache_clear()
 
 
 def test_model_config_list_supports_search_status_and_offset(client: TestClient) -> None:

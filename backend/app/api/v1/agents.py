@@ -38,6 +38,7 @@ from app.schemas.agent import (
     WorkflowNodeFailureResponse,
     WorkflowNodeResponse,
 )
+from app.schemas.model_config import model_config_response
 from app.services.agent_service import (
     AgentModelConfigNotFoundError,
     AgentNotFoundError,
@@ -214,7 +215,9 @@ def get_agent_summary(
         ) from exc
     return AgentOperationalSummaryResponse(
         agent=AgentResponse.model_validate(summary["agent"]),
-        assigned_model_config=summary["model_config"],
+        assigned_model_config=(
+            model_config_response(summary["model_config"]) if summary["model_config"] else None
+        ),
         recent_runs=[GraphRunResponse.model_validate(run) for run in summary["recent_runs"]],
         total_runs=summary["total_runs"],
         completed_runs=summary["completed_runs"],

@@ -13,6 +13,7 @@ from app.schemas.model_config import (
     ModelConfigCreateRequest,
     ModelConfigListResponse,
     ModelConfigResponse,
+    model_config_response,
 )
 from app.services.audit_log_service import AuditLogService
 from app.services.model_config_service import ModelConfigNotFoundError, ModelConfigService
@@ -58,7 +59,7 @@ def list_model_configs(
         search=search,
     )
     return ModelConfigListResponse(
-        items=[ModelConfigResponse.model_validate(config) for config in configs],
+        items=[model_config_response(config) for config in configs],
         total=total,
         limit=limit,
         offset=offset,
@@ -96,7 +97,7 @@ def create_model_config(
             "active": config.active,
         },
     )
-    return ModelConfigResponse.model_validate(config)
+    return model_config_response(config)
 
 
 @router.post("/{model_config_id}/activate", response_model=ModelConfigResponse)
@@ -126,7 +127,7 @@ def activate_model_config(
         resource_id=config.id,
         metadata={"provider": config.provider, "model": config.model, "purpose": config.purpose},
     )
-    return ModelConfigResponse.model_validate(config)
+    return model_config_response(config)
 
 
 @router.delete("/{model_config_id}", status_code=status.HTTP_204_NO_CONTENT)
