@@ -1466,6 +1466,63 @@ small {
   gap: 10px;
 }
 
+.active-agent-picker {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.active-agent-picker-head {
+  display: grid;
+  gap: 3px;
+}
+
+.active-agent-picker-head span {
+  color: var(--text-subtle);
+  font-size: 0.84rem;
+  font-weight: 720;
+}
+
+.active-agent-picker-head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.active-agent-picker-head small {
+  color: var(--text-subtle);
+}
+
+.active-agent-options {
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.active-agent-option {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.active-agent-option span,
+.active-agent-option small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.active-agent-option small {
+  color: var(--text-subtle);
+}
+
 .readiness-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

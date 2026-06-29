@@ -4496,6 +4496,12 @@ export function App() {
     const recentRuns = summary?.recent_runs ?? [];
     const agentFolders = foldersFor("agent_config");
     const displayedAgents = agents;
+    const selectedAgentForPicker = selectedAgent && !displayedAgents.some((agent) => agent.id === selectedAgent.id)
+      ? selectedAgent
+      : null;
+    const activeAgentPickerOptions = selectedAgentForPicker ? [selectedAgentForPicker, ...displayedAgents] : displayedAgents;
+    const displayedAgentPickerOptions = activeAgentPickerOptions.slice(0, MAX_VISIBLE_AGENT_PICKER_OPTIONS);
+    const hiddenAgentPickerCount = Math.max(activeAgentPickerOptions.length - displayedAgentPickerOptions.length, 0);
     const selectedAgentFolderLabel = selectedAgentFolderId === "all"
       ? "All agent folders"
       : selectedAgentFolderId === "unfiled"
@@ -4553,17 +4559,37 @@ export function App() {
             <p className="muted">Select an agent, inspect real run history, tune token and routing controls, then run a multilingual support workflow with traceable model calls, tools, citations, and review routing.</p>
           </div>
           <div className="agent-hero-actions">
-            <label>
-              Active agent
-              <select
-                value={selectedAgentId}
-                onChange={(event) => void selectAgent(event.target.value)}
-              >
-                <option value="">Select agent</option>
-                {displayedAgents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · budget {agent.token_budget}</option>)}
-              </select>
-              <small>{agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown in {selectedAgentFolderLabel}</small>
-            </label>
+            <section className="active-agent-picker" aria-label="Active agent picker">
+              <div className="active-agent-picker-head">
+                <span>Active agent</span>
+                <strong>{selectedAgent?.name ?? "No agent selected"}</strong>
+                <small>{agents.length ? `${agentPageStart}-${agentPageEnd}` : "0"} shown in {selectedAgentFolderLabel}</small>
+              </div>
+              <label>
+                Search agents in current folder
+                <input
+                  value={agentSearch}
+                  onChange={(event) => { setAgentPage(0); setAgentSearch(event.target.value); }}
+                  placeholder="Agent name or runtime settings"
+                />
+              </label>
+              <div className="active-agent-options" role="listbox" aria-label="Agents in current folder">
+                {displayedAgentPickerOptions.map((agent) => (
+                  <button
+                    type="button"
+                    key={agent.id}
+                    className={selectedAgentId === agent.id ? "active-agent-option selected-list-item" : "active-agent-option"}
+                    onClick={() => void selectAgent(agent.id)}
+                    aria-selected={selectedAgentId === agent.id}
+                  >
+                    <span>{agent.name}</span>
+                    <small>{folderLabel("agent_config", agent.folder_id)} · budget {agent.token_budget}</small>
+                  </button>
+                ))}
+              </div>
+              {hiddenAgentPickerCount > 0 && <small className="folder-picker-note">Showing first {MAX_VISIBLE_AGENT_PICKER_OPTIONS} of {activeAgentPickerOptions.length}. Search or page the library before selecting.</small>}
+              {activeAgentPickerOptions.length === 0 && <small className="folder-picker-note">No agents in this folder/page. Create one below or switch folders.</small>}
+            </section>
             <form className="inline-form" onSubmit={createAgent}>
               <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} disabled={!canConfigureAgent || loading} />
               <button type="submit" disabled={!canConfigureAgent || loading || !newAgentName.trim()}>Create agent</button>
@@ -4614,7 +4640,7 @@ export function App() {
                 <input
                   value={agentSearch}
                   onChange={(event) => { setAgentPage(0); setAgentSearch(event.target.value); }}
-                  placeholder="Agent name or runtime settings"
+                  placeholder="Agent name, folder, or runtime settings"
                 />
               </label>
             </div>
