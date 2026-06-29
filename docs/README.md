@@ -49,6 +49,7 @@ Read:
 - `docs/observability-design.md`
 - `docs/api-design.md`
 - `docs/product-spec.md` for workflow intent
+- `docs/audits/platform-ux-backend-recovery-audit.md` for the approved UX/backend recovery roadmap when working on recovery tickets
 
 ## Security Review Or Red-Team Work
 Read:
