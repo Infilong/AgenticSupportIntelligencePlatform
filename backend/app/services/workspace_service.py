@@ -55,6 +55,7 @@ MEMBER_PERMISSIONS = [
     *VIEWER_PERMISSIONS,
     "tools:read",
     "guardrails:read",
+    "system:read",
     "data:write",
     "knowledge:write",
     "agents:run",
