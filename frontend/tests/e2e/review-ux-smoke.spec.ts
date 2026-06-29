@@ -81,17 +81,35 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   const runBody = await run.json();
   expect(runBody.route_decision).toBe("human_review");
 
-  const evaluationName = `E2E Evaluation ${runId}`;
+  const baselineEvaluationName = `E2E Baseline Evaluation ${runId}`;
+  const baselineEvaluation = await api.post(`/api/v1/workspaces/${workspaceBody.id}/evaluations`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      name: baselineEvaluationName,
+      modes: ["direct_llm"],
+      jsonl_cases: JSON.stringify({
+        id: `baseline-eval-${runId}`,
+        language: "en",
+        input_message: "Can I get a refund within 30 days?",
+        expected_route: "finalize",
+        must_include: [],
+        must_not_include: ["unconditional"],
+      }),
+    },
+  });
+  expect(baselineEvaluation.status()).toBe(201);
+
+  const evaluationName = `E2E Regressed Evaluation ${runId}`;
   const evaluation = await api.post(`/api/v1/workspaces/${workspaceBody.id}/evaluations`, {
     headers: { Authorization: `Bearer ${token}` },
     data: {
       name: evaluationName,
-      modes: ["direct_llm", "vector_rag"],
+      modes: ["direct_llm"],
       jsonl_cases: JSON.stringify({
-        id: `eval-${runId}`,
+        id: `regressed-eval-${runId}`,
         language: "en",
         input_message: "Can I get a refund within 30 days?",
-        expected_route: "finalize",
+        expected_route: "human_review",
         must_include: [],
         must_not_include: ["unconditional"],
       }),
@@ -110,6 +128,17 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByText(workspaceName).first()).toBeVisible();
 
   const productNav = page.getByRole("navigation", { name: "Product navigation" });
+  await productNav.getByRole("button", { name: "My Tasks", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Operate what needs attention" })).toBeVisible();
+  const evaluationRegressionTask = page.locator(".task-card").filter({ hasText: "Evaluation regressions" });
+  await expect(evaluationRegressionTask).toContainText("Baseline Evaluation");
+  await evaluationRegressionTask.getByRole("button", { name: "Compare evaluation" }).click();
+  await expect(page.getByRole("heading", { name: "Quality by mode and language" })).toBeVisible();
+  await expect(page.getByText(evaluationName).first()).toBeVisible();
+  await expect(page.getByText("Regression comparison", { exact: true })).toBeVisible();
+  await expect(page.getByText(baselineEvaluationName).first()).toBeVisible();
+  await expect(page.getByText(/Case pass rate/i).first()).toBeVisible();
+
   const appShell = page.locator(".app-shell");
   await expect(page.getByRole("button", { name: "Hide navigation" })).toBeVisible();
   await expect(appShell).not.toHaveClass(/sidebar-collapsed/);
@@ -196,13 +225,13 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await productNav.getByRole("button", { name: "Evaluations", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Compare quality, routing, language, and cost" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Evaluation operations board" })).toBeVisible();
-  const evaluationSearchInput = page.getByPlaceholder("Run name, agent, mode, status, or id");
+  const evaluationSearchInput = page.getByPlaceholder("Run name, mode, or status");
   await evaluationSearchInput.fill("");
   await evaluationSearchInput.type("E2E Evaluation");
   await expect(evaluationSearchInput).toHaveValue("E2E Evaluation");
   await expect(evaluationSearchInput).toBeFocused();
   await page.locator(".evaluation-run-buttons").getByRole("button", { name: new RegExp(evaluationName) }).click();
-  await expect(page.getByText("Selected run")).toBeVisible();
+  await expect(page.getByText("Selected run", { exact: true })).toBeVisible();
   await expect(page.getByText(evaluationName).first()).toBeVisible();
 
   await productNav.getByRole("button", { name: "Guardrails", exact: true }).click();
@@ -250,7 +279,7 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
 
   await productNav.getByRole("button", { name: "Runs & traces", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Debug LangGraph executions" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Trace entry points" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run history" })).toBeVisible();
   await page.locator(".trace-entry-panel").getByRole("button", { name: /Ignore all previous instructions/ }).click();
   await expect(page.getByRole("heading", { name: "Execution navigator" })).toBeVisible();
   await expect(page.getByText("AI runtime", { exact: true })).toBeVisible();
