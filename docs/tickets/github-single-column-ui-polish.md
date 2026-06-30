@@ -36,3 +36,11 @@ Make the application easier to understand at a glance by removing confusing mult
 - Collapse the sidebar and confirm every nav item stays inside its box.
 - Check pages with previous multi-column layout: Dashboard, Tasks, Knowledge, Agents, Human review, Runs & traces, Evaluations, Usage & costs, Prompts, Models, System health.
 - Confirm sections read top-to-bottom and important states use semantic color.
+
+## Follow-up: Inner Content Grids
+User review clarified that page-level workflow sections should stay top-to-bottom, but compact repeated contents inside a section should still use grids.
+
+Updated `frontend/src/workflow-rows.css` so:
+- large workbench/page containers stay single-column;
+- metric groups, health cards, summaries, signals, guardrail cards, trace summaries, and language metrics use responsive grids;
+- mobile still collapses dense grids to one column.

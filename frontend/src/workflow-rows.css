@@ -39,58 +39,76 @@
   color: var(--link);
 }
 
-.grid,
 .two,
 .three,
 .two-wide-left,
 .overview-hero,
 .overview-layout,
-.overview-health-grid,
 .overview-attention-grid,
-.overview-admin-grid,
 .tasks-hero,
 .tasks-workbench,
 .data-workbench-grid,
-.knowledge-health-grid,
 .agent-management-grid,
-.queue-summary-grid,
 .tool-grid,
 .tool-config-grid,
 .guardrail-policy-grid,
+.review-context-grid,
+.trace-inspector-grid,
+.trace-navigator-grid,
+.prompt-template-list,
+.model-config-list {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.console-strip,
+.metric-grid,
+.metric-grid.compact,
+.overview-health-grid,
+.overview-admin-grid,
+.queue-summary-grid,
+.knowledge-health-grid,
 .settings-summary-grid,
 .settings-meta-grid,
 .settings-card-grid,
 .member-card-grid,
 .system-check-grid,
 .system-section-grid,
-.review-context-grid,
 .signal-grid,
+.guardrail-grid,
+.guardrail-result-grid,
 .trace-summary-grid,
 .trace-runtime-summary-grid,
 .trace-decision-grid,
-.trace-inspector-grid,
-.trace-navigator-grid,
-.trace-navigator-panel,
 .trace-evidence-card-grid,
-.guardrail-grid,
-.guardrail-result-grid,
+.runtime-component-grid,
 .mode-card-grid,
 .model-spend-grid,
-.runtime-component-grid,
 .evaluation-prompt-grid,
 .language-metric-grid,
 .permission-summary-grid,
 .scenario-grid,
-.node-stat-grid,
-.model-config-list,
-.prompt-template-list {
-  grid-template-columns: minmax(0, 1fr) !important;
+.node-stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
 }
 
+.metric-grid.compact,
 .console-strip,
-.metric-grid,
-.metric-grid.compact {
-  grid-template-columns: minmax(0, 1fr) !important;
+.node-stat-grid,
+.permission-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+}
+
+.settings-meta-grid,
+.language-metric-grid,
+.signal-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+}
+
+.trace-summary-grid,
+.trace-runtime-summary-grid,
+.trace-decision-grid,
+.guardrail-result-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
 }
 
 .operations-panel,
@@ -136,6 +154,15 @@ code,
   .sidebar {
     position: static;
     height: auto;
+  }
+
+  .workspace-main,
+  .console-strip,
+  .metric-grid,
+  .queue-summary-grid,
+  .settings-summary-grid,
+  .signal-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   .workspace-main {
