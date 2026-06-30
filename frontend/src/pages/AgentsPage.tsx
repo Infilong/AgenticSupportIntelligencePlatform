@@ -379,6 +379,14 @@ export function AgentsPage({
   const reviewRate = summary && summary.total_runs > 0
     ? Math.round((summary.human_review_runs / summary.total_runs) * 100)
     : 0;
+  const quickLinks = [
+    { id: "agent-setup", label: "1. Select and choose agent", detail: "Pick workspace and active agent" },
+    { id: "agent-library", label: "2. Manage agent library", detail: "Move, filter, and browse folder-scoped configs" },
+    { id: "agent-configuration", label: "3. Tune runtime controls", detail: "Token, confidence, retrieval, and model route" },
+    { id: "agent-operations", label: "4. Inspect operations", detail: "Read summaries, failures, and workflow health" },
+    { id: "agent-run", label: "5. Run and trace", detail: "Execute scenario and inspect latest outcome" },
+  ];
+
   const readinessItems = [
     {
       label: "Agent",
@@ -414,7 +422,15 @@ export function AgentsPage({
 
   return (
     <div className="agent-console">
-      <section className="panel agent-hero">
+      <nav className="workflow-shortcuts" aria-label="Agent workflow">
+        {quickLinks.map((link) => (
+          <a key={link.id} className="workflow-shortcut" href={`#${link.id}`}>
+            <strong>{link.label}</strong>
+            <span>{link.detail}</span>
+          </a>
+        ))}
+      </nav>
+      <section id="agent-setup" className="panel agent-hero">
         <div className="agent-hero-copy">
           <p className="eyebrow">Agent management</p>
           <h2>Operate a governed LangGraph support agent</h2>
@@ -462,7 +478,7 @@ export function AgentsPage({
         </div>
       </section>
 
-      <section className="evaluation-workbench agent-library-workbench">
+      <section id="agent-library" className="evaluation-workbench agent-library-workbench">
         {resourceFolderPanel({
           resourceType: "agent_config",
           title: "Agent folders",
@@ -558,7 +574,7 @@ export function AgentsPage({
         ))}
       </section>
 
-      <section className="panel stack agent-control-center">
+      <section id="agent-configuration" className="panel stack agent-control-center">
         <div className="row-head">
           <div>
             <p className="eyebrow">Configuration control center</p>
@@ -675,7 +691,7 @@ export function AgentsPage({
         </div>
       </section>
 
-      <section className="agent-management-grid">
+      <section id="agent-operations" className="agent-management-grid">
         <article className="panel stack agent-ops-panel">
           <div className="row-head">
             <div>
@@ -859,7 +875,7 @@ export function AgentsPage({
         </article>
       </section>
 
-      <section className="agent-workbench">
+      <section id="agent-run" className="agent-workbench">
         <form className="panel stack run-console" onSubmit={runAgent}>
           <div className="row-head">
             <div>
