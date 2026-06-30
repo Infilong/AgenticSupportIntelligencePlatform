@@ -31,6 +31,12 @@ function formatWorkspaceRole(role: WorkspaceMemberRole): string {
   if (role === "viewer") return "Viewer";
   return "Legacy member";
 }
+function getUserInitials(user: CurrentUser | null): string {
+  const label = user?.display_name || user?.email || "User";
+  const words = label.trim().split(/[\s@._-]+/).filter(Boolean);
+  const initials = words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join("");
+  return initials || "U";
+}
 
 const MAX_VISIBLE_EXAMPLES = 50;
 const MAX_VISIBLE_CHUNKS = 80;
@@ -1415,6 +1421,8 @@ export function App() {
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId),
     [selectedWorkspaceId, workspaces],
   );
+  const currentUserLabel = currentUser?.display_name || currentUser?.email || "User";
+  const currentUserInitials = getUserInitials(currentUser);
 
   useEffect(() => {
     setWorkspaceSettingsName(selectedWorkspace?.name ?? "");
@@ -3715,10 +3723,10 @@ export function App() {
     <main className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <aside className="sidebar" aria-label="Workspace navigation">
         <div className="brand-block">
-          <div className="brand-mark">AI</div>
+          <div className="brand-mark">{currentUserInitials}</div>
           <div className="brand-copy">
-            <p className="eyebrow">Agentic platform</p>
-            <h1>Agentic Intelligence</h1>
+            <p className="eyebrow">User</p>
+            <h1>{currentUserLabel}</h1>
           </div>
           <button
             type="button"
@@ -3732,23 +3740,11 @@ export function App() {
         </div>
 
         <WorkspaceSwitcher
-          workspaces={workspaces}
-          selectedWorkspaceId={selectedWorkspaceId}
+          selectedWorkspace={selectedWorkspace ?? null}
           workspaceRole={workspaceRole}
           consoleState={consoleState}
-          loading={loading}
-          onSelectWorkspace={setSelectedWorkspaceId}
           onOpenAccount={() => goToTab("account")}
         />
-
-        <section className="readiness-card">
-          <div className="row-head">
-            <span className="mini-label">Readiness</span>
-            <strong>{readinessPercent}%</strong>
-          </div>
-          <div className="progress-track"><span style={{ width: `${readinessPercent}%` }} /></div>
-          <small>{completedStepCount} of {setupSteps.length} operational checks complete</small>
-        </section>
 
         <nav className="tab-nav" aria-label="Product navigation">
           {navSections.map((section) => (

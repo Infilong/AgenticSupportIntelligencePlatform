@@ -215,72 +215,51 @@
   font-size: 1rem;
 }
 
-.workspace-switcher .row-head strong,
-.workspace-switcher-option strong,
-.current-workspace-marker {
+.workspace-summary-card {
+  gap: 10px;
+}
+
+.sidebar-workspace-summary {
+  display: grid;
+  gap: 3px;
   min-width: 0;
-  overflow-wrap: anywhere;
 }
 
-.workspace-switcher .row-head small {
-  display: block;
-  margin-top: 3px;
+.sidebar-workspace-summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #24292f;
+  font-size: 0.94rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.current-workspace-marker {
-  border: 1px solid #0969da;
-  border-radius: 8px;
-  background: #ddf4ff;
-  padding: 8px 10px;
+.sidebar-workspace-summary small {
+  overflow: hidden;
+  color: #57606a;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-summary-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workspace-manage-button {
+  min-height: 30px;
+  border-color: #d0d7de;
+  border-radius: 7px;
+  background: #ffffff;
+  padding: 5px 9px;
   color: #0969da;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 760;
 }
 
-.workspace-switcher-list {
-  display: grid;
-  gap: 6px;
-}
-
-.workspace-switcher-option {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  min-height: 42px;
-  align-items: center;
-  width: 100%;
-  border-radius: 8px;
-  padding: 8px 9px;
-  text-align: left;
-}
-
-.workspace-switcher-option small {
-  display: block;
-  margin-top: 2px;
-}
-
-.workspace-switcher-option.selected {
-  border-color: #0969da;
+.workspace-manage-button:hover:not(:disabled) {
   background: #f6f8fa;
-  box-shadow: inset 3px 0 0 #0969da;
-}
-
-.workspace-switcher-pagination {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 6px;
-  align-items: center;
-}
-
-.workspace-switcher-pagination button {
-  min-height: 32px;
-  padding: 5px 8px;
-  font-size: 0.78rem;
-}
-
-.workspace-switcher-pagination span {
-  color: #57606a;
-  font-size: 0.78rem;
-  font-weight: 720;
-  text-align: center;
 }
