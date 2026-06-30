@@ -11,10 +11,12 @@ import { ModelsPage } from "../pages/ModelsPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { SystemHealthPage } from "../pages/SystemHealthPage";
 import { OverviewPage } from "../pages/OverviewPage";
+import { AccountPage } from "../pages/AccountPage";
 
 type Language = "en" | "ja" | "zh";
 type Mode = "direct_llm" | "vector_rag" | "system_v1";
-type Tab = "overview" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models" | "system" | "settings";
+type Tab = "overview" | "account" | "tasks" | "datasets" | "documents" | "agent" | "tools" | "guardrails" | "trace" | "reviews" | "evaluations" | "costs" | "members" | "audit" | "prompts" | "models" | "system" | "settings";
+type WorkspaceTab = Exclude<Tab, "account">;
 type WorkspaceMemberRole = "owner" | "developer" | "reviewer" | "viewer" | "member";
 type NavGroup = "Platform" | "Build" | "Operate" | "Evaluate" | "Admin" | "Settings";
 
@@ -653,7 +655,7 @@ type AttentionItem = {
   detail: string;
   count: number;
   action_label: string;
-  target_tab: Tab;
+  target_tab: WorkspaceTab;
   target_id: string | null;
   target_context: Record<string, string> | null;
   created_at: string | null;
@@ -894,6 +896,7 @@ type TabDefinition = {
 };
 
 const tabs: TabDefinition[] = [
+  { id: "account", label: "Account", token: "◌", group: "Platform", purpose: "Create workspaces, switch context, and inspect your permissions.", requiredPermissions: [] },
   { id: "overview", label: "Dashboard", token: "⌂", group: "Platform", purpose: "Workspace health, next action, and platform coverage.", requiredPermissions: ["workspace:read"] },
   { id: "tasks", label: "My Tasks", token: "✓", group: "Platform", purpose: "Backend-ranked review, failure, guardrail, evaluation, and operations tasks.", requiredPermissions: ["tasks:read"] },
   { id: "datasets", label: "Data", token: "▣", group: "Build", purpose: "Import and label multilingual examples for evaluation and routing.", requiredPermissions: ["data:read"] },
@@ -1442,7 +1445,8 @@ export function App() {
   const permissionList = workspaceMembership?.permissions ?? [];
   const permissionKey = permissionList.join("|");
   const canAccessTab = (tab: TabDefinition) => {
-    if (!selectedWorkspaceId || !workspaceMembership) return tab.id === "overview";
+    if (tab.requiredPermissions.length === 0) return true;
+    if (!selectedWorkspaceId || !workspaceMembership) return false;
     return tab.requiredPermissions.every((permission) => permissionList.includes(permission));
   };
   const availableTabs = tabs.filter((tab) => canAccessTab(tab));
@@ -1485,24 +1489,24 @@ export function App() {
             : "Read-only workspace access; write, review, and cleanup actions are restricted.";
   const visiblePermissions = workspaceMembership?.permissions.slice(0, 4) ?? [];
   const pendingReviews = reviews.filter((review) => review.reviewer_decision === "pending").length;
-  const allSetupSteps = [
-    { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as Tab },
-    { label: "Tasks", done: Boolean(attentionSummary && attentionSummary.total_items === 0), tab: "tasks" as Tab },
-    { label: "Data", done: datasets.length > 0, tab: "datasets" as Tab },
-    { label: "Knowledge", done: documents.length > 0, tab: "documents" as Tab },
-    { label: "Agents", done: agents.length > 0, tab: "agent" as Tab },
-    { label: "Tools", done: tools.some((tool) => tool.usage.total_calls > 0), tab: "tools" as Tab },
-    { label: "Guardrails", done: guardrails.some((item) => item.usage.total_evaluations > 0), tab: "guardrails" as Tab },
-    { label: "Runs & traces", done: Boolean(trace), tab: "trace" as Tab },
-    { label: "Human review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as Tab },
-    { label: "Evaluations", done: Boolean(evaluationDetail), tab: "evaluations" as Tab },
-    { label: "Usage", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as Tab },
-    { label: "Members", done: workspaceMembers.length > 0, tab: "members" as Tab },
-    { label: "Prompts", done: promptTemplates.some((template) => template.active), tab: "prompts" as Tab },
-    { label: "Models", done: modelConfigs.some((config) => config.active && !config.archived_at), tab: "models" as Tab },
-    { label: "System health", done: Boolean(systemHealth), tab: "system" as Tab },
-    { label: "Audit", done: auditLogs.length > 0, tab: "audit" as Tab },
-    { label: "Settings", done: Boolean(selectedWorkspaceId && workspaceMembership), tab: "settings" as Tab },
+  const allSetupSteps: Array<{ label: string; done: boolean; tab: WorkspaceTab }> = [
+    { label: "Dashboard", done: Boolean(selectedWorkspaceId), tab: "overview" as WorkspaceTab },
+    { label: "Tasks", done: Boolean(attentionSummary && attentionSummary.total_items === 0), tab: "tasks" as WorkspaceTab },
+    { label: "Data", done: datasets.length > 0, tab: "datasets" as WorkspaceTab },
+    { label: "Knowledge", done: documents.length > 0, tab: "documents" as WorkspaceTab },
+    { label: "Agents", done: agents.length > 0, tab: "agent" as WorkspaceTab },
+    { label: "Tools", done: tools.some((tool) => tool.usage.total_calls > 0), tab: "tools" as WorkspaceTab },
+    { label: "Guardrails", done: guardrails.some((item) => item.usage.total_evaluations > 0), tab: "guardrails" as WorkspaceTab },
+    { label: "Runs & traces", done: Boolean(trace), tab: "trace" as WorkspaceTab },
+    { label: "Human review", done: pendingReviews === 0 && reviews.length > 0, tab: "reviews" as WorkspaceTab },
+    { label: "Evaluations", done: Boolean(evaluationDetail), tab: "evaluations" as WorkspaceTab },
+    { label: "Usage", done: Boolean(costSummary && costSummary.total_runs > 0), tab: "costs" as WorkspaceTab },
+    { label: "Members", done: workspaceMembers.length > 0, tab: "members" as WorkspaceTab },
+    { label: "Prompts", done: promptTemplates.some((template) => template.active), tab: "prompts" as WorkspaceTab },
+    { label: "Models", done: modelConfigs.some((config) => config.active && !config.archived_at), tab: "models" as WorkspaceTab },
+    { label: "System health", done: Boolean(systemHealth), tab: "system" as WorkspaceTab },
+    { label: "Audit", done: auditLogs.length > 0, tab: "audit" as WorkspaceTab },
+    { label: "Settings", done: Boolean(selectedWorkspaceId && workspaceMembership), tab: "settings" as WorkspaceTab },
   ];
   const setupSteps = allSetupSteps.filter((step) => canOpenTab(step.tab));
   const nextStep = setupSteps.find((step) => !step.done);
@@ -1563,7 +1567,11 @@ export function App() {
   }
 
   useEffect(() => {
-    if (!selectedWorkspaceId || !workspaceMembership || availableTabIds.has(activeTab)) return;
+    if (!selectedWorkspaceId) {
+      if (!availableTabIds.has(activeTab)) setActiveTab("account");
+      return;
+    }
+    if (!workspaceMembership || availableTabIds.has(activeTab)) return;
     setActiveTab("overview");
   }, [activeTab, selectedWorkspaceId, workspaceMembership?.role, permissionKey]);
 
@@ -3648,10 +3656,9 @@ export function App() {
               )}
             </div>
           )}
-          <form className="workspace-create" onSubmit={createWorkspace}>
-            <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} />
-            <button type="submit">Create</button>
-          </form>
+          <button type="button" className="workspace-manage-button" onClick={() => goToTab("account")}>
+            Account & workspaces
+          </button>
         </section>
 
         <section className="readiness-card">
@@ -3716,7 +3723,7 @@ export function App() {
           </section>
         )}
         <Status notice={notice} error={error} />
-        {!selectedWorkspaceId ? <EmptyState title="Create or select a workspace" detail="Workspace isolation is enforced by every backend route." /> : renderActiveTab()}
+        {activeTab === "account" ? renderActiveTab() : !selectedWorkspaceId ? <EmptyState title="Create or select a workspace" detail="Open Account to create a workspace or select an existing workspace from the sidebar." /> : renderActiveTab()}
       </section>
     </main>
   );
@@ -3727,6 +3734,30 @@ export function App() {
     }
 
     switch (activeTab) {
+      case "account":
+        return (
+          <AccountPage
+            currentUser={currentUser}
+            workspaces={workspaces}
+            selectedWorkspaceId={selectedWorkspaceId}
+            workspaceName={workspaceName}
+            workspaceRole={workspaceRole}
+            permissionSummary={permissionSummary}
+            permissions={workspaceMembership?.permissions ?? []}
+            canManageWorkspace={Boolean(workspaceMembership?.can_manage_workspace)}
+            pendingReviews={pendingReviews}
+            openTasks={attentionSummary?.total_items ?? 0}
+            workspaceMembersCount={workspaceMembers.length}
+            loading={loading}
+            onWorkspaceNameChange={setWorkspaceName}
+            onCreateWorkspace={createWorkspace}
+            onSelectWorkspace={setSelectedWorkspaceId}
+            onGoToTab={(tab: "tasks" | "reviews" | "members" | "settings") => goToTab(tab)}
+            canOpenTab={(tab: "tasks" | "reviews" | "members" | "settings") => canOpenTab(tab)}
+            formatWorkspaceRole={formatWorkspaceRole}
+            formatDate={formatDate}
+          />
+        );
       case "tasks":
         return (
           <TasksPage

@@ -1,0 +1,204 @@
+import { FormEvent } from "react";
+import { Badge, EmptyState, Metric } from "../app/shared/Primitives";
+
+type WorkspaceMemberRole = "owner" | "developer" | "reviewer" | "viewer" | "member";
+type AccountTab = "tasks" | "reviews" | "members" | "settings";
+
+type CurrentUser = {
+  id: string;
+  email: string;
+  display_name: string;
+};
+
+type Workspace = {
+  id: string;
+  name: string;
+  created_by_user_id: string;
+  created_at: string;
+};
+
+type AccountPageProps = {
+  currentUser: CurrentUser | null;
+  workspaces: Workspace[];
+  selectedWorkspaceId: string;
+  workspaceName: string;
+  workspaceRole: string;
+  permissionSummary: string;
+  permissions: string[];
+  canManageWorkspace: boolean;
+  pendingReviews: number;
+  openTasks: number;
+  workspaceMembersCount: number;
+  loading: boolean;
+  onWorkspaceNameChange: (value: string) => void;
+  onCreateWorkspace: (event: FormEvent) => Promise<void>;
+  onSelectWorkspace: (id: string) => void;
+  onGoToTab: (tab: AccountTab) => void;
+  canOpenTab: (tab: AccountTab) => boolean;
+  formatWorkspaceRole: (role: WorkspaceMemberRole) => string;
+  formatDate: (value: string | null) => string;
+};
+
+export function AccountPage({
+  currentUser,
+  workspaces,
+  selectedWorkspaceId,
+  workspaceName,
+  workspaceRole,
+  permissionSummary,
+  permissions,
+  canManageWorkspace,
+  pendingReviews,
+  openTasks,
+  workspaceMembersCount,
+  loading,
+  onWorkspaceNameChange,
+  onCreateWorkspace,
+  onSelectWorkspace,
+  onGoToTab,
+  canOpenTab,
+  formatWorkspaceRole,
+  formatDate,
+}: AccountPageProps) {
+  const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? null;
+  const initials = (currentUser?.display_name || currentUser?.email || "User")
+    .split(/\s|@/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
+  const ownedWorkspaces = currentUser
+    ? workspaces.filter((workspace) => workspace.created_by_user_id === currentUser.id).length
+    : 0;
+
+  return (
+    <div className="account-console">
+      <section className="panel account-profile-card">
+        <div className="account-avatar" aria-hidden="true">{initials}</div>
+        <div>
+          <p className="eyebrow">Account and workspaces</p>
+          <h2>{currentUser?.display_name || "Signed-in user"}</h2>
+          <p className="muted">{currentUser?.email ?? "Session profile is loading."}</p>
+        </div>
+        <Badge tone={selectedWorkspace ? "good" : "warn"}>{selectedWorkspace ? workspaceRole : "no workspace"}</Badge>
+      </section>
+
+      <section className="account-summary-grid">
+        <Metric label="Workspaces" value={workspaces.length} />
+        <Metric label="Owned" value={ownedWorkspaces} />
+        <Metric label="Current role" value={workspaceRole} />
+        <Metric label="Permissions" value={permissions.length} />
+        <Metric label="Open tasks" value={openTasks} />
+        <Metric label="Pending reviews" value={pendingReviews} />
+      </section>
+
+      <form className="panel stack account-create-panel" onSubmit={onCreateWorkspace}>
+        <div className="row-head">
+          <div>
+            <h3>Create workspace</h3>
+            <p className="muted">A workspace is an isolated project area for documents, datasets, agent runs, reviews, costs, and audit logs.</p>
+          </div>
+          <Badge tone="good">isolated by backend</Badge>
+        </div>
+        <label>
+          Workspace name
+          <input
+            value={workspaceName}
+            onChange={(event) => onWorkspaceNameChange(event.target.value)}
+            placeholder="Example: Billing AI Support"
+            disabled={loading}
+          />
+        </label>
+        <div className="run-action-bar">
+          <button type="submit" className="primary" disabled={loading || !workspaceName.trim()}>
+            Create workspace
+          </button>
+          {selectedWorkspace && canOpenTab("settings") && (
+            <button type="button" onClick={() => onGoToTab("settings")}>Open workspace settings</button>
+          )}
+        </div>
+      </form>
+
+      <section className="panel stack">
+        <div className="row-head">
+          <div>
+            <h3>Your workspaces</h3>
+            <p className="muted">Select the workspace you want to operate. Every main page reloads through workspace-scoped APIs.</p>
+          </div>
+          <Badge>{selectedWorkspace ? selectedWorkspace.name : "select one"}</Badge>
+        </div>
+        <div className="account-workspace-list">
+          {workspaces.map((workspace) => {
+            const isSelected = workspace.id === selectedWorkspaceId;
+            const isOwner = currentUser?.id === workspace.created_by_user_id;
+            return (
+              <button
+                type="button"
+                key={workspace.id}
+                className={isSelected ? "account-workspace-row selected" : "account-workspace-row"}
+                onClick={() => onSelectWorkspace(workspace.id)}
+              >
+                <span>
+                  <strong>{workspace.name}</strong>
+                  <small>Created {formatDate(workspace.created_at)}</small>
+                </span>
+                <span className="account-workspace-badges">
+                  {isOwner && <Badge tone="good">owner</Badge>}
+                  {isSelected && <Badge>active</Badge>}
+                </span>
+              </button>
+            );
+          })}
+          {workspaces.length === 0 && (
+            <EmptyState title="No workspace yet" detail="Create your first workspace above to unlock the platform workflow." />
+          )}
+        </div>
+      </section>
+
+      <section className="panel stack">
+        <div className="row-head">
+          <div>
+            <h3>Current workspace access</h3>
+            <p className="muted">{permissionSummary}</p>
+          </div>
+          <Badge tone={canManageWorkspace ? "good" : "warn"}>
+            {canManageWorkspace ? "admin capable" : "limited access"}
+          </Badge>
+        </div>
+        <div className="account-permission-board">
+          <Metric label="Members" value={workspaceMembersCount} />
+          <Metric label="Role" value={workspaceRole} />
+          <Metric label="Manage workspace" value={canManageWorkspace ? "allowed" : "restricted"} />
+        </div>
+        <div className="permission-chip-row">
+          {permissions.map((permission) => <span key={permission}>{permission}</span>)}
+          {permissions.length === 0 && <span>No workspace permissions loaded</span>}
+        </div>
+        <div className="account-shortcuts">
+          {canOpenTab("tasks") && <button type="button" onClick={() => onGoToTab("tasks")}>Open task queue</button>}
+          {canOpenTab("reviews") && <button type="button" onClick={() => onGoToTab("reviews")}>Open human review</button>}
+          {canOpenTab("members") && <button type="button" onClick={() => onGoToTab("members")}>Manage members</button>}
+          {canOpenTab("settings") && <button type="button" onClick={() => onGoToTab("settings")}>Workspace settings</button>}
+        </div>
+      </section>
+
+      <section className="panel stack">
+        <div className="row-head">
+          <div>
+            <h3>Role presets</h3>
+            <p className="muted">Workspace permissions come from backend role presets. Owners can change member roles from the Members page.</p>
+          </div>
+          <Badge>permission model</Badge>
+        </div>
+        <div className="account-role-grid">
+          {(["owner", "developer", "reviewer", "viewer"] as WorkspaceMemberRole[]).map((role) => (
+            <article key={role}>
+              <strong>{formatWorkspaceRole(role)}</strong>
+              <span>{role === "owner" ? "Full workspace administration." : role === "developer" ? "Build and operate AI resources." : role === "reviewer" ? "Resolve human-review cases." : "Inspect workspace evidence and metrics."}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
