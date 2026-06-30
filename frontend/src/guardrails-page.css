@@ -1,0 +1,78 @@
+.guardrail-console {
+  gap: 18px;
+}
+
+.guardrail-hero,
+.guardrail-filter-row,
+.guardrail-workbench,
+.guardrail-grid,
+.guardrail-policy-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.guardrail-hero {
+  align-items: stretch;
+}
+
+.guardrail-hero .next-action-card {
+  max-width: 720px;
+}
+
+.guardrail-toolbar {
+  gap: 14px;
+}
+
+.guardrail-filter-row {
+  align-items: start;
+}
+
+.guardrail-filter-row label,
+.guardrail-filter-row .folder-scope-banner {
+  max-width: 760px;
+}
+
+.guardrail-filter {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.guardrail-workbench {
+  align-items: stretch;
+}
+
+.guardrail-grid {
+  gap: 14px;
+}
+
+.guardrail-card {
+  border-left: 4px solid #0969da;
+}
+
+.guardrail-card .metric-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+}
+
+.guardrail-policy-grid {
+  max-width: 820px;
+}
+
+.guardrail-failure-panel {
+  position: static;
+  border-left: 4px solid #bf8700;
+}
+
+.guardrail-failure-panel .recent-run-row,
+.guardrail-card .recent-run-row {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+@media (max-width: 720px) {
+  .guardrail-filter {
+    width: 100%;
+  }
+
+  .guardrail-failure-panel .recent-run-row,
+  .guardrail-card .recent-run-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
