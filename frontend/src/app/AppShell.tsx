@@ -1,6 +1,7 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { Badge, EmptyState, Metric } from "./shared/Primitives";
 import { TasksPage } from "../pages/TasksPage";
+import { AgentsPage } from "../pages/AgentsPage";
 import { DatasetsPage } from "../pages/DatasetsPage";
 import { DocumentsPage } from "../pages/DocumentsPage";
 import { MembersPage } from "../pages/MembersPage";
@@ -3903,7 +3904,89 @@ export function App() {
           );
         }
       case "agent":
-        return AgentPanel();
+        return (
+          <AgentsPage
+            agentPrompts={agentPrompts}
+            reviews={reviews}
+            documents={documents}
+            agentSummary={agentSummary}
+            selectedAgent={selectedAgent}
+            modelConfigs={modelConfigs}
+            agentWorkflowSummary={agentWorkflowSummary}
+            foldersFor={foldersFor}
+            selectedAgentFolderId={selectedAgentFolderId}
+            selectedAgentFolderCount={resourceItemCount("agent_config", selectedAgentFolderId)}
+            agents={agents}
+            selectedAgentId={selectedAgentId}
+            newAgentName={newAgentName}
+            setNewAgentName={setNewAgentName}
+            createAgent={createAgent}
+            canConfigureAgent={canConfigureAgent}
+            canManageResourceFolders={canManageResourceFolders}
+            canDeleteAgent={canDeleteAgent}
+            canResolveReviews={canResolveReviews}
+            loading={loading}
+            canRunAgent={canRunAgent}
+            agentFolderName={agentFolderName}
+            onAgentFolderNameChange={setAgentFolderName}
+            selectAgentFolder={setSelectedAgentFolderId}
+            agentPage={agentPage}
+            agentTotal={agentTotal}
+            agentHasNext={agentHasNext}
+            setAgentPage={setAgentPage}
+            onAgentSearchChange={setAgentSearch}
+            agentSearch={agentSearch}
+            selectedWorkspaceName={selectedWorkspace?.name ?? "-"}
+            workspaceRole={workspaceRole}
+            selectAgent={selectAgent}
+            moveAgentFolder={moveAgentFolder}
+            resourceFolderPanel={ResourceFolderPanel}
+            folderPicker={FolderPicker}
+            maxVisibleResources={MAX_VISIBLE_RESOURCES}
+            maxVisibleAgentPickerOptions={MAX_VISIBLE_AGENT_PICKER_OPTIONS}
+            resourceItemCount={resourceItemCount}
+            folderLabel={folderLabel}
+            onNewAgentFolderIdChange={setNewAgentFolderId}
+            newAgentFolderId={newAgentFolderId}
+            agentMessage={agentMessage}
+            setAgentMessage={setAgentMessage}
+            runAgent={runAgent}
+            latestRun={latestRun}
+            goToTab={(tab) => goToTab(tab)}
+            setTraceRunId={setTraceRunId}
+            loadTrace={loadTrace}
+            RunSummary={RunSummary}
+            toneForStatus={toneForStatus}
+            formatPercent={formatPercent}
+            formatCost={formatCost}
+            formatLatency={formatLatency}
+            formatDate={formatDate}
+            formatNumber={formatNumber}
+            formatStepName={formatStepName}
+            safeJson={safeJson}
+            selectAgentModelConfigId={setAgentModelConfigId}
+            agentModelSearch={agentModelSearch}
+            setAgentModelSearch={setAgentModelSearch}
+            setAgentRetrievalTopK={setAgentRetrievalTopK}
+            setAgentRetrievalMinScore={setAgentRetrievalMinScore}
+            setAgentConfidenceThreshold={setAgentConfidenceThreshold}
+            setAgentTokenBudget={setAgentTokenBudget}
+            setAgentName={setAgentName}
+            agentName={agentName}
+            agentTokenBudget={agentTokenBudget}
+            agentConfidenceThreshold={agentConfidenceThreshold}
+            agentRetrievalTopK={agentRetrievalTopK}
+            agentRetrievalMinScore={agentRetrievalMinScore}
+            agentModelConfigId={agentModelConfigId}
+            agentModelOptions={agentModelOptions}
+            agentModelOptionTotal={agentModelOptionTotal}
+            agentModelOptionHasNext={agentModelOptionHasNext}
+            updateAgentRuntime={updateAgentRuntime}
+            canCreateAgent={canConfigureAgent}
+            archiveSelectedAgent={archiveSelectedAgent}
+            shortId={shortId}
+          />
+        );
       case "tools":
         return (
           <ToolsPage
