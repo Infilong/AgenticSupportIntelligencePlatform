@@ -235,7 +235,7 @@ export function DatasetsPage({
           resourceLabel: "dataset",
         })}
         <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => onDatasetContentChange(event.target.value)} /></label>
-        <button type="submit" className="primary" disabled={!canWriteData || loading}>Import JSONL</button>
+        <button type="submit" className="primary" disabled={!canWriteData || loading || !datasetName.trim() || !datasetContent.trim()}>Import JSONL</button>
       </form>
       <section className="panel stack dataset-library-panel">
         <div className="row-head">

@@ -1764,6 +1764,7 @@ export function App() {
       });
       await loadWorkspaces();
       setSelectedWorkspaceId(workspace.id);
+      setWorkspaceName("");
     });
   }
 
@@ -1957,10 +1958,10 @@ export function App() {
         token,
         body: { resource_type: resourceType, name },
       });
-      if (resourceType === "dataset") setDataFolderName("Training data");
-      if (resourceType === "knowledge_document") setKnowledgeFolderName("Policies");
-      if (resourceType === "evaluation_run") setEvaluationFolderName("Regression packs");
-      if (resourceType === "agent_config") setAgentFolderName("Production agents");
+      if (resourceType === "dataset") setDataFolderName("");
+      if (resourceType === "knowledge_document") setKnowledgeFolderName("");
+      if (resourceType === "evaluation_run") setEvaluationFolderName("");
+      if (resourceType === "agent_config") setAgentFolderName("");
       await loadResourceFolders();
       await loadAuditLogsIfAllowed();
     });
@@ -2178,12 +2179,17 @@ export function App() {
 
   async function importDataset(event: FormEvent) {
     event.preventDefault();
+    if (!datasetName.trim() || !datasetContent.trim()) {
+      setNotice("");
+      setError("Dataset name and JSONL content are required.");
+      return;
+    }
     await runAction("Dataset imported", async () => {
       const response = await apiRequest<{ dataset: Dataset }>(workspacePath("/datasets/import"), {
         method: "POST",
         token,
         body: {
-          dataset_name: datasetName,
+          dataset_name: datasetName.trim(),
           description: "Imported from the browser demo UI.",
           source_type: "jsonl",
           folder_id: datasetFolderId || null,
@@ -2194,6 +2200,8 @@ export function App() {
       await loadDatasets(0);
       await loadResourceFolders();
       setSelectedDatasetId(response.dataset.id);
+      setDatasetName("");
+      setDatasetContent("");
       await loadExamples(response.dataset.id);
     });
   }
@@ -2649,7 +2657,7 @@ export function App() {
       await loadAgents(0, targetFolderId, "");
       await loadResourceFolders();
       setSelectedAgentId(agent.id);
-      setNewAgentName("Support Workflow Agent");
+      setNewAgentName("");
       applyAgentControls(agent);
       await Promise.all([loadAgentSummary(agent.id), loadAgentWorkflow(agent.id)]);
     });
