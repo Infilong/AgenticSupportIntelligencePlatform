@@ -54,3 +54,17 @@ Updated the sidebar to a quieter modern admin rail:
 - soft pill-style navigation rows instead of heavy boxed buttons;
 - cleaner collapsed rail with only bounded symbols;
 - sidebar-specific styling split into `frontend/src/sidebar-modern.css` to keep theme files focused.
+
+## Follow-up: Full Page Layout Audit
+User review found that Knowledge, Agents, Guardrails, Runs & traces, and other pages still had multi-column page-level content.
+
+Audited frontend page layouts and expanded `frontend/src/workflow-rows.css` so top-level hero/workbench/side-panel layouts render as consistent rows across:
+- Knowledge documents;
+- Agents and agent runtime configuration;
+- Tools and guardrails;
+- Runs & traces;
+- Human review;
+- Evaluations and costs;
+- Audit, settings, models, prompts, members, and system health.
+
+Kept compact repeated content as responsive grids: metrics, health cards, summaries, signals, trace cards, node cards, and language metric groups.

@@ -48,13 +48,38 @@
 .tasks-hero,
 .tasks-workbench,
 .data-workbench-grid,
+.knowledge-hero,
+.knowledge-workbench,
+.agent-hero,
+.agent-library-workbench,
+.agent-control-layout,
 .agent-management-grid,
+.agent-workbench,
+.tool-hero,
+.tool-filter-row,
 .tool-grid,
 .tool-config-grid,
+.guardrail-hero,
+.guardrail-filter-row,
 .guardrail-policy-grid,
-.review-context-grid,
+.guardrail-workbench,
+.trace-entry-hero,
+.trace-entry-layout,
+.trace-workbench,
 .trace-inspector-grid,
 .trace-navigator-grid,
+.review-hero,
+.review-workbench,
+.review-context-grid,
+.evaluation-hero,
+.evaluation-workbench,
+.cost-hero,
+.cost-workbench,
+.audit-hero,
+.audit-workbench,
+.settings-hero,
+.settings-workbench,
+.system-health-hero,
 .prompt-template-list,
 .model-config-list {
   grid-template-columns: minmax(0, 1fr) !important;
@@ -80,6 +105,7 @@
 .trace-runtime-summary-grid,
 .trace-decision-grid,
 .trace-evidence-card-grid,
+.trace-inspector-metrics,
 .runtime-component-grid,
 .mode-card-grid,
 .model-spend-grid,
@@ -87,18 +113,24 @@
 .language-metric-grid,
 .permission-summary-grid,
 .scenario-grid,
-.node-stat-grid {
+.node-stat-grid,
+.workflow-graph-summary,
+.workflow-node-board,
+.readiness-strip {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
 }
 
 .metric-grid.compact,
 .console-strip,
 .node-stat-grid,
-.permission-summary-grid {
+.permission-summary-grid,
+.workflow-graph-summary,
+.readiness-strip {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
 }
 
 .settings-meta-grid,
+.knowledge-meta-grid,
 .language-metric-grid,
 .signal-grid {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
@@ -107,12 +139,16 @@
 .trace-summary-grid,
 .trace-runtime-summary-grid,
 .trace-decision-grid,
-.guardrail-result-grid {
+.guardrail-result-grid,
+.trace-inspector-metrics {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
 }
 
 .operations-panel,
-.task-side-panel {
+.task-side-panel,
+.run-outcome-panel,
+.review-policy-panel,
+.audit-side-panel {
   position: static;
 }
 
@@ -120,8 +156,11 @@
 .resource-row,
 .audit-event-card,
 .model-route-row,
+.recent-run-row,
 .trace-run-card,
-.review-queue-item {
+.review-queue-item,
+.folder-row,
+.resource-main-button {
   grid-template-columns: minmax(0, 1fr) !important;
 }
 
@@ -130,7 +169,8 @@
 .command-actions,
 .review-actions,
 .resource-actions,
-.pagination-bar {
+.pagination-bar,
+.run-action-bar {
   flex-wrap: wrap;
 }
 
@@ -161,7 +201,8 @@ code,
   .metric-grid,
   .queue-summary-grid,
   .settings-summary-grid,
-  .signal-grid {
+  .signal-grid,
+  .workflow-node-board {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
