@@ -44,3 +44,13 @@ Updated `frontend/src/workflow-rows.css` so:
 - large workbench/page containers stay single-column;
 - metric groups, health cards, summaries, signals, guardrail cards, trace summaries, and language metrics use responsive grids;
 - mobile still collapses dense grids to one column.
+
+## Follow-up: Modern Sidebar Style
+User review clarified that the left side panel still looked visually weak.
+
+Updated the sidebar to a quieter modern admin rail:
+- light gray rail background with white workspace/readiness cards;
+- blue product mark and blue active navigation indicator;
+- soft pill-style navigation rows instead of heavy boxed buttons;
+- cleaner collapsed rail with only bounded symbols;
+- sidebar-specific styling split into `frontend/src/sidebar-modern.css` to keep theme files focused.
