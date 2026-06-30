@@ -3740,13 +3740,9 @@ export function App() {
         </div>
 
         <WorkspaceSwitcher
-          workspaces={workspaces}
           selectedWorkspace={selectedWorkspace ?? null}
-          selectedWorkspaceId={selectedWorkspaceId}
           workspaceRole={workspaceRole}
           consoleState={consoleState}
-          loading={loading}
-          onSelectWorkspace={setSelectedWorkspaceId}
           onOpenAccount={() => goToTab("account")}
         />
 
