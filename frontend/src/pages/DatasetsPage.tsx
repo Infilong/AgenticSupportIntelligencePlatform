@@ -1,8 +1,7 @@
 import { FormEvent, ReactNode, SetStateAction } from "react";
 import { Badge, EmptyState } from "../app/shared/Primitives";
 
-const datasetJsonlPlaceholder = `{"external_id":"ja_refund_001","messages":[{"role":"user","content":"先月購入したプランの返金はできますか？"}],"labels":{"intent":"refund_request","product_area":"billing"}}
-{"external_id":"en_security_001","messages":[{"role":"user","content":"I think my account was accessed by someone else."}],"labels":{"intent":"security_issue","escalation_needed":"true"}}`;
+const datasetJsonlPlaceholder = "Paste JSONL conversation examples here. Each line should be one JSON object with messages and labels.";
 
 type Language = "en" | "ja" | "zh";
 

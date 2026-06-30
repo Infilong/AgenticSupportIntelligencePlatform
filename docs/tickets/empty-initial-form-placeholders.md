@@ -35,3 +35,7 @@ Manual QA:
 - Open Account and confirm workspace creation is empty until typed.
 - Open Datasets/Documents/Agents/Evaluations/Prompts/Models and confirm sample content is placeholder-only.
 - Select an existing resource and confirm edit forms still load the saved values.
+
+
+## Follow-up: Placeholder Visual Clarity
+The first fix moved demo values into placeholders, but long JSON/prompt placeholders still looked like real input content. This follow-up removes full sample payloads from placeholders, keeps only short guidance text, adds an explicit global placeholder style, and disables browser autocomplete on auth fields so refresh does not visually reinsert real credentials.
