@@ -66,7 +66,7 @@ export function MembersPage({
           <p className="eyebrow">Workspace administration</p>
           <h2>Manage members and permissions</h2>
           <p className="muted">
-            Membership is backend-enforced. Owners assign role presets for platform owners, developers,
+            Membership is permission-controlled. Owners assign role presets for platform owners, developers,
             reviewers, and viewers while the workspace keeps at least one owner.
           </p>
         </div>

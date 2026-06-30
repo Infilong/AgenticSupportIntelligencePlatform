@@ -897,30 +897,37 @@ small {
 }
 
 .status-slot {
-  display: grid;
-  min-height: 42px;
-  align-items: start;
+  display: none;
 }
 
-.status-slot:not(.visible) {
-  visibility: hidden;
+.status-slot.visible {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1000;
+  display: grid;
+  width: min(420px, calc(100vw - 36px));
+  align-items: start;
 }
 
 .status {
   min-height: 42px;
+  border: 1px solid #d0d7de;
   border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgb(140 149 159 / 24%);
   padding: 10px 12px;
   font-weight: 740;
 }
 
 .status.success {
-  background: #f2f2f2;
-  color: #111111;
+  border-left: 4px solid #1a7f37;
+  color: #24292f;
 }
 
 .status.error {
-  background: #f2f2f2;
-  color: #111111;
+  border-left: 4px solid #cf222e;
+  color: #24292f;
 }
 
 .empty {

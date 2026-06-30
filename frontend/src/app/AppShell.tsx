@@ -1,5 +1,6 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { Badge, EmptyState, Metric } from "./shared/Primitives";
+import { WorkspaceSwitcher } from "./shared/WorkspaceSwitcher";
 import { TasksPage } from "../pages/TasksPage";
 import { AgentsPage } from "../pages/AgentsPage";
 import { DatasetsPage } from "../pages/DatasetsPage";
@@ -1221,6 +1222,12 @@ export function App() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timeoutId = window.setTimeout(() => setNotice(""), 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
+
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetName, setDatasetName] = useState("");
   const [datasetContent, setDatasetContent] = useState("");
@@ -1700,7 +1707,7 @@ export function App() {
 
   async function handleAuth(event: FormEvent) {
     event.preventDefault();
-    await runAction("Authentication succeeded", async () => {
+    await runAction("Signed in", async () => {
       if (authMode === "register") {
         await apiRequest("/api/v1/auth/register", {
           method: "POST",
@@ -3724,40 +3731,15 @@ export function App() {
           </button>
         </div>
 
-        <section className="workspace-card">
-          <div className="row-head">
-            <div>
-              <span className="mini-label">Workspace</span>
-              <strong>{selectedWorkspace?.name ?? "Not selected"}</strong>
-            </div>
-            <Badge tone={selectedWorkspaceId ? "good" : "warn"}>{consoleState}</Badge>
-          </div>
-          <label>
-            Active workspace
-            <select value={selectedWorkspaceId} onChange={(event) => setSelectedWorkspaceId(event.target.value)}>
-              <option value="">Select workspace</option>
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>{workspace.archived_at ? `${workspace.name} (archived)` : workspace.name}</option>
-              ))}
-            </select>
-          </label>
-          <div className="role-line">
-            <span>Role</span>
-            <strong>{workspaceRole}</strong>
-          </div>
-          <p className="permission-summary">{permissionSummary}</p>
-          {visiblePermissions.length > 0 && (
-            <div className="permission-chip-row" aria-label="Available permissions">
-              {visiblePermissions.map((permission) => <span key={permission}>{permission}</span>)}
-              {workspaceMembership && workspaceMembership.permissions.length > visiblePermissions.length && (
-                <span>+{workspaceMembership.permissions.length - visiblePermissions.length}</span>
-              )}
-            </div>
-          )}
-          <button type="button" className="workspace-manage-button" onClick={() => goToTab("account")}>
-            Account & workspaces
-          </button>
-        </section>
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          selectedWorkspaceId={selectedWorkspaceId}
+          workspaceRole={workspaceRole}
+          consoleState={consoleState}
+          loading={loading}
+          onSelectWorkspace={setSelectedWorkspaceId}
+          onOpenAccount={() => goToTab("account")}
+        />
 
         <section className="readiness-card">
           <div className="row-head">
@@ -3793,9 +3775,9 @@ export function App() {
       <section className="workspace-main">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{selectedWorkspace ? selectedWorkspace.name : "No workspace selected"}</p>
-            <h2>{activeTabInfo.label}</h2>
-            <p className="page-purpose">{activeTabInfo.purpose}</p>
+            <p className="eyebrow">Current workspace</p>
+            <h2>{selectedWorkspace ? selectedWorkspace.name : "No workspace selected"}</h2>
+            <p className="page-purpose">{activeTabInfo.label} - {activeTabInfo.purpose}</p>
           </div>
           <div className="topbar-actions">
             <Badge>{workspaceRole}</Badge>

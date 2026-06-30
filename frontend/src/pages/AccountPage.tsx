@@ -1,8 +1,9 @@
-import { FormEvent } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { Badge, EmptyState, Metric } from "../app/shared/Primitives";
 
 type WorkspaceMemberRole = "owner" | "developer" | "reviewer" | "viewer" | "member";
 type AccountTab = "tasks" | "reviews" | "members" | "settings";
+const WORKSPACE_PAGE_SIZE = 8;
 
 type CurrentUser = {
   id: string;
@@ -82,6 +83,28 @@ export function AccountPage({
     ? "You already have access to a workspace with this name."
     : "Names must be unique in your workspace list.";
 
+  const [workspaceSearch, setWorkspaceSearch] = useState("");
+  const [workspacePage, setWorkspacePage] = useState(0);
+  const filteredWorkspaces = useMemo(() => {
+    const query = workspaceSearch.trim().toLowerCase();
+    if (!query) return workspaces;
+    return workspaces.filter((workspace) =>
+      [workspace.name, workspace.id].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [workspaceSearch, workspaces]);
+  const workspacePageCount = Math.max(Math.ceil(filteredWorkspaces.length / WORKSPACE_PAGE_SIZE), 1);
+  const safeWorkspacePage = Math.min(workspacePage, workspacePageCount - 1);
+  const pagedWorkspaces = filteredWorkspaces.slice(
+    safeWorkspacePage * WORKSPACE_PAGE_SIZE,
+    safeWorkspacePage * WORKSPACE_PAGE_SIZE + WORKSPACE_PAGE_SIZE,
+  );
+  const canGoToPreviousWorkspacePage = safeWorkspacePage > 0;
+  const canGoToNextWorkspacePage = safeWorkspacePage < workspacePageCount - 1;
+  const workspaceListStart = filteredWorkspaces.length === 0
+    ? 0
+    : safeWorkspacePage * WORKSPACE_PAGE_SIZE + 1;
+  const workspaceListEnd = Math.min((safeWorkspacePage + 1) * WORKSPACE_PAGE_SIZE, filteredWorkspaces.length);
+
   function submitCreateWorkspace(event: FormEvent) {
     if (!normalizedWorkspaceName || duplicateWorkspaceName) {
       event.preventDefault();
@@ -118,7 +141,7 @@ export function AccountPage({
             <h3>Create workspace</h3>
             <p className="muted">A workspace is an isolated project area for documents, datasets, agent runs, reviews, costs, and audit logs.</p>
           </div>
-          <Badge tone="good">isolated by backend</Badge>
+          <Badge tone="good">new workspace</Badge>
         </div>
         <label>
           Workspace name
@@ -147,12 +170,27 @@ export function AccountPage({
         <div className="row-head">
           <div>
             <h3>Your workspaces</h3>
-            <p className="muted">Select the workspace you want to operate. Every main page reloads through workspace-scoped APIs.</p>
+            <p className="muted">Select the workspace you want to operate. The active workspace controls every main page.</p>
           </div>
-          <Badge>{selectedWorkspace ? selectedWorkspace.name : "select one"}</Badge>
+          <Badge>{filteredWorkspaces.length} total</Badge>
         </div>
+        {selectedWorkspace && (
+          <div className="current-workspace-callout">
+            <span>Current workspace</span>
+            <strong>{selectedWorkspace.name}</strong>
+            <small>{workspaceRole} · {selectedWorkspace.archived_at ? "archived" : "active"}</small>
+          </div>
+        )}
+        <label className="account-workspace-search">
+          Search workspaces
+          <input
+            value={workspaceSearch}
+            onChange={(event) => { setWorkspaceSearch(event.target.value); setWorkspacePage(0); }}
+            placeholder="Workspace name or id"
+          />
+        </label>
         <div className="account-workspace-list">
-          {workspaces.map((workspace) => {
+          {pagedWorkspaces.map((workspace) => {
             const isSelected = workspace.id === selectedWorkspaceId;
             const isOwner = currentUser?.id === workspace.created_by_user_id;
             const isArchived = Boolean(workspace.archived_at);
@@ -178,7 +216,17 @@ export function AccountPage({
           {workspaces.length === 0 && (
             <EmptyState title="No workspace yet" detail="Create your first workspace above to unlock the platform workflow." />
           )}
+          {workspaces.length > 0 && filteredWorkspaces.length === 0 && (
+            <EmptyState title="No workspaces match" detail="Clear search or use another workspace name." />
+          )}
         </div>
+        {workspaces.length > WORKSPACE_PAGE_SIZE && (
+          <div className="pagination-bar">
+            <button type="button" onClick={() => setWorkspacePage((page) => Math.max(page - 1, 0))} disabled={!canGoToPreviousWorkspacePage || loading}>Previous</button>
+            <span>{workspaceListStart}-{workspaceListEnd} of {filteredWorkspaces.length} workspaces</span>
+            <button type="button" onClick={() => setWorkspacePage((page) => page + 1)} disabled={!canGoToNextWorkspacePage || loading}>Next</button>
+          </div>
+        )}
       </section>
 
       <section className="panel stack">
@@ -212,7 +260,7 @@ export function AccountPage({
         <div className="row-head">
           <div>
             <h3>Role presets</h3>
-            <p className="muted">Workspace permissions come from backend role presets. Owners can change member roles from the Members page.</p>
+            <p className="muted">Workspace permissions come from role presets. Owners can change member roles from the Members page.</p>
           </div>
           <Badge>permission model</Badge>
         </div>

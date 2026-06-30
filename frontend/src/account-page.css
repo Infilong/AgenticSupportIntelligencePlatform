@@ -132,3 +132,28 @@
     height: 52px;
   }
 }
+
+.current-workspace-callout {
+  display: grid;
+  gap: 3px;
+  border: 1px solid #0969da;
+  border-radius: 8px;
+  background: #ddf4ff;
+  padding: 12px 14px;
+}
+
+.current-workspace-callout span {
+  color: #0969da;
+  font-size: 0.72rem;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.current-workspace-callout strong {
+  color: #24292f;
+  overflow-wrap: anywhere;
+}
+
+.account-workspace-search {
+  max-width: 680px;
+}

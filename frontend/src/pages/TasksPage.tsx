@@ -72,14 +72,14 @@ export function TasksPage({
           <p className="eyebrow">My tasks</p>
           <h2>Operate what needs attention</h2>
           <p className="muted">
-            This queue is built from backend workspace signals: pending reviews, failed runs,
+            This queue is built from workspace signals: pending reviews, failed runs,
             model failures, tool errors, guardrail blocks, indexing failures, and evaluation regressions.
           </p>
         </div>
         <div className="next-action-card">
           <span>Next task</span>
           <strong>{nextTask ? nextTask.title : "Queue clear"}</strong>
-          <p>{nextTask ? nextTask.detail : "No backend attention items are currently open for this workspace."}</p>
+          <p>{nextTask ? nextTask.detail : "No attention items are currently open for this workspace."}</p>
           {nextTask ? (
             <button
               className="primary"
@@ -110,7 +110,7 @@ export function TasksPage({
           <div className="row-head">
             <div>
               <h3>Attention queue</h3>
-              <p className="muted">Each task has a backend source and opens the relevant operations page.</p>
+              <p className="muted">Each task opens the relevant operations page.</p>
             </div>
             <button type="button" onClick={() => void onRefresh()}>
               Refresh

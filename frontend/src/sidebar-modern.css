@@ -214,3 +214,73 @@
   color: var(--danger);
   font-size: 1rem;
 }
+
+.workspace-switcher .row-head strong,
+.workspace-switcher-option strong,
+.current-workspace-marker {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.workspace-switcher .row-head small {
+  display: block;
+  margin-top: 3px;
+}
+
+.current-workspace-marker {
+  border: 1px solid #0969da;
+  border-radius: 8px;
+  background: #ddf4ff;
+  padding: 8px 10px;
+  color: #0969da;
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.workspace-switcher-list {
+  display: grid;
+  gap: 6px;
+}
+
+.workspace-switcher-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 42px;
+  align-items: center;
+  width: 100%;
+  border-radius: 8px;
+  padding: 8px 9px;
+  text-align: left;
+}
+
+.workspace-switcher-option small {
+  display: block;
+  margin-top: 2px;
+}
+
+.workspace-switcher-option.selected {
+  border-color: #0969da;
+  background: #f6f8fa;
+  box-shadow: inset 3px 0 0 #0969da;
+}
+
+.workspace-switcher-pagination {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.workspace-switcher-pagination button {
+  min-height: 32px;
+  padding: 5px 8px;
+  font-size: 0.78rem;
+}
+
+.workspace-switcher-pagination span {
+  color: #57606a;
+  font-size: 0.78rem;
+  font-weight: 720;
+  text-align: center;
+}

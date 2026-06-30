@@ -96,7 +96,7 @@ export function SettingsPage({
         <div>
           <p className="eyebrow">Workspace settings</p>
           <h2>Manage workspace identity, lifecycle, and permissions</h2>
-          <p className="muted">Workspace administration follows a GitHub-like model: identity, membership, role capabilities, archive, leave, and delete controls are explicit and backend-enforced.</p>
+          <p className="muted">Workspace administration follows a GitHub-like model: identity, membership, role capabilities, archive, leave, and delete controls are explicit and permission-aware.</p>
         </div>
         <div className="next-action-card">
           <span>Your permission</span>
@@ -132,7 +132,7 @@ export function SettingsPage({
             />
           </label>
           {isArchived && <div className="settings-note warning-note">Archived workspaces are read-only. Restore the workspace before renaming or changing resources.</div>}
-          <div className="settings-note">Workspace identity changes are written through the backend and recorded as <code>workspace.updated</code> audit events.</div>
+          <div className="settings-note">Workspace identity changes are recorded as <code>workspace.updated</code> audit events.</div>
           <div className="run-action-bar">
             <button type="submit" className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading || isArchived}>Save workspace</button>
             {isArchived ? (
@@ -190,9 +190,9 @@ export function SettingsPage({
         <div className="row-head">
           <div>
             <h3>Permission matrix</h3>
-            <p className="muted">Role capabilities are returned by the backend so the UI reflects the server-side permission model instead of hardcoding authority in the browser.</p>
+            <p className="muted">Role capabilities reflect the permission model used for workspace actions.</p>
           </div>
-          <Badge tone="good">backend source</Badge>
+          <Badge tone="good">permission model</Badge>
         </div>
         <div className="permission-matrix-list">
           {permissionMatrix.map((entry) => (
@@ -215,7 +215,7 @@ export function SettingsPage({
         <div className="row-head">
           <div>
             <h3>Danger zone</h3>
-            <p className="muted">Lifecycle actions are separated from normal settings and require backend authorization.</p>
+            <p className="muted">Lifecycle actions are separated from normal settings and require owner permission where appropriate.</p>
           </div>
           <Badge tone="bad">careful</Badge>
         </div>
@@ -223,7 +223,7 @@ export function SettingsPage({
           <article className="danger-zone-row">
             <div>
               <strong>Leave workspace</strong>
-              <p className="muted">Remove your own membership. The backend prevents leaving as the last owner.</p>
+              <p className="muted">Remove your own membership. The platform prevents leaving as the last owner.</p>
             </div>
             <button type="button" className="danger-button" onClick={() => void onLeaveWorkspace()} disabled={loading || !workspaceName}>Leave workspace</button>
           </article>
@@ -255,10 +255,10 @@ export function SettingsPage({
           <Badge tone="good">workspace scoped</Badge>
         </div>
         <div className="policy-list settings-boundary-list">
-          <span>Workspace rename, archive, restore, and deletion require owner permission and backend authorization.</span>
+          <span>Workspace rename, archive, restore, and deletion require owner permission.</span>
           <span>Archived workspaces are readable but block write-level routes until restored.</span>
           <span>Provider/model routes are configured in Models; missing API keys are reported in System Health.</span>
-          <span>Workspace budget policy is configured in Usage & Costs and enforced by the backend runtime.</span>
+          <span>Workspace budget policy is configured in Usage & Costs and enforced during agent runs.</span>
           <span>Membership, resource deletion, folder management, and audit-sensitive actions remain owner-gated where required.</span>
         </div>
       </section>

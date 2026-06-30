@@ -390,7 +390,7 @@ export function OverviewPage({
         <article className="overview-admin-card">
           <span>Permissions</span>
           <strong>Workspace scoped</strong>
-          <small>All product data is routed through workspace-scoped APIs and audit records.</small>
+          <small>All product data follows the selected workspace and audit records.</small>
         </article>
         <article className="overview-admin-card">
           <span>Scale path</span>
