@@ -5228,6 +5228,11 @@ export function App() {
   }
 
   function ReviewsPanel() {
+    const reviewQuickLinks = [
+      { id: "review-overview", label: "1. Review queue", detail: "Inspect pending and resolve routing blockers" },
+      { id: "review-pending", label: "2. Pending cases", detail: "Choose a case and set resolution action" },
+      { id: "review-resolved", label: "3. Resolved history", detail: "Review closed decisions and inspect finalization" },
+    ];
     const pendingReviewItems = reviews.filter((review) => review.reviewer_decision === "pending");
     const displayedPendingReviewItems = pendingReviewItems;
     const resolvedReviewItems = reviews.filter((review) => review.reviewer_decision !== "pending");
@@ -5255,7 +5260,15 @@ export function App() {
 
     return (
       <div className="review-console">
-        <section className="panel review-hero">
+        <nav className="workflow-shortcuts" aria-label="Human review workflow">
+          {reviewQuickLinks.map((link) => (
+            <a key={link.id} className="workflow-shortcut" href={`#${link.id}`}>
+              <strong>{link.label}</strong>
+              <span>{link.detail}</span>
+            </a>
+          ))}
+        </nav>
+        <section id="review-overview" className="panel review-hero">
           <div>
             <p className="eyebrow">Human review</p>
             <h2>Resolve blocked agent runs</h2>
@@ -5278,7 +5291,7 @@ export function App() {
           <Metric label="Loaded model/budget" value={modelCount} />
         </section>
 
-        <section className="review-workbench">
+        <section id="review-pending" className="review-workbench">
           <div className="panel stack">
             <div className="row-head">
               <div>
@@ -5549,7 +5562,7 @@ export function App() {
           </aside>
         </section>
 
-        <section className="panel stack">
+        <section id="review-resolved" className="panel stack">
           <div className="row-head">
             <div>
               <h3>Resolved review history</h3>
