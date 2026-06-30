@@ -28,6 +28,7 @@ from app.services.workspace_service import (
     WorkspaceMemberNotFoundError,
     WorkspaceMemberOwnerError,
     WorkspaceMemberUserNotFoundError,
+    WorkspaceNameConflictError,
     WorkspaceService,
     permissions_for_role,
 )
@@ -55,7 +56,10 @@ def create_workspace(
     db: DbSession,
 ) -> WorkspaceResponse:
     service = WorkspaceService(db)
-    workspace = service.create_workspace(name=payload.name, creator=current_user)
+    try:
+        workspace = service.create_workspace(name=payload.name, creator=current_user)
+    except WorkspaceNameConflictError as exc:
+        raise _workspace_name_conflict(exc) from exc
     return WorkspaceResponse.model_validate(workspace)
 
 
@@ -71,7 +75,12 @@ def update_workspace_settings(
     current_user: CurrentUser,
     db: DbSession,
 ) -> WorkspaceResponse:
-    updated = WorkspaceService(db).update_workspace_name(workspace=workspace, name=payload.name)
+    try:
+        updated = WorkspaceService(db).update_workspace_name(
+            workspace=workspace, name=payload.name, actor_user_id=current_user.id
+        )
+    except WorkspaceNameConflictError as exc:
+        raise _workspace_name_conflict(exc) from exc
     AuditLogService(db).record(
         workspace_id=updated.id,
         actor_user_id=current_user.id,
@@ -215,6 +224,13 @@ def remove_workspace_member(
         resource_type="workspace_member",
         resource_id=member.id if member else member_user_id,
         metadata={"user_id": str(member_user_id)},
+    )
+
+
+def _workspace_name_conflict(exc: Exception) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={"code": "workspace_name_conflict", "message": str(exc)},
     )
 
 

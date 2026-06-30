@@ -884,7 +884,18 @@ small {
   color: var(--surface);
 }
 
+.status-slot {
+  display: grid;
+  min-height: 42px;
+  align-items: start;
+}
+
+.status-slot:not(.visible) {
+  visibility: hidden;
+}
+
 .status {
+  min-height: 42px;
   border-radius: 8px;
   padding: 10px 12px;
   font-weight: 740;

@@ -1743,11 +1743,24 @@ export function App() {
 
   async function createWorkspace(event: FormEvent) {
     event.preventDefault();
+    const resolvedName = workspaceName.trim();
+    const duplicateWorkspaceName = workspaces.some(
+      (workspace) => workspace.name.trim().toLowerCase() === resolvedName.toLowerCase(),
+    );
+    if (!resolvedName || duplicateWorkspaceName) {
+      setNotice("");
+      setError(
+        duplicateWorkspaceName
+          ? "You already have access to a workspace with this name."
+          : "Workspace name is required.",
+      );
+      return;
+    }
     await runAction("Workspace created", async () => {
       const workspace = await apiRequest<Workspace>("/api/v1/workspaces", {
         method: "POST",
         token,
-        body: { name: workspaceName },
+        body: { name: resolvedName },
       });
       await loadWorkspaces();
       setSelectedWorkspaceId(workspace.id);
@@ -6868,7 +6881,13 @@ function InfoCard({ title, text }: { title: string; text: string }) {
 }
 
 function Status({ notice, error }: { notice: string; error: string }) {
-  return <>{notice && <div className="status success">{notice}</div>}{error && <div className="status error">{error}</div>}</>;
+  const message = error || notice;
+  return (
+    <div className={message ? "status-slot visible" : "status-slot"} aria-live="polite" aria-atomic="true">
+      {notice && !error && <div className="status success">{notice}</div>}
+      {error && <div className="status error">{error}</div>}
+    </div>
+  );
 }
 
 

@@ -160,6 +160,41 @@ def test_workspace_create_rejects_blank_name(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_workspace_create_rejects_duplicate_visible_name(client: TestClient) -> None:
+    register(client, "duplicate-workspace-owner@example.com")
+    token = login(client, "duplicate-workspace-owner@example.com")
+
+    first = client.post(
+        "/api/v1/workspaces", json={"name": "Japan Support"}, headers=auth_headers(token)
+    )
+    duplicate = client.post(
+        "/api/v1/workspaces", json={"name": "  japan support  "}, headers=auth_headers(token)
+    )
+    workspaces = client.get("/api/v1/workspaces", headers=auth_headers(token))
+
+    assert first.status_code == 201
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"]["code"] == "workspace_name_conflict"
+    assert [workspace["name"] for workspace in workspaces.json()] == ["Japan Support"]
+
+
+def test_different_users_can_use_same_workspace_name(client: TestClient) -> None:
+    register(client, "same-name-owner-a@example.com")
+    token_a = login(client, "same-name-owner-a@example.com")
+    register(client, "same-name-owner-b@example.com")
+    token_b = login(client, "same-name-owner-b@example.com")
+
+    response_a = client.post(
+        "/api/v1/workspaces", json={"name": "Shared Label"}, headers=auth_headers(token_a)
+    )
+    response_b = client.post(
+        "/api/v1/workspaces", json={"name": "Shared Label"}, headers=auth_headers(token_b)
+    )
+
+    assert response_a.status_code == 201
+    assert response_b.status_code == 201
+
+
 def test_workspace_membership_endpoint_returns_owner_permissions(client: TestClient) -> None:
     register(client, "owner-permissions@example.com")
     token = login(client, "owner-permissions@example.com")
@@ -441,6 +476,36 @@ def test_workspace_owner_can_update_workspace_settings(client: TestClient) -> No
     assert updated.status_code == 200
     assert updated.json()["name"] == "Production AI Platform"
     assert detail.json()["name"] == "Production AI Platform"
+
+
+def test_workspace_settings_update_rejects_duplicate_visible_name(client: TestClient) -> None:
+    register(client, "workspace-settings-duplicate-owner@example.com")
+    token = login(client, "workspace-settings-duplicate-owner@example.com")
+    first = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Support Production"},
+        headers=auth_headers(token),
+    ).json()
+    second = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Support Sandbox"},
+        headers=auth_headers(token),
+    ).json()
+
+    duplicate = client.patch(
+        f"/api/v1/workspaces/{second['id']}",
+        headers=auth_headers(token),
+        json={"name": " support production "},
+    )
+    unchanged = client.get(
+        f"/api/v1/workspaces/{second['id']}",
+        headers=auth_headers(token),
+    )
+
+    assert first["name"] == "Support Production"
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"]["code"] == "workspace_name_conflict"
+    assert unchanged.json()["name"] == "Support Sandbox"
 
 
 def test_workspace_settings_update_requires_owner(client: TestClient, db_session: Session) -> None:

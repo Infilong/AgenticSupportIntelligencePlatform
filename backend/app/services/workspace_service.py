@@ -107,6 +107,10 @@ class WorkspaceMemberOwnerError(WorkspaceMemberError):
     pass
 
 
+class WorkspaceNameConflictError(ValueError):
+    pass
+
+
 def permissions_for_role(role: WorkspaceRole) -> list[str]:
     return ROLE_PERMISSIONS.get(role, VIEWER_PERMISSIONS).copy()
 
@@ -116,7 +120,10 @@ class WorkspaceService:
         self.db = db
 
     def create_workspace(self, *, name: str, creator: User) -> Workspace:
-        workspace = Workspace(name=name.strip(), created_by_user_id=creator.id)
+        resolved_name = name.strip()
+        if self._workspace_name_exists_for_user(user_id=creator.id, name=resolved_name):
+            raise WorkspaceNameConflictError("Workspace name already exists for your account.")
+        workspace = Workspace(name=resolved_name, created_by_user_id=creator.id)
         self.db.add(workspace)
         self.db.flush()
         self.db.add(
@@ -150,11 +157,34 @@ class WorkspaceService:
         )
         return self.db.scalar(statement)
 
-    def update_workspace_name(self, *, workspace: Workspace, name: str) -> Workspace:
-        workspace.name = name.strip()
+    def update_workspace_name(
+        self, *, workspace: Workspace, name: str, actor_user_id: UUID
+    ) -> Workspace:
+        resolved_name = name.strip()
+        if self._workspace_name_exists_for_user(
+            user_id=actor_user_id, name=resolved_name, exclude_workspace_id=workspace.id
+        ):
+            raise WorkspaceNameConflictError("Workspace name already exists for your account.")
+        workspace.name = resolved_name
         self.db.commit()
         self.db.refresh(workspace)
         return workspace
+
+    def _workspace_name_exists_for_user(
+        self, *, user_id: UUID, name: str, exclude_workspace_id: UUID | None = None
+    ) -> bool:
+        normalized_name = name.strip().lower()
+        statement = (
+            select(Workspace.id)
+            .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
+            .where(
+                WorkspaceMember.user_id == user_id,
+                func.lower(Workspace.name) == normalized_name,
+            )
+        )
+        if exclude_workspace_id is not None:
+            statement = statement.where(Workspace.id != exclude_workspace_id)
+        return self.db.scalar(statement.limit(1)) is not None
 
     def list_members(self, *, workspace_id: UUID) -> list[WorkspaceMember]:
         statement = (

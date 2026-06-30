@@ -70,6 +70,22 @@ export function AccountPage({
   const ownedWorkspaces = currentUser
     ? workspaces.filter((workspace) => workspace.created_by_user_id === currentUser.id).length
     : 0;
+  const normalizedWorkspaceName = workspaceName.trim().toLowerCase();
+  const duplicateWorkspaceName = Boolean(
+    normalizedWorkspaceName
+      && workspaces.some((workspace) => workspace.name.trim().toLowerCase() === normalizedWorkspaceName),
+  );
+  const workspaceNameFeedback = duplicateWorkspaceName
+    ? "You already have access to a workspace with this name."
+    : "Names must be unique in your workspace list.";
+
+  function submitCreateWorkspace(event: FormEvent) {
+    if (!normalizedWorkspaceName || duplicateWorkspaceName) {
+      event.preventDefault();
+      return;
+    }
+    void onCreateWorkspace(event);
+  }
 
   return (
     <div className="account-console">
@@ -92,7 +108,7 @@ export function AccountPage({
         <Metric label="Pending reviews" value={pendingReviews} />
       </section>
 
-      <form className="panel stack account-create-panel" onSubmit={onCreateWorkspace}>
+      <form className="panel stack account-create-panel" onSubmit={submitCreateWorkspace}>
         <div className="row-head">
           <div>
             <h3>Create workspace</h3>
@@ -107,10 +123,14 @@ export function AccountPage({
             onChange={(event) => onWorkspaceNameChange(event.target.value)}
             placeholder="Example: Billing AI Support"
             disabled={loading}
+            aria-invalid={duplicateWorkspaceName}
           />
+          <span className={duplicateWorkspaceName ? "account-field-note error" : "account-field-note"}>
+            {workspaceNameFeedback}
+          </span>
         </label>
         <div className="run-action-bar">
-          <button type="submit" className="primary" disabled={loading || !workspaceName.trim()}>
+          <button type="submit" className="primary" disabled={loading || !workspaceName.trim() || duplicateWorkspaceName}>
             Create workspace
           </button>
           {selectedWorkspace && canOpenTab("settings") && (
