@@ -68,3 +68,10 @@ Audited frontend page layouts and expanded `frontend/src/workflow-rows.css` so t
 - Audit, settings, models, prompts, members, and system health.
 
 Kept compact repeated content as responsive grids: metrics, health cards, summaries, signals, trace cards, node cards, and language metric groups.
+
+## Follow-up: Scrollbar Auto-Hide
+User review requested scrollbars to stay hidden unless the scrollable area is focused.
+
+Added `frontend/src/scrollbars.css` and imported it last so internal scrollable panels hide scrollbars by default and reveal thin GitHub-style scrollbars on hover or `:focus-within`.
+
+Targeted internal app surfaces only: sidebar, folder/resource lists, document/chunk lists, agent option lists, trace/review queues, evaluation/cost/admin lists, JSON blocks, and folder pickers.

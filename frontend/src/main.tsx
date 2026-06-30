@@ -6,6 +6,7 @@ import "./styles.css";
 import "./github-theme.css";
 import "./sidebar-modern.css";
 import "./workflow-rows.css";
+import "./scrollbars.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
