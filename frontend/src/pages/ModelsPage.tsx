@@ -207,7 +207,7 @@ export function ModelsPage({
             </label>
             <label>
               Model
-              <input value={modelName} disabled={!canManageModels || loading} onChange={(event) => onModelNameChange(event.target.value)} />
+              <input value={modelName} disabled={!canManageModels || loading} onChange={(event) => onModelNameChange(event.target.value)} placeholder={selectedModelProvider?.defaultModel ?? "Example: gpt-4.1-mini"} />
             </label>
           </div>
           {selectedModelProvider && <div className="settings-note">{selectedModelProvider.note}</div>}
@@ -230,7 +230,7 @@ export function ModelsPage({
             Activate this config immediately
           </label>
           <div className="run-action-bar">
-            <button type="submit" className="primary" disabled={!canManageModels || loading}>Create config</button>
+            <button type="submit" className="primary" disabled={!canManageModels || loading || !modelName.trim()}>Create config</button>
             <TabShortcut tab="agent">Run agent</TabShortcut>
             <TabShortcut tab="costs">Inspect costs</TabShortcut>
           </div>

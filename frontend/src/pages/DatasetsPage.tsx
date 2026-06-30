@@ -1,6 +1,9 @@
 import { FormEvent, ReactNode, SetStateAction } from "react";
 import { Badge, EmptyState } from "../app/shared/Primitives";
 
+const datasetJsonlPlaceholder = `{"external_id":"ja_refund_001","messages":[{"role":"user","content":"先月購入したプランの返金はできますか？"}],"labels":{"intent":"refund_request","product_area":"billing"}}
+{"external_id":"en_security_001","messages":[{"role":"user","content":"I think my account was accessed by someone else."}],"labels":{"intent":"security_issue","escalation_needed":"true"}}`;
+
 type Language = "en" | "ja" | "zh";
 
 type ResourceType = "knowledge_document" | "dataset" | "evaluation_run" | "agent_config";
@@ -225,7 +228,7 @@ export function DatasetsPage({
       })}
       <form className="panel stack" onSubmit={onImportDataset}>
         <h3>Import multilingual data</h3>
-        <label>Dataset name<input value={datasetName} onChange={(event) => onDatasetNameChange(event.target.value)} /></label>
+        <label>Dataset name<input value={datasetName} onChange={(event) => onDatasetNameChange(event.target.value)} placeholder="Example: Japanese refund conversations" /></label>
         {folderPicker({
           label: "Import target folder",
           value: datasetFolderId,
@@ -234,7 +237,7 @@ export function DatasetsPage({
           disabled: loading,
           resourceLabel: "dataset",
         })}
-        <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => onDatasetContentChange(event.target.value)} /></label>
+        <label>JSONL content<textarea rows={14} value={datasetContent} onChange={(event) => onDatasetContentChange(event.target.value)} placeholder={datasetJsonlPlaceholder} /></label>
         <button type="submit" className="primary" disabled={!canWriteData || loading || !datasetName.trim() || !datasetContent.trim()}>Import JSONL</button>
       </form>
       <section className="panel stack dataset-library-panel">

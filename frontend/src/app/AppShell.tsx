@@ -1217,16 +1217,16 @@ function JsonBlock({ value }: { value: unknown }) {
 export function App() {
   const [token, setToken] = useState(() => localStorage.getItem("asi_token") ?? "");
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("demo@example.com");
-  const [password, setPassword] = useState("strong-password");
-  const [displayName, setDisplayName] = useState("Demo User");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceMembership, setWorkspaceMembership] = useState<WorkspaceMembership | null>(null);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<WorkspaceMemberRole>("developer");
-  const [workspaceName, setWorkspaceName] = useState("Agentic Platform Demo");
+  const [workspaceName, setWorkspaceName] = useState("");
   const [workspaceSettingsName, setWorkspaceSettingsName] = useState("");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -1238,8 +1238,8 @@ export function App() {
   const [error, setError] = useState("");
 
   const [datasets, setDatasets] = useState<Dataset[]>([]);
-  const [datasetName, setDatasetName] = useState("Demo Support Conversations");
-  const [datasetContent, setDatasetContent] = useState(demoDataset);
+  const [datasetName, setDatasetName] = useState("");
+  const [datasetContent, setDatasetContent] = useState("");
   const [datasetFolderId, setDatasetFolderId] = useState("");
   const [selectedDatasetId, setSelectedDatasetId] = useState("");
   const [selectedDataFolderId, setSelectedDataFolderId] = useState("all");
@@ -1248,14 +1248,14 @@ export function App() {
   const [datasetTotal, setDatasetTotal] = useState(0);
   const [datasetHasNext, setDatasetHasNext] = useState(false);
   const [exampleSearch, setExampleSearch] = useState("");
-  const [dataFolderName, setDataFolderName] = useState("Training data");
+  const [dataFolderName, setDataFolderName] = useState("");
   const [examples, setExamples] = useState<ConversationExample[]>([]);
   const [labelDrafts, setLabelDrafts] = useState<Record<string, { label_type: string; value: string }>>({});
 
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
-  const [documentTitle, setDocumentTitle] = useState("Refund Policy EN");
+  const [documentTitle, setDocumentTitle] = useState("");
   const [documentLanguage, setDocumentLanguage] = useState<Language>("en");
-  const [documentContent, setDocumentContent] = useState(demoDocument);
+  const [documentContent, setDocumentContent] = useState("");
   const [documentFolderId, setDocumentFolderId] = useState("");
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [selectedKnowledgeFolderId, setSelectedKnowledgeFolderId] = useState("all");
@@ -1264,7 +1264,7 @@ export function App() {
   const [documentTotal, setDocumentTotal] = useState(0);
   const [documentHasNext, setDocumentHasNext] = useState(false);
   const [chunkSearch, setChunkSearch] = useState("");
-  const [knowledgeFolderName, setKnowledgeFolderName] = useState("Policies");
+  const [knowledgeFolderName, setKnowledgeFolderName] = useState("");
   const [resourceFolders, setResourceFolders] = useState<ResourceFolder[]>([]);
   const [resourceFolderCounts, setResourceFolderCounts] = useState<Partial<Record<ResourceType, ResourceFolderCountSummary>>>(
     {},
@@ -1275,21 +1275,21 @@ export function App() {
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
 
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [newAgentName, setNewAgentName] = useState("Support Workflow Agent");
+  const [newAgentName, setNewAgentName] = useState("");
   const [newAgentFolderId, setNewAgentFolderId] = useState("");
   const [selectedAgentFolderId, setSelectedAgentFolderId] = useState("all");
-  const [agentFolderName, setAgentFolderName] = useState("Production agents");
+  const [agentFolderName, setAgentFolderName] = useState("");
   const [agentSearch, setAgentSearch] = useState("");
   const [agentPage, setAgentPage] = useState(0);
   const [agentTotal, setAgentTotal] = useState(0);
   const [agentHasNext, setAgentHasNext] = useState(false);
-  const [agentName, setAgentName] = useState("Support Workflow Agent");
+  const [agentName, setAgentName] = useState("");
   const [agentTokenBudget, setAgentTokenBudget] = useState(4000);
   const [agentConfidenceThreshold, setAgentConfidenceThreshold] = useState(0.5);
   const [agentRetrievalTopK, setAgentRetrievalTopK] = useState(4);
   const [agentRetrievalMinScore, setAgentRetrievalMinScore] = useState(0.2);
   const [agentModelConfigId, setAgentModelConfigId] = useState("");
-  const [agentMessage, setAgentMessage] = useState("Can I get a refund within 30 days?");
+  const [agentMessage, setAgentMessage] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [agentSummary, setAgentSummary] = useState<AgentOperationalSummary | null>(null);
   const [agentWorkflowSummary, setAgentWorkflowSummary] = useState<AgentWorkflowSummary | null>(null);
@@ -1337,14 +1337,14 @@ export function App() {
   const [evaluationComparison, setEvaluationComparison] = useState<EvaluationComparison | null>(null);
   const [evaluationBaselineId, setEvaluationBaselineId] = useState("");
   const [evaluationBaselineSearch, setEvaluationBaselineSearch] = useState("");
-  const [evaluationName, setEvaluationName] = useState("Smoke Evaluation");
+  const [evaluationName, setEvaluationName] = useState("");
   const [evaluationAgentId, setEvaluationAgentId] = useState("");
   const [evaluationAgentOptions, setEvaluationAgentOptions] = useState<Agent[]>([]);
   const [evaluationAgentSearch, setEvaluationAgentSearch] = useState("");
   const [evaluationFolderId, setEvaluationFolderId] = useState("");
   const [selectedEvaluationFolderId, setSelectedEvaluationFolderId] = useState("all");
-  const [evaluationFolderName, setEvaluationFolderName] = useState("Regression packs");
-  const [evaluationCases, setEvaluationCases] = useState(demoEvaluation);
+  const [evaluationFolderName, setEvaluationFolderName] = useState("");
+  const [evaluationCases, setEvaluationCases] = useState("");
   const [evaluationModes, setEvaluationModes] = useState<Mode[]>(["direct_llm", "vector_rag", "system_v1"]);
   const [evaluationSearch, setEvaluationSearch] = useState("");
   const [evaluationStatusFilter, setEvaluationStatusFilter] = useState("all");
@@ -1383,7 +1383,7 @@ export function App() {
   const [promptHistoryHasNext, setPromptHistoryHasNext] = useState(false);
   const [promptName, setPromptName] = useState("support_response_drafter");
   const [promptLanguage, setPromptLanguage] = useState<Language>("en");
-  const [promptText, setPromptText] = useState(defaultPromptTemplateText);
+  const [promptText, setPromptText] = useState("");
   const [promptActive, setPromptActive] = useState(true);
   const [showArchivedPrompts, setShowArchivedPrompts] = useState(false);
   const [promptSearch, setPromptSearch] = useState("");
@@ -1399,7 +1399,7 @@ export function App() {
   const [agentModelOptionTotal, setAgentModelOptionTotal] = useState(0);
   const [agentModelOptionHasNext, setAgentModelOptionHasNext] = useState(false);
   const [modelProvider, setModelProvider] = useState("mock");
-  const [modelName, setModelName] = useState("mock-cheap");
+  const [modelName, setModelName] = useState("");
   const [modelPurpose, setModelPurpose] = useState<ModelPurpose>("classification");
   const [modelPromptCost, setModelPromptCost] = useState(0.0001);
   const [modelCompletionCost, setModelCompletionCost] = useState(0.0002);
@@ -1414,7 +1414,7 @@ export function App() {
     setModelProvider(provider);
     const preset = modelProviderOptions.find((option) => option.id === provider);
     if (!preset) return;
-    setModelName(preset.defaultModel);
+    setModelName("");
     setModelPromptCost(preset.promptCost);
     setModelCompletionCost(preset.completionCost);
     setModelMaxContext(preset.maxContext);
@@ -1952,11 +1952,17 @@ export function App() {
         : resourceType === "agent_config"
           ? agentFolderName
           : knowledgeFolderName;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setNotice("");
+      setError("Folder name is required.");
+      return;
+    }
     await runAction("Folder created", async () => {
       await apiRequest<ResourceFolder>(workspacePath("/resource-folders"), {
         method: "POST",
         token,
-        body: { resource_type: resourceType, name },
+        body: { resource_type: resourceType, name: trimmedName },
       });
       if (resourceType === "dataset") setDataFolderName("");
       if (resourceType === "knowledge_document") setKnowledgeFolderName("");
@@ -2287,12 +2293,17 @@ export function App() {
 
   async function uploadDocument(event: FormEvent) {
     event.preventDefault();
+    if (!documentTitle.trim() || !documentContent.trim()) {
+      setNotice("");
+      setError("Document title and source content are required.");
+      return;
+    }
     await runAction("Document indexed", async () => {
       const response = await apiRequest<{ document: KnowledgeDocument }>(workspacePath("/knowledge-documents"), {
         method: "POST",
         token,
         body: {
-          title: documentTitle,
+          title: documentTitle.trim(),
           content_type: "text/plain",
           language: documentLanguage,
           folder_id: documentFolderId || null,
@@ -2349,10 +2360,10 @@ export function App() {
   function resetDocumentForm(folderId = selectedKnowledgeFolderId) {
     setSelectedDocumentId("");
     setDocumentDetail(null);
-    setDocumentTitle(demoDocumentTitles.en);
+    setDocumentTitle("");
     setDocumentLanguage("en");
     setDocumentFolderId(folderSelectionToFormValue(folderId));
-    setDocumentContent(demoDocumentTemplates.en);
+    setDocumentContent("");
   }
 
   function changeDocumentLanguage(language: Language) {
@@ -2551,7 +2562,7 @@ export function App() {
         {hiddenFolderCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_FOLDERS} of {matchingFolders.length} matching folders. Search before moving resources in large workspaces.</p>}
         {canManageResourceFolders ? (
           <div className="folder-create">
-            <input value={folderName} onChange={(event) => onFolderNameChange(event.target.value)} placeholder="New folder name" />
+            <input value={folderName} onChange={(event) => onFolderNameChange(event.target.value)} placeholder="Example: Policies" />
             <button type="button" onClick={() => void createResourceFolder(resourceType)} disabled={!folderName.trim() || loading}>
               Create folder
             </button>
@@ -2638,12 +2649,18 @@ export function App() {
 
   async function createAgent(event: FormEvent) {
     event.preventDefault();
+    const trimmedName = newAgentName.trim();
+    if (!trimmedName) {
+      setNotice("");
+      setError("Agent name is required.");
+      return;
+    }
     await runAction("Agent created", async () => {
       const agent = await apiRequest<Agent>(workspacePath("/agents"), {
         method: "POST",
         token,
         body: {
-          name: newAgentName,
+          name: trimmedName,
           token_budget: agentTokenBudget,
           model_config_id: agentModelConfigId || null,
           folder_id: newAgentFolderId || null,
@@ -3111,12 +3128,17 @@ export function App() {
 
   async function runEvaluation(event: FormEvent) {
     event.preventDefault();
+    if (!evaluationName.trim() || !evaluationCases.trim()) {
+      setNotice("");
+      setError("Evaluation name and JSONL cases are required.");
+      return;
+    }
     await runAction("Evaluation completed", async () => {
       const detail = await apiRequest<EvaluationDetail>(workspacePath("/evaluations"), {
         method: "POST",
         token,
         body: {
-          name: evaluationName,
+          name: evaluationName.trim(),
           folder_id: evaluationFolderId || null,
           jsonl_cases: evaluationCases,
           modes: evaluationModes,
@@ -3400,6 +3422,11 @@ export function App() {
 
   async function createPromptTemplateVersion(event: FormEvent) {
     event.preventDefault();
+    if (!promptText.trim()) {
+      setNotice("");
+      setError("Prompt template source is required.");
+      return;
+    }
     await runAction("Prompt template version created", async () => {
       await apiRequest<PromptTemplate>(workspacePath("/prompt-templates"), {
         method: "POST",
@@ -3407,7 +3434,7 @@ export function App() {
         body: {
           name: promptName,
           language: promptLanguage,
-          template_text: promptText,
+          template_text: promptText.trim(),
           active: promptActive,
         },
       });
@@ -3518,13 +3545,19 @@ export function App() {
 
   async function createModelConfig(event: FormEvent) {
     event.preventDefault();
+    const trimmedModelName = modelName.trim();
+    if (!trimmedModelName) {
+      setNotice("");
+      setError("Model name is required.");
+      return;
+    }
     await runAction("Model configuration created", async () => {
       await apiRequest<ModelConfig>(workspacePath("/model-configs"), {
         method: "POST",
         token,
         body: {
           provider: modelProvider,
-          model: modelName,
+          model: trimmedModelName,
           purpose: modelPurpose,
           prompt_token_cost_per_1k: modelPromptCost,
           completion_token_cost_per_1k: modelCompletionCost,
@@ -3609,16 +3642,16 @@ export function App() {
           {authMode === "register" && (
             <label>
               Display name
-              <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+              <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Your name" />
             </label>
           )}
           <label>
             Email
-            <input value={email} onChange={(event) => setEmail(event.target.value)} />
+            <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
           </label>
           <label>
             Password
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" />
           </label>
           <button type="submit" className="primary" disabled={loading}>{authMode === "login" ? "Login" : "Register and login"}</button>
           <Status notice={notice} error={error} />
@@ -4841,7 +4874,7 @@ export function App() {
               <textarea rows={8} value={agentMessage} onChange={(event) => setAgentMessage(event.target.value)} />
             </label>
             <div className="run-action-bar">
-              <button type="submit" className="primary" disabled={!canRunAgent || loading || !selectedAgentId}>Run agent</button>
+              <button type="submit" className="primary" disabled={!canRunAgent || loading || !selectedAgentId || !agentMessage.trim()}>Run agent</button>
               <TabShortcut tab="trace" disabled={!traceRunId}>Open trace</TabShortcut>
               <TabShortcut tab="reviews">Review queue</TabShortcut>
             </div>
@@ -5748,7 +5781,7 @@ export function App() {
               </div>
               <Badge tone={evaluationModes.length ? "good" : "warn"}>{evaluationModes.length} modes</Badge>
             </div>
-            <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} /></label>
+            <label>Name<input value={evaluationName} onChange={(event) => setEvaluationName(event.target.value)} placeholder="Example: Release readiness smoke test" /></label>
             <div className="stack compact-stack">
               <label>
                 Search target agents
@@ -5827,10 +5860,10 @@ export function App() {
             </div>
             <label>
               JSONL cases
-              <textarea rows={16} value={evaluationCases} onChange={(event) => setEvaluationCases(event.target.value)} />
+              <textarea rows={16} value={evaluationCases} onChange={(event) => setEvaluationCases(event.target.value)} placeholder={demoEvaluation} />
             </label>
             <div className="run-action-bar">
-              <button type="submit" className="primary" disabled={!canRunEvaluations || loading || evaluationModes.length === 0}>Run evaluation</button>
+              <button type="submit" className="primary" disabled={!canRunEvaluations || loading || evaluationModes.length === 0 || !evaluationName.trim() || !evaluationCases.trim()}>Run evaluation</button>
               <TabShortcut tab="costs">Inspect cost ledger</TabShortcut>
             </div>
           </form>
@@ -6070,10 +6103,10 @@ export function App() {
             </div>
             <label>
               Template source
-              <textarea rows={16} value={promptText} disabled={!canManagePrompts || loading} onChange={(event) => setPromptText(event.target.value)} />
+              <textarea rows={16} value={promptText} disabled={!canManagePrompts || loading} onChange={(event) => setPromptText(event.target.value)} placeholder={defaultPromptTemplateText} />
             </label>
             <div className="run-action-bar">
-              <button type="submit" className="primary" disabled={!canManagePrompts || loading}>Create version</button>
+              <button type="submit" className="primary" disabled={!canManagePrompts || loading || !promptText.trim()}>Create version</button>
               <TabShortcut tab="agent">Run agent</TabShortcut>
               <TabShortcut tab="trace">Inspect trace</TabShortcut>
             </div>

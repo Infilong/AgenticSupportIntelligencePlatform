@@ -340,7 +340,7 @@ export function DocumentsPage({
             </div>
           </div>
           <div className="knowledge-meta-grid">
-            <label>Title<input value={documentTitle} onChange={(event) => onSetDocumentTitle(event.target.value)} /></label>
+            <label>Title<input value={documentTitle} onChange={(event) => onSetDocumentTitle(event.target.value)} placeholder="Example: Refund policy EN" /></label>
             <label>
               Language
               <select value={documentLanguage} onChange={(event) => onSetDocumentLanguage(event.target.value as Language)}>
@@ -365,10 +365,10 @@ export function DocumentsPage({
           </div>
           <label>
             Source content
-            <textarea rows={16} value={documentContent} onChange={(event) => onSetDocumentContent(event.target.value)} />
+            <textarea rows={16} value={documentContent} onChange={(event) => onSetDocumentContent(event.target.value)} placeholder="Paste the policy, FAQ, release note, or support manual text here." />
           </label>
           <div className="run-action-bar">
-            <button type="submit" className="primary" disabled={!canWriteKnowledge || loading}>
+            <button type="submit" className="primary" disabled={!canWriteKnowledge || loading || !documentTitle.trim() || !documentContent.trim()}>
               {selectedDocumentId ? "Save edits and reindex" : "Upload and index"}
             </button>
             {selectedDocumentId && <button type="button" onClick={() => onMoveSelectedDocumentFolder()} disabled={!canManageResourceFolders || loading}>Move only</button>}

@@ -472,7 +472,7 @@ export function AgentsPage({
             {activeAgentPickerOptions.length === 0 && <small className="folder-picker-note">No agents in this folder/page. Create one below or switch folders.</small>}
           </section>
           <form className="inline-form" onSubmit={createAgent}>
-            <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} disabled={!canCreateAgent || loading} />
+            <input aria-label="New agent name" value={newAgentName} onChange={(event) => setNewAgentName(event.target.value)} disabled={!canCreateAgent || loading} placeholder="Example: Billing support triage" />
             <button type="submit" disabled={!canCreateAgent || loading || !newAgentName.trim()}>Create agent</button>
           </form>
         </div>
@@ -591,7 +591,7 @@ export function AgentsPage({
                 <strong>{selectedAgent?.name ?? "No agent selected"}</strong>
                 <small>{selectedWorkspaceName} · {workspaceRole}</small>
               </div>
-              <label>Agent name<input value={agentName} onChange={(event) => setAgentName(event.target.value)} disabled={!canConfigureAgent || loading} /></label>
+              <label>Agent name<input value={agentName} onChange={(event) => setAgentName(event.target.value)} disabled={!canConfigureAgent || loading} placeholder="Select an agent or type a runtime name" /></label>
             </section>
             <section className="agent-config-section">
               <div>
@@ -903,10 +903,10 @@ export function AgentsPage({
           </div>
           <label>
             Message
-            <textarea rows={8} value={agentMessage} onChange={(event) => setAgentMessage(event.target.value)} />
+            <textarea rows={8} value={agentMessage} onChange={(event) => setAgentMessage(event.target.value)} placeholder="Write a customer message, or choose a scenario card above." />
           </label>
           <div className="run-action-bar">
-            <button type="submit" className="primary" disabled={!canRunAgent || loading || !selectedAgentId}>Run agent</button>
+            <button type="submit" className="primary" disabled={!canRunAgent || loading || !selectedAgentId || !agentMessage.trim()}>Run agent</button>
             <button type="button" onClick={() => goToTab("trace")} disabled={!latestRun}>Open trace</button>
             <button type="button" onClick={() => goToTab("reviews")}>Review queue</button>
           </div>

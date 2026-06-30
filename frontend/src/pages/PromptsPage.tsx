@@ -255,10 +255,10 @@ export function PromptsPage({
           </div>
           <label>
             Template source
-            <textarea rows={16} value={promptText} disabled={!canManagePrompts || loading} onChange={(event) => onPromptTextChange(event.target.value)} />
+            <textarea rows={16} value={promptText} disabled={!canManagePrompts || loading} onChange={(event) => onPromptTextChange(event.target.value)} placeholder="Write the prompt template source here. Keep variables explicit and version every change." />
           </label>
           <div className="run-action-bar">
-            <button type="submit" className="primary" disabled={!canManagePrompts || loading}>Create version</button>
+            <button type="submit" className="primary" disabled={!canManagePrompts || loading || !promptText.trim()}>Create version</button>
             <TabShortcut tab="agent" onGoToTab={onGoToTab} canOpenTab={canOpenTab}>Run agent</TabShortcut>
             <TabShortcut tab="trace" onGoToTab={onGoToTab} canOpenTab={canOpenTab}>Inspect trace</TabShortcut>
           </div>
