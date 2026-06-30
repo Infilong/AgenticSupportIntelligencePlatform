@@ -1,0 +1,275 @@
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-muted: #f6f8fa;
+  --surface-strong: #24292f;
+  --border: #d0d7de;
+  --border-strong: #8c959f;
+  --text: #24292f;
+  --text-muted: #57606a;
+  --text-subtle: #6e7781;
+  --focus: #0969da;
+  --link: #0969da;
+  --success: #1a7f37;
+  --warning: #9a6700;
+  --danger: #cf222e;
+  --shadow: 0 1px 0 rgb(27 31 36 / 4%);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+input,
+select,
+textarea,
+.panel,
+.workspace-card,
+.readiness-card,
+.command-center,
+.guide-panel {
+  border-color: var(--border);
+}
+
+button {
+  border-radius: 6px;
+  background: #f6f8fa;
+  box-shadow: 0 1px 0 rgb(27 31 36 / 4%);
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: #f3f4f6;
+}
+
+.primary {
+  border-color: #1f883d;
+  background: #1f883d;
+  color: #ffffff;
+}
+
+.primary:hover:not(:disabled) {
+  border-color: #1a7f37;
+  background: #1a7f37;
+}
+
+.danger-button {
+  border-color: #ffebe9;
+  background: #ffebe9;
+  color: var(--danger);
+}
+
+.danger-button:hover:not(:disabled) {
+  border-color: #ff8182;
+  background: #ffebe9;
+}
+
+.app-shell {
+  grid-template-columns: 286px minmax(0, 1fr);
+}
+
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.sidebar {
+  gap: 12px;
+  overflow-x: hidden;
+  background: #ffffff;
+  padding: 14px 12px;
+}
+
+.sidebar * {
+  min-width: 0;
+}
+
+.brand-block {
+  grid-template-columns: 36px minmax(0, 1fr) 34px;
+  gap: 8px;
+}
+
+.brand-mark,
+.nav-token {
+  border-radius: 6px;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  background: #24292f;
+}
+
+.sidebar-toggle {
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+  overflow: hidden;
+  font-size: 0;
+}
+
+.sidebar-toggle::after {
+  content: "<";
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.sidebar-collapsed .sidebar-toggle::after {
+  content: ">";
+}
+
+.sidebar-collapsed .brand-block {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.sidebar-collapsed .brand-mark {
+  width: 38px;
+  height: 38px;
+}
+
+.sidebar-collapsed .workspace-card,
+.sidebar-collapsed .readiness-card {
+  display: grid;
+  justify-items: center;
+  width: 48px;
+  min-height: 48px;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.sidebar-collapsed .workspace-card::after {
+  content: "⌂";
+  width: 34px;
+  height: 34px;
+  border-color: var(--border);
+  color: var(--link);
+  font-size: 1rem;
+}
+
+.tab-nav {
+  gap: 10px;
+}
+
+.nav-section {
+  gap: 6px;
+}
+
+.nav-section p {
+  color: #6e7781;
+}
+
+.tab-nav button {
+  min-height: 48px;
+  border-radius: 6px;
+  border-color: transparent;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.tab-nav button:hover:not(:disabled) {
+  border-color: #d0d7de;
+  background: #f6f8fa;
+}
+
+.tab-nav button.active {
+  border-color: #d0d7de;
+  border-left: 4px solid #fd8c73;
+  background: #f6f8fa;
+  color: #24292f;
+}
+
+.nav-token {
+  width: 30px;
+  height: 30px;
+  background: #ddf4ff;
+  color: #0969da;
+  font-size: 0.95rem;
+}
+
+.tab-nav button.active .nav-token {
+  background: #0969da;
+  color: #ffffff;
+}
+
+.tab-nav button.active small {
+  color: #57606a;
+}
+
+.sidebar-collapsed .tab-nav button {
+  width: 46px;
+  min-height: 44px;
+  padding: 6px;
+}
+
+.sidebar-collapsed .nav-token {
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+}
+
+.sidebar-collapsed .logout-button::after {
+  content: "⎋";
+  color: var(--danger);
+  font-size: 1rem;
+}
+
+.status.success,
+.badge-good,
+.check-item.done,
+.step-card.done {
+  border-color: #aceebb;
+  background: #dafbe1;
+  color: #116329;
+}
+
+.status.error,
+.badge-bad {
+  border-color: #ff8182;
+  background: #ffebe9;
+  color: #cf222e;
+}
+
+.badge-warn,
+.task-critical,
+.task-warning,
+.answer-required-callout {
+  border-color: #d4a72c;
+  background: #fff8c5;
+  color: #7d4e00;
+}
+
+.badge-neutral {
+  border-color: #d0d7de;
+  background: #f6f8fa;
+  color: #57606a;
+}
+
+.panel,
+.workspace-card,
+.readiness-card,
+.task-card,
+.metric,
+.info-card,
+.next-action-card,
+.overview-health-card,
+.overview-admin-card,
+.list-button {
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.metric {
+  background: #ffffff;
+}
+
+.metric span,
+.mini-label,
+.eyebrow,
+.page-purpose,
+.muted,
+.permission-note,
+small {
+  color: var(--text-muted);
+}

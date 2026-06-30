@@ -1,0 +1,144 @@
+.workspace-main {
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  gap: 18px;
+  padding: 24px;
+}
+
+.topbar,
+.command-center,
+.guide-panel {
+  align-items: flex-start;
+  border-radius: 6px;
+}
+
+.command-center,
+.guide-panel {
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.workflow-shortcuts {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 96%);
+  padding: 10px;
+}
+
+.workflow-shortcuts a,
+.workflow-shortcuts button {
+  width: auto;
+  min-height: 34px;
+  color: var(--link);
+}
+
+.grid,
+.two,
+.three,
+.two-wide-left,
+.overview-hero,
+.overview-layout,
+.overview-health-grid,
+.overview-attention-grid,
+.overview-admin-grid,
+.tasks-hero,
+.tasks-workbench,
+.data-workbench-grid,
+.knowledge-health-grid,
+.agent-management-grid,
+.queue-summary-grid,
+.tool-grid,
+.tool-config-grid,
+.guardrail-policy-grid,
+.settings-summary-grid,
+.settings-meta-grid,
+.settings-card-grid,
+.member-card-grid,
+.system-check-grid,
+.system-section-grid,
+.review-context-grid,
+.signal-grid,
+.trace-summary-grid,
+.trace-runtime-summary-grid,
+.trace-decision-grid,
+.trace-inspector-grid,
+.trace-navigator-grid,
+.trace-navigator-panel,
+.trace-evidence-card-grid,
+.guardrail-grid,
+.guardrail-result-grid,
+.mode-card-grid,
+.model-spend-grid,
+.runtime-component-grid,
+.evaluation-prompt-grid,
+.language-metric-grid,
+.permission-summary-grid,
+.scenario-grid,
+.node-stat-grid,
+.model-config-list,
+.prompt-template-list {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.console-strip,
+.metric-grid,
+.metric-grid.compact {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.operations-panel,
+.task-side-panel {
+  position: static;
+}
+
+.attention-item,
+.resource-row,
+.audit-event-card,
+.model-route-row,
+.trace-run-card,
+.review-queue-item {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.row-head,
+.topbar-actions,
+.command-actions,
+.review-actions,
+.resource-actions,
+.pagination-bar {
+  flex-wrap: wrap;
+}
+
+pre,
+code,
+.answer,
+.chunk-card,
+.trace-json,
+.prompt-preview {
+  border-radius: 6px;
+  background: #f6f8fa;
+  color: #24292f;
+}
+
+@media (max-width: 900px) {
+  .app-shell,
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+  }
+
+  .workspace-main {
+    padding: 16px;
+  }
+}
