@@ -9,7 +9,11 @@ from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceRole
-from app.services.workspace_service import WorkspaceService, permissions_for_role
+from app.services.workspace_service import (
+    ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS,
+    WorkspaceService,
+    permissions_for_role,
+)
 
 WorkspaceId = Annotated[UUID, Path()]
 CurrentUser = Annotated[User, Depends(get_current_user)]
@@ -82,6 +86,22 @@ def require_workspace_permission(
                 detail={
                     "code": "workspace_permission_required",
                     "message": f"This action requires {permission} permission.",
+                    "required_permission": permission,
+                },
+            )
+        archived_write_blocked = (
+            workspace.archived_at is not None
+            and permission not in ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS
+        )
+        if archived_write_blocked:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "workspace_archived",
+                    "message": (
+                        "Archived workspaces are read-only. "
+                        "Restore the workspace before changing resources."
+                    ),
                     "required_permission": permission,
                 },
             )

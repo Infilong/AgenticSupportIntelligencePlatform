@@ -789,3 +789,221 @@ def test_workspace_permission_dependency_blocks_disallowed_role_actions(
     assert reviewer_run.status_code == 403
     assert reviewer_run.json()["detail"]["required_permission"] == "agents:run"
     assert developer_run.status_code == 201
+
+
+def test_workspace_permission_matrix_is_workspace_scoped(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "matrix-owner@example.com")
+    owner_token = login(client, "matrix-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Permission Matrix Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    register(client, "matrix-viewer@example.com")
+    viewer_token = login(client, "matrix-viewer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="matrix-viewer@example.com",
+        role=WorkspaceRole.viewer,
+    )
+    register(client, "matrix-other@example.com")
+    other_token = login(client, "matrix-other@example.com")
+
+    viewer_matrix = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/permission-matrix",
+        headers=auth_headers(viewer_token),
+    )
+    other_matrix = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/permission-matrix",
+        headers=auth_headers(other_token),
+    )
+
+    assert viewer_matrix.status_code == 200
+    roles = {entry["role"]: entry["permissions"] for entry in viewer_matrix.json()["roles"]}
+    assert "owner" in roles
+    assert "workspace:manage" in roles["owner"]
+    assert "viewer" in roles
+    assert "data:write" not in roles["viewer"]
+    assert other_matrix.status_code == 404
+
+
+def test_owner_can_archive_restore_and_archived_workspace_is_read_only(
+    client: TestClient, db_session: Session
+) -> None:
+    register(client, "archive-owner@example.com")
+    owner_token = login(client, "archive-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Archive Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    developer = register(client, "archive-developer@example.com")
+    developer_token = login(client, "archive-developer@example.com")
+    register(client, "archive-reviewer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="archive-developer@example.com",
+        role=WorkspaceRole.developer,
+    )
+
+    non_owner_archive = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/archive",
+        headers=auth_headers(developer_token),
+    )
+    archived = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/archive",
+        headers=auth_headers(owner_token),
+    )
+    read_datasets = client.get(
+        f"/api/v1/workspaces/{workspace['id']}/datasets",
+        headers=auth_headers(owner_token),
+    )
+    blocked_import = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/datasets/import",
+        headers=auth_headers(owner_token),
+        json={
+            "dataset_name": "Blocked Import",
+            "source_type": "jsonl",
+            "content": '{"messages":[{"role":"user","content":"Can I get a refund?"}]}',
+        },
+    )
+    blocked_rename = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(owner_token),
+        json={"name": "Archived Rename"},
+    )
+    blocked_member_add = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/members",
+        headers=auth_headers(owner_token),
+        json={"email": "archive-reviewer@example.com", "role": "reviewer"},
+    )
+    blocked_member_update = client.patch(
+        f"/api/v1/workspaces/{workspace['id']}/members/{developer['id']}",
+        headers=auth_headers(owner_token),
+        json={"role": "viewer"},
+    )
+    blocked_member_remove = client.delete(
+        f"/api/v1/workspaces/{workspace['id']}/members/{developer['id']}",
+        headers=auth_headers(owner_token),
+    )
+    restored = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/restore",
+        headers=auth_headers(owner_token),
+    )
+    allowed_import = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/datasets/import",
+        headers=auth_headers(owner_token),
+        json={
+            "dataset_name": "Allowed Import",
+            "source_type": "jsonl",
+            "content": '{"messages":[{"role":"user","content":"Can I get a refund?"}]}',
+        },
+    )
+
+    assert non_owner_archive.status_code == 403
+    assert non_owner_archive.json()["detail"]["code"] == "workspace_owner_required"
+    assert archived.status_code == 200
+    assert archived.json()["archived_at"] is not None
+    assert read_datasets.status_code == 200
+    assert blocked_import.status_code == 409
+    assert blocked_import.json()["detail"]["code"] == "workspace_archived"
+    assert blocked_rename.status_code == 409
+    assert blocked_rename.json()["detail"]["code"] == "workspace_archived"
+    assert blocked_member_add.status_code == 409
+    assert blocked_member_update.status_code == 409
+    assert blocked_member_remove.status_code == 409
+    assert restored.status_code == 200
+    assert restored.json()["archived_at"] is None
+    assert allowed_import.status_code == 201
+
+
+def test_workspace_delete_requires_owner_and_exact_confirmation(client: TestClient) -> None:
+    register(client, "delete-owner@example.com")
+    owner_token = login(client, "delete-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Delete Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    register(client, "delete-other@example.com")
+    other_token = login(client, "delete-other@example.com")
+
+    non_member_delete = client.request(
+        "DELETE",
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(other_token),
+        json={"confirmation_name": "Delete Workspace"},
+    )
+    mismatch = client.request(
+        "DELETE",
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(owner_token),
+        json={"confirmation_name": "delete workspace"},
+    )
+    deleted = client.request(
+        "DELETE",
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(owner_token),
+        json={"confirmation_name": "Delete Workspace"},
+    )
+    after_delete_list = client.get("/api/v1/workspaces", headers=auth_headers(owner_token))
+    after_delete_detail = client.get(
+        f"/api/v1/workspaces/{workspace['id']}", headers=auth_headers(owner_token)
+    )
+    recreate = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Delete Workspace"},
+        headers=auth_headers(owner_token),
+    )
+
+    assert non_member_delete.status_code == 404
+    assert mismatch.status_code == 409
+    assert mismatch.json()["detail"]["code"] == "workspace_delete_confirmation_mismatch"
+    assert deleted.status_code == 204
+    assert after_delete_list.status_code == 200
+    assert after_delete_list.json() == []
+    assert after_delete_detail.status_code == 404
+    assert recreate.status_code == 201
+
+
+def test_workspace_leave_allows_members_and_preserves_last_owner(
+    client: TestClient, db_session: Session
+) -> None:
+    owner = register(client, "leave-owner@example.com")
+    owner_token = login(client, "leave-owner@example.com")
+    workspace = client.post(
+        "/api/v1/workspaces",
+        json={"name": "Leave Workspace"},
+        headers=auth_headers(owner_token),
+    ).json()
+    register(client, "leave-developer@example.com")
+    developer_token = login(client, "leave-developer@example.com")
+    add_workspace_member(
+        db_session,
+        workspace_id=workspace["id"],
+        user_email="leave-developer@example.com",
+        role=WorkspaceRole.developer,
+    )
+
+    developer_leave = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/leave",
+        headers=auth_headers(developer_token),
+    )
+    developer_detail = client.get(
+        f"/api/v1/workspaces/{workspace['id']}",
+        headers=auth_headers(developer_token),
+    )
+    last_owner_leave = client.post(
+        f"/api/v1/workspaces/{workspace['id']}/leave",
+        headers=auth_headers(owner_token),
+    )
+
+    assert owner["email"] == "leave-owner@example.com"
+    assert developer_leave.status_code == 204
+    assert developer_detail.status_code == 404
+    assert last_owner_leave.status_code == 409
+    assert last_owner_leave.json()["detail"]["code"] == "workspace_owner_guard"

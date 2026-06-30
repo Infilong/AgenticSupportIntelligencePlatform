@@ -15,15 +15,20 @@ from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember
 from app.schemas.workspace import (
     WorkspaceCreateRequest,
+    WorkspaceDeleteRequest,
     WorkspaceMemberAddRequest,
     WorkspaceMemberResponse,
     WorkspaceMemberRoleUpdateRequest,
     WorkspaceMembershipResponse,
+    WorkspacePermissionMatrixEntry,
+    WorkspacePermissionMatrixResponse,
     WorkspaceResponse,
     WorkspaceUpdateRequest,
 )
 from app.services.audit_log_service import AuditLogService
 from app.services.workspace_service import (
+    ROLE_PERMISSIONS,
+    WorkspaceDeleteConfirmationError,
     WorkspaceMemberAlreadyExistsError,
     WorkspaceMemberNotFoundError,
     WorkspaceMemberOwnerError,
@@ -75,6 +80,7 @@ def update_workspace_settings(
     current_user: CurrentUser,
     db: DbSession,
 ) -> WorkspaceResponse:
+    _reject_archived_workspace_mutation(workspace)
     try:
         updated = WorkspaceService(db).update_workspace_name(
             workspace=workspace, name=payload.name, actor_user_id=current_user.id
@@ -90,6 +96,104 @@ def update_workspace_settings(
         metadata={"name": updated.name},
     )
     return WorkspaceResponse.model_validate(updated)
+
+
+@router.post("/{workspace_id}/archive", response_model=WorkspaceResponse)
+def archive_workspace(
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> WorkspaceResponse:
+    archived = WorkspaceService(db).archive_workspace(workspace=workspace)
+    AuditLogService(db).record(
+        workspace_id=archived.id,
+        actor_user_id=current_user.id,
+        action="workspace.archived",
+        resource_type="workspace",
+        resource_id=archived.id,
+        metadata={"name": archived.name},
+    )
+    return WorkspaceResponse.model_validate(archived)
+
+
+@router.post("/{workspace_id}/restore", response_model=WorkspaceResponse)
+def restore_workspace(
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> WorkspaceResponse:
+    restored = WorkspaceService(db).restore_workspace(workspace=workspace)
+    AuditLogService(db).record(
+        workspace_id=restored.id,
+        actor_user_id=current_user.id,
+        action="workspace.restored",
+        resource_type="workspace",
+        resource_id=restored.id,
+        metadata={"name": restored.name},
+    )
+    return WorkspaceResponse.model_validate(restored)
+
+
+@router.post("/{workspace_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
+def leave_workspace(
+    workspace: WorkspaceMemberAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> None:
+    try:
+        WorkspaceService(db).leave_workspace(workspace_id=workspace.id, user_id=current_user.id)
+        AuditLogService(db).record(
+            workspace_id=workspace.id,
+            actor_user_id=current_user.id,
+            action="workspace_member.left",
+            resource_type="workspace_member",
+            resource_id=current_user.id,
+            metadata={"user_id": str(current_user.id)},
+        )
+    except WorkspaceMemberNotFoundError as exc:
+        raise _member_not_found(exc) from exc
+    except WorkspaceMemberOwnerError as exc:
+        raise _member_owner_error(exc) from exc
+
+
+@router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_workspace(
+    payload: WorkspaceDeleteRequest,
+    workspace: WorkspaceOwnerAccess,
+    current_user: CurrentUser,
+    db: DbSession,
+) -> None:
+    service = WorkspaceService(db)
+    try:
+        if payload.confirmation_name.strip() != workspace.name:
+            raise WorkspaceDeleteConfirmationError("Workspace name confirmation did not match.")
+        AuditLogService(db).record(
+            workspace_id=workspace.id,
+            actor_user_id=current_user.id,
+            action="workspace.deleted",
+            resource_type="workspace",
+            resource_id=workspace.id,
+            metadata={"name": workspace.name, "mode": "soft_delete"},
+        )
+        service.delete_workspace(
+            workspace=workspace,
+            confirmation_name=payload.confirmation_name,
+        )
+    except WorkspaceDeleteConfirmationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "workspace_delete_confirmation_mismatch", "message": str(exc)},
+        ) from exc
+
+
+@router.get("/{workspace_id}/permission-matrix", response_model=WorkspacePermissionMatrixResponse)
+def get_permission_matrix(workspace: WorkspaceMemberAccess) -> WorkspacePermissionMatrixResponse:
+    return WorkspacePermissionMatrixResponse(
+        roles=[
+            WorkspacePermissionMatrixEntry(role=role, permissions=permissions.copy())
+            for role, permissions in ROLE_PERMISSIONS.items()
+        ]
+    )
 
 
 @router.get("/{workspace_id}/membership", response_model=WorkspaceMembershipResponse)
@@ -133,6 +237,7 @@ def add_workspace_member(
     current_user: CurrentUser,
     db: DbSession,
 ) -> WorkspaceMemberResponse:
+    _reject_archived_workspace_mutation(workspace)
     service = WorkspaceService(db)
     try:
         member = service.add_member_by_email(
@@ -177,6 +282,7 @@ def update_workspace_member_role(
     current_user: CurrentUser,
     db: DbSession,
 ) -> WorkspaceMemberResponse:
+    _reject_archived_workspace_mutation(workspace)
     service = WorkspaceService(db)
     try:
         member = service.update_member_role(
@@ -207,6 +313,7 @@ def remove_workspace_member(
     current_user: CurrentUser,
     db: DbSession,
 ) -> None:
+    _reject_archived_workspace_mutation(workspace)
     service = WorkspaceService(db)
     member = service.get_membership(workspace.id, member_user_id)
     try:
@@ -224,6 +331,21 @@ def remove_workspace_member(
         resource_type="workspace_member",
         resource_id=member.id if member else member_user_id,
         metadata={"user_id": str(member_user_id)},
+    )
+
+
+def _reject_archived_workspace_mutation(workspace: Workspace) -> None:
+    if workspace.archived_at is None:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail={
+            "code": "workspace_archived",
+            "message": (
+                "Archived workspaces are read-only. "
+                "Restore the workspace before changing workspace settings."
+            ),
+        },
     )
 
 

@@ -14,6 +14,8 @@ type Workspace = {
   id: string;
   name: string;
   created_by_user_id: string;
+  archived_at: string | null;
+  deleted_at: string | null;
   created_at: string;
 };
 
@@ -70,6 +72,7 @@ export function AccountPage({
   const ownedWorkspaces = currentUser
     ? workspaces.filter((workspace) => workspace.created_by_user_id === currentUser.id).length
     : 0;
+  const archivedWorkspaces = workspaces.filter((workspace) => workspace.archived_at).length;
   const normalizedWorkspaceName = workspaceName.trim().toLowerCase();
   const duplicateWorkspaceName = Boolean(
     normalizedWorkspaceName
@@ -102,6 +105,7 @@ export function AccountPage({
       <section className="account-summary-grid">
         <Metric label="Workspaces" value={workspaces.length} />
         <Metric label="Owned" value={ownedWorkspaces} />
+        <Metric label="Archived" value={archivedWorkspaces} />
         <Metric label="Current role" value={workspaceRole} />
         <Metric label="Permissions" value={permissions.length} />
         <Metric label="Open tasks" value={openTasks} />
@@ -151,6 +155,7 @@ export function AccountPage({
           {workspaces.map((workspace) => {
             const isSelected = workspace.id === selectedWorkspaceId;
             const isOwner = currentUser?.id === workspace.created_by_user_id;
+            const isArchived = Boolean(workspace.archived_at);
             return (
               <button
                 type="button"
@@ -160,11 +165,12 @@ export function AccountPage({
               >
                 <span>
                   <strong>{workspace.name}</strong>
-                  <small>Created {formatDate(workspace.created_at)}</small>
+                  <small>{isArchived ? `Archived ${formatDate(workspace.archived_at)}` : `Created ${formatDate(workspace.created_at)}`}</small>
                 </span>
                 <span className="account-workspace-badges">
                   {isOwner && <Badge tone="good">owner</Badge>}
-                  {isSelected && <Badge>active</Badge>}
+                  {isArchived && <Badge tone="warn">archived</Badge>}
+                  {isSelected && <Badge>{isArchived ? "selected" : "active"}</Badge>}
                 </span>
               </button>
             );

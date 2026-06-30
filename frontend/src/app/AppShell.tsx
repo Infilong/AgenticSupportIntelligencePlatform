@@ -55,7 +55,18 @@ type Workspace = {
   id: string;
   name: string;
   created_by_user_id: string;
+  archived_at: string | null;
+  deleted_at: string | null;
   created_at: string;
+};
+
+type WorkspacePermissionMatrixEntry = {
+  role: WorkspaceMemberRole;
+  permissions: string[];
+};
+
+type WorkspacePermissionMatrixResponse = {
+  roles: WorkspacePermissionMatrixEntry[];
 };
 
 type WorkspaceMembership = {
@@ -1195,10 +1206,12 @@ export function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceMembership, setWorkspaceMembership] = useState<WorkspaceMembership | null>(null);
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  const [workspacePermissionMatrix, setWorkspacePermissionMatrix] = useState<WorkspacePermissionMatrixEntry[]>([]);
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<WorkspaceMemberRole>("developer");
   const [workspaceName, setWorkspaceName] = useState("");
   const [workspaceSettingsName, setWorkspaceSettingsName] = useState("");
+  const [workspaceDeleteConfirmation, setWorkspaceDeleteConfirmation] = useState("");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -1398,6 +1411,7 @@ export function App() {
 
   useEffect(() => {
     setWorkspaceSettingsName(selectedWorkspace?.name ?? "");
+    setWorkspaceDeleteConfirmation("");
   }, [selectedWorkspace?.id, selectedWorkspace?.name]);
 
   const selectedAgent = useMemo(
@@ -1709,7 +1723,7 @@ export function App() {
   async function loadWorkspaces() {
     const data = await apiRequest<Workspace[]>("/api/v1/workspaces", { token });
     setWorkspaces(data);
-    setSelectedWorkspaceId((current) => current || data[0]?.id || "");
+    setSelectedWorkspaceId((current) => data.some((workspace) => workspace.id === current) ? current : data[0]?.id || "");
   }
 
   async function createWorkspace(event: FormEvent) {
@@ -1751,8 +1765,74 @@ export function App() {
       await loadWorkspaces();
       setSelectedWorkspaceId(updated.id);
       setWorkspaceSettingsName(updated.name);
+      setWorkspaceDeleteConfirmation("");
       await loadAuditLogsIfAllowed();
       await loadSystemHealthIfAllowed();
+    });
+  }
+
+  async function loadWorkspacePermissionMatrix() {
+    if (!selectedWorkspaceId) {
+      setWorkspacePermissionMatrix([]);
+      return;
+    }
+    const data = await apiRequest<WorkspacePermissionMatrixResponse>(workspacePath("/permission-matrix"), { token });
+    setWorkspacePermissionMatrix(data.roles);
+  }
+
+  async function archiveSelectedWorkspace() {
+    if (!selectedWorkspaceId) return;
+    await runAction("Workspace archived", async () => {
+      const archived = await apiRequest<Workspace>(workspacePath("/archive"), { method: "POST", token });
+      await loadWorkspaces();
+      setSelectedWorkspaceId(archived.id);
+      setWorkspaceSettingsName(archived.name);
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
+    });
+  }
+
+  async function restoreSelectedWorkspace() {
+    if (!selectedWorkspaceId) return;
+    await runAction("Workspace restored", async () => {
+      const restored = await apiRequest<Workspace>(workspacePath("/restore"), { method: "POST", token });
+      await loadWorkspaces();
+      setSelectedWorkspaceId(restored.id);
+      setWorkspaceSettingsName(restored.name);
+      await loadAuditLogsIfAllowed();
+      await loadSystemHealthIfAllowed();
+    });
+  }
+
+  async function leaveSelectedWorkspace() {
+    if (!selectedWorkspaceId) return;
+    const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
+    if (!window.confirm(`Leave workspace "${selectedWorkspace?.name ?? "selected workspace"}"?`)) return;
+    await runAction("Workspace left", async () => {
+      await apiRequest(workspacePath("/leave"), { method: "POST", token });
+      setWorkspaceDeleteConfirmation("");
+      await loadWorkspaces();
+    });
+  }
+
+  async function deleteSelectedWorkspace(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedWorkspaceId) return;
+    const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
+    if (!selectedWorkspace || workspaceDeleteConfirmation.trim() !== selectedWorkspace.name) {
+      setError("Type the exact workspace name before deletion.");
+      return;
+    }
+    if (!window.confirm(`Delete workspace "${selectedWorkspace.name}"? This removes it from your workspace list.`)) return;
+    await runAction("Workspace deleted", async () => {
+      await apiRequest(workspacePath(""), {
+        method: "DELETE",
+        token,
+        body: { confirmation_name: workspaceDeleteConfirmation },
+      });
+      setWorkspaceDeleteConfirmation("");
+      setWorkspaceSettingsName("");
+      await loadWorkspaces();
     });
   }
 
@@ -1764,6 +1844,7 @@ export function App() {
       .some((permission) => can(permission));
 
     await Promise.all([
+      loadWorkspacePermissionMatrix(),
       can("members:read") ? loadWorkspaceMembers() : Promise.resolve(setWorkspaceMembers([])),
       can("tasks:read") ? loadAttentionSummary() : Promise.resolve(setAttentionSummary(null)),
       can("data:read") ? loadDatasets() : Promise.resolve(clearDatasetState()),
@@ -3656,7 +3737,7 @@ export function App() {
             <select value={selectedWorkspaceId} onChange={(event) => setSelectedWorkspaceId(event.target.value)}>
               <option value="">Select workspace</option>
               {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
+                <option key={workspace.id} value={workspace.id}>{workspace.archived_at ? `${workspace.name} (archived)` : workspace.name}</option>
               ))}
             </select>
           </label>
@@ -4192,6 +4273,7 @@ export function App() {
         return (
           <SettingsPage
             workspaceName={selectedWorkspace?.name ?? null}
+            workspaceArchivedAt={selectedWorkspace?.archived_at ?? null}
             workspaceRole={workspaceRole}
             activeModelCount={activeModelCount}
             pendingHealthSignals={pendingHealthSignals}
@@ -4205,12 +4287,19 @@ export function App() {
             canConfigureGuardrails={canConfigureGuardrails}
             guardrailConfigurableCount={guardrailConfigurableCount}
             workspaceSettingsName={workspaceSettingsName}
+            workspaceDeleteConfirmation={workspaceDeleteConfirmation}
+            permissionMatrix={workspacePermissionMatrix}
             loading={loading}
             onWorkspaceSettingsNameChange={setWorkspaceSettingsName}
+            onWorkspaceDeleteConfirmationChange={setWorkspaceDeleteConfirmation}
             onUpdateWorkspaceSettings={updateWorkspaceSettings}
+            onArchiveWorkspace={archiveSelectedWorkspace}
+            onRestoreWorkspace={restoreSelectedWorkspace}
+            onLeaveWorkspace={leaveSelectedWorkspace}
+            onDeleteWorkspace={deleteSelectedWorkspace}
             onRefreshWorkspace={() => runAction("Workspace data refreshed", refreshWorkspaceData)}
-            onGoToTab={(tab: "members" | "models" | "costs" | "system" | "tools" | "guardrails" | "prompts") => goToTab(tab)}
-            canOpenTab={(tab: "members" | "models" | "costs" | "system" | "tools" | "guardrails" | "prompts") => canOpenTab(tab)}
+            onGoToTab={(tab: "members" | "models" | "costs" | "system" | "tools" | "guardrails" | "prompts" | "audit") => goToTab(tab)}
+            canOpenTab={(tab: "members" | "models" | "costs" | "system" | "tools" | "guardrails" | "prompts" | "audit") => canOpenTab(tab)}
             hasAdvancedAdminShortcuts={hasAdvancedAdminShortcuts}
           />
         );

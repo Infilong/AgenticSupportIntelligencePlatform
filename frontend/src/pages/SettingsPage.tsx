@@ -1,10 +1,17 @@
 import { FormEvent, ReactNode } from "react";
 import { Badge, Metric } from "../app/shared/Primitives";
 
-type SettingsTab = "members" | "models" | "costs" | "system" | "tools" | "guardrails" | "prompts";
+type WorkspaceMemberRole = "owner" | "developer" | "reviewer" | "viewer" | "member";
+type SettingsTab = "members" | "models" | "costs" | "system" | "tools" | "guardrails" | "prompts" | "audit";
+
+type WorkspacePermissionMatrixEntry = {
+  role: WorkspaceMemberRole;
+  permissions: string[];
+};
 
 type SettingsPageProps = {
   workspaceName: string | null;
+  workspaceArchivedAt: string | null;
   workspaceRole: string;
   activeModelCount: number;
   pendingHealthSignals: number;
@@ -18,9 +25,16 @@ type SettingsPageProps = {
   canConfigureGuardrails: boolean;
   guardrailConfigurableCount: number;
   workspaceSettingsName: string;
+  workspaceDeleteConfirmation: string;
+  permissionMatrix: WorkspacePermissionMatrixEntry[];
   loading: boolean;
   onWorkspaceSettingsNameChange: (value: string) => void;
+  onWorkspaceDeleteConfirmationChange: (value: string) => void;
   onUpdateWorkspaceSettings: (event: FormEvent) => Promise<void>;
+  onArchiveWorkspace: () => Promise<void>;
+  onRestoreWorkspace: () => Promise<void>;
+  onLeaveWorkspace: () => Promise<void>;
+  onDeleteWorkspace: (event: FormEvent) => Promise<void>;
   onRefreshWorkspace: () => Promise<void>;
   onGoToTab: (tab: SettingsTab) => void;
   canOpenTab: (tab: SettingsTab) => boolean;
@@ -29,6 +43,7 @@ type SettingsPageProps = {
 
 export function SettingsPage({
   workspaceName,
+  workspaceArchivedAt,
   workspaceRole,
   activeModelCount,
   pendingHealthSignals,
@@ -42,14 +57,24 @@ export function SettingsPage({
   canConfigureGuardrails,
   guardrailConfigurableCount,
   workspaceSettingsName,
+  workspaceDeleteConfirmation,
+  permissionMatrix,
   loading,
   onWorkspaceSettingsNameChange,
+  onWorkspaceDeleteConfirmationChange,
   onUpdateWorkspaceSettings,
+  onArchiveWorkspace,
+  onRestoreWorkspace,
+  onLeaveWorkspace,
+  onDeleteWorkspace,
   onRefreshWorkspace,
   onGoToTab,
   canOpenTab,
   hasAdvancedAdminShortcuts,
 }: SettingsPageProps) {
+  const isArchived = Boolean(workspaceArchivedAt);
+  const canDeleteWorkspace = canManageWorkspace && Boolean(workspaceName) && workspaceDeleteConfirmation === workspaceName;
+
   function TabShortcut({
     tab,
     children,
@@ -70,25 +95,25 @@ export function SettingsPage({
       <section className="panel settings-hero">
         <div>
           <p className="eyebrow">Workspace settings</p>
-          <h2>Configure workspace identity and administration paths</h2>
-          <p className="muted">Settings are workspace-scoped and backend-enforced. This page keeps identity controls separate from provider routing, members, audit, and system health.</p>
+          <h2>Manage workspace identity, lifecycle, and permissions</h2>
+          <p className="muted">Workspace administration follows a GitHub-like model: identity, membership, role capabilities, archive, leave, and delete controls are explicit and backend-enforced.</p>
         </div>
         <div className="next-action-card">
           <span>Your permission</span>
           <strong>{canManageWorkspace ? "Owner controls" : "Read-only"}</strong>
-          <p>{canManageWorkspace ? "You can update workspace identity and manage admin resources." : "You can inspect settings, but owner-only changes are disabled."}</p>
+          <p>{canManageWorkspace ? "You can rename, archive, restore, and delete this workspace." : "You can inspect settings and leave the workspace, but owner-only changes are disabled."}</p>
           <button type="button" onClick={() => void onRefreshWorkspace()}>Refresh workspace</button>
         </div>
       </section>
 
       <section className="settings-summary-grid">
         <Metric label="Workspace" value={workspaceName ?? "none"} />
+        <Metric label="Lifecycle" value={isArchived ? "archived" : "active"} />
         <Metric label="Role" value={workspaceRole} />
-        <Metric label="Active models" value={activeModelCount} />
         <Metric label="Health signals" value={pendingHealthSignals} />
       </section>
 
-      <section className="settings-workbench">
+      <section className="settings-workbench single-column-workbench">
         <form className="panel stack settings-editor-panel" onSubmit={onUpdateWorkspaceSettings}>
           <div className="row-head">
             <div>
@@ -102,20 +127,32 @@ export function SettingsPage({
             <input
               value={workspaceSettingsName}
               onChange={(event) => onWorkspaceSettingsNameChange(event.target.value)}
-              disabled={!canManageWorkspace || loading}
+              placeholder="Example: Billing AI Support"
+              disabled={!canManageWorkspace || loading || isArchived}
             />
           </label>
-          <div className="settings-note">Workspace identity changes are written through the backend and recorded as `workspace.updated` audit events.</div>
+          {isArchived && <div className="settings-note warning-note">Archived workspaces are read-only. Restore the workspace before renaming or changing resources.</div>}
+          <div className="settings-note">Workspace identity changes are written through the backend and recorded as <code>workspace.updated</code> audit events.</div>
           <div className="run-action-bar">
-            <button type="submit" className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading}>Save workspace</button>
-            <TabShortcut tab="members">Open audit trail</TabShortcut>
+            <button type="submit" className="primary" disabled={!canManageWorkspace || !workspaceSettingsName.trim() || loading || isArchived}>Save workspace</button>
+            {isArchived ? (
+              <button type="button" onClick={() => void onRestoreWorkspace()} disabled={!canManageWorkspace || loading}>Restore workspace</button>
+            ) : (
+              <button type="button" onClick={() => void onArchiveWorkspace()} disabled={!canManageWorkspace || loading}>Archive workspace</button>
+            )}
+            <TabShortcut tab="audit">Open audit trail</TabShortcut>
           </div>
         </form>
 
-        <aside className="panel stack settings-side-panel">
-          <h3>Settings map</h3>
-          <p className="muted">Advanced controls live on dedicated pages so this does not become one giant settings form.</p>
-          <div className="settings-map-list">
+        <section className="panel stack">
+          <div className="row-head">
+            <div>
+              <h3>Settings map</h3>
+              <p className="muted">Related administration pages stay separate so each workflow remains focused and reviewable.</p>
+            </div>
+            <Badge>admin routes</Badge>
+          </div>
+          <div className="settings-map-list settings-map-grid">
             <TabShortcut tab="members">
               <strong>Members and permissions</strong>
               <span>{workspaceMembersCount} users · {workspaceRole}</span>
@@ -146,7 +183,67 @@ export function SettingsPage({
             </TabShortcut>
             {!hasAdvancedAdminShortcuts && <p className="permission-note">No advanced administration shortcuts are available for this role.</p>}
           </div>
-        </aside>
+        </section>
+      </section>
+
+      <section className="panel stack full-width">
+        <div className="row-head">
+          <div>
+            <h3>Permission matrix</h3>
+            <p className="muted">Role capabilities are returned by the backend so the UI reflects the server-side permission model instead of hardcoding authority in the browser.</p>
+          </div>
+          <Badge tone="good">backend source</Badge>
+        </div>
+        <div className="permission-matrix-list">
+          {permissionMatrix.map((entry) => (
+            <article key={entry.role} className="permission-matrix-row">
+              <div>
+                <strong>{entry.role}</strong>
+                <small>{entry.permissions.length} permissions</small>
+              </div>
+              <div className="permission-chip-row">
+                {entry.permissions.slice(0, 12).map((permission) => <span key={permission}>{permission}</span>)}
+                {entry.permissions.length > 12 && <span>+{entry.permissions.length - 12} more</span>}
+              </div>
+            </article>
+          ))}
+          {permissionMatrix.length === 0 && <p className="muted">Permission matrix is unavailable for the current workspace.</p>}
+        </div>
+      </section>
+
+      <section className="panel stack full-width danger-zone-panel">
+        <div className="row-head">
+          <div>
+            <h3>Danger zone</h3>
+            <p className="muted">Lifecycle actions are separated from normal settings and require backend authorization.</p>
+          </div>
+          <Badge tone="bad">careful</Badge>
+        </div>
+        <div className="danger-zone-list">
+          <article className="danger-zone-row">
+            <div>
+              <strong>Leave workspace</strong>
+              <p className="muted">Remove your own membership. The backend prevents leaving as the last owner.</p>
+            </div>
+            <button type="button" className="danger-button" onClick={() => void onLeaveWorkspace()} disabled={loading || !workspaceName}>Leave workspace</button>
+          </article>
+          <form className="danger-zone-row" onSubmit={onDeleteWorkspace}>
+            <div>
+              <strong>Delete workspace</strong>
+              <p className="muted">Type the exact workspace name to remove it from your workspace list. This is owner-only and recorded in the audit log before the workspace is hidden.</p>
+            </div>
+            <label className="danger-confirm-label">
+              Confirm workspace name
+              <input
+                value={workspaceDeleteConfirmation}
+                onChange={(event) => onWorkspaceDeleteConfirmationChange(event.target.value)}
+                placeholder={workspaceName ?? "Workspace name"}
+                disabled={!canManageWorkspace || loading || !workspaceName}
+              />
+            </label>
+            <button type="submit" className="danger-button" disabled={!canDeleteWorkspace || loading}>Delete workspace</button>
+          </form>
+        </div>
       </section>
 
       <section className="panel stack full-width">
@@ -158,7 +255,8 @@ export function SettingsPage({
           <Badge tone="good">workspace scoped</Badge>
         </div>
         <div className="policy-list settings-boundary-list">
-          <span>Workspace rename requires owner permission and backend authorization.</span>
+          <span>Workspace rename, archive, restore, and deletion require owner permission and backend authorization.</span>
+          <span>Archived workspaces are readable but block write-level routes until restored.</span>
           <span>Provider/model routes are configured in Models; missing API keys are reported in System Health.</span>
           <span>Workspace budget policy is configured in Usage & Costs and enforced by the backend runtime.</span>
           <span>Membership, resource deletion, folder management, and audit-sensitive actions remain owner-gated where required.</span>

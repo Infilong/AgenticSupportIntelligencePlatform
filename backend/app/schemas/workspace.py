@@ -37,6 +37,8 @@ class WorkspaceResponse(BaseModel):
     name: str
     created_by_user_id: UUID
     created_at: datetime
+    archived_at: datetime | None = None
+    deleted_at: datetime | None = None
 
 
 class WorkspaceMembershipResponse(BaseModel):
@@ -74,3 +76,24 @@ class WorkspaceMemberAddRequest(BaseModel):
 
 class WorkspaceMemberRoleUpdateRequest(BaseModel):
     role: WorkspaceRole
+
+
+class WorkspaceDeleteRequest(BaseModel):
+    confirmation_name: str = Field(min_length=1, max_length=160)
+
+    @field_validator("confirmation_name")
+    @classmethod
+    def strip_confirmation_name(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("confirmation_name cannot be blank")
+        return stripped
+
+
+class WorkspacePermissionMatrixEntry(BaseModel):
+    role: WorkspaceRole
+    permissions: list[str]
+
+
+class WorkspacePermissionMatrixResponse(BaseModel):
+    roles: list[WorkspacePermissionMatrixEntry]

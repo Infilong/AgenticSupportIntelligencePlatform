@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -86,6 +87,28 @@ ROLE_PERMISSIONS = {
     WorkspaceRole.viewer: VIEWER_PERMISSIONS,
 }
 
+ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS = [
+    "workspace:read",
+    "workspace:manage",
+    "settings:read",
+    "tasks:read",
+    "members:read",
+    "audit:read",
+    "data:read",
+    "knowledge:read",
+    "agents:read",
+    "traces:read",
+    "reviews:read",
+    "evaluations:read",
+    "costs:read",
+    "budget_policy:read",
+    "tools:read",
+    "guardrails:read",
+    "prompts:read",
+    "models:read",
+    "system:read",
+]
+
 
 class WorkspaceMemberError(ValueError):
     pass
@@ -108,6 +131,10 @@ class WorkspaceMemberOwnerError(WorkspaceMemberError):
 
 
 class WorkspaceNameConflictError(ValueError):
+    pass
+
+
+class WorkspaceDeleteConfirmationError(ValueError):
     pass
 
 
@@ -137,7 +164,7 @@ class WorkspaceService:
         statement = (
             select(Workspace)
             .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
-            .where(WorkspaceMember.user_id == user_id)
+            .where(WorkspaceMember.user_id == user_id, Workspace.deleted_at.is_(None))
             .order_by(Workspace.created_at.desc())
         )
         return list(self.db.scalars(statement).all())
@@ -146,7 +173,11 @@ class WorkspaceService:
         statement = (
             select(Workspace)
             .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
-            .where(Workspace.id == workspace_id, WorkspaceMember.user_id == user_id)
+            .where(
+                Workspace.id == workspace_id,
+                WorkspaceMember.user_id == user_id,
+                Workspace.deleted_at.is_(None),
+            )
         )
         return self.db.scalar(statement)
 
@@ -170,6 +201,38 @@ class WorkspaceService:
         self.db.refresh(workspace)
         return workspace
 
+    def archive_workspace(self, *, workspace: Workspace) -> Workspace:
+        if workspace.archived_at is None:
+            workspace.archived_at = datetime.now(UTC)
+            self.db.commit()
+            self.db.refresh(workspace)
+        return workspace
+
+    def restore_workspace(self, *, workspace: Workspace) -> Workspace:
+        if workspace.archived_at is not None:
+            workspace.archived_at = None
+            self.db.commit()
+            self.db.refresh(workspace)
+        return workspace
+
+    def delete_workspace(self, *, workspace: Workspace, confirmation_name: str) -> Workspace:
+        if confirmation_name.strip() != workspace.name:
+            raise WorkspaceDeleteConfirmationError("Workspace name confirmation did not match.")
+        if workspace.deleted_at is None:
+            workspace.deleted_at = datetime.now(UTC)
+            self.db.commit()
+            self.db.refresh(workspace)
+        return workspace
+
+    def leave_workspace(self, *, workspace_id: UUID, user_id: UUID) -> None:
+        membership = self.get_membership(workspace_id, user_id)
+        if membership is None:
+            raise WorkspaceMemberNotFoundError("Workspace member was not found.")
+        if membership.role == WorkspaceRole.owner:
+            self._require_another_owner(workspace_id=workspace_id, user_id=user_id)
+        self.db.delete(membership)
+        self.db.commit()
+
     def _workspace_name_exists_for_user(
         self, *, user_id: UUID, name: str, exclude_workspace_id: UUID | None = None
     ) -> bool:
@@ -180,6 +243,7 @@ class WorkspaceService:
             .where(
                 WorkspaceMember.user_id == user_id,
                 func.lower(Workspace.name) == normalized_name,
+                Workspace.deleted_at.is_(None),
             )
         )
         if exclude_workspace_id is not None:
