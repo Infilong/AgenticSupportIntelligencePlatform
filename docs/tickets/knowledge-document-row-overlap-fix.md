@@ -13,9 +13,11 @@ The document list used compact expandable folder pickers inside each document ca
 - Made the document select button use a stable title/status grid without depending on generic resource-row classes.
 - Renamed the document row action wrapper to `.document-card-actions` so shared `.resource-actions` rules cannot leak into this page.
 - Replaced the per-document expandable folder picker with a bounded native folder select so list rows cannot expand over neighboring rows.
+- Changed the Knowledge document list to a vertical flex stack and set document cards to `flex: 0 0 auto` so the scroll container cannot shrink cards below their metadata/action content.
 - Made document actions use a two-column grid that collapses on small screens.
 
 ## Validation Results
+- Chrome visual QA passed against a seeded 8-document multilingual workspace: no card overlap, no child controls outside card bounds, no row-level folder pickers, bounded badge/select widths.
 - `npm --prefix frontend run typecheck` passed.
 - `npm --prefix frontend run build` passed.
 - `docker compose up -d --build frontend` completed and restarted the local app.

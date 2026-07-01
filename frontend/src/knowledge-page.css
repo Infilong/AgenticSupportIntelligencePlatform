@@ -1,6 +1,15 @@
+.document-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .document-card {
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
   gap: 10px;
+  min-height: 0;
+  height: auto;
   overflow: visible;
   border: 1px solid var(--border);
   border-radius: 8px;
