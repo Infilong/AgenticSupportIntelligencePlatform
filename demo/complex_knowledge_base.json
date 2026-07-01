@@ -1,0 +1,91 @@
+{
+  "workspace_name": "Complex Support Demo",
+  "agent_name": "Complex Demo Support Agent",
+  "documents": [
+    {
+      "title": "Billing Refund and Downgrade Policy EN",
+      "language": "en",
+      "content_type": "text/markdown",
+      "content": "# Billing Refund and Downgrade Policy EN\n\nPolicy code: BILL-REF-30.\n\nRefund eligibility:\n- Self-service plan purchases are refundable only within 30 days of the original purchase date.\n- Renewal charges are refundable within 7 days if the workspace has fewer than 5 successful agent runs after renewal.\n- Enterprise contracts are not handled by self-service support. They require an account manager review.\n\nDowngrade behavior:\n- Downgrades take effect at the next billing cycle.\n- If a workspace downgrades from Pro to Starter, historical graph traces remain readable for 90 days, but new evaluation runs are limited.\n- Billing administrators can export invoices, but reviewers cannot change payment methods.\n\nEscalation rules:\n- Escalate to human review when the customer mentions duplicate charge, chargeback, legal complaint, or enterprise contract terms.\n- Use escalation tag BILLING_ESCALATE when the message includes payment dispute, card fraud, or account manager.\n\nDo not promise unconditional refunds. Do not say refunds are available after 30 days unless the renewal exception applies."
+    },
+    {
+      "title": "Security Incident and Audit Retention Policy EN",
+      "language": "en",
+      "content_type": "text/markdown",
+      "content": "# Security Incident and Audit Retention Policy EN\n\nPolicy code: SOC2-ESC-2.\n\nSecurity incidents:\n- Possible credential exposure, workspace permission leakage, or customer data exfiltration must be escalated within 72 hours.\n- If the customer reports leaked personal data, the support agent must not provide a final answer. It must route to human review.\n- The first response should acknowledge receipt, avoid blame, and request only the minimum information needed for triage.\n\nAudit retention:\n- Workspace deletion is a soft delete for normal users.\n- Audit logs, AI run ledgers, graph traces, cost records, and human review decisions are retained for governance and abuse investigation.\n- Permanent purge is a separate administrator-controlled retention workflow.\n\nAccess control:\n- Owners may manage workspace settings and members.\n- Developers may run agents and manage knowledge documents.\n- Reviewers may resolve human reviews but cannot delete workspaces."
+    },
+    {
+      "title": "日本語 請求 返金 エスカレーション FAQ",
+      "language": "ja",
+      "content_type": "text/markdown",
+      "content": "# 日本語 請求 返金 エスカレーション FAQ\n\nポリシーコード: JA-BILL-REF-30。\n\n返金ルール:\n- セルフサービスで購入したプランの返金は、購入日から30日以内に申請できます。\n- 更新料金は、更新後7日以内かつ成功したエージェント実行が5回未満の場合のみ返金対象です。\n- エンタープライズ契約はセルフサービス窓口では判断せず、アカウント担当者にエスカレーションします。\n\n日本語応対:\n- 回答はユーザーと同じ日本語で行います。\n- 根拠が不足している場合は、断定せず人間レビューに回します。\n- 無条件で返金できるとは書いてはいけません。\n\n危険なケース:\n- 二重請求、チャージバック、法的苦情、個人情報漏えい、権限漏えいは人間レビューに回します。\n- 個人情報漏えいの申告では、最終回答を出さず、受領確認と最小限の確認事項だけを残します。"
+    },
+    {
+      "title": "中文 隐私 安全 升级处理手册",
+      "language": "zh",
+      "content_type": "text/markdown",
+      "content": "# 中文 隐私 安全 升级处理手册\n\n政策编号: ZH-PRIV-72。\n\n隐私事件:\n- 如果用户声称发生个人信息泄露、权限越权、工作区数据被其他团队看到，必须进入人工审核。\n- 初步响应只能确认已收到问题，不得承认责任，不得要求用户提供完整身份证号或银行卡号。\n- 安全团队需要在72小时内完成初步分级。\n\n退款和账单:\n- 自助购买的套餐可以在购买后30天内申请退款。\n- 续费账单只有在续费后7天内并且成功智能体运行少于5次时才可能退款。\n- 企业合同、拒付、重复扣费必须升级给人工处理。\n\n数据保留:\n- 用户删除工作区时采用软删除。\n- 审计日志、AI调用记录、图运行轨迹、成本记录和人工审核结论会保留，用于合规、排查和滥用调查。\n- 永久删除需要单独的管理员数据保留流程。"
+    }
+  ],
+  "retrieval_checks": [
+    {
+      "name": "en_refund_self_service",
+      "query": "Can I get a refund 30 days after self-service plan purchase?",
+      "language": "en",
+      "top_k": 3,
+      "min_score": 0.2,
+      "expected_document": "Billing Refund and Downgrade Policy EN",
+      "must_include": ["30 days", "self-service"]
+    },
+    {
+      "name": "en_security_retention",
+      "query": "After workspace deletion are audit logs and AI run ledgers retained?",
+      "language": "en",
+      "top_k": 3,
+      "min_score": 0.2,
+      "expected_document": "Security Incident and Audit Retention Policy EN",
+      "must_include": ["soft delete", "AI run ledgers"]
+    },
+    {
+      "name": "ja_refund_30_days",
+      "query": "購入日から30日以内なら返金できますか？",
+      "language": "ja",
+      "top_k": 3,
+      "min_score": 0.2,
+      "expected_document": "日本語 請求 返金 エスカレーション FAQ",
+      "must_include": ["30日以内", "返金"]
+    },
+    {
+      "name": "ja_privacy_escalation",
+      "query": "個人情報漏えいが起きたので苦情を出したいです",
+      "language": "ja",
+      "top_k": 3,
+      "min_score": 0.2,
+      "expected_document": "日本語 請求 返金 エスカレーション FAQ",
+      "must_include": ["個人情報漏えい", "人間レビュー"]
+    },
+    {
+      "name": "zh_privacy_72h",
+      "query": "我认为发生了个人信息泄露，需要多久内处理？",
+      "language": "zh",
+      "top_k": 3,
+      "min_score": 0.2,
+      "expected_document": "中文 隐私 安全 升级处理手册",
+      "must_include": ["个人信息泄露", "72小时"]
+    },
+    {
+      "name": "en_no_source_unrelated",
+      "query": "Do you support exporting animated stickers to a game console?",
+      "language": "en",
+      "top_k": 3,
+      "min_score": 0.85,
+      "expected_no_source": true
+    }
+  ],
+  "agent_check": {
+    "input_message": "Can I get a refund within 30 days for a self-service plan?",
+    "expected_language": "en",
+    "expected_status": "completed",
+    "must_include": ["30 days"]
+  }
+}
