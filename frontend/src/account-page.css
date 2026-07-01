@@ -157,3 +157,15 @@
 .account-workspace-search {
   max-width: 680px;
 }
+
+.account-retention-list {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.account-delete-row {
+  align-items: end;
+}
+
+.account-delete-row .run-action-bar {
+  justify-content: flex-start;
+}

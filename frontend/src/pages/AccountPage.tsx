@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Badge, EmptyState, Metric } from "../app/shared/Primitives";
+import { WorkspaceDeletionPanel } from "./account/WorkspaceDeletionPanel";
 
 type WorkspaceMemberRole = "owner" | "developer" | "reviewer" | "viewer" | "member";
 type AccountTab = "tasks" | "reviews" | "members" | "settings";
@@ -33,8 +34,11 @@ type AccountPageProps = {
   openTasks: number;
   workspaceMembersCount: number;
   loading: boolean;
+  workspaceDeleteConfirmation: string;
   onWorkspaceNameChange: (value: string) => void;
+  onWorkspaceDeleteConfirmationChange: (value: string) => void;
   onCreateWorkspace: (event: FormEvent) => Promise<void>;
+  onDeleteWorkspace: (event: FormEvent) => Promise<void>;
   onSelectWorkspace: (id: string) => void;
   onGoToTab: (tab: AccountTab) => void;
   canOpenTab: (tab: AccountTab) => boolean;
@@ -55,8 +59,11 @@ export function AccountPage({
   openTasks,
   workspaceMembersCount,
   loading,
+  workspaceDeleteConfirmation,
   onWorkspaceNameChange,
+  onWorkspaceDeleteConfirmationChange,
   onCreateWorkspace,
+  onDeleteWorkspace,
   onSelectWorkspace,
   onGoToTab,
   canOpenTab,
@@ -255,6 +262,16 @@ export function AccountPage({
           {canOpenTab("settings") && <button type="button" onClick={() => onGoToTab("settings")}>Workspace settings</button>}
         </div>
       </section>
+
+      <WorkspaceDeletionPanel
+        workspaceName={selectedWorkspace?.name ?? null}
+        canManageWorkspace={canManageWorkspace}
+        loading={loading}
+        workspaceDeleteConfirmation={workspaceDeleteConfirmation}
+        onWorkspaceDeleteConfirmationChange={onWorkspaceDeleteConfirmationChange}
+        onDeleteWorkspace={onDeleteWorkspace}
+        onOpenSettings={() => onGoToTab("settings")}
+      />
 
       <section className="panel stack">
         <div className="row-head">

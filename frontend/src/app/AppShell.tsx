@@ -3843,8 +3843,11 @@ export function App() {
             openTasks={attentionSummary?.total_items ?? 0}
             workspaceMembersCount={workspaceMembers.length}
             loading={loading}
+            workspaceDeleteConfirmation={workspaceDeleteConfirmation}
             onWorkspaceNameChange={setWorkspaceName}
+            onWorkspaceDeleteConfirmationChange={setWorkspaceDeleteConfirmation}
             onCreateWorkspace={createWorkspace}
+            onDeleteWorkspace={deleteSelectedWorkspace}
             onSelectWorkspace={setSelectedWorkspaceId}
             onGoToTab={(tab: "tasks" | "reviews" | "members" | "settings") => goToTab(tab)}
             canOpenTab={(tab: "tasks" | "reviews" | "members" | "settings") => canOpenTab(tab)}
