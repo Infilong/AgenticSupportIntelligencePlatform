@@ -56,6 +56,9 @@ V1 supports `en`, `ja`, and `zh`. Future languages must be added through languag
 - Frontend permission states are explanatory only; the backend must enforce create, move, edit, delete, and folder-management permissions.
 - Large source content and indexed chunks belong in bounded inspectors or detail panels, not expanding page sections that grow with every file name or chunk.
 
+## UI Design Reference
+Frontend work must follow docs/ui-design-system.md. Keep page-level workflows top-to-bottom, use GitHub-like neutral/semantic color, keep growing lists bounded, preserve focus while typing, and verify UI changes in a browser when practical.
+
 ## Human And Codex Roles
 The human engineer owns requirements, scope decisions, architecture approval, code review, test review, final merge decisions, project narrative, and quality bar.
 

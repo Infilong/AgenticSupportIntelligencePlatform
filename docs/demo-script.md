@@ -25,7 +25,7 @@ Open `http://localhost:5173`.
 3. Point out that every product route is workspace-scoped and protected by JWT auth.
 
 ## 3. Import Multilingual Conversations
-1. Open `Datasets`.
+1. Open `Data`.
 2. Import the prefilled JSONL examples.
 3. Select the dataset and show English, Japanese, and Chinese examples.
 4. Edit one label, such as `intent=refund_request`.
@@ -33,17 +33,17 @@ Open `http://localhost:5173`.
 Talking point: deterministic language detection and manual curation create evaluation-ready support data before the agent is involved.
 
 ## 4. Upload Knowledge
-1. Open `Documents`.
+1. Open `Knowledge`.
 2. Upload the prefilled refund policy.
 3. Select the document and inspect chunks and token counts.
 
 Talking point: long documents are chunked and embedded; raw long documents are not sent directly to the LLM.
 
 ## 5. Run The Agent
-1. Open `Agent`.
+1. Open `Agents`.
 2. Create a `Support Agent` if none exists.
 3. Run: `Can I get a refund within 30 days?`
-4. The UI moves to `Trace`.
+4. The UI moves to `Runs & traces`.
 
 Talking point: this is a governed LangGraph workflow, not an uncontrolled autonomous agent.
 
@@ -64,7 +64,7 @@ Talking point: the system is built for debugging and review, which is what produ
 
 ## 7. Human Review
 1. Run a risky or unsupported request, such as a privacy complaint.
-2. Open `Reviews`.
+2. Open `Human review`.
 3. Approve, edit, or reject a pending review.
 
 Talking point: human review is a workflow with stored decision data, not just a status label.
@@ -77,7 +77,7 @@ Talking point: human review is a workflow with stored decision data, not just a 
 Talking point: quality is measured by baseline, language, citations, routing accuracy, groundedness, latency, tokens, and estimated cost.
 
 ## 9. Cost Dashboard
-1. Open `Costs`.
+1. Open `Usage & costs`.
 2. Show AI run counts, total tokens, estimated cost, average latency, cache hit rate, and purpose breakdown.
 
 Talking point: token economy is a first-class product requirement, not an afterthought.
