@@ -47,37 +47,31 @@
 
 .document-card-actions {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto;
+  grid-template-columns: minmax(180px, 320px) auto;
   gap: 10px;
-  align-items: start;
+  align-items: end;
   width: 100%;
   min-width: 0;
 }
 
-.document-card-actions .folder-picker,
-.document-card-actions .folder-picker-compact {
-  width: 100%;
+.document-card-folder-control {
+  display: grid;
+  gap: 4px;
   min-width: 0;
 }
 
-.document-card-actions .folder-picker-compact > summary {
-  min-height: 48px;
+.document-card-folder-control span {
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  font-weight: 820;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
-.document-card-actions .folder-picker-body {
-  margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  padding: 8px;
-}
-
-.document-card-actions .folder-picker[open] {
-  grid-column: 1 / -1;
-}
-
-.document-card-actions .folder-picker[open] + .danger-button {
-  grid-column: 1 / -1;
+.document-card-folder-control select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
 }
 
 .document-card-actions .danger-button {
@@ -86,16 +80,17 @@
 }
 
 @media (max-width: 720px) {
-  .document-card-actions {
+  .document-card-actions,
+  .document-select-button {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .document-select-button {
-    grid-template-columns: minmax(0, 1fr);
     row-gap: 8px;
   }
 
-  .document-select-button > .badge {
+  .document-select-button > .badge,
+  .document-card-actions .danger-button {
     justify-self: start;
   }
 }

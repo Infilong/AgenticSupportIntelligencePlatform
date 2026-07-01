@@ -298,15 +298,19 @@ export function DocumentsPage({
                 <span className="document-metadata">{document.language.toUpperCase()} · {folderLabel("knowledge_document", document.folder_id)} · updated {formatDate(document.updated_at)}</span>
                 {document.error_message && <small>{document.error_message}</small>}
                 <div className="document-card-actions">
-                  {folderPicker({
-                    label: `Move ${document.title}`,
-                    value: document.folder_id ?? "",
-                    folders: knowledgeFolders,
-                    onChange: (folderId) => void onMoveDocumentFolder(document.id, folderId),
-                    disabled: !canManageResourceFolders || loading,
-                    resourceLabel: "knowledge",
-                    compact: true,
-                  })}
+                  <label className="document-card-folder-control">
+                    <span>Folder</span>
+                    <select
+                      value={document.folder_id ?? ""}
+                      onChange={(event) => void onMoveDocumentFolder(document.id, event.target.value)}
+                      disabled={!canManageResourceFolders || loading}
+                    >
+                      <option value="">Unfiled</option>
+                      {knowledgeFolders.map((folder) => (
+                        <option key={folder.id} value={folder.id}>{folder.name}</option>
+                      ))}
+                    </select>
+                  </label>
                   <button type="button" className="danger-button" onClick={() => void onDeleteDocument(document.id)} disabled={!canManageResources || loading}>Delete</button>
                 </div>
               </article>
