@@ -2,6 +2,15 @@
 
 Use this script for a 5-10 minute portfolio walkthrough. The local stack should be running at `http://localhost:5173` with the API at `http://localhost:8000`.
 
+If port `5173` is already used by another local app, start the stack with:
+
+```bash
+FRONTEND_PORT=5174 docker compose up -d --build
+make backend-migrate
+```
+
+Then open `http://localhost:5174`.
+
 ## 1. Start The Stack
 ```bash
 docker compose up -d --build

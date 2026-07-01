@@ -140,11 +140,11 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   }, token);
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await page.getByLabel("Active workspace").selectOption({ label: workspaceName });
-  await expect(page.getByText(workspaceName).first()).toBeVisible();
-
   const productNav = page.getByRole("navigation", { name: "Product navigation" });
+  await expect(page.getByText(workspaceName).first()).toBeVisible();
+  await productNav.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await expect(page.getByText("Dashboard - Workspace health, next action, and platform coverage.", { exact: true })).toBeVisible();
+
   await productNav.getByRole("button", { name: "My Tasks", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Operate what needs attention" })).toBeVisible();
   const evaluationRegressionTask = page.locator(".task-card").filter({ hasText: "Evaluation regressions" });
@@ -185,7 +185,7 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await expect(page.getByRole("button", { name: "Show navigation" })).toBeVisible();
   await expect(appShell).toHaveClass(/sidebar-collapsed/);
   await productNav.getByRole("button", { name: "Dashboard", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  await expect(page.getByText("Dashboard - Workspace health, next action, and platform coverage.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Show navigation" }).click();
   await expect(page.getByRole("button", { name: "Hide navigation" })).toBeVisible();
   await expect(appShell).not.toHaveClass(/sidebar-collapsed/);
@@ -263,7 +263,7 @@ test("folder and human-review editor inputs keep focus while typing", async ({ p
   await chunkSearch.type("30 days");
   await expect(chunkSearch).toHaveValue("30 days");
   await expect(chunkSearch).toBeFocused();
-  const folderInput = page.getByPlaceholder("New folder name");
+  const folderInput = page.getByLabel("New folder name");
   await folderInput.fill("");
   await folderInput.type("Regional Policy QA");
   await expect(folderInput).toHaveValue("Regional Policy QA");
@@ -475,11 +475,12 @@ test("reviewer dashboard hides restricted shortcuts", async ({ page }) => {
   }, reviewerToken);
 
   await page.goto("/");
-  await page.getByLabel("Active workspace").selectOption({ label: workspaceName });
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  const productNav = page.getByRole("navigation", { name: "Product navigation" });
+  await expect(page.getByText(workspaceName).first()).toBeVisible();
+  await productNav.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await expect(page.getByText("Dashboard - Workspace health, next action, and platform coverage.", { exact: true })).toBeVisible();
   await expect(page.getByText("Reviewer").first()).toBeVisible();
 
-  const productNav = page.getByRole("navigation", { name: "Product navigation" });
   await expect(productNav.getByRole("button", { name: "Dashboard", exact: true })).toBeVisible();
   await expect(productNav.getByRole("button", { name: "My Tasks", exact: true })).toBeVisible();
   await expect(productNav.getByRole("button", { name: "Knowledge", exact: true })).toBeVisible();

@@ -2621,7 +2621,7 @@ export function App() {
         {hiddenFolderCount > 0 && <p className="permission-note">Showing first {MAX_VISIBLE_FOLDERS} of {matchingFolders.length} matching folders. Search before moving resources in large workspaces.</p>}
         {canManageResourceFolders ? (
           <div className="folder-create">
-            <input value={folderName} onChange={(event) => onFolderNameChange(event.target.value)} placeholder="Example: Policies" />
+            <input aria-label="New folder name" value={folderName} onChange={(event) => onFolderNameChange(event.target.value)} placeholder="Example: Policies" />
             <button type="button" onClick={() => void createResourceFolder(resourceType)} disabled={!folderName.trim() || loading}>
               Create folder
             </button>

@@ -140,6 +140,15 @@ API:      http://localhost:8000
 Health:   http://localhost:8000/health
 ```
 
+If another local app already uses port `5173`, start the frontend on a different host port:
+
+```bash
+FRONTEND_PORT=5174 docker compose up -d --build
+make backend-migrate
+```
+
+Then open `http://localhost:5174`.
+
 Browser demo path:
 
 ```text
