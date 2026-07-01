@@ -6,6 +6,7 @@ import "./styles.css";
 import "./github-theme.css";
 import "./sidebar-modern.css";
 import "./workflow-rows.css";
+import "./knowledge-page.css";
 import "./account-page.css";
 import "./settings-page.css";
 import "./guardrails-page.css";

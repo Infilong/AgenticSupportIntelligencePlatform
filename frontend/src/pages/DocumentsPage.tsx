@@ -291,13 +291,13 @@ export function DocumentsPage({
                 key={document.id}
                 className={`document-card ${selectedDocumentId === document.id ? "selected" : ""}`}
               >
-                <button type="button" className="resource-main-button document-select-button" onClick={() => void onLoadDocumentDetail(document.id)}>
+                <button type="button" className="document-select-button" onClick={() => void onLoadDocumentDetail(document.id)}>
                   <strong>{document.title}</strong>
                   <Badge tone={document.status === "indexed" ? "good" : document.status === "failed" ? "bad" : "warn"}>{document.status}</Badge>
                 </button>
-                <span>{document.language.toUpperCase()} · {folderLabel("knowledge_document", document.folder_id)} · updated {formatDate(document.updated_at)}</span>
+                <span className="document-metadata">{document.language.toUpperCase()} · {folderLabel("knowledge_document", document.folder_id)} · updated {formatDate(document.updated_at)}</span>
                 {document.error_message && <small>{document.error_message}</small>}
-                <div className="resource-actions">
+                <div className="document-card-actions">
                   {folderPicker({
                     label: `Move ${document.title}`,
                     value: document.folder_id ?? "",
