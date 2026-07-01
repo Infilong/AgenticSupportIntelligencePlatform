@@ -1,0 +1,68 @@
+{
+  "target_url": "http://127.0.0.1:5174/",
+  "production_static_url": "http://127.0.0.1:4173/",
+  "branch": "main",
+  "commit": "00d938b",
+  "timestamp": "2026-07-01T08:40:00Z",
+  "baseline_found": false,
+  "pages": {
+    "dev_landing_5174": {
+      "ttfb_ms": 4,
+      "fcp_ms": 96,
+      "dom_interactive_ms": 19,
+      "dom_complete_ms": 68,
+      "full_load_ms": 68,
+      "total_requests": 33,
+      "reported_transfer_bytes": 8400,
+      "console_errors": 0,
+      "notes": "Vite dev-server mode; module request count is not production-comparable."
+    },
+    "production_static_landing_4173": {
+      "ttfb_ms": 3,
+      "fcp_ms": 36,
+      "dom_interactive_ms": 16,
+      "dom_complete_ms": 21,
+      "full_load_ms": 21,
+      "total_requests": 2,
+      "js_bundle_bytes": 471693,
+      "css_bundle_bytes": 69519,
+      "console_errors": 0
+    },
+    "authenticated_dev_app_shell_5174": {
+      "ttfb_ms": 5,
+      "fcp_ms": 124,
+      "dom_interactive_ms": 22,
+      "dom_complete_ms": 74,
+      "full_load_ms": 74,
+      "total_requests": 63,
+      "fetch_requests": 30,
+      "reported_transfer_bytes": 8400,
+      "console_errors": 0,
+      "slowest_resources": [
+        {"name":"guardrails","type":"fetch","duration_ms":408},
+        {"name":"counts","type":"fetch","duration_ms":369},
+        {"name":"counts","type":"fetch","duration_ms":366},
+        {"name":"resource-folders","type":"fetch","duration_ms":365},
+        {"name":"counts","type":"fetch","duration_ms":354},
+        {"name":"counts","type":"fetch","duration_ms":343},
+        {"name":"resource-folders","type":"fetch","duration_ms":324},
+        {"name":"system-health","type":"fetch","duration_ms":314},
+        {"name":"resource-folders","type":"fetch","duration_ms":307},
+        {"name":"resource-folders","type":"fetch","duration_ms":307}
+      ]
+    }
+  },
+  "budget": {
+    "production_js_under_500kb": "pass_close",
+    "production_css_under_100kb": "pass",
+    "production_initial_requests_under_50": "pass",
+    "authenticated_dev_shell_requests_under_50": "warning",
+    "console_errors": "pass"
+  },
+  "recommendations": [
+    "Capture this as baseline before larger UI or data-fetching changes.",
+    "Add a production frontend serving mode for Docker or a frontend-preview target.",
+    "Reduce authenticated app-shell eager loading and lazy-load section-specific data.",
+    "Watch JS bundle size because the raw bundle is close to 500 KB."
+  ]
+}
