@@ -908,6 +908,7 @@ small {
   display: grid;
   width: min(420px, calc(100vw - 36px));
   align-items: start;
+  pointer-events: none;
 }
 
 .status {
@@ -918,6 +919,14 @@ small {
   box-shadow: 0 8px 24px rgb(140 149 159 / 24%);
   padding: 10px 12px;
   font-weight: 740;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 480ms ease, transform 480ms ease;
+}
+
+.status-slot.dismissing .status {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 .status.success {

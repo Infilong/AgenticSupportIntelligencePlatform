@@ -51,6 +51,8 @@ const MAX_VISIBLE_REVIEWS = 30;
 const MAX_VISIBLE_MODEL_ROUTE_OPTIONS = 12;
 const MAX_VISIBLE_AGENT_PICKER_OPTIONS = 12;
 const MAX_VISIBLE_BASELINE_OPTIONS = 8;
+const NOTIFICATION_VISIBLE_MS = 3200;
+const NOTIFICATION_FADE_MS = 480;
 
 type CurrentUser = {
   id: string;
@@ -1227,12 +1229,27 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [notificationDismissing, setNotificationDismissing] = useState(false);
 
   useEffect(() => {
-    if (!notice) return undefined;
-    const timeoutId = window.setTimeout(() => setNotice(""), 3200);
-    return () => window.clearTimeout(timeoutId);
-  }, [notice]);
+    if (!notice && !error) {
+      setNotificationDismissing(false);
+      return undefined;
+    }
+    setNotificationDismissing(false);
+    const fadeTimeoutId = window.setTimeout(() => {
+      setNotificationDismissing(true);
+    }, NOTIFICATION_VISIBLE_MS);
+    const clearTimeoutId = window.setTimeout(() => {
+      setNotice("");
+      setError("");
+      setNotificationDismissing(false);
+    }, NOTIFICATION_VISIBLE_MS + NOTIFICATION_FADE_MS);
+    return () => {
+      window.clearTimeout(fadeTimeoutId);
+      window.clearTimeout(clearTimeoutId);
+    };
+  }, [notice, error]);
 
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [datasetName, setDatasetName] = useState("");
@@ -1688,6 +1705,7 @@ export function App() {
   }
 
   function resetMessages() {
+    setNotificationDismissing(false);
     setNotice("");
     setError("");
   }
@@ -3713,7 +3731,7 @@ export function App() {
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" autoComplete="new-password" />
           </label>
           <button type="submit" className="primary" disabled={loading}>{authMode === "login" ? "Login" : "Register and login"}</button>
-          <Status notice={notice} error={error} />
+          <Status notice={notice} error={error} dismissing={notificationDismissing} />
         </form>
       </main>
     );
@@ -3798,7 +3816,7 @@ export function App() {
             <Metric label="Audit events" value={auditLogs.length} />
           </section>
         )}
-        <Status notice={notice} error={error} />
+        <Status notice={notice} error={error} dismissing={notificationDismissing} />
         {activeTab === "account" ? renderActiveTab() : !selectedWorkspaceId ? <EmptyState title="Create or select a workspace" detail="Open Account to create a workspace or select an existing workspace from the sidebar." /> : renderActiveTab()}
       </section>
     </main>
@@ -6951,10 +6969,13 @@ function InfoCard({ title, text }: { title: string; text: string }) {
   );
 }
 
-function Status({ notice, error }: { notice: string; error: string }) {
+function Status({ notice, error, dismissing }: { notice: string; error: string; dismissing: boolean }) {
   const message = error || notice;
+  const className = ["status-slot", message ? "visible" : "", dismissing ? "dismissing" : ""]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <div className={message ? "status-slot visible" : "status-slot"} aria-live="polite" aria-atomic="true">
+    <div className={className} aria-live="polite" aria-atomic="true">
       {notice && !error && <div className="status success">{notice}</div>}
       {error && <div className="status error">{error}</div>}
     </div>
