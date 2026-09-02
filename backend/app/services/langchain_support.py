@@ -5,64 +5,20 @@ from typing import Any
 from uuid import UUID
 
 from langchain_core.documents import Document
-from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, Field
 
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, PromptTemplate
 from app.services.model_provider import ModelProvider
 from app.services.retrieval_service import RetrievalResult, RetrievalService
-
-
-class ClassificationOutput(BaseModel):
-    intent: str = Field(description="Stable intent label used by backend routing.")
-    sentiment: str = Field(description="Customer sentiment: neutral, frustrated, angry, or urgent.")
-    product_area: str = Field(
-        description="Product or operational area such as billing or security."
-    )
-    safety_risk: str = Field(description="Safety or business risk level: low, medium, or high.")
-    escalation_needed: bool = Field(description="Whether a human escalation is needed.")
-    confidence: float = Field(ge=0.0, le=1.0, description="Classifier confidence from 0 to 1.")
-    rationale: str = Field(description="Short reviewer-readable reason for the classification.")
-
-
-CLASSIFICATION_OUTPUT_PARSER = PydanticOutputParser(pydantic_object=ClassificationOutput)
-
-CLASSIFICATION_SYSTEM_TEMPLATE = (
-    "Classify the support message for an AI support operations workflow. "
-    "Return only valid JSON that matches these format instructions:\n"
-    "{format_instructions}"
-)
-CLASSIFICATION_HUMAN_TEMPLATE = "Support message:\n{input_message}"
-CLASSIFICATION_TEMPLATE_TEXT = (
-    f"system: {CLASSIFICATION_SYSTEM_TEMPLATE}\n"
-    f"human: {CLASSIFICATION_HUMAN_TEMPLATE}"
-)
-
-DRAFT_RESPONSE_SYSTEM_TEMPLATE = (
-    "Draft a same-language support answer using only the cited evidence. "
-    "Do not invent policy details. If the evidence is insufficient, say the "
-    "case should be reviewed by a human support specialist."
-)
-DRAFT_RESPONSE_HUMAN_TEMPLATE = (
-    "Language: {language}\n"
-    "User message:\n{input_message}\n\n"
-    "Cited evidence:\n{evidence}"
-)
-DRAFT_RESPONSE_TEMPLATE_TEXT = (
-    f"system: {DRAFT_RESPONSE_SYSTEM_TEMPLATE}\n"
-    f"human: {DRAFT_RESPONSE_HUMAN_TEMPLATE}"
-)
-
-CLASSIFICATION_PROMPT = ChatPromptTemplate.from_messages(
-    [("system", CLASSIFICATION_SYSTEM_TEMPLATE), ("human", CLASSIFICATION_HUMAN_TEMPLATE)]
-).partial(format_instructions=CLASSIFICATION_OUTPUT_PARSER.get_format_instructions())
-
-DRAFT_RESPONSE_PROMPT = ChatPromptTemplate.from_messages(
-    [("system", DRAFT_RESPONSE_SYSTEM_TEMPLATE), ("human", DRAFT_RESPONSE_HUMAN_TEMPLATE)]
+from app.services.support_prompts import (
+    CLASSIFICATION_OUTPUT_PARSER,
+    ClassificationOutput,
+    classification_prompt,
+    draft_response_prompt,
+    format_evidence,
 )
 
 
@@ -72,11 +28,6 @@ class LangChainModelCall:
     ai_run: AIRun
     prompt_text: str
     structured_output: dict[str, Any] | None = None
-
-
-def build_classification_prompt(input_message: str) -> str:
-    prompt_value = CLASSIFICATION_PROMPT.invoke({"input_message": input_message})
-    return prompt_value.to_string()
 
 
 def run_classification_chain(
@@ -92,6 +43,7 @@ def run_classification_chain(
     model_config_id: UUID | None = None,
 ) -> LangChainModelCall:
     captured: dict[str, Any] = {}
+    prompt = classification_prompt(prompt_template)
 
     def call_model(prompt_value: Any) -> str:
         prompt_text = prompt_value.to_string()
@@ -110,7 +62,7 @@ def run_classification_chain(
         captured["ai_run"] = response.ai_run
         return response.content
 
-    chain = CLASSIFICATION_PROMPT | RunnableLambda(call_model) | CLASSIFICATION_OUTPUT_PARSER
+    chain = prompt | RunnableLambda(call_model) | CLASSIFICATION_OUTPUT_PARSER
     parsed = chain.invoke({"input_message": input_message})
     return LangChainModelCall(
         content=parsed.intent,
@@ -207,23 +159,6 @@ def chunk_payloads_to_documents(chunks: list[dict[str, Any]]) -> list[Document]:
     return documents
 
 
-def build_draft_response_prompt(
-    *,
-    input_message: str,
-    language: SupportedLanguage,
-    documents: list[Document],
-) -> str:
-    evidence = _format_evidence(documents)
-    prompt_value = DRAFT_RESPONSE_PROMPT.invoke(
-        {
-            "language": language.value,
-            "input_message": input_message,
-            "evidence": evidence,
-        }
-    )
-    return prompt_value.to_string()
-
-
 def run_draft_response_chain(
     *,
     provider: ModelProvider,
@@ -238,6 +173,7 @@ def run_draft_response_chain(
     model_config_id: UUID | None = None,
 ) -> LangChainModelCall:
     captured: dict[str, Any] = {}
+    prompt = draft_response_prompt(prompt_template)
 
     def call_model(prompt_value: Any) -> str:
         prompt_text = prompt_value.to_string()
@@ -256,12 +192,12 @@ def run_draft_response_chain(
         captured["ai_run"] = response.ai_run
         return response.content
 
-    chain = DRAFT_RESPONSE_PROMPT | RunnableLambda(call_model) | StrOutputParser()
+    chain = prompt | RunnableLambda(call_model) | StrOutputParser()
     content = chain.invoke(
         {
             "language": language.value,
             "input_message": input_message,
-            "evidence": _format_evidence(documents),
+            "evidence": format_evidence(documents),
         }
     ).strip()
     return LangChainModelCall(
@@ -273,18 +209,6 @@ def run_draft_response_chain(
 
 def parse_model_text(text: str) -> str:
     return StrOutputParser().invoke(text).strip()
-
-
-def _format_evidence(documents: list[Document]) -> str:
-    if not documents:
-        return "No cited evidence was retrieved."
-    lines: list[str] = []
-    for index, document in enumerate(documents, start=1):
-        citation = document.metadata.get("citation", "uncited")
-        score = document.metadata.get("combined_score")
-        score_text = f" score={score}" if score is not None else ""
-        lines.append(f"[{index}] {citation}{score_text}\n{document.page_content}")
-    return "\n\n".join(lines)
 
 
 def _retrieval_result_payload(result: RetrievalResult) -> dict[str, Any]:

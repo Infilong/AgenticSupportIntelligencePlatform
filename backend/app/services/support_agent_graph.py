@@ -21,20 +21,25 @@ from app.models.agent import (
 from app.models.ai import AIRun
 from app.services.guardrail_catalog_service import GuardrailCatalogService, GuardrailEffectivePolicy
 from app.services.langchain_support import (
-    CLASSIFICATION_TEMPLATE_TEXT,
-    DRAFT_RESPONSE_TEMPLATE_TEXT,
-    build_classification_prompt,
-    build_draft_response_prompt,
     chunk_payloads_to_documents,
     create_search_documents_tool,
     run_classification_chain,
     run_draft_response_chain,
 )
-from app.services.model_config_service import ModelConfigService
+from app.services.model_call_planning import (
+    fit_draft_documents_to_budget as _fit_draft_documents_to_budget,
+)
+from app.services.model_call_planning import plan_model_call as _plan_model_call
 from app.services.model_provider import ConfiguredModelProvider, ModelProviderError
 from app.services.prompt_template_service import PromptTemplateService
 from app.services.support_agent_state import SupportAgentState
-from app.services.token_budget import ModelCallBudgetPlan, TokenBudgetPlanner
+from app.services.support_prompts import (
+    CLASSIFICATION_TEMPLATE_TEXT,
+    DRAFT_RESPONSE_TEMPLATE_TEXT,
+    build_classification_prompt,
+    build_draft_response_prompt,
+)
+from app.services.token_budget import ModelCallBudgetPlan
 from app.services.tool_service import ToolService
 
 
@@ -89,7 +94,9 @@ class SupportAgentGraphRunner:
             workspace_id=UUID(state["workspace_id"]),
             purpose="classification",
             fallback_model="mock-cheap",
-            prompt_text=build_classification_prompt(state["input_message"]),
+            prompt_text=build_classification_prompt(
+                state["input_message"], prompt_template=prompt_template
+            ),
             completion_text=json.dumps(classification, ensure_ascii=False),
             language=language,
             model_config_id=_agent_model_config_id(state),
@@ -276,6 +283,12 @@ class SupportAgentGraphRunner:
             chunks=chunks,
         )
         documents = chunk_payloads_to_documents(chunks)
+        prompt_template = PromptTemplateService(self.db).get_active_or_create_default(
+            workspace_id=UUID(state["workspace_id"]),
+            name="support_response_drafter",
+            language=language,
+            template_text=DRAFT_RESPONSE_TEMPLATE_TEXT,
+        )
         packed_documents, budget_plan, trimmed_count = _fit_draft_documents_to_budget(
             db=self.db,
             workspace_id=UUID(state["workspace_id"]),
@@ -284,6 +297,7 @@ class SupportAgentGraphRunner:
             documents=documents,
             completion_text=completion,
             model_config_id=_agent_model_config_id(state),
+            prompt_template=prompt_template,
         )
         if not budget_plan.allowed:
             output = _budget_failure_output(state, budget_plan, purpose="draft_response")
@@ -356,7 +370,10 @@ class SupportAgentGraphRunner:
             purpose="draft_response",
             fallback_model="mock-standard",
             prompt_text=build_draft_response_prompt(
-                input_message=state["input_message"], language=language, documents=documents
+                input_message=state["input_message"],
+                language=language,
+                documents=documents,
+                prompt_template=prompt_template,
             ),
             completion_text=completion,
             language=language,
@@ -533,63 +550,6 @@ class SupportAgentGraphRunner:
             .order_by(GraphStep.created_at.desc(), GraphStep.id.desc())
         )
         return previous_step.span_id if previous_step else None
-
-
-def _plan_model_call(
-    *,
-    db: Session,
-    workspace_id: UUID,
-    purpose: str,
-    fallback_model: str,
-    prompt_text: str,
-    completion_text: str,
-    language: SupportedLanguage,
-    model_config_id: UUID | None = None,
-) -> ModelCallBudgetPlan:
-    pricing = ModelConfigService(db).resolve_pricing(
-        workspace_id=workspace_id,
-        purpose=purpose,
-        fallback_model=fallback_model,
-        model_config_id=model_config_id,
-    )
-    return TokenBudgetPlanner().plan_model_call(
-        prompt_text=prompt_text,
-        completion_text=completion_text,
-        language=language,
-        pricing=pricing,
-    )
-
-
-def _fit_draft_documents_to_budget(
-    *,
-    db: Session,
-    workspace_id: UUID,
-    input_message: str,
-    language: SupportedLanguage,
-    documents: list,
-    completion_text: str,
-    model_config_id: UUID | None = None,
-) -> tuple[list, ModelCallBudgetPlan, int]:
-    current_documents = list(documents)
-    trimmed_count = 0
-    while True:
-        prompt_text = build_draft_response_prompt(
-            input_message=input_message, language=language, documents=current_documents
-        )
-        plan = _plan_model_call(
-            db=db,
-            workspace_id=workspace_id,
-            purpose="draft_response",
-            fallback_model="mock-standard",
-            prompt_text=prompt_text,
-            completion_text=completion_text,
-            language=language,
-            model_config_id=model_config_id,
-        )
-        if plan.allowed or not current_documents:
-            return current_documents, plan, trimmed_count
-        current_documents = current_documents[:-1]
-        trimmed_count += 1
 
 
 def _classification_analysis(input_message: str) -> dict:

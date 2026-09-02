@@ -15,6 +15,7 @@ from app.schemas.prompt_template import (
     PromptTemplateResponse,
 )
 from app.services.audit_log_service import AuditLogService
+from app.services.prompt_runtime import PromptTemplateValidationError
 from app.services.prompt_template_service import (
     PromptTemplateNotFoundError,
     PromptTemplateService,
@@ -76,13 +77,19 @@ def create_prompt_template_version(
     current_user: CurrentUser,
     db: DbSession,
 ) -> PromptTemplateResponse:
-    template = PromptTemplateService(db).create_version(
-        workspace_id=workspace.id,
-        name=payload.name,
-        language=payload.language,
-        template_text=payload.template_text,
-        active=payload.active,
-    )
+    try:
+        template = PromptTemplateService(db).create_version(
+            workspace_id=workspace.id,
+            name=payload.name,
+            language=payload.language,
+            template_text=payload.template_text,
+            active=payload.active,
+        )
+    except PromptTemplateValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"code": "prompt_template_invalid", "message": str(exc)},
+        ) from exc
     AuditLogService(db).record(
         workspace_id=workspace.id,
         actor_user_id=current_user.id,
@@ -116,6 +123,11 @@ def activate_prompt_template(
                 "code": "prompt_template_not_found",
                 "message": "Prompt template was not found.",
             },
+        ) from exc
+    except PromptTemplateValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={"code": "prompt_template_invalid", "message": str(exc)},
         ) from exc
     AuditLogService(db).record(
         workspace_id=workspace.id,

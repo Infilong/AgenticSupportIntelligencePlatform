@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, AIRunStatus, PromptTemplate
+from app.services.ai_run_ledger import record_ai_run as _record_ai_run
 from app.services.model_config_service import ModelConfigService
 from app.services.token_accounting import ModelPricing, estimate_cost, estimate_tokens
 
@@ -203,6 +204,7 @@ class OpenAICompatibleModelProvider:
                 purpose=purpose,
                 language=language,
                 prompt_template=prompt_template,
+                prompt=prompt,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=0,
                 estimated_cost=0.0,
@@ -228,6 +230,7 @@ class OpenAICompatibleModelProvider:
                 purpose=purpose,
                 language=language,
                 prompt_template=prompt_template,
+                prompt=prompt,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=0,
                 estimated_cost=0.0,
@@ -271,6 +274,7 @@ class OpenAICompatibleModelProvider:
                 purpose=purpose,
                 language=language,
                 prompt_template=prompt_template,
+                prompt=prompt,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 estimated_cost=estimated,
@@ -293,6 +297,7 @@ class OpenAICompatibleModelProvider:
                 purpose=purpose,
                 language=language,
                 prompt_template=prompt_template,
+                prompt=prompt,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=0,
                 estimated_cost=0.0,
@@ -363,6 +368,7 @@ class MockModelProvider:
             purpose=purpose,
             language=language,
             prompt_template=prompt_template,
+            prompt=prompt,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             estimated_cost=estimated,
@@ -392,52 +398,6 @@ def _extract_chat_content(payload: dict[str, Any]) -> str:
     if not isinstance(content, str) or not content.strip():
         raise ValueError("OpenAI response message content was empty")
     return content.strip()
-
-
-def _record_ai_run(
-    db: Session,
-    *,
-    workspace_id: UUID,
-    graph_run_id: UUID | None,
-    graph_step_id: UUID | None,
-    provider: str,
-    model: str,
-    model_config_id: UUID | None,
-    purpose: str,
-    language: SupportedLanguage,
-    prompt_template: PromptTemplate | None,
-    prompt_tokens: int,
-    completion_tokens: int,
-    estimated_cost: float,
-    latency_ms: int,
-    cache_hit: bool,
-    status: AIRunStatus,
-    error_message: str | None,
-) -> AIRun:
-    ai_run = AIRun(
-        workspace_id=workspace_id,
-        graph_run_id=graph_run_id,
-        graph_step_id=graph_step_id,
-        model_config_id=model_config_id,
-        provider=provider,
-        model=model,
-        purpose=purpose,
-        language=language,
-        prompt_template_id=prompt_template.id if prompt_template else None,
-        prompt_version=prompt_template.version if prompt_template else None,
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        total_tokens=prompt_tokens + completion_tokens,
-        estimated_cost=estimated_cost,
-        latency_ms=latency_ms,
-        cache_hit=cache_hit,
-        status=status,
-        error_message=error_message,
-    )
-    db.add(ai_run)
-    db.commit()
-    db.refresh(ai_run)
-    return ai_run
 
 
 def _latency_ms(started: float) -> int:

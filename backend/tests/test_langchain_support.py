@@ -4,8 +4,6 @@ from uuid import uuid4
 
 from app.core.language import SupportedLanguage
 from app.services.langchain_support import (
-    build_classification_prompt,
-    build_draft_response_prompt,
     chunk_payloads_to_documents,
     parse_classification_output,
     parse_model_text,
@@ -14,6 +12,10 @@ from app.services.langchain_support import (
     run_draft_response_chain,
 )
 from app.services.retrieval_service import RetrievalResult
+from app.services.support_prompts import (
+    build_classification_prompt,
+    build_draft_response_prompt,
+)
 
 
 def test_langchain_classification_prompt_contains_message_and_allowed_labels() -> None:
@@ -137,6 +139,64 @@ def test_classification_chain_calls_provider_inside_langchain_runnable() -> None
     assert call["model"] == "mock-cheap"
     assert "Can I get a refund?" in call["prompt"]
     assert result.prompt_text == call["prompt"]
+
+
+def test_classification_chain_sends_active_template_to_provider() -> None:
+    provider = RecordingProvider()
+    prompt_template = SimpleNamespace(
+        template_text=(
+            "system: ACTIVE CLASSIFIER VERSION\n"
+            "human: Customer text: {input_message}"
+        )
+    )
+
+    run_classification_chain(
+        provider=provider,
+        workspace_id=uuid4(),
+        language=SupportedLanguage.en,
+        input_message="Can I get a refund?",
+        graph_run_id=uuid4(),
+        prompt_template=prompt_template,
+        completion_text=json.dumps({
+            "intent": "refund_request",
+            "sentiment": "neutral",
+            "product_area": "billing",
+            "safety_risk": "low",
+            "escalation_needed": False,
+            "confidence": 0.9,
+            "rationale": "Refund request.",
+        }),
+    )
+
+    assert "ACTIVE CLASSIFIER VERSION" in provider.calls[0]["prompt"]
+    assert (
+        "Classify the support message for an AI support operations workflow"
+        not in provider.calls[0]["prompt"]
+    )
+
+
+def test_draft_chain_sends_active_template_to_provider() -> None:
+    provider = RecordingProvider()
+    prompt_template = SimpleNamespace(
+        template_text=(
+            "system: ACTIVE DRAFTER VERSION\n"
+            "human: {language} | {input_message} | {evidence}"
+        )
+    )
+
+    run_draft_response_chain(
+        provider=provider,
+        workspace_id=uuid4(),
+        language=SupportedLanguage.en,
+        input_message="Can I get a refund?",
+        documents=[],
+        graph_run_id=uuid4(),
+        prompt_template=prompt_template,
+        completion_text="Please contact support.",
+    )
+
+    assert "ACTIVE DRAFTER VERSION" in provider.calls[0]["prompt"]
+    assert "No cited evidence was retrieved." in provider.calls[0]["prompt"]
 
 
 def test_draft_response_chain_calls_provider_with_cited_langchain_documents() -> None:

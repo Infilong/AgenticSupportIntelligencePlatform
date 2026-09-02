@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.language import SupportedLanguage
 from app.models.ai import PromptTemplate
+from app.services.prompt_runtime import validate_prompt_template
 
 
 class PromptTemplateNotFoundError(ValueError):
@@ -86,6 +87,10 @@ class PromptTemplateService:
             .order_by(PromptTemplate.version.desc())
         )
         if active_template is not None:
+            validate_prompt_template(
+                name=active_template.name,
+                template_text=active_template.template_text,
+            )
             return active_template
         return self.create_version(
             workspace_id=workspace_id,
@@ -144,6 +149,7 @@ class PromptTemplateService:
     ) -> PromptTemplate:
         resolved_name = name.strip()
         resolved_text = template_text.strip()
+        validate_prompt_template(name=resolved_name, template_text=resolved_text)
         resolved_version = version or self._next_version(
             workspace_id=workspace_id, name=resolved_name, language=language
         )
@@ -174,6 +180,7 @@ class PromptTemplateService:
         )
         if template is None:
             raise PromptTemplateNotFoundError("Prompt template was not found.")
+        validate_prompt_template(name=template.name, template_text=template.template_text)
         self._deactivate_family(
             workspace_id=workspace_id, name=template.name, language=template.language
         )

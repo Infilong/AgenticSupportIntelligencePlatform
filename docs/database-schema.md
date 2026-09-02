@@ -297,6 +297,7 @@ AIRun
 - language
 - prompt_template_id nullable
 - prompt_version nullable
+- rendered_prompt_hash nullable for historical rows; populated for every new model call
 - prompt_tokens
 - completion_tokens
 - total_tokens

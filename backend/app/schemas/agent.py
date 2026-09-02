@@ -214,6 +214,7 @@ class AIRunTraceResponse(BaseModel):
     prompt_template_name: str | None = None
     prompt_template_text: str | None = None
     prompt_version: int | None
+    rendered_prompt_hash: str | None
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int

@@ -94,6 +94,7 @@ class AIRun(Base):
         Uuid, ForeignKey("prompt_templates.id", ondelete="SET NULL"), nullable=True
     )
     prompt_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rendered_prompt_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     total_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
