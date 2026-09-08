@@ -1,6 +1,8 @@
-# Milestone Plan
+# Historical portfolio milestone plan
 
-Do not code all milestones at once. For each milestone: create a plan, wait for approval, implement, add tests, run validation, explain the diff, update docs, create a learning note, and stop for review.
+This is the pre-rebuild portfolio roadmap, retained as history. It does not authorize new
+features or define current scope. Use [product spec](product-spec.md), [PLANS](PLANS.md), and
+the [rebuild execution plan](exec-plans/completed/simple-admin-rebuild.md) for current work.
 
 ## Milestone 0: Planning And Governance
 Deliverables:

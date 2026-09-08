@@ -1,6 +1,9 @@
 # Architecture Tree
 
-Use this file for quick orientation. It summarizes the architecture, tools, current implementation state, and future milestones. Detailed decisions remain in the focused design docs.
+Status: historical conceptual map. Its future/implemented labels are not current evidence.
+Use the [verified code map](code-map.md) for actual entry points, ownership and known gaps.
+
+Retained as historical design context. Use root ARCHITECTURE.md for current contracts and the code map for implementation status.
 
 ## System Tree
 

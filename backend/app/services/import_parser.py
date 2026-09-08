@@ -3,6 +3,7 @@ import io
 import json
 from dataclasses import dataclass, field
 
+from app.core.language import SupportedLanguage
 from app.models.dataset import LabelType, MessageRole
 
 
@@ -21,6 +22,7 @@ class ParsedExample:
     external_id: str | None
     messages: list[ParsedMessage]
     labels: dict[LabelType, str] = field(default_factory=dict)
+    language: SupportedLanguage | None = None
 
 
 def parse_import_content(source_type: str, content: str) -> list[ParsedExample]:
@@ -49,13 +51,24 @@ def parse_jsonl(content: str) -> list[ParsedExample]:
 
 
 def parse_csv(content: str) -> list[ParsedExample]:
-    reader = csv.DictReader(io.StringIO(content))
+    reader = csv.DictReader(io.StringIO(content), strict=True)
+    try:
+        return _parse_csv_rows(reader)
+    except csv.Error as exc:
+        raise ImportParseError(f"Malformed CSV near line {reader.line_num}.") from exc
+
+
+def _parse_csv_rows(reader: csv.DictReader) -> list[ParsedExample]:
     required_columns = {"role", "content"}
     if reader.fieldnames is None or not required_columns.issubset(set(reader.fieldnames)):
         raise ImportParseError("CSV must include role and content columns.")
+    if len(reader.fieldnames) != len(set(reader.fieldnames)):
+        raise ImportParseError("CSV column names must be unique.")
 
     examples: list[ParsedExample] = []
     for row_number, row in enumerate(reader, start=2):
+        if None in row:
+            raise ImportParseError(f"CSV row {row_number} has more fields than its header.")
         role = _parse_role(row.get("role"), f"row {row_number}")
         message_content = (row.get("content") or "").strip()
         if not message_content:
@@ -66,6 +79,7 @@ def parse_csv(content: str) -> list[ParsedExample]:
                 external_id=(row.get("external_id") or "").strip() or None,
                 messages=[ParsedMessage(role=role, content=message_content)],
                 labels=labels,
+                language=_parse_language(row.get("language"), f"row {row_number}"),
             )
         )
 
@@ -86,7 +100,11 @@ def _parse_jsonl_example(payload: object, line_number: int) -> ParsedExample:
         if not isinstance(raw_message, dict):
             raise ImportParseError(f"JSONL line {line_number} message {index} must be an object.")
         role = _parse_role(raw_message.get("role"), f"line {line_number} message {index}")
-        message_content = str(raw_message.get("content") or "").strip()
+        raw_content = raw_message.get("content")
+        if not isinstance(raw_content, str):
+            raise ImportParseError(
+                f"JSONL line {line_number} message {index} content must be a string.")
+        message_content = raw_content.strip()
         if not message_content:
             raise ImportParseError(f"JSONL line {line_number} message {index} has empty content.")
         messages.append(ParsedMessage(role=role, content=message_content))
@@ -97,7 +115,17 @@ def _parse_jsonl_example(payload: object, line_number: int) -> ParsedExample:
         external_id=str(external_id).strip() if external_id is not None else None,
         messages=messages,
         labels=labels,
+        language=_parse_language(payload.get("language"), f"line {line_number}"),
     )
+
+
+def _parse_language(value: object, location: str) -> SupportedLanguage | None:
+    if value is None or value == "":
+        return None
+    try:
+        return SupportedLanguage(value)
+    except (ValueError, TypeError) as exc:
+        raise ImportParseError(f"Unsupported language at {location}; use en, ja or zh.") from exc
 
 
 def _parse_role(value: object, location: str) -> MessageRole:

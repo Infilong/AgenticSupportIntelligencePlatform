@@ -184,6 +184,7 @@ def move_dataset_folder(
             workspace_id=workspace.id,
             dataset_id=dataset_id,
             folder_id=payload.folder_id,
+            actor_user_id=current_user.id,
         )
     except DatasetNotFoundError as exc:
         raise HTTPException(
@@ -192,13 +193,7 @@ def move_dataset_folder(
         ) from exc
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
-    return _dataset_changed_response(
-        db=db,
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="dataset.moved",
-        dataset=dataset,
-    )
+    return DatasetResponse.model_validate(dataset)
 
 
 @router.delete("/datasets/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -209,21 +204,13 @@ def delete_dataset(
     db: DbSession,
 ) -> None:
     try:
-        DatasetService(db).delete_dataset(workspace_id=workspace.id, dataset_id=dataset_id)
+        DatasetService(db).delete_dataset(workspace_id=workspace.id, dataset_id=dataset_id,
+                                          actor_user_id=current_user.id)
     except DatasetNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "dataset_not_found", "message": "Dataset was not found."},
         ) from exc
-    from app.services.audit_log_service import AuditLogService
-
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="dataset.deleted",
-        resource_type="dataset",
-        resource_id=dataset_id,
-    )
 
 
 def _folder_not_found(exc: Exception) -> HTTPException:
@@ -231,22 +218,3 @@ def _folder_not_found(exc: Exception) -> HTTPException:
         status_code=status.HTTP_404_NOT_FOUND,
         detail={"code": "resource_folder_not_found", "message": "Resource folder was not found."},
     )
-
-
-def _dataset_changed_response(
-    *, db: DbSession, workspace_id, actor_user_id, action: str, dataset
-) -> DatasetResponse:
-    from app.services.audit_log_service import AuditLogService
-
-    AuditLogService(db).record(
-        workspace_id=workspace_id,
-        actor_user_id=actor_user_id,
-        action=action,
-        resource_type="dataset",
-        resource_id=dataset.id,
-        metadata={
-            "name": dataset.name,
-            "folder_id": str(dataset.folder_id) if dataset.folder_id else None,
-        },
-    )
-    return DatasetResponse.model_validate(dataset)

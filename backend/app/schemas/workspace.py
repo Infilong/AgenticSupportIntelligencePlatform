@@ -1,9 +1,13 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.workspace import WorkspaceRole
+
+AssignableRole = Literal[WorkspaceRole.viewer, WorkspaceRole.operator,
+                         WorkspaceRole.admin, WorkspaceRole.owner]
 
 
 class WorkspaceCreateRequest(BaseModel):
@@ -63,7 +67,7 @@ class WorkspaceMemberResponse(BaseModel):
 
 class WorkspaceMemberAddRequest(BaseModel):
     email: str = Field(min_length=3, max_length=320)
-    role: WorkspaceRole = WorkspaceRole.developer
+    role: AssignableRole = WorkspaceRole.viewer
 
     @field_validator("email")
     @classmethod
@@ -75,7 +79,7 @@ class WorkspaceMemberAddRequest(BaseModel):
 
 
 class WorkspaceMemberRoleUpdateRequest(BaseModel):
-    role: WorkspaceRole
+    role: AssignableRole
 
 
 class WorkspaceDeleteRequest(BaseModel):

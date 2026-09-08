@@ -2,9 +2,11 @@ import json
 from uuid import UUID
 
 from fastapi.testclient import TestClient
+from pagination_fixtures import set_creation_order
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.agent import AgentConfig
 from app.models.user import User
 from app.models.workspace import WorkspaceMember, WorkspaceRole
 
@@ -604,7 +606,9 @@ def test_resource_list_filters_are_backend_bounded_and_searchable(client: TestCl
     assert triage_agent["folder_id"] == agent_folder["id"]
 
 
-def test_agent_list_supports_folder_unfiled_search_and_offset(client: TestClient) -> None:
+def test_agent_list_supports_folder_unfiled_search_and_offset(
+    client: TestClient, db_session,
+) -> None:
     register(client, "agent-page-owner@example.com")
     token = login(client, "agent-page-owner@example.com")
     workspace = create_workspace(client, token)
@@ -624,6 +628,8 @@ def test_agent_list_supports_folder_unfiled_search_and_offset(client: TestClient
         )
         assert response.status_code == 201
         created_names.append(name)
+
+    set_creation_order(db_session, AgentConfig, workspace["id"], created_names)
 
     first_page = client.get(
         f"/api/v1/workspaces/{workspace['id']}/agents",

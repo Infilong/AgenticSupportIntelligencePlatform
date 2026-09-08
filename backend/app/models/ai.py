@@ -6,6 +6,7 @@ from enum import StrEnum
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Enum,
     Float,
@@ -23,6 +24,8 @@ from app.db.base import Base
 
 
 class AIRunStatus(StrEnum):
+    pending = "pending"
+    uncertain = "uncertain"
     succeeded = "succeeded"
     failed = "failed"
 
@@ -76,6 +79,11 @@ class PromptTemplate(Base):
 
 class AIRun(Base):
     __tablename__ = "ai_runs"
+    __table_args__ = (CheckConstraint(
+        "(execution_id IS NULL AND execution_protocol IS NULL) OR "
+        "(execution_id IS NOT NULL AND execution_protocol IS NOT NULL "
+        "AND execution_protocol = 'pg-session-v1')",
+        name="ck_ai_run_execution_protocol"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -83,6 +91,8 @@ class AIRun(Base):
     )
     graph_run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
     graph_step_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
+    execution_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    execution_protocol: Mapped[str | None] = mapped_column(String(32), nullable=True)
     model_config_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("model_configs.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -101,7 +111,9 @@ class AIRun(Base):
     estimated_cost: Mapped[float] = mapped_column(Float, nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     cache_hit: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    status: Mapped[AIRunStatus] = mapped_column(Enum(AIRunStatus), nullable=False)
+    status: Mapped[AIRunStatus] = mapped_column(
+        Enum(AIRunStatus, name="ai_run_status"), nullable=False
+    )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False

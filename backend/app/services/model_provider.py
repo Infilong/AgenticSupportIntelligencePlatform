@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import time
 import urllib.error
 import urllib.request
@@ -15,6 +14,7 @@ from app.core.language import SupportedLanguage
 from app.models.ai import AIRun, AIRunStatus, PromptTemplate
 from app.services.ai_run_ledger import record_ai_run as _record_ai_run
 from app.services.model_config_service import ModelConfigService
+from app.services.openai_transport import OpenAIChatTransport, UrllibOpenAIChatTransport
 from app.services.token_accounting import ModelPricing, estimate_cost, estimate_tokens
 
 
@@ -32,6 +32,7 @@ class MockModelProviderError(ModelProviderError):
 class ModelProviderResponse:
     content: str
     ai_run: AIRun
+    usage_complete: bool = True
 
 
 MockModelResponse = ModelProviderResponse
@@ -54,49 +55,6 @@ class ModelProvider(Protocol):
         cache_hit: bool = False,
         fail: bool = False,
     ) -> ModelProviderResponse: ...
-
-
-class OpenAIChatTransport(Protocol):
-    def create_chat_completion(
-        self,
-        *,
-        api_key: str,
-        base_url: str,
-        model: str,
-        prompt: str,
-        timeout_seconds: int,
-    ) -> dict[str, Any]: ...
-
-
-class UrllibOpenAIChatTransport:
-    def create_chat_completion(
-        self,
-        *,
-        api_key: str,
-        base_url: str,
-        model: str,
-        prompt: str,
-        timeout_seconds: int,
-    ) -> dict[str, Any]:
-        url = f"{base_url.rstrip('/')}/chat/completions"
-        body = json.dumps(
-            {
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.2,
-            }
-        ).encode("utf-8")
-        request = urllib.request.Request(
-            url,
-            data=body,
-            method="POST",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-        )
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-            return json.loads(response.read().decode("utf-8"))
 
 
 class ConfiguredModelProvider:
@@ -189,6 +147,7 @@ class OpenAICompatibleModelProvider:
         graph_step_id: UUID | None = None,
         cache_hit: bool = False,
         fail: bool = False,
+        max_completion_tokens: int | None = None,
     ) -> ModelProviderResponse:
         started = time.perf_counter()
         prompt_tokens = estimate_tokens(prompt, language)
@@ -247,16 +206,25 @@ class OpenAICompatibleModelProvider:
                 model=pricing.model,
                 prompt=prompt,
                 timeout_seconds=self.timeout_seconds,
+                **({"max_completion_tokens": max_completion_tokens}
+                   if max_completion_tokens is not None else {}),
             )
             content = _extract_chat_content(payload)
             usage = payload.get("usage") if isinstance(payload, dict) else None
+            usage_complete = isinstance(usage, dict) and all(
+                key in usage for key in ("prompt_tokens", "completion_tokens")
+            )
             if isinstance(usage, dict):
-                prompt_tokens = int(usage.get("prompt_tokens") or prompt_tokens)
-                completion_tokens = int(
-                    usage.get("completion_tokens") or estimate_tokens(content, language)
-                )
+                for key in ("prompt_tokens", "completion_tokens"):
+                    if key in usage and (type(usage[key]) is not int or usage[key] < 0):
+                        raise ValueError("provider usage must contain nonnegative integers")
+                prompt_tokens = usage.get("prompt_tokens", prompt_tokens)
+                completion_tokens = usage.get(
+                    "completion_tokens", estimate_tokens(content, language))
             else:
                 completion_tokens = estimate_tokens(content, language)
+            if prompt_tokens < 0 or completion_tokens < 0:
+                raise ValueError("provider usage must be nonnegative")
             estimated = estimate_cost(
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
@@ -283,7 +251,8 @@ class OpenAICompatibleModelProvider:
                 status=AIRunStatus.succeeded,
                 error_message=None,
             )
-            return ModelProviderResponse(content=content, ai_run=ai_run)
+            return ModelProviderResponse(
+                content=content, ai_run=ai_run, usage_complete=usage_complete)
         except (OSError, urllib.error.URLError, ValueError, KeyError, TypeError) as exc:
             message = f"openai_provider_error: {exc}"
             ai_run = _record_ai_run(

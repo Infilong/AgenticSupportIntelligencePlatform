@@ -16,7 +16,6 @@ from app.schemas.folder import (
     ResourceFolderResponse,
     ResourceFolderUpdateRequest,
 )
-from app.services.audit_log_service import AuditLogService
 from app.services.folder_service import (
     ResourceFolderError,
     ResourceFolderInvalidTypeError,
@@ -122,14 +121,6 @@ def create_resource_folder(
         raise _not_found(exc) from exc
     except ResourceFolderError as exc:
         raise _bad_request(exc) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="resource_folder.created",
-        resource_type="resource_folder",
-        resource_id=folder.id,
-        metadata={"name": folder.name, "resource_type": folder.resource_type},
-    )
     return ResourceFolderResponse.model_validate(folder)
 
 
@@ -147,19 +138,13 @@ def update_resource_folder(
             folder_id=folder_id,
             name=payload.name,
             parent_folder_id=payload.parent_folder_id,
+            update_parent="parent_folder_id" in payload.model_fields_set,
+            actor_user_id=current_user.id,
         )
     except ResourceFolderNotFoundError as exc:
         raise _not_found(exc) from exc
     except ResourceFolderError as exc:
         raise _bad_request(exc) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="resource_folder.updated",
-        resource_type="resource_folder",
-        resource_id=folder.id,
-        metadata={"name": folder.name, "resource_type": folder.resource_type},
-    )
     return ResourceFolderResponse.model_validate(folder)
 
 
@@ -171,7 +156,9 @@ def delete_resource_folder(
     db: DbSession,
 ) -> None:
     try:
-        ResourceFolderService(db).delete_folder(workspace_id=workspace.id, folder_id=folder_id)
+        ResourceFolderService(db).delete_folder(
+            workspace_id=workspace.id, folder_id=folder_id, actor_user_id=current_user.id,
+        )
     except ResourceFolderNotFoundError as exc:
         raise _not_found(exc) from exc
     except ResourceFolderNotEmptyError as exc:
@@ -179,13 +166,6 @@ def delete_resource_folder(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "resource_folder_not_empty", "message": str(exc)},
         ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="resource_folder.deleted",
-        resource_type="resource_folder",
-        resource_id=folder_id,
-    )
 
 
 def _require_resource_folder_read(

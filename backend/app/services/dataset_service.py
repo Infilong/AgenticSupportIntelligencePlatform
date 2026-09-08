@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.language import LanguageDetectionError, detect_language_for_messages
+from app.core.language import LanguageDetectionError
 from app.models.dataset import (
     ConversationExample,
     Dataset,
@@ -18,7 +18,9 @@ from app.models.dataset import (
     Message,
 )
 from app.models.user import User
+from app.services.dataset_mutation import commit_dataset_mutation
 from app.services.folder_service import ResourceFolderService
+from app.services.import_language import prepare_import_languages
 from app.services.import_parser import ImportParseError, parse_import_content
 
 
@@ -78,10 +80,9 @@ class DatasetService:
 
         try:
             parsed_examples = parse_import_content(source_type.value, content)
-            for parsed_example in parsed_examples:
-                language = detect_language_for_messages(
-                    [message.content for message in parsed_example.messages]
-                )
+            # Validate the whole batch before adding any usable examples or labels.
+            prepared = prepare_import_languages(parsed_examples)
+            for parsed_example, language, message_languages in prepared:
                 example = ConversationExample(
                     workspace_id=workspace_id,
                     dataset_id=dataset.id,
@@ -93,8 +94,9 @@ class DatasetService:
                 self.db.add(example)
                 self.db.flush()
 
-                for parsed_message in parsed_example.messages:
-                    message_language = detect_language_for_messages([parsed_message.content])
+                for parsed_message, message_language in zip(
+                    parsed_example.messages, message_languages, strict=True,
+                ):
                     self.db.add(
                         Message(
                             workspace_id=workspace_id,
@@ -148,7 +150,7 @@ class DatasetService:
         statement = (
             select(Dataset)
             .where(*conditions)
-            .order_by(Dataset.created_at.desc())
+            .order_by(Dataset.created_at.desc(), Dataset.id.desc())
             .offset(offset)
         )
         if limit is not None:
@@ -217,7 +219,8 @@ class DatasetService:
         value: str,
         current_user: User,
     ) -> Label:
-        example = self.get_example(workspace_id=workspace_id, example_id=example_id)
+        example = self.get_example(workspace_id=workspace_id, example_id=example_id,
+                                   for_update=True)
         if example is None:
             raise ExampleNotFoundError("Example was not found.")
 
@@ -227,7 +230,7 @@ class DatasetService:
             Label.label_type == label_type,
             Label.source == LabelSource.human,
         )
-        label = self.db.scalar(statement)
+        label = self.db.scalar(statement.execution_options(populate_existing=True))
         if label is None:
             label = Label(
                 workspace_id=workspace_id,
@@ -247,7 +250,8 @@ class DatasetService:
         return label
 
     def move_dataset(
-        self, *, workspace_id: UUID, dataset_id: UUID, folder_id: UUID | None
+        self, *, workspace_id: UUID, dataset_id: UUID, folder_id: UUID | None,
+        actor_user_id: UUID,
     ) -> Dataset:
         dataset = self.get_dataset(workspace_id=workspace_id, dataset_id=dataset_id)
         if dataset is None:
@@ -256,16 +260,19 @@ class DatasetService:
             workspace_id=workspace_id, folder_id=folder_id, resource_type="dataset"
         )
         dataset.folder_id = folder_id
-        self.db.commit()
+        commit_dataset_mutation(self.db, dataset=dataset, actor_user_id=actor_user_id,
+                                action="moved")
         self.db.refresh(dataset)
         return dataset
 
-    def delete_dataset(self, *, workspace_id: UUID, dataset_id: UUID) -> None:
+    def delete_dataset(self, *, workspace_id: UUID, dataset_id: UUID,
+                       actor_user_id: UUID) -> None:
         dataset = self.get_dataset(workspace_id=workspace_id, dataset_id=dataset_id)
         if dataset is None:
             raise DatasetNotFoundError("Dataset was not found.")
         self.db.delete(dataset)
-        self.db.commit()
+        commit_dataset_mutation(self.db, dataset=dataset, actor_user_id=actor_user_id,
+                                action="deleted")
 
     def get_dataset(self, *, workspace_id: UUID, dataset_id: UUID) -> Dataset | None:
         statement = select(Dataset).where(
@@ -275,10 +282,12 @@ class DatasetService:
         return self.db.scalar(statement)
 
     def get_example(
-        self, *, workspace_id: UUID, example_id: UUID
+        self, *, workspace_id: UUID, example_id: UUID, for_update: bool = False,
     ) -> ConversationExample | None:
         statement = select(ConversationExample).where(
             ConversationExample.workspace_id == workspace_id,
             ConversationExample.id == example_id,
         )
+        if for_update:
+            statement = statement.with_for_update(key_share=True)
         return self.db.scalar(statement)

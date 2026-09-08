@@ -101,13 +101,14 @@ def test_retrieval_returns_cited_chunks_and_persists_trace(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["strategy"] == "hybrid"
+    assert body["strategy"] == "lexical"
     assert body["no_source"] is False
     assert body["results"]
     top = body["results"][0]
     assert top["document_title"] == "Refund Policy"
     assert "Refund Policy v1 #chunk-" in top["citation"]
-    assert top["combined_score"] >= top["vector_score"] * 0.35
+    assert top["vector_score"] is None
+    assert top["combined_score"] == top["lexical_score"]
 
     trace = db_session.scalar(
         select(RetrievalTrace).where(RetrievalTrace.id == UUID(body["trace_id"]))

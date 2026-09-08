@@ -1,8 +1,10 @@
 import json
 
 from fastapi.testclient import TestClient
+from pagination_fixtures import set_creation_order
 
 from app.core.language import LanguageDetectionError, SupportedLanguage, detect_language
+from app.models.dataset import Dataset
 from app.services.import_parser import ImportParseError, parse_csv, parse_jsonl
 
 
@@ -250,7 +252,9 @@ def test_dataset_routes_reject_unauthenticated_requests(client: TestClient) -> N
 
 
 
-def test_dataset_list_supports_folder_unfiled_search_and_offset(client: TestClient) -> None:
+def test_dataset_list_supports_folder_unfiled_search_and_offset(
+    client: TestClient, db_session,
+) -> None:
     register(client, "dataset-page-owner@example.com")
     token = login(client, "dataset-page-owner@example.com")
     workspace = create_workspace(client, token)
@@ -280,6 +284,8 @@ def test_dataset_list_supports_folder_unfiled_search_and_offset(client: TestClie
         )
         assert response.status_code == 201
         created_names.append(name)
+
+    set_creation_order(db_session, Dataset, workspace["id"], created_names)
 
     first_page = client.get(
         f"/api/v1/workspaces/{workspace['id']}/datasets",

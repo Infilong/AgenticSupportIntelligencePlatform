@@ -5,7 +5,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.language import SupportedLanguage
 from app.schemas.model_config import ModelConfigResponse
+from app.schemas.public_trace import PublicTraceResponse
 
 
 class AgentCreateRequest(BaseModel):
@@ -71,6 +73,7 @@ class AgentListResponse(BaseModel):
 
 
 class AgentRunRequest(BaseModel):
+    language: SupportedLanguage | None = None
     input_message: str = Field(min_length=1, max_length=4000)
 
     @field_validator("input_message")
@@ -250,6 +253,7 @@ class CheckpointTraceResponse(BaseModel):
 
 class GraphStepResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    sequence: int | None = None
 
     id: UUID
     span_id: str | None
@@ -273,7 +277,7 @@ class GraphStepResponse(BaseModel):
     state_keys: list[str] = Field(default_factory=list)
 
 
-class GraphTraceResponse(BaseModel):
+class GraphTraceResponse(PublicTraceResponse):
     runtime: GraphRuntimeResponse
     run: GraphRunResponse
     steps: list[GraphStepResponse]

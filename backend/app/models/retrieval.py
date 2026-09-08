@@ -24,6 +24,8 @@ class RetrievalTrace(Base):
     filters_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     no_source: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    outcome: Mapped[str] = mapped_column(String(20), default="unknown", nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

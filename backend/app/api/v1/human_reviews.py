@@ -19,7 +19,7 @@ from app.schemas.human_review import (
     HumanReviewResponse,
     HumanReviewRunContext,
 )
-from app.services.audit_log_service import AuditLogService
+from app.services.graph_step_ordering import step_order
 from app.services.human_review_service import (
     HumanReviewAlreadyResolvedError,
     HumanReviewAssignmentConflictError,
@@ -125,14 +125,6 @@ def claim_human_review(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "human_review_assignment_conflict", "message": str(exc)},
         ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="human_review.claimed",
-        resource_type="human_review",
-        resource_id=review.id,
-        metadata={"graph_run_id": str(review.graph_run_id), "reason": review.reason},
-    )
     return _review_response(review, db)
 
 
@@ -162,14 +154,6 @@ def release_human_review(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "human_review_assignment_conflict", "message": str(exc)},
         ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="human_review.released",
-        resource_type="human_review",
-        resource_id=review.id,
-        metadata={"graph_run_id": str(review.graph_run_id), "reason": review.reason},
-    )
     return _review_response(review, db)
 
 
@@ -210,18 +194,6 @@ def resolve_human_review(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "human_review_invalid_decision", "message": str(exc)},
         ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="human_review.resolved",
-        resource_type="human_review",
-        resource_id=review.id,
-        metadata={
-            "decision": review.reviewer_decision,
-            "graph_run_id": str(review.graph_run_id),
-            "reason": review.reason,
-        },
-    )
     return _review_response(review, db)
 
 
@@ -260,13 +232,11 @@ def _review_response(review: HumanReview, db: Session) -> HumanReviewResponse:
 
 
 def _review_context(*, review: HumanReview, run: GraphRun, db: Session) -> dict:
-    steps = list(
-        db.scalars(
-            select(GraphStep)
-            .where(GraphStep.workspace_id == review.workspace_id, GraphStep.graph_run_id == run.id)
-            .order_by(GraphStep.created_at.asc())
-        ).all()
-    )
+    steps = db.scalars(
+        select(GraphStep)
+        .where(GraphStep.workspace_id == review.workspace_id, GraphStep.graph_run_id == run.id)
+        .order_by(*step_order())
+    ).all()
     outputs = {step.step_name: _json_object(step.output_json) for step in steps}
     classification = outputs.get("classify_intent", {})
     retrieval = outputs.get("retrieve_evidence", {})

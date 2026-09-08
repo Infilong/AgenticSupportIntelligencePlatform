@@ -5,8 +5,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.core.language import detect_language
+from app.core.answer_language import detect_answer_language
 from app.models.review import GuardrailResult
+from app.services.answer_citations import has_answer_citations
+from app.services.answer_duration_support import has_unverified_durations
 from app.services.guardrail_catalog_service import GuardrailCatalogService, GuardrailEffectivePolicy
 from app.services.support_agent_state import SupportAgentState
 
@@ -41,6 +43,7 @@ class GuardrailService:
         graph_run_id: UUID,
         state: SupportAgentState,
         graph_step_id: UUID | None = None,
+        commit: bool = True,
     ) -> list[GuardrailDecision]:
         policies = GuardrailCatalogService(self.db).effective_policies(workspace_id=workspace_id)
         decisions = evaluate_guardrails(state, policies=policies)
@@ -56,7 +59,8 @@ class GuardrailService:
                     message=decision.message,
                 )
             )
-        self.db.commit()
+        if commit:
+            self.db.commit()
         return decisions
 
 
@@ -66,7 +70,7 @@ def evaluate_guardrails(
 ) -> list[GuardrailDecision]:
     input_message = state.get("input_message", "")
     language = state.get("detected_language")
-    citations = state.get("citations") or []
+    answer_is_cited = has_answer_citations(state)
     draft_answer = state.get("draft_answer")
     confidence = state.get("confidence_score", 0.0)
     lowered = input_message.lower()
@@ -162,25 +166,22 @@ def evaluate_guardrails(
         decisions,
         policies,
         guardrail_type="citation_required",
-        passed=bool(citations),
-        fallback_severity="medium" if not citations else "low",
+        passed=answer_is_cited,
+        fallback_severity="medium" if not answer_is_cited else "low",
         message=(
-            "No supporting citations were retrieved."
-            if not citations
-            else "Citations are present."
+            "Draft lacks an exact packed citation or contains an unrecognized chunk reference."
+            if not answer_is_cited
+            else "Draft cites packed evidence; factual support is not established."
         ),
     )
+    duration_missing = has_unverified_durations(state)
+    unsupported = not state.get("retrieved_chunks") or duration_missing
     _append_decision(
-        decisions,
-        policies,
-        guardrail_type="unsupported_answer",
-        passed=bool(state.get("retrieved_chunks")),
-        fallback_severity="high" if not state.get("retrieved_chunks") else "low",
-        message=(
-            "No retrieved evidence supports an answer."
-            if not state.get("retrieved_chunks")
-            else "Retrieved evidence is present."
-        ),
+        decisions, policies, guardrail_type="unsupported_answer", passed=not unsupported,
+        fallback_severity="high" if unsupported else "low",
+        message=("No retrieved evidence supports an answer." if not state.get("retrieved_chunks")
+                 else "Draft durations are absent from cited packed evidence." if duration_missing
+                 else "Evidence is present; duration matching does not establish factual support."),
     )
     confidence_policy = policies.get("confidence_threshold")
     threshold = (
@@ -198,7 +199,10 @@ def evaluate_guardrails(
     )
     if draft_answer and language in {"en", "ja", "zh"}:
         try:
-            answer_language = detect_language(draft_answer).value
+            answer_language = detect_answer_language(draft_answer, (
+                chunk.get("citation", "") for chunk in state.get("packed_context_chunks") or []
+                if isinstance(chunk.get("content"), str) and chunk["content"].strip()
+            )).value
         except ValueError:
             answer_language = "unknown"
         passed = answer_language == language

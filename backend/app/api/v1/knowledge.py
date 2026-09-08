@@ -20,7 +20,6 @@ from app.schemas.knowledge import (
     KnowledgeDocumentResponse,
     KnowledgeDocumentUploadRequest,
 )
-from app.services.audit_log_service import AuditLogService
 from app.services.folder_service import ResourceFolderNotFoundError
 from app.services.knowledge_service import (
     KnowledgeDocumentIndexError,
@@ -77,18 +76,6 @@ def upload_knowledge_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "knowledge_document_index_failed", "message": str(exc)},
         ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="knowledge_document.uploaded",
-        resource_type="knowledge_document",
-        resource_id=result.document.id,
-        metadata={
-            "title": result.document.title,
-            "language": result.document.language,
-            "chunk_count": result.chunk_count,
-        },
-    )
     return _index_response(result)
 
 
@@ -187,6 +174,7 @@ def reindex_knowledge_document(
             language=payload.language,
             folder_id=payload.folder_id,
             update_folder="folder_id" in payload.model_fields_set,
+            actor_user_id=current_user.id,
         )
     except KnowledgeDocumentNotFoundError as exc:
         raise HTTPException(
@@ -200,19 +188,6 @@ def reindex_knowledge_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"code": "knowledge_document_index_failed", "message": str(exc)},
         ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="knowledge_document.reindexed",
-        resource_type="knowledge_document",
-        resource_id=result.document.id,
-        metadata={
-            "title": result.document.title,
-            "language": result.document.language,
-            "version": result.latest_version.version,
-            "chunk_count": result.chunk_count,
-        },
-    )
     return _index_response(result)
 
 
@@ -226,7 +201,8 @@ def move_knowledge_document_folder(
 ) -> KnowledgeDocumentResponse:
     try:
         document = KnowledgeService(db).move_document(
-            workspace_id=workspace.id, document_id=document_id, folder_id=payload.folder_id
+            workspace_id=workspace.id, document_id=document_id, folder_id=payload.folder_id,
+            actor_user_id=current_user.id,
         )
     except KnowledgeDocumentNotFoundError as exc:
         raise HTTPException(
@@ -235,14 +211,6 @@ def move_knowledge_document_folder(
         ) from exc
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="knowledge_document.moved",
-        resource_type="knowledge_document",
-        resource_id=document.id,
-        metadata={"folder_id": str(document.folder_id) if document.folder_id else None},
-    )
     return KnowledgeDocumentResponse.model_validate(document)
 
 
@@ -254,19 +222,13 @@ def delete_knowledge_document(
     db: DbSession,
 ) -> None:
     try:
-        KnowledgeService(db).delete_document(workspace_id=workspace.id, document_id=document_id)
+        KnowledgeService(db).delete_document(workspace_id=workspace.id, document_id=document_id,
+                                             actor_user_id=current_user.id)
     except KnowledgeDocumentNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "knowledge_document_not_found", "message": "Document was not found."},
         ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="knowledge_document.deleted",
-        resource_type="knowledge_document",
-        resource_id=document_id,
-    )
 
 
 def _index_response(result) -> KnowledgeDocumentIndexResponse:

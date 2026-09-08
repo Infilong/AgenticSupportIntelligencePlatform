@@ -225,7 +225,7 @@ def test_guardrail_policy_updates_require_owner_and_configurable_policy(
     add_member = client.post(
         f"/api/v1/workspaces/{workspace['id']}/members",
         headers=auth_headers(owner_token),
-        json={"email": "guardrail-policy-member@example.com", "role": "member"},
+        json={"email": "guardrail-policy-member@example.com", "role": "operator"},
     )
     assert add_member.status_code == 201
 

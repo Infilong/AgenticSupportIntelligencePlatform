@@ -2,6 +2,7 @@ from itertools import pairwise
 from uuid import UUID
 
 from fastapi.testclient import TestClient
+from pagination_fixtures import set_creation_order
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -429,7 +430,7 @@ def test_long_document_is_chunked_before_embedding(
 
 
 def test_knowledge_document_list_supports_folder_unfiled_search_and_offset(
-    client: TestClient,
+    client: TestClient, db_session,
 ) -> None:
     register(client, "knowledge-page-owner@example.com")
     token = login(client, "knowledge-page-owner@example.com")
@@ -458,6 +459,10 @@ def test_knowledge_document_list_supports_folder_unfiled_search_and_offset(
         )
         assert response.status_code == 201
         created_titles.append(title)
+
+    set_creation_order(
+        db_session, KnowledgeDocument, workspace["id"], created_titles, label="title"
+    )
 
     first_page = client.get(
         f"/api/v1/workspaces/{workspace['id']}/knowledge-documents",

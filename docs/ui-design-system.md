@@ -1,3 +1,12 @@
+# Current interface ownership
+
+The approved five-area interface is implemented in `frontend/src/rebuild/`; its visual rules
+live in `workspace.css`. Use [frontend guide](../frontend/README.md) and
+[product spec](product-spec.md) for current navigation and behavior. The earlier design notes
+below are historical references, not instructions to restore removed dashboards or components.
+Current controls use explicit labels/focus, bounded lists, retained failure drafts, collapsed
+advanced details and responsive layouts. Verify changes in the browser.
+
 # UI Design System
 
 This is the durable design reference for frontend tickets. Keep docs/PROJECT_CONTEXT.md concise; use this file when a ticket touches layout, navigation, forms, state messages, visual hierarchy, or browser QA.

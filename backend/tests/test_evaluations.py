@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from pagination_fixtures import set_creation_order
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -158,8 +159,8 @@ def test_metric_calculation_groups_by_mode_and_language() -> None:
 
     assert metrics[("system_v1", "en")]["case_pass_rate"] == 1.0
     assert metrics[("system_v1", "en")]["average_prompt_tokens"] == 20.0
-    assert metrics[("system_v1", "en")]["tool_call_correctness"] == 1.0
-    assert metrics[("system_v1", "en")]["guardrail_failure_detection_rate"] == 1.0
+    assert "expected_tool_call_match_rate" not in metrics[("system_v1", "en")]
+    assert "expected_guardrail_detection_rate" not in metrics[("system_v1", "en")]
 
 
 def test_evaluation_api_runs_baselines_and_system_v1(client: TestClient) -> None:
@@ -304,8 +305,8 @@ def test_system_v1_evaluation_scores_tool_calls_and_guardrail_failures(
         for score in scores
     )
     metric_values = {metric["metric_name"]: metric["metric_value"] for metric in body["metrics"]}
-    assert metric_values["tool_call_correctness"] == 1.0
-    assert metric_values["guardrail_failure_detection_rate"] == 1.0
+    assert metric_values["expected_tool_call_match_rate"] == 1.0
+    assert metric_values["expected_guardrail_detection_rate"] == 1.0
 
 
 def test_evaluation_routes_enforce_workspace_isolation(client: TestClient) -> None:
@@ -436,7 +437,7 @@ def test_evaluation_archive_requires_owner_and_workspace_scope(client: TestClien
     add_member = client.post(
         f"/api/v1/workspaces/{owner_workspace['id']}/members",
         headers=auth_headers(owner_token),
-        json={"email": "eval-member@example.com", "role": "member"},
+        json={"email": "eval-member@example.com", "role": "operator"},
     )
     assert add_member.status_code == 201
 
@@ -533,7 +534,7 @@ def test_evaluation_runs_can_be_foldered_filtered_and_moved(client: TestClient) 
 
 
 def test_evaluation_list_supports_folder_unfiled_status_archive_search_and_offset(
-    client: TestClient,
+    client: TestClient, db_session,
 ) -> None:
     register(client, "eval-page-owner@example.com")
     token = login(client, "eval-page-owner@example.com")
@@ -562,6 +563,8 @@ def test_evaluation_list_supports_folder_unfiled_status_archive_search_and_offse
         )
         assert response.status_code == 201
         created_names.append(name)
+
+    set_creation_order(db_session, EvaluationRun, workspace["id"], created_names)
 
     first_page = client.get(
         f"/api/v1/workspaces/{workspace['id']}/evaluations",

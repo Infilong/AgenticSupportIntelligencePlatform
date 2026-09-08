@@ -4,7 +4,18 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.language import SupportedLanguage
@@ -12,9 +23,14 @@ from app.db.base import Base
 
 
 class GraphRunStatus(StrEnum):
+    queued = "queued"
+    stopping = "stopping"
+    stopped = "stopped"
+    rejected = "rejected"
     running = "running"
     completed = "completed"
     needs_human_review = "needs_human_review"
+    awaiting_clarification = "awaiting_clarification"
     failed = "failed"
 
 
@@ -81,6 +97,12 @@ class GraphRun(Base):
 
 class GraphStep(Base):
     __tablename__ = "graph_steps"
+    __table_args__ = (
+        UniqueConstraint("graph_run_id", "sequence", name="uq_graph_step_sequence"),
+        CheckConstraint("sequence > 0", name="ck_graph_step_sequence_positive"),
+    )
+
+    sequence: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(

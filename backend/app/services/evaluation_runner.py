@@ -2,17 +2,14 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.language import detect_language
 from app.models.agent import AgentConfig, GraphRunStatus
 from app.models.evaluation import (
     EvaluationCase,
-    EvaluationMetric,
     EvaluationMode,
     EvaluationResult,
     EvaluationRun,
@@ -21,28 +18,24 @@ from app.models.evaluation import (
 from app.models.review import GuardrailResult
 from app.models.user import User
 from app.services.agent_service import AgentNotFoundError, AgentService
+from app.services.evaluation_comparison import compare_metrics
+from app.services.evaluation_direct_baseline import run_direct_baseline
+from app.services.evaluation_execution import evaluation_execution
 from app.services.evaluation_loader import LoadedEvaluationCase, load_jsonl_cases
-from app.services.evaluation_metrics import calculate_metrics
+from app.services.evaluation_management import (
+    EvaluationManagement,
+)
+from app.services.evaluation_management import (
+    EvaluationRunNotArchivedError as EvaluationRunNotArchivedError,
+)
+from app.services.evaluation_management import (
+    EvaluationRunNotFoundError as EvaluationRunNotFoundError,
+)
+from app.services.evaluation_rag_baseline import run_rag_baseline
+from app.services.evaluation_scoring import _score_case as _score_case
+from app.services.evaluation_usage import graph_model_usage
 from app.services.folder_service import ResourceFolderService
-from app.services.model_provider import MockModelProvider
-from app.services.retrieval_service import RetrievalService
-from app.services.token_accounting import estimate_tokens
-
-
-class EvaluationRunNotFoundError(ValueError):
-    pass
-
-
-class EvaluationRunNotArchivedError(ValueError):
-    pass
-
-
-LOWER_IS_BETTER_METRICS = {
-    "average_latency_ms",
-    "average_prompt_tokens",
-    "estimated_cost_per_run",
-}
-METRIC_DELTA_TOLERANCE = 0.000001
+from app.services.model_provider import ModelProviderError
 
 
 class EvaluationRunner:
@@ -91,34 +84,19 @@ class EvaluationRunner:
         self.db.commit()
         if EvaluationMode.system_v1 in modes:
             agent_id = attached_agent_id
-        results: list[EvaluationResult] = []
-        for case, loaded_case in zip(cases, loaded_cases, strict=True):
-            for mode in modes:
-                result = self._run_case(
-                    workspace_id=workspace_id,
-                    run_id=run.id,
-                    case=case,
-                    loaded_case=loaded_case,
-                    mode=mode,
-                    current_user=current_user,
-                    agent_id=agent_id,
-                )
-                results.append(result)
-        for (mode, language), metric_values in calculate_metrics(results).items():
-            for metric_name, metric_value in metric_values.items():
-                self.db.add(
-                    EvaluationMetric(
+        with evaluation_execution(self.db, run) as results:
+            for case, loaded_case in zip(cases, loaded_cases, strict=True):
+                for mode in modes:
+                    result = self._run_case(
                         workspace_id=workspace_id,
-                        evaluation_run_id=run.id,
-                        mode=EvaluationMode(mode),
-                        language=language,
-                        metric_name=metric_name,
-                        metric_value=metric_value,
+                        run_id=run.id,
+                        case=case,
+                        loaded_case=loaded_case,
+                        mode=mode,
+                        current_user=current_user,
+                        agent_id=agent_id,
                     )
-                )
-        run.status = EvaluationRunStatus.completed
-        run.completed_at = datetime.now(UTC)
-        self.db.commit()
+                    results.append(result)
         self.db.refresh(run)
         return run
 
@@ -169,37 +147,16 @@ class EvaluationRunner:
             statement = statement.limit(limit)
         return list(self.db.scalars(statement).all())
 
-    def move_run(
-        self, *, workspace_id: UUID, run_id: UUID, folder_id: UUID | None
-    ) -> EvaluationRun:
-        ResourceFolderService(self.db).validate_folder(
-            workspace_id=workspace_id, folder_id=folder_id, resource_type="evaluation_run"
-        )
-        run = self.db.scalar(
-            select(EvaluationRun).where(
-                EvaluationRun.workspace_id == workspace_id, EvaluationRun.id == run_id
-            )
-        )
-        if run is None:
-            raise EvaluationRunNotFoundError("Evaluation run was not found.")
-        run.folder_id = folder_id
-        self.db.commit()
-        self.db.refresh(run)
-        return run
+    def move_run(self, *, workspace_id: UUID, run_id: UUID, folder_id: UUID | None,
+                 actor_user_id: UUID) -> EvaluationRun:
+        return EvaluationManagement(self.db).move_run(
+            workspace_id=workspace_id, run_id=run_id, folder_id=folder_id,
+            actor_user_id=actor_user_id)
 
-    def archive_run(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
-        run = self.db.scalar(
-            select(EvaluationRun).where(
-                EvaluationRun.workspace_id == workspace_id, EvaluationRun.id == run_id
-            )
-        )
-        if run is None:
-            raise EvaluationRunNotFoundError("Evaluation run was not found.")
-        if run.archived_at is None:
-            run.archived_at = datetime.now(UTC)
-        self.db.commit()
-        self.db.refresh(run)
-        return run
+    def archive_run(self, *, workspace_id: UUID, run_id: UUID,
+                    actor_user_id: UUID) -> EvaluationRun:
+        return EvaluationManagement(self.db).archive_run(
+            workspace_id=workspace_id, run_id=run_id, actor_user_id=actor_user_id)
 
     def get_run_detail(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
         run = self.db.scalar(
@@ -220,70 +177,13 @@ class EvaluationRunner:
     ) -> tuple[EvaluationRun, EvaluationRun, list[dict[str, object]]]:
         current_run = self.get_run_detail(workspace_id=workspace_id, run_id=current_run_id)
         baseline_run = self.get_run_detail(workspace_id=workspace_id, run_id=baseline_run_id)
-        current_metrics = {
-            (str(metric.mode), str(metric.language), metric.metric_name): metric.metric_value
-            for metric in current_run.metrics
-        }
-        baseline_metrics = {
-            (str(metric.mode), str(metric.language), metric.metric_name): metric.metric_value
-            for metric in baseline_run.metrics
-        }
-        keys = sorted(
-            set(current_metrics) | set(baseline_metrics),
-            key=lambda item: (item[0], item[1], _metric_sort_key(item[2])),
-        )
-        deltas: list[dict[str, object]] = []
-        for mode, language, metric_name in keys:
-            current_value = current_metrics.get((mode, language, metric_name))
-            baseline_value = baseline_metrics.get((mode, language, metric_name))
-            delta = (
-                current_value - baseline_value
-                if current_value is not None and baseline_value is not None
-                else None
-            )
-            deltas.append(
-                {
-                    "mode": mode,
-                    "language": language,
-                    "metric_name": metric_name,
-                    "current_value": current_value,
-                    "baseline_value": baseline_value,
-                    "delta": delta,
-                    "direction": _metric_direction(metric_name, current_value, baseline_value),
-                }
-            )
+        deltas = compare_metrics(current_run, baseline_run)
         return current_run, baseline_run, deltas
 
-    def delete_archived_run(self, *, workspace_id: UUID, run_id: UUID) -> EvaluationRun:
-        run = self.db.scalar(
-            select(EvaluationRun)
-            .options(selectinload(EvaluationRun.results), selectinload(EvaluationRun.metrics))
-            .where(EvaluationRun.workspace_id == workspace_id, EvaluationRun.id == run_id)
-        )
-        if run is None:
-            raise EvaluationRunNotFoundError("Evaluation run was not found.")
-        if run.archived_at is None:
-            raise EvaluationRunNotArchivedError(
-                "Archive the evaluation run before permanent deletion."
-            )
-
-        case_ids = [result.evaluation_case_id for result in run.results]
-        for metric in list(run.metrics):
-            self.db.delete(metric)
-        for result in list(run.results):
-            self.db.delete(result)
-        for case_id in case_ids:
-            case = self.db.scalar(
-                select(EvaluationCase).where(
-                    EvaluationCase.workspace_id == workspace_id,
-                    EvaluationCase.id == case_id,
-                )
-            )
-            if case is not None:
-                self.db.delete(case)
-        self.db.delete(run)
-        self.db.commit()
-        return run
+    def delete_archived_run(self, *, workspace_id: UUID, run_id: UUID,
+                            actor_user_id: UUID) -> EvaluationRun:
+        return EvaluationManagement(self.db).delete_archived_run(
+            workspace_id=workspace_id, run_id=run_id, actor_user_id=actor_user_id)
 
     def _persist_case(
         self, workspace_id: UUID, loaded_case: LoadedEvaluationCase
@@ -338,7 +238,7 @@ class EvaluationRunner:
         answer: str | None = None
         citations: list[str] = []
         actual_route = "finalize"
-        prompt_tokens = estimate_tokens(loaded_case.input_message, loaded_case.language)
+        prompt_tokens = 0
         estimated_cost = 0.0
         error_message = None
         actual_tool_calls: list[str] = []
@@ -346,35 +246,24 @@ class EvaluationRunner:
         graph_run_id: UUID | None = None
         try:
             if mode == EvaluationMode.direct_llm:
-                response = MockModelProvider(self.db).complete(
-                    workspace_id=workspace_id,
-                    purpose="evaluation_direct_llm",
-                    language=loaded_case.language,
-                    prompt=loaded_case.input_message,
-                    model="mock-standard",
-                    completion_text=_direct_answer(loaded_case.language),
-                )
+                response = run_direct_baseline(self.db, workspace_id=workspace_id,
+                    evaluation_run_id=run_id, question=loaded_case.input_message,
+                    language=loaded_case.language)
                 answer = response.content
                 prompt_tokens = response.ai_run.prompt_tokens
                 estimated_cost = response.ai_run.estimated_cost
             elif mode == EvaluationMode.vector_rag:
-                retrieval = RetrievalService(self.db).search(
-                    workspace_id=workspace_id,
-                    query=loaded_case.input_message,
-                    language=loaded_case.language,
-                    top_k=4,
-                    min_score=0.2,
-                    document_id=None,
-                )
-                citations = [result.citation for result in retrieval.results]
-                actual_route = "human_review" if retrieval.no_source else "finalize"
-                answer = _rag_answer(loaded_case.language) if not retrieval.no_source else None
+                rag = run_rag_baseline(self.db, workspace_id=workspace_id,
+                                       question=loaded_case.input_message,
+                                       language=loaded_case.language, evaluation_run_id=run_id)
+                answer, citations, actual_route = rag.answer, rag.citations, rag.route
+                prompt_tokens, estimated_cost = rag.prompt_tokens, rag.estimated_cost
             else:
                 graph_run = AgentService(self.db).run_agent(
                     workspace_id=workspace_id,
                     agent_id=agent_id,
                     input_message=loaded_case.input_message,
-                    current_user=current_user,
+                    current_user=current_user, language=loaded_case.language,
                 )
                 graph_run_id = graph_run.id
                 actual_route = (
@@ -389,14 +278,16 @@ class EvaluationRunner:
                 actual_guardrail_failures = _failed_guardrails_for_run(
                     self.db, workspace_id=workspace_id, run_id=graph_run.id
                 )
-                prompt_tokens = sum(step.token_count or 0 for step in trace.steps) or prompt_tokens
-                estimated_cost = sum(step.estimated_cost or 0.0 for step in trace.steps)
+                prompt_tokens, estimated_cost = graph_model_usage(self.db, workspace_id, trace.id)
         except Exception as exc:
             actual_route = "error"
             error_message = str(exc)
+            if isinstance(exc, ModelProviderError) and exc.ai_run is not None:
+                prompt_tokens = exc.ai_run.prompt_tokens
+                estimated_cost = exc.ai_run.estimated_cost
         latency_ms = max(1, int((time.perf_counter() - started) * 1000))
         scores = _score_case(
-            loaded_case=loaded_case,
+            loaded_case=loaded_case, prompt_tokens=prompt_tokens,
             actual_route=actual_route,
             answer=answer,
             citations=citations,
@@ -424,70 +315,6 @@ class EvaluationRunner:
         self.db.commit()
         self.db.refresh(result)
         return result
-
-
-def _score_case(
-    *,
-    loaded_case: LoadedEvaluationCase,
-    actual_route: str,
-    answer: str | None,
-    citations: list[str],
-    actual_tool_calls: list[str],
-    actual_guardrail_failures: list[str],
-) -> dict[str, float | list[str]]:
-    answer_text = answer or ""
-    route_match = 1.0 if actual_route == loaded_case.expected_route else 0.0
-    must_include = 1.0 if all(item in answer_text for item in loaded_case.must_include) else 0.0
-    must_not_include = (
-        1.0 if all(item not in answer_text for item in loaded_case.must_not_include) else 0.0
-    )
-    citation_accuracy = 1.0
-    if loaded_case.expected_sources:
-        citation_accuracy = (
-            1.0
-            if any(
-                expected in citation
-                for expected in loaded_case.expected_sources
-                for citation in citations
-            )
-            else 0.0
-        )
-    elif loaded_case.expected_route == "finalize":
-        citation_accuracy = 1.0 if citations else 0.0
-    groundedness = 1.0 if loaded_case.expected_route != "finalize" or bool(citations) else 0.0
-    language_preserved = _language_preserved(answer_text, loaded_case.language)
-    tool_call_match = _expected_subset_score(loaded_case.expected_tool_calls, actual_tool_calls)
-    guardrail_failure_match = _expected_subset_score(
-        loaded_case.expected_guardrail_failures, actual_guardrail_failures
-    )
-    return {
-        "route_match": route_match,
-        "must_include": must_include,
-        "must_not_include": must_not_include,
-        "citation_accuracy": citation_accuracy,
-        "groundedness": groundedness,
-        "language_preserved": language_preserved,
-        "tool_call_match": tool_call_match,
-        "guardrail_failure_match": guardrail_failure_match,
-        "actual_tool_calls": actual_tool_calls,
-        "actual_guardrail_failures": actual_guardrail_failures,
-    }
-
-
-def _expected_subset_score(expected: list[str], actual: list[str]) -> float:
-    if not expected:
-        return 1.0
-    actual_set = set(actual)
-    return 1.0 if all(item in actual_set for item in expected) else 0.0
-
-
-def _language_preserved(answer: str, language) -> float:
-    if not answer:
-        return 1.0
-    try:
-        return 1.0 if detect_language(answer) == language else 0.0
-    except ValueError:
-        return 0.0
 
 
 def _failed_guardrails_for_run(db: Session, *, workspace_id: UUID, run_id: UUID) -> list[str]:
@@ -520,53 +347,3 @@ def _citations_from_steps(graph_run) -> list[str]:
                 return []
             return list(output.get("citations", []))
     return []
-
-
-def _direct_answer(language) -> str:
-    if str(language) == "ja":
-        return "返金についてはサポートに確認してください。"
-    if str(language) == "zh":
-        return "请联系支持团队确认退款政策。"
-    return "Please contact support to confirm the refund policy."
-
-
-def _rag_answer(language) -> str:
-    if str(language) == "ja":
-        return "関連資料によると、返金は30日以内に申請できます。"
-    if str(language) == "zh":
-        return "根据相关资料，退款可以在30天内申请。"
-    return "According to the retrieved policy, refunds can be requested within 30 days."
-
-
-def _metric_sort_key(metric_name: str) -> tuple[int, str]:
-    order = [
-        "case_pass_rate",
-        "human_review_routing_accuracy",
-        "tool_call_correctness",
-        "guardrail_failure_detection_rate",
-        "groundedness_pass_rate",
-        "citation_accuracy",
-        "language_preservation_pass_rate",
-        "average_prompt_tokens",
-        "estimated_cost_per_run",
-        "average_latency_ms",
-    ]
-    try:
-        return order.index(metric_name), metric_name
-    except ValueError:
-        return len(order), metric_name
-
-
-def _metric_direction(
-    metric_name: str, current_value: float | None, baseline_value: float | None
-) -> str:
-    if current_value is None:
-        return "missing"
-    if baseline_value is None:
-        return "new"
-    delta = current_value - baseline_value
-    if abs(delta) <= METRIC_DELTA_TOLERANCE:
-        return "unchanged"
-    if metric_name in LOWER_IS_BETTER_METRICS:
-        return "improved" if delta < 0 else "regressed"
-    return "improved" if delta > 0 else "regressed"

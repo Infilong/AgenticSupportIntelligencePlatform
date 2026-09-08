@@ -1,68 +1,53 @@
-# Ticket Planning Protocol
+# Persistent execution plans
 
-This file is an execution-plan template for long tasks. It is not the product plan.
+Create a plan only for cross-cutting, long-running, architecture-sensitive, security-sensitive,
+or multi-session work. Simple scoped changes need a brief working plan and relevant checks,
+not a new Markdown file. Product scope stays in [product spec](product-spec.md) and
+[milestones](milestone-plan.md); operational sequencing lives in execution plans.
 
-The project plan lives in:
-- `docs/product-spec.md`
-- `docs/PROJECT_CONTEXT.md`
-- `docs/milestone-plan.md`
-- `docs/architecture.md`
+Create `docs/exec-plans/active/<topic>.md`, using the template below. Keep the plan self-contained
+through links to authoritative context, not copied manuals. Identify ownership, API/schema/
+migration effects, compatibility and rollback where relevant. Plan first for high-risk work;
+request approval only for decisions or actions outside existing authorization.
 
-Use this template before implementing any non-trivial ticket. Do not code complex changes before a plan is approved.
+When resuming, read the latest user request before selecting an active plan. A plan records
+execution history and remaining work; it does not grant authority or override a narrower current
+request. Recheck the worktree and saved evidence before relying on its status. Leave broader
+plans active while completing a scoped documentation, review or investigation request.
 
-```text
-# Ticket Title
-
+```markdown
+# Title
 ## Goal
-What are we trying to build or change?
-
+Required outcome.
 ## Context
-Which modules, files, docs, or prior decisions matter?
-
+Relevant code, docs, prior decisions and current evidence.
 ## Requirements
-Concrete behavior.
-
+Concrete contracts and constraints.
 ## Non-goals
-What this ticket must not do.
-
-## Design Plan
-Expected files/modules/tables/APIs.
-
-## Files Likely To Change
-List expected files or directories. Keep this focused.
-
-## Database Migrations
-Tables, columns, indexes, constraints, and ownership rules.
-
-## API Changes
-Routes, request/response shapes, auth requirements, and error cases.
-
-## Test Plan
-Unit tests, integration tests, manual tests.
-
+Explicit exclusions.
 ## Acceptance Criteria
-What must be true before the ticket is complete?
-
+Observable conditions, including denied and failed operations where relevant.
+## Plan
+Ordered small steps and ownership/files for each responsibility.
+## Verification
+Commands, test boundaries, expected results and evidence paths.
 ## Risks
-Possible mistakes, edge cases, security risks, performance issues.
-
-## Human Review Checklist
-What should the human inspect before accepting the diff?
-
-## Operating Notes
-What should be documented or reviewed after this ticket?
+Security, concurrency, data integrity, compatibility and rollback considerations.
+## Progress
+Dated completed/current steps and verified process handles when work is running.
+## Decisions
+Dated choices with reasons; retain superseded decisions as history.
+## Findings
+Reproductions, failures, surprises and resulting next actions.
+## Final Result
+Open until acceptance is verified; then exact outcome and remaining limits.
 ```
 
-## Required Ticket Workflow
-1. Read relevant docs first.
-2. Create a focused plan using this template.
-3. Wait for approval on complex work.
-4. Implement only the approved scope.
-5. Add tests.
-6. Run relevant validation commands.
-7. Explain the diff.
-8. Self-review for P0/P1/P2 issues.
-9. Update docs or learning notes where relevant.
+Update Progress, Decisions and Findings at meaningful checkpoints. Preserve failing evidence;
+never replace a failed run with a success claim from a narrower retry. Record durable learning
+using [learning notes](learning/README.md) when useful.
 
-## Review Focus
-Check every implementation for workspace permission leaks, fake implementation, missing tests, hidden model calls in tests, raw documents sent to LLMs, missing token/cost tracking, missing graph trace data, weak error handling, prompt injection exposure, and unclear project rationale.
+Move a plan to `completed/` only after its acceptance criteria are met; update inbound links and
+[the plan index](exec-plans/README.md). A blocked plan remains active with its blocker and next
+required action. Historical `docs/tickets/` files remain linked evidence; do not mass-relocate or
+mark them complete without inspecting their acceptance criteria.

@@ -1,219 +1,115 @@
-# Multilingual Agentic Support Intelligence Platform
+# Agentic Support Intelligence Platform
 
-A production-style AI/backend portfolio project for multilingual support intelligence: dataset curation, knowledge ingestion, RAG, LangGraph workflows, human review, evaluation, and token/cost observability.
+A local-first RAG and AI agent administration app for a small team. Provide company
+knowledge, ask support questions in English, Japanese or Chinese, review proposed changes,
+and inspect what the agent did. The interface is inspired by Dify, with a deliberately
+smaller scope: five areas, a shared backend and a practical CLI.
 
-This is not a tutorial chatbot. It is a local-first internal AI platform designed to demonstrate backend architecture, LLM application engineering, multilingual product thinking, cost discipline, observability, and interview-defensible tradeoffs.
+## Main workflow
 
-## Problem
-
-SaaS, gaming, entertainment, healthcare, and education teams receive support and community messages in English, Japanese, and Chinese. They want generative AI support, but production systems need more than a prompt box:
-
-- reliable knowledge retrieval with citations
-- workspace permission isolation
-- language preservation
-- human review for risky cases
-- evaluation by language and baseline
-- token/cost/latency tracking
-- traceable workflow execution
-- honest scale and deployment boundaries
-
-## Solution
-
-The platform lets a small internal team import multilingual conversations, label examples, upload policy/FAQ documents, run a governed LangGraph support workflow, inspect every graph step, resolve human reviews, evaluate results across baseline modes, and monitor token usage and estimated cost.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    UI["React Internal UI"] --> API["FastAPI API"]
-    API --> Auth["JWT Auth + Workspace Checks"]
-    API --> Data["Dataset Curation"]
-    API --> Docs["Knowledge Documents"]
-    API --> Agent["LangGraph Support Workflow"]
-    API --> Eval["Evaluation Runner"]
-    API --> Cost["AI Run Ledger + Cost Summary"]
-
-    Docs --> Chunk["Language-Aware Chunking"]
-    Chunk --> Embed["Mock Embeddings"]
-    Embed --> PG[("PostgreSQL + pgvector")]
-
-    Agent --> Retrieve["Hybrid Retrieval + Citations"]
-    Agent --> Guard["Guardrails"]
-    Agent --> Review["Human Review"]
-    Agent --> Trace["GraphRun / GraphStep / ToolCall"]
-
-    API --> PG
-    API --> Redis[("Redis")]
-```
-
-Core pillars:
-
-1. Multilingual data platform
-2. Knowledge and retrieval
-3. Agent workflow
-4. Quality and safety
-5. Observability and cost
-
-## Tech Stack
-
-```text
-Frontend: React, TypeScript, Vite
-Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic
-Database: PostgreSQL, pgvector
-Queue/cache: Redis
-AI workflow: LangGraph
-AI app layer: LangChain Core prompt templates, documents, output parsing
-Testing: pytest, ruff, TypeScript checks
-Runtime: Docker Compose, uv, npm
-CI: GitHub Actions
-```
-
-## Implemented V1 Features
-
-| Area | Implemented |
+| Area | What you do |
 | --- | --- |
-| Auth and tenancy | JWT auth, workspace creation, workspace membership checks |
-| Dataset curation | JSONL import, multilingual language detection, message storage, manual labels |
-| Knowledge ingestion | Text/Markdown upload, document versions, chunks, token counts, mock embeddings, pgvector storage |
-| Retrieval | Vector scoring, multilingual lexical scoring, hybrid ranking, citations, retrieval traces, no-source detection |
-| Agent workflow | LangGraph support workflow with graph runs, graph steps, tool calls, routing, and trace API |
-| LangChain integration | LangChain Core prompt templates, `Document` wrappers for retrieved evidence, and output parsing in the support workflow |
-| Guardrails | Prompt-injection checks, citation-required checks, language preservation, confidence scoring, review routing |
-| Human review | Pending review queue, approve/edit/reject resolution, stored reviewer decision |
-| Evaluation | JSONL cases, direct LLM baseline, vector RAG baseline, system v1 mode, per-language metrics |
-| Observability | AI run ledger, token/cost/latency estimates, cost summary, graph trace viewer |
-| Frontend | Browser UI for the full local demo path |
+| Work | Ask questions, follow tasks and handle requests needing human review. |
+| Knowledge | Add text or Markdown, inspect processing failures, retry and maintain documents. |
+| Agents | Set instructions, model, permitted knowledge and allowed internal actions. |
+| Activity | Inspect shared execution records, evidence, steps, model calls and interventions. |
+| Settings | Manage workspace members, roles and model configuration. |
 
-## LangGraph Workflow
+Start by adding knowledge and configuring an agent. Ask a question in Work, inspect its
+cited evidence, and review any proposed category or internal note. Approval applies to the
+exact proposed input. You can edit a draft answer, reject a request, stop a task, or create
+a linked attempt with corrected instructions. Prior attempts and applied actions remain recorded.
 
-```text
-detect_language
-classify_intent
-retrieve_evidence
-compress_context
-draft_response
-check_policy_and_tone
-score_confidence
-route_review_or_finalize
-finalize_response
-```
+## Permissions and human control
 
-The workflow routes to human review for low confidence, missing citations, unsupported answers, unsafe or injected input, high token cost, high safety risk, escalation need, or language-specific quality failure.
+| Role | Capabilities |
+| --- | --- |
+| Viewer | Read permitted work, knowledge and activity. |
+| Operator | Viewer access plus start/stop tasks and resolve reviews. |
+| Admin | Operator access plus knowledge, agents and lower-role member management. |
+| Owner | Full workspace administration, privileged membership and model settings. |
 
-## Token Economy
+The API enforces workspace scope and permissions for browser, CLI and agent actions.
+An agent's allowed actions are also limited by its initiating user's authority. Migration
+0037 retires legacy memberships: Reviewer becomes Operator; Member and Developer become
+Admin. Each authority change is audited. Back up before upgrading; use forward repair or
+a verified backup restore rather than downgrade to reverse this transition.
 
-Token cost is a first-class requirement. The system:
+Runs execute through a durable worker. Stop requests prevent later steps and publication;
+an in-flight call may finish before Stopping becomes Stopped. Stopping does not undo
+already approved changes or guarantee cancellation of provider charges. Interrupted work
+is not automatically replayed. A corrected attempt has a new execution record.
 
-- avoids sending raw long documents to model calls
-- chunks and retrieves evidence before generation
-- estimates prompt, completion, and total tokens
-- records model, purpose, language, latency, estimated cost, and cache-hit fields
-- exposes cost summaries by workspace and purpose
-- keeps deterministic code in front of LLM-like calls where possible
+## Run locally
 
-## Evaluation
+Requirements: Docker Desktop with Compose. From the repository root:
 
-Evaluation compares:
-
-```text
-direct_llm: no retrieval baseline
-vector_rag: retrieval baseline
-system_v1: LangGraph workflow with retrieval, guardrails, and review routing
-```
-
-Stored metrics include case pass rate, human-review routing accuracy, language preservation, citation accuracy, groundedness, latency, prompt tokens, and estimated cost per run. Metrics are grouped by language and mode so English, Japanese, and Chinese regressions are visible.
-
-## Local Demo
-
-Start the stack:
-
-```bash
+```sh
 docker compose up -d --build
-make backend-migrate
 ```
 
-Open:
+Open [the app](http://localhost:5173). The API is at [localhost:8000](http://localhost:8000/docs)
+and its [health endpoint](http://localhost:8000/health) reports availability. API startup
+applies migrations; the worker waits for the API to be healthy. Create an account and
+workspace, then follow Knowledge → Agents → Work.
+
+If you already use the verification stack, keep its project name:
+`docker compose -p asi-verification up -d --build`. Do not start a second stack on the same ports.
+Set the `FRONTEND_PORT` environment variable before starting Compose if port 5173 is occupied.
+All published service ports bind to loopback. See the [infrastructure guide](infra/README.md)
+for deployment settings and the verified logical backup/restore procedure.
+
+`/` is the main interface. `/rebuild.html` preserves saved links to it. The obsolete
+interface has been removed; browser workflows use the five-area app.
+
+## CLI
+
+From `backend/`, run `uv sync --frozen --extra dev`, then `uv run --frozen asi --help`.
+An activated installed environment exposes `asi` directly:
 
 ```text
-Frontend: http://localhost:5173
-API:      http://localhost:8000
-Health:   http://localhost:8000/health
+asi auth login
+asi workspace list
+asi --workspace WORKSPACE_UUID knowledge add ./policy.md
+asi --workspace WORKSPACE_UUID agent list
+asi --workspace WORKSPACE_UUID task create --agent support --message "Explain the refund policy"
+asi --workspace WORKSPACE_UUID run watch RUN_UUID
+asi --workspace WORKSPACE_UUID run inspect RUN_UUID --json
+asi --workspace WORKSPACE_UUID run stop RUN_UUID
+asi --workspace WORKSPACE_UUID review list
+asi --workspace WORKSPACE_UUID review approve REVIEW_UUID
+asi --workspace WORKSPACE_UUID review reject REVIEW_UUID --reason "Insufficient evidence"
 ```
 
-If another local app already uses port `5173`, start the frontend on a different host port:
+The [CLI guide](docs/cli.md) covers secure login, workspace selection, exact action approval,
+non-interactive operation, versioned JSON and exit codes. CLI operations use the same API
+permissions and records as the browser.
 
-```bash
-FRONTEND_PORT=5174 docker compose up -d --build
-make backend-migrate
-```
+## Architecture and verification
 
-Then open `http://localhost:5174`.
+React/TypeScript/Vite serves the interface. One modular FastAPI backend owns authentication,
+permissions, retrieval, task admission, reviews and accounting. PostgreSQL/pgvector stores
+knowledge and execution state; a worker runs the bounded LangGraph support workflow.
+The Compose stack also includes Redis. See [architecture](ARCHITECTURE.md) and the
+[code map](docs/code-map.md) for module ownership.
 
-Browser demo path:
+Recorded evidence includes multilingual mock journeys, permission and transaction tests,
+exact-action approval and duplicate prevention, CLI acceptance, browser cancellation and
+recovery of the current database schema. The [testing guide](docs/testing.md) contains
+commands, dated results and their limits. The [rebuild plan](docs/exec-plans/completed/simple-admin-rebuild.md)
+records delivery evidence and limits. Passing these checks does not establish production readiness.
 
-```text
-register/login
--> create workspace
--> import multilingual dataset
--> upload knowledge document
--> create agent
--> run support workflow
--> inspect graph trace
--> resolve human review
--> run evaluation
--> inspect cost dashboard
-```
+Models and embeddings default to deterministic mocks. Configured OpenAI-compatible providers
+are supported, but real-provider quality and cancellation remain separately unverified.
+Credentials belong on the backend; do not put provider keys in browser inputs or source control.
+Costs are estimates, not billing records. Automated multilingual regressions verify control
+flow and expected facts, not general model quality. Local restore evidence does not establish
+offsite disaster recovery, operational load capacity or enterprise deployment readiness.
 
-Detailed walkthrough: `docs/demo-script.md`.
+## Agent-first development
 
-## Validation
-
-Current validation commands:
-
-```bash
-make backend-lint
-make backend-test
-make frontend-test
-make frontend-build
-git diff --check
-```
-
-Latest milestone validation passed with 54 backend tests, frontend TypeScript checks, production build, backend lint, and Docker health/CORS checks.
-
-## Documentation
-
-- `docs/architecture-tree.md`: quick architecture and tool map
-- `docs/demo-script.md`: browser walkthrough
-- `docs/interview-explanation.md`: interview-ready explanation
-- `docs/resume-bullets.md`: resume bullet drafts
-- `docs/known-limitations.md`: honest limitations
-- `docs/scale-path.md`: migration path from local v1 to larger deployments
-- `docs/tickets/`: milestone implementation records
-- `docs/learning/`: learning notes by milestone
-
-## Scale Path
-
-V1 is local-first and honest about scope. The documented migration path is:
-
-| Scale | Direction |
-| --- | --- |
-| 100 records | Docker Compose, one API, PostgreSQL/pgvector, Redis |
-| 1,000 records | background jobs, indexes, cached retrieval, pagination |
-| 10,000 records | batch embeddings, async evaluation, worker queues, stricter observability |
-| 1M+ records | managed PostgreSQL/Cloud SQL, object storage, analytics warehouse, dedicated vector index, horizontal workers, Cloud Run, Terraform, monitoring |
-
-The 1M+ path is documented, not implemented in v1.
-
-## Known Limitations
-
-- Model and embedding providers are deterministic mocks for local safety and test stability.
-- Evaluation is deterministic and regression-oriented, not a replacement for human rubric review.
-- Japanese and Chinese lexical search is intentionally simple in v1.
-- PII redaction, full audit logging, enterprise SSO, Terraform, and cloud deployment are postponed.
-- Cost values are estimates, not billing-grade accounting.
-
-See `docs/known-limitations.md` for the full list.
-
-## Portfolio Positioning
-
-This project is aimed at backend/AI application roles where employers care about more than prompt demos: LLM system design, LangGraph workflows, RAG quality, multilingual behavior, token economy, human review, evaluation, observability, testing, and clean implementation boundaries.
+Start with [AGENTS.md](AGENTS.md) and the [documentation router](docs/README.md). Read
+[coding rules](codingRules.md) before source changes. Keep changes focused, use deterministic
+providers in tests, verify UI behavior in a browser, and preserve failed evidence. Architecture,
+setup, tests and CLI each have an owning guide; plans preserve decisions and unfinished work.
+Historical evaluation, learning and portfolio material remains available through the router.

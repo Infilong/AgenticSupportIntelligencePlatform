@@ -21,11 +21,11 @@ class DocumentStatus(StrEnum):
     failed = "failed"
 
 
-class Vector16(UserDefinedType):
+class EmbeddingVector(UserDefinedType):
     cache_ok = True
 
     def get_col_spec(self, **kw: Any) -> str:
-        return "vector(16)"
+        return "vector"
 
     def bind_processor(self, dialect: Any):
         def process(value: list[float] | str | None) -> str | None:
@@ -165,7 +165,7 @@ class Embedding(Base):
     )
     provider: Mapped[str] = mapped_column(String(80), nullable=False)
     model: Mapped[str] = mapped_column(String(120), nullable=False)
-    vector: Mapped[list[float]] = mapped_column(Vector16(), nullable=False)
+    vector: Mapped[list[float]] = mapped_column(EmbeddingVector(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

@@ -1,83 +1,44 @@
-# Documentation Map
+# Documentation router
 
-Use this file to choose the smallest useful context set for each task. Do not read every Markdown file by default.
+Start with the task row below, then load only the code and focused references it needs.
+[AGENTS.md](../AGENTS.md) is the instruction map. Do not read this entire tree by default.
+Requirements/design documents are not evidence of implementation; consult the code and tests.
 
-## Always Automatic
-`AGENTS.md` is loaded by Codex automatically. It contains durable repo rules and should stay concise.
+| Task | Start here | Load only if needed |
+| --- | --- | --- |
+| Understand product/scope | [Project context](PROJECT_CONTEXT.md) | [Product spec](product-spec.md), [milestones](milestone-plan.md) |
+| Architecture/refactor | [Architecture](../ARCHITECTURE.md), [code map](code-map.md) | [Coding rules](../codingRules.md), relevant local guide |
+| Plan or resume long work | [Plans](PLANS.md), [execution index](exec-plans/README.md) | Selected active plan and its evidence |
+| Assess readiness | [Quality score](QUALITY_SCORE.md) | [Production audit](audits/production-readiness-2026-09-07.md), [limitations](known-limitations.md) |
+| Debug/runtime/failures | [Reliability](RELIABILITY.md), [testing](testing.md) | [Observability](observability-design.md), [infra](../infra/README.md) |
+| Backend/API | [Backend](../backend/README.md), [API guide](../backend/app/api/README.md) | [API design](api-design.md), [service ownership](../backend/app/services/README.md) |
+| Schema/transactions | [Migrations](../backend/alembic/README.md) | [Database schema](database-schema.md), affected service/tests |
+| Auth/permissions/security | [Threat model](security-threat-model.md) | [Reliability](RELIABILITY.md), affected route and workspace dependency |
+| Knowledge/RAG | [RAG](rag-design.md) | [Tokens](token-economy-design.md), security and affected models |
+| Graph/tools/review | [Graph workflow](langgraph-workflow-design.md) | [Tool execution](tool-execution-design.md), [observability](observability-design.md) |
+| Evaluation/AI quality | [Evaluation](evaluation-design.md) | [RAG](rag-design.md), [tokens](token-economy-design.md) |
+| Frontend/UI | [Frontend](../frontend/README.md), [UI design](ui-design-system.md) | Affected page/hook/API contract, [UX audit](audits/platform-ux-backend-recovery-audit.md) |
+| CLI | [CLI guide](cli.md) | [Testing](testing.md), [task API](api-design.md) |
+| Tooling/CI | [Scripts](../scripts/README.md), [testing](testing.md) | [CI workflow](../.github/workflows/ci.yml) |
+| Workflow principles | [Core beliefs](CORE_BELIEFS.md) | [Codex workflow entry](codex-workflow.md) |
+| Learning/decisions | [Learning index](learning/README.md) | [Tradeoffs](tradeoffs.md), selected plan Decisions |
+| Demo/portfolio | [Root README](../README.md), [demo](demo-script.md) | [Scale path](scale-path.md), [interview](interview-explanation.md), [resume](resume-bullets.md), [screenshots](screenshots/README.md) |
 
-## Usually Read For Implementation
-Read `docs/PROJECT_CONTEXT.md` for real implementation tasks. It contains standing rules for token economy, multilingual support, workspace isolation, evaluation, observability, and the human/Codex operating model.
+## Ownership and history
+Root ARCHITECTURE.md owns top-level flow/dependencies; code-map.md owns file locations.
+RELIABILITY.md owns failure contracts; observability-design.md owns record/log shapes.
+QUALITY_SCORE.md owns the dated status summary; testing.md owns commands and detailed evidence.
+PLANS.md owns plan lifecycle; each execution plan owns its progress and decisions.
 
-## Quick Orientation
-- Start here for a compact architecture and tools tree: `docs/architecture-tree.md`
+Existing tickets and audits remain historical records. The older architecture-tree.md is a
+conceptual artifact; use the current code map instead. Fix a stale owning document rather than
+creating another competing summary. Keep compatibility entry pages short when relocating docs.
 
-## Planning And Governance
-- Create or review a ticket plan: `docs/PLANS.md`
-- Check milestone order or scope: `docs/milestone-plan.md`
-- Check product intent or Phase 1/Phase 2 boundaries: `docs/product-spec.md`
-- Check AI-native workflow expectations: `docs/codex-workflow.md`
-
-## Backend And API Work
-Read:
-- `docs/architecture.md`
-- `docs/database-schema.md`
-- `docs/api-design.md`
-- `docs/security-threat-model.md` when auth, permissions, workspace isolation, or sensitive data are involved
-
-## RAG And Knowledge Work
-Read:
-- `docs/rag-design.md`
-- `docs/token-economy-design.md`
-- `docs/database-schema.md`
-- `docs/security-threat-model.md` for retrieval leakage checks
-
-## LangGraph And Tool Work
-Read:
-- `docs/langgraph-workflow-design.md`
-- `docs/tool-execution-design.md`
-- `docs/token-economy-design.md`
-- `docs/observability-design.md`
-
-## Evaluation Work
-Read:
-- `docs/evaluation-design.md`
-- `docs/rag-design.md` when retrieval metrics are involved
-- `docs/token-economy-design.md` when cost metrics are involved
-
-## Frontend And Dashboard Work
-Read:
-- `docs/observability-design.md`
-- `docs/api-design.md`
-- `docs/product-spec.md` for workflow intent
-- `docs/audits/platform-ux-backend-recovery-audit.md` for the approved UX/backend recovery roadmap when working on recovery tickets
-
-## Security Review Or Red-Team Work
-Read:
-- `docs/security-threat-model.md`
-- `docs/database-schema.md`
-- `docs/api-design.md`
-- relevant subsystem design docs
-
-## Portfolio Packaging
-Read:
-- `README.md`
-- `docs/product-spec.md`
-- `docs/tradeoffs.md`
-- `docs/scale-path.md`
-- `docs/demo-script.md`
-- `docs/interview-explanation.md`
-- `docs/resume-bullets.md`
-- `docs/known-limitations.md`
-- `docs/screenshots/README.md`
-
-## Learning Notes
-Read `docs/learning/README.md` only when creating or updating learning notes.
-
-## Rule Of Thumb
-For most implementation tickets, read at most:
-1. `docs/PROJECT_CONTEXT.md`
-2. `docs/PLANS.md` if planning
-3. one or two focused subsystem docs
-4. the files being changed
-
-If more context seems necessary, explain why before loading many additional docs.
+## Maintaining the map
+When a boundary changes, update its owning guide and any affected router links in the same
+change. Keep dated execution details in plans and verification evidence in testing.md; standing
+guides should remain useful across sessions. Label requirements separately from implemented
+behavior, and retain superseded decisions as history rather than competing current instructions.
+Run `python scripts/check_docs.py` after documentation edits. This gate checks maintained local
+file targets and plan structure; manually review factual claims and heading links. Its exact
+coverage and limitations live in the [tooling guide](../scripts/README.md).

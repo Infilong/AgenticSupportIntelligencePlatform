@@ -1,0 +1,16 @@
+.git
+.git-real
+.artifacts
+.codex
+.agents
+**/.env
+**/.env.*
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.tsbuildinfo
+**/test-results
+**/playwright-report

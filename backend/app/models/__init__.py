@@ -7,13 +7,23 @@ from app.models.evaluation import EvaluationCase, EvaluationMetric, EvaluationRe
 from app.models.folder import ResourceFolder
 from app.models.guardrail import GuardrailPolicy
 from app.models.knowledge import DocumentChunk, DocumentVersion, Embedding, KnowledgeDocument
+from app.models.knowledge_upload import KnowledgeUpload
+from app.models.reservation import ModelCallReservation
 from app.models.retrieval import RetrievalTrace, RetrievedChunk
 from app.models.review import GuardrailResult, HumanReview
+from app.models.task import SupportTask, TaskExecution
+from app.models.task_action import TaskActionProposal, TaskNote
+from app.models.task_attempt import TaskAttempt
 from app.models.tool import ToolConfig
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 
 __all__ = [
+    "KnowledgeUpload",
+    "TaskAttempt",
+    "TaskActionProposal", "TaskNote",
+    "SupportTask", "TaskExecution",
+    "ModelCallReservation",
     "AgentConfig",
     "Checkpoint",
     "GraphRun",

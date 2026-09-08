@@ -1,108 +1,85 @@
-# Product Spec
+# Product specification
 
-## Project Name
-Multilingual Agentic Support Intelligence Platform
+## Purpose
 
-## Subtitle
-A multilingual AI support platform for dataset curation, RAG, LangGraph workflows, human review, evaluation, and token/cost observability.
+A small, modern internal tool where a team provides knowledge, runs AI support tasks,
+supervises agents and inspects accountable results. English, Japanese and Chinese are
+first-class. This approved rebuild supersedes the earlier portfolio feature list. Requirements
+are distinct from [verification evidence](audits/simple-admin-acceptance.md).
 
-## Primary Goal
-Build a production-style AI/backend platform that demonstrates backend architecture, multilingual AI systems, dataset curation, RAG quality, LangChain, LangGraph workflow orchestration, human review, guardrails, evaluation, token economy, observability, auditability, permission isolation, Docker-based local deployment, clean documentation, and production-defensible engineering decisions.
+## Five areas
 
-This must not look like a tutorial chatbot or junior portfolio project. It should look like a small but serious internal AI platform that a SaaS company could use for multilingual support, product, and community workflows.
+| Area | Primary responsibility |
+| --- | --- |
+| Work | Landing page; ask questions, follow tasks, handle pending reviews |
+| Knowledge | Upload/paste text or Markdown, search, inspect versions, retry, edit and remove |
+| Agents | Configure instructions, model, permitted knowledge, actions and budget |
+| Activity | Search history and inspect the same run-detail view used by Work |
+| Settings | Workspace, members, fixed roles and model-provider configuration |
 
-## Target Roles
-- Backend Engineer with AI product experience
-- AI Application Engineer
-- Python Backend Engineer
-- Product Engineer for AI-enabled SaaS
-- Mid-to-senior AI Platform Engineer
-- RAG / LLM Application Engineer
-- Agent workflow / LangGraph engineer
+A user uploads knowledge, sees Ready or an actionable failure, configures an agent, asks a
+question and receives a grounded answer with source excerpts and document-version links.
+Unsafe requests or insufficient evidence need review. Users can edit an answer, approve or
+reject an exact proposed action, stop a run, or start a linked attempt with corrections.
+Navigation and reload preserve authoritative state. Ordinary users do not need JSONL,
+graph terminology or developer documentation.
 
-## Core Product Narrative
-A SaaS company receives support, community, and product feedback in English, Japanese, and Chinese.
+## Permissions
 
-The internal team needs to:
-1. Import multilingual customer conversations.
-2. Detect language automatically.
-3. Label examples by intent, sentiment, product area, escalation need, safety risk, and response quality.
-4. Upload product docs, policies, FAQs, release notes, and support manuals.
-5. Run a LangGraph-based support agent over new customer messages.
-6. Retrieve relevant evidence with citations.
-7. Generate same-language responses.
-8. Route risky, low-confidence, unsupported, or high-cost cases to human review.
-9. Evaluate output quality separately for English, Japanese, and Chinese.
-10. Monitor token usage, cost, latency, model choice, cache hit rate, and quality metrics.
-11. Inspect every workflow step through a graph trace viewer.
+| Role | Capabilities |
+| --- | --- |
+| Viewer | Read permitted work, knowledge and activity |
+| Operator | Viewer plus start/stop tasks and resolve reviews |
+| Admin | Operator plus knowledge/agent administration and lower-role members |
+| Owner | Full workspace administration, privileged roles and provider settings |
 
-Portfolio story:
+Backend checks apply to web, CLI and tool calls. Every resource is workspace-scoped.
+Prevent self-promotion and last-owner removal. Agent capability is limited by both configured
+allowance and the initiating user's current authority. Provider credentials stay on the backend.
 
-> I built a multilingual AI support intelligence platform. It imports and labels English/Japanese/Chinese conversations, indexes knowledge documents, runs a LangGraph support-agent workflow with RAG and human review, evaluates outputs per language, and tracks every model call for cost, latency, cache usage, and quality. The system is local-first but designed with clean backend boundaries, workspace isolation, async workers, pgvector retrieval, audit logs, and a documented cloud-scale migration path.
+## Agent execution
 
-## Phase 1: Production-Grade Vertical Slice
-Phase 1 must include:
-1. FastAPI backend
-2. PostgreSQL + pgvector
-3. Redis async worker
-4. Docker Compose
-5. User auth
-6. Workspace isolation
-7. Multilingual conversation import
-8. Language detection for English, Japanese, and Chinese
-9. Manual label editing
-10. Knowledge document upload
-11. Background document chunking and embedding
-12. LangGraph support-agent workflow
-13. RAG retrieval with citations
-14. Same-language response generation
-15. No-source refusal
-16. Token-budget enforcement
-17. Human-review routing
-18. Graph run trace storage
-19. AI run ledger for model calls
-20. Evaluation runner with JSONL cases
-21. Evaluation dashboard by language
-22. Cost/token dashboard
-23. pytest test suite
-24. GitHub Actions CI
-25. README and architecture docs
+The bounded agent interprets support requests, retrieves permitted ready evidence, reads a
+bounded operational task-history summary, drafts an answer and proposes a category or internal
+note. Only exact approved updates execute. No arbitrary shell tools or autonomous agent teams.
 
-Detailed sequencing lives in `docs/milestone-plan.md`.
+States are Queued, Running, Awaiting review, Completed, Failed, Rejected, Stopping and Stopped.
+A stop request prevents later steps/actions and records a confirmed terminal outcome. It does
+not reverse completed actions or promise cancellation of provider billing. Ownership loss fails
+interrupted work without silently replaying it. Linked retries preserve history and recheck
+current settings, permissions and budgets; completed effects cannot be duplicated.
 
-## Phase 2 Extensions
-Add only after Phase 1 is stable:
-1. Retrieval reranking
-2. Better context compression
-3. Prompt template/version management
-4. Response caching
-5. More evaluation cases
-6. PII detection/redaction
-7. More detailed audit logs
-8. Baseline comparison report
-9. Admin debug views
-10. Cloud deployment design document
-11. Optional GCP Cloud Run deployment
+Each model call has a ledger entry. Runs record initiator, configuration snapshot, status,
+timestamps, duration, ordered steps, sources, model/provider, model latency, tokens, estimated
+cost, tool outcomes, errors, retry lineage, interventions and final outcome. Summaries precede
+technical detail. Redact sensitive trace fields; store observable results, not private reasoning.
+Clearly label mock execution, estimated costs and unavailable measurements.
 
-## Postponed Features
-Do not implement in v1:
-- Kubernetes
-- Terraform
-- BigQuery
-- dedicated external vector database
-- arbitrary language plugin system
-- full enterprise SSO
-- complex role hierarchy
-- multimodal documents
-- fine-tuning
-- real email/task external integrations
-- multi-region scale
-- complex frontend design
+## Shared API and CLI
 
-The project should document the scale path, but not pretend to implement million-record infrastructure in v1.
+One FastAPI backend and PostgreSQL/pgvector database serve both clients. A worker executes
+durable tasks. The [CLI](cli.md) provides auth login, workspace list, knowledge add, agent list,
+task create, run watch/inspect/stop, and review approve/reject. Require explicit workspace
+scope, discoverable help, stable JSON, useful exit codes and secure noninteractive login.
+CLI review follows the same exact-action rules. Full settings-screen CLI parity is outside scope.
 
-## Success Criteria
-- The project can be understood as a serious internal AI platform, not a tutorial chatbot.
-- The demo path works from data import through evaluation and cost inspection.
-- Workspace isolation, token economy, RAG quality, evaluation, traceability, and guardrails are visible in code and docs.
-- Architecture decisions, risks, and tradeoffs are documented clearly.
+## Usability and verification
+
+Use consistent typography, spacing, status labels, accessible controls/focus/contrast and
+responsive layouts. Keep lists bounded/searchable, empty states useful, errors actionable
+and mutation feedback clear. Avoid duplicated dashboards and deeply nested navigation.
+
+Verify the complete EN/JA/ZH journey, ingestion recovery, exact-action approval/rejection,
+stop without later effects, reliable records, role denial/isolation and reload in Chrome.
+Verify corresponding CLI operations, focused deterministic backend/concurrency tests and a
+small multilingual regression set. Verify configured real providers separately or disclose
+unavailable verification. Local mock evidence is not a claim of real semantic quality.
+
+## Explicit limits
+
+Keep the existing stack and cohesive modules; maintain setup, architecture, testing, CLI and
+agent instructions. Preserve recovery copies and unrelated changes. No workflow canvas,
+marketplace, broad integrations, custom role designer or speculative enterprise infrastructure.
+Backend evaluation/import functionality may remain as supporting tools; it is not an ordinary
+user prerequisite. Deployment evidence does not establish hosted CI, load capacity, enterprise
+SSO, offsite recovery or general production certification. See [limitations](known-limitations.md).

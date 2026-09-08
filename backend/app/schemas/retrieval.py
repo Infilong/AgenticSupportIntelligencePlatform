@@ -57,4 +57,6 @@ class RetrievalTraceResponse(BaseModel):
     filters_json: str
     latency_ms: int
     no_source: bool
+    outcome: str
+    error_code: str | None
     created_at: datetime

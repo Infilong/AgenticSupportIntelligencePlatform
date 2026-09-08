@@ -23,8 +23,9 @@ from app.schemas.evaluation import (
     EvaluationRunResponse,
 )
 from app.services.agent_service import AgentNotFoundError
-from app.services.audit_log_service import AuditLogService
+from app.services.budget_reservations import EvaluationReservationActive
 from app.services.evaluation_loader import EvaluationCaseLoadError
+from app.services.evaluation_management import EvaluationRunActiveError
 from app.services.evaluation_runner import (
     EvaluationRunner,
     EvaluationRunNotArchivedError,
@@ -141,10 +142,7 @@ def compare_evaluations(
             baseline_run_id=baseline_id,
         )
     except EvaluationRunNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "evaluation_not_found", "message": "Evaluation was not found."},
-        ) from exc
+        raise _evaluation_not_found() from exc
     return EvaluationComparisonResponse(
         current_run=EvaluationRunResponse.model_validate(current_run),
         baseline_run=EvaluationRunResponse.model_validate(baseline_run),
@@ -167,10 +165,7 @@ def get_evaluation(
             workspace_id=workspace.id, run_id=evaluation_id
         )
     except EvaluationRunNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "evaluation_not_found", "message": "Evaluation was not found."},
-        ) from exc
+        raise _evaluation_not_found() from exc
     return _detail_response(detail, db=db)
 
 
@@ -184,23 +179,13 @@ def move_evaluation_folder(
 ) -> EvaluationRunResponse:
     try:
         run = EvaluationRunner(db).move_run(
-            workspace_id=workspace.id, run_id=evaluation_id, folder_id=payload.folder_id
+            workspace_id=workspace.id, run_id=evaluation_id, folder_id=payload.folder_id,
+            actor_user_id=current_user.id
         )
     except EvaluationRunNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "evaluation_not_found", "message": "Evaluation was not found."},
-        ) from exc
+        raise _evaluation_not_found() from exc
     except ResourceFolderNotFoundError as exc:
         raise _folder_not_found(exc) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="evaluation.moved",
-        resource_type="evaluation_run",
-        resource_id=run.id,
-        metadata={"folder_id": str(run.folder_id) if run.folder_id else None},
-    )
     return EvaluationRunResponse.model_validate(run)
 
 
@@ -212,23 +197,10 @@ def archive_evaluation(
     db: DbSession,
 ) -> None:
     try:
-        run = EvaluationRunner(db).archive_run(workspace_id=workspace.id, run_id=evaluation_id)
+        EvaluationRunner(db).archive_run(
+            workspace_id=workspace.id, run_id=evaluation_id, actor_user_id=current_user.id)
     except EvaluationRunNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "evaluation_not_found", "message": "Evaluation was not found."},
-        ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="evaluation.archived",
-        resource_type="evaluation_run",
-        resource_id=run.id,
-        metadata={
-            "name": run.name,
-            "archived_at": run.archived_at.isoformat() if run.archived_at else None,
-        },
-    )
+        raise _evaluation_not_found() from exc
 
 
 @router.delete("/{evaluation_id}/permanent", status_code=status.HTTP_204_NO_CONTENT)
@@ -239,27 +211,23 @@ def permanently_delete_evaluation(
     db: DbSession,
 ) -> None:
     try:
-        run = EvaluationRunner(db).delete_archived_run(
-            workspace_id=workspace.id, run_id=evaluation_id
+        EvaluationRunner(db).delete_archived_run(
+            workspace_id=workspace.id, run_id=evaluation_id, actor_user_id=current_user.id
         )
     except EvaluationRunNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "evaluation_not_found", "message": "Evaluation was not found."},
-        ) from exc
-    except EvaluationRunNotArchivedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "evaluation_not_archived", "message": str(exc)},
-        ) from exc
-    AuditLogService(db).record(
-        workspace_id=workspace.id,
-        actor_user_id=current_user.id,
-        action="evaluation.deleted",
-        resource_type="evaluation_run",
-        resource_id=run.id,
-        metadata={"name": run.name},
-    )
+        raise _evaluation_not_found() from exc
+    except EvaluationRunActiveError as exc:
+        raise HTTPException(status_code=409, detail={
+            "code": "evaluation_running", "message": str(exc)}) from exc
+    except (EvaluationReservationActive, EvaluationRunNotArchivedError) as exc:
+        code = ("evaluation_reservation_active" if isinstance(exc, EvaluationReservationActive)
+                else "evaluation_not_archived")
+        raise HTTPException(status_code=409, detail={"code": code, "message": str(exc)}) from exc
+
+
+def _evaluation_not_found() -> HTTPException:
+    return HTTPException(status_code=404, detail={
+        "code": "evaluation_not_found", "message": "Evaluation was not found."})
 
 
 def _folder_not_found(exc: Exception) -> HTTPException:

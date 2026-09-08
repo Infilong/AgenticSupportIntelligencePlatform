@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
-from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import String, cast, func, or_, select
@@ -17,48 +14,29 @@ from app.models.knowledge import (
     DocumentChunk,
     DocumentStatus,
     DocumentVersion,
-    Embedding,
     KnowledgeDocument,
 )
 from app.models.user import User
-from app.services.chunking import chunk_text
 from app.services.document_parser import DocumentParseError, parse_text_document
-from app.services.embedding_provider import EmbeddingProvider, MockEmbeddingProvider
+from app.services.embedding_provider import EmbeddingProvider
 from app.services.folder_service import ResourceFolderService
-
-
-class KnowledgeDocumentError(ValueError):
-    pass
-
-
-class KnowledgeDocumentNotFoundError(KnowledgeDocumentError):
-    pass
-
-
-class KnowledgeDocumentIndexError(KnowledgeDocumentError):
-    pass
-
-
-@dataclass(frozen=True)
-class KnowledgeDocumentIndexResult:
-    document: KnowledgeDocument
-    latest_version: DocumentVersion
-    chunk_count: int
-    embedding_count: int
-
-
-@dataclass(frozen=True)
-class KnowledgeDocumentDetail:
-    document: KnowledgeDocument
-    latest_version: DocumentVersion | None
-    chunks: list[DocumentChunk]
-    embedding_count: int
+from app.services.knowledge_contracts import (
+    KnowledgeDocumentDetail,
+    KnowledgeDocumentIndexError,
+    KnowledgeDocumentIndexResult,
+    KnowledgeDocumentNotFoundError,
+)
+from app.services.knowledge_contracts import (
+    KnowledgeDocumentError as KnowledgeDocumentError,
+)
+from app.services.knowledge_indexing import KnowledgeIndexer
+from app.services.knowledge_mutation import commit_document_mutation
 
 
 class KnowledgeService:
     def __init__(self, db: Session, embedding_provider: EmbeddingProvider | None = None):
         self.db = db
-        self.embedding_provider = embedding_provider or MockEmbeddingProvider()
+        self.embedding_provider = embedding_provider
 
     def upload_document(
         self,
@@ -86,13 +64,14 @@ class KnowledgeService:
         )
         self.db.add(document)
         self.db.flush()
-        return self._index_document_version(
+        return KnowledgeIndexer(self.db, self.embedding_provider).index(
             document=document,
             workspace_id=workspace_id,
             content_type=content_type,
             raw_text=raw_text,
             language=resolved_language,
             version_number=1,
+            actor_user_id=current_user.id, audit_action="uploaded",
         )
 
     def list_documents(
@@ -199,8 +178,10 @@ class KnowledgeService:
         language: SupportedLanguage | None = None,
         folder_id: UUID | None = None,
         update_folder: bool = False,
+        actor_user_id: UUID | None = None,
     ) -> KnowledgeDocumentIndexResult:
-        document = self.get_document(workspace_id=workspace_id, document_id=document_id)
+        document = self.get_document(workspace_id=workspace_id, document_id=document_id,
+                                     for_update=True)
         if document is None:
             raise KnowledgeDocumentNotFoundError("Knowledge document was not found.")
 
@@ -222,43 +203,54 @@ class KnowledgeService:
             document.title = title.strip()
         document.language = resolved_language
         next_version = self._next_version_number(workspace_id=workspace_id, document_id=document_id)
-        return self._index_document_version(
+        return KnowledgeIndexer(self.db, self.embedding_provider).index(
             document=document,
             workspace_id=workspace_id,
             content_type=content_type if content_type is not None else latest_version.content_type,
             raw_text=raw_text,
             language=resolved_language,
             version_number=next_version,
+            actor_user_id=actor_user_id, audit_action="reindexed",
         )
 
     def move_document(
-        self, *, workspace_id: UUID, document_id: UUID, folder_id: UUID | None
+        self, *, workspace_id: UUID, document_id: UUID, folder_id: UUID | None,
+        actor_user_id: UUID,
     ) -> KnowledgeDocument:
-        document = self.get_document(workspace_id=workspace_id, document_id=document_id)
+        document = self.get_document(workspace_id=workspace_id, document_id=document_id,
+                                     for_update=True)
         if document is None:
             raise KnowledgeDocumentNotFoundError("Knowledge document was not found.")
         ResourceFolderService(self.db).validate_folder(
             workspace_id=workspace_id, folder_id=folder_id, resource_type="knowledge_document"
         )
         document.folder_id = folder_id
-        self.db.commit()
+        commit_document_mutation(self.db, document=document, actor_user_id=actor_user_id,
+                                 action="moved")
         self.db.refresh(document)
         return document
 
-    def delete_document(self, *, workspace_id: UUID, document_id: UUID) -> None:
-        document = self.get_document(workspace_id=workspace_id, document_id=document_id)
+    def delete_document(self, *, workspace_id: UUID, document_id: UUID,
+                        actor_user_id: UUID) -> None:
+        document = self.get_document(workspace_id=workspace_id, document_id=document_id,
+                                     for_update=True)
         if document is None:
             raise KnowledgeDocumentNotFoundError("Knowledge document was not found.")
         self.db.delete(document)
-        self.db.commit()
+        commit_document_mutation(self.db, document=document, actor_user_id=actor_user_id,
+                                 action="deleted")
 
     def get_document(
-        self, *, workspace_id: UUID, document_id: UUID
+        self, *, workspace_id: UUID, document_id: UUID, for_update: bool = False,
     ) -> KnowledgeDocument | None:
         statement = select(KnowledgeDocument).where(
             KnowledgeDocument.workspace_id == workspace_id,
             KnowledgeDocument.id == document_id,
         )
+        if for_update:
+            statement = statement.with_for_update(key_share=True).execution_options(
+                populate_existing=True,
+            )
         return self.db.scalar(statement)
 
     def get_latest_version(
@@ -274,82 +266,6 @@ class KnowledgeService:
             .limit(1)
         )
         return self.db.scalar(statement)
-
-    def _index_document_version(
-        self,
-        *,
-        document: KnowledgeDocument,
-        workspace_id: UUID,
-        content_type: str,
-        raw_text: str,
-        language: SupportedLanguage,
-        version_number: int,
-    ) -> KnowledgeDocumentIndexResult:
-        document.status = DocumentStatus.indexing
-        document.error_message = None
-        version = DocumentVersion(
-            workspace_id=workspace_id,
-            knowledge_document_id=document.id,
-            version=version_number,
-            content_hash=hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
-            content_type=content_type.strip().lower(),
-            raw_text=raw_text,
-        )
-        self.db.add(version)
-        self.db.flush()
-
-        try:
-            text_chunks = chunk_text(raw_text, language)
-            if not text_chunks:
-                raise KnowledgeDocumentIndexError("Document did not produce any chunks.")
-            vectors = self.embedding_provider.embed_texts([chunk.content for chunk in text_chunks])
-            if len(vectors) != len(text_chunks):
-                raise KnowledgeDocumentIndexError(
-                    "Embedding provider returned an invalid vector count."
-                )
-            for text_chunk, vector in zip(text_chunks, vectors, strict=True):
-                if len(vector) != self.embedding_provider.dimensions:
-                    raise KnowledgeDocumentIndexError(
-                        "Embedding provider returned an invalid dimension."
-                    )
-                chunk = DocumentChunk(
-                    workspace_id=workspace_id,
-                    document_version_id=version.id,
-                    language=language,
-                    chunk_index=text_chunk.chunk_index,
-                    content=text_chunk.content,
-                    token_count=text_chunk.token_count,
-                    chunk_metadata=json.dumps(text_chunk.metadata, sort_keys=True),
-                )
-                self.db.add(chunk)
-                self.db.flush()
-                self.db.add(
-                    Embedding(
-                        workspace_id=workspace_id,
-                        document_chunk_id=chunk.id,
-                        provider=self.embedding_provider.provider,
-                        model=self.embedding_provider.model,
-                        vector=vector,
-                    )
-                )
-        except (KnowledgeDocumentIndexError, RuntimeError, ValueError) as exc:
-            document.status = DocumentStatus.failed
-            document.error_message = str(exc)
-            self.db.commit()
-            self.db.refresh(document)
-            raise KnowledgeDocumentIndexError(str(exc)) from exc
-
-        document.status = DocumentStatus.indexed
-        document.error_message = None
-        self.db.commit()
-        self.db.refresh(document)
-        self.db.refresh(version)
-        return KnowledgeDocumentIndexResult(
-            document=document,
-            latest_version=version,
-            chunk_count=len(text_chunks),
-            embedding_count=len(vectors),
-        )
 
     def _next_version_number(self, *, workspace_id: UUID, document_id: UUID) -> int:
         statement = select(func.max(DocumentVersion.version)).where(

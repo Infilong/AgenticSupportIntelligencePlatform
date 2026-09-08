@@ -6,8 +6,39 @@ on:
   pull_request:
 
 jobs:
+  source-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test source size guardrail
+        run: python -m unittest discover -s scripts/tests -v
+      - name: Enforce source size limits
+        run: python scripts/check_source_sizes.py
+      - name: Enforce documentation map and plan structure
+        run: python scripts/check_docs.py
+
   backend:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+psycopg://agentic:agentic@localhost:5432/agentic_test
+      RUN_POSTGRES_TESTS: "1"
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: agentic
+          POSTGRES_PASSWORD: agentic
+          POSTGRES_DB: agentic_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentic -d agentic_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -20,9 +51,11 @@ jobs:
         with:
           enable-cache: true
       - name: Install backend dependencies
-        run: uv sync --extra dev
+        run: uv sync --frozen --extra dev
       - name: Lint backend
         run: uv run ruff check .
+      - name: Apply migrations to disposable PostgreSQL
+        run: uv run alembic upgrade head
       - name: Test backend
         run: uv run pytest -s
 
@@ -44,3 +77,58 @@ jobs:
         run: npm run build
       - name: Test frontend
         run: npm test
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      OPENAI_API_KEY: ""
+      API_URL: http://127.0.0.1:8000
+      FRONTEND_URL: http://127.0.0.1:5173
+      PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ github.workspace }}/.artifacts/browser-results.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install browser dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Start isolated application and wait for HTTP readiness
+        run: |
+          mkdir -p .artifacts
+          docker compose -p asi-ci up -d --build > .artifacts/startup.log 2>&1
+          python scripts/wait_http.py "$API_URL/health" "$FRONTEND_URL"
+          docker compose -p asi-ci exec -T api alembic current > .artifacts/migration.log
+      - name: Test browser journeys against PostgreSQL
+        working-directory: frontend
+        run: npx playwright test --project=chromium --reporter=line,json --trace=retain-on-failure --output=../.artifacts/browser
+      - name: Verify HTTP log privacy
+        run: python scripts/check_http_log_privacy.py --project asi-ci > .artifacts/http-log-privacy.log
+      - name: Verify built web deployment image
+        run: python scripts/verify_built_web.py --project asi-ci
+      - name: Capture runtime evidence
+        if: always()
+        run: |
+          mkdir -p .artifacts
+          docker compose -p asi-ci ps --format json > .artifacts/containers.json
+          docker compose -p asi-ci logs --no-color --timestamps > .artifacts/runtime.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence-${{ github.run_attempt }}
+          path: .artifacts/
+          include-hidden-files: true
+          retention-days: 7
+      - name: Remove disposable CI stack
+        if: always()
+        run: docker compose -p asi-ci down --volumes --remove-orphans

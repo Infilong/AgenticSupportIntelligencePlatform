@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -7,11 +8,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.agent import AgentConfig
+from app.models.audit import AuditLog
 from app.models.dataset import Dataset
 from app.models.evaluation import EvaluationRun
 from app.models.folder import ResourceFolder
 from app.models.knowledge import KnowledgeDocument
 from app.models.user import User
+from app.models.workspace import Workspace
 
 VALID_RESOURCE_TYPES = {"knowledge_document", "dataset", "evaluation_run", "agent_config"}
 
@@ -114,7 +117,7 @@ class ResourceFolderService:
             created_by_user_id=current_user.id,
         )
         self.db.add(folder)
-        self.db.commit()
+        self._commit_mutation(folder, current_user.id, "created")
         self.db.refresh(folder)
         return folder
 
@@ -125,7 +128,13 @@ class ResourceFolderService:
         folder_id: UUID,
         name: str | None,
         parent_folder_id: UUID | None,
+        actor_user_id: UUID,
+        update_parent: bool = True,
     ) -> ResourceFolder:
+        if update_parent:
+            # Serialize parent changes without conflicting with FK key-share locks.
+            self.db.execute(select(Workspace.id).where(Workspace.id == workspace_id)
+                            .with_for_update(key_share=True))
         folder = self.get_folder(workspace_id=workspace_id, folder_id=folder_id)
         if folder is None:
             raise ResourceFolderNotFoundError("Resource folder was not found.")
@@ -137,14 +146,33 @@ class ResourceFolderService:
                 folder_id=parent_folder_id,
                 resource_type=folder.resource_type,
             )
+            if update_parent:
+                self._validate_ancestry(folder, parent_folder_id)
         if name is not None:
             folder.name = name.strip()
-        folder.parent_folder_id = parent_folder_id
-        self.db.commit()
+        if update_parent:
+            folder.parent_folder_id = parent_folder_id
+        self._commit_mutation(folder, actor_user_id, "updated")
         self.db.refresh(folder)
         return folder
 
-    def delete_folder(self, *, workspace_id: UUID, folder_id: UUID) -> None:
+    def _validate_ancestry(self, folder: ResourceFolder, parent_id: UUID) -> None:
+        visited = {folder.id}
+        current: UUID | None = parent_id
+        while current is not None:
+            if current in visited:
+                raise ResourceFolderInvalidTypeError("Folder movement would create a cycle.")
+            visited.add(current)
+            # Column reads bypass stale ORM instances after a competing move commits.
+            row = self.db.execute(select(ResourceFolder.parent_folder_id).where(
+                ResourceFolder.id == current, ResourceFolder.workspace_id == folder.workspace_id,
+                ResourceFolder.resource_type == folder.resource_type,
+            )).first()
+            if row is None:
+                raise ResourceFolderNotFoundError("Resource folder was not found.")
+            current = row[0]
+
+    def delete_folder(self, *, workspace_id: UUID, folder_id: UUID, actor_user_id: UUID) -> None:
         folder = self.get_folder(workspace_id=workspace_id, folder_id=folder_id)
         if folder is None:
             raise ResourceFolderNotFoundError("Resource folder was not found.")
@@ -153,14 +181,31 @@ class ResourceFolderService:
         if self._has_assigned_resources(workspace_id=workspace_id, folder=folder):
             raise ResourceFolderNotEmptyError("Folder contains resources.")
         self.db.delete(folder)
-        self.db.commit()
+        self._commit_mutation(folder, actor_user_id, "deleted")
+
+    def _commit_mutation(self, folder: ResourceFolder, actor: UUID, action: str) -> None:
+        try:
+            self.db.flush()
+            metadata = {} if action == "deleted" else {
+                "name": folder.name, "resource_type": folder.resource_type,
+            }
+            self.db.add(AuditLog(
+                workspace_id=folder.workspace_id, actor_user_id=actor,
+                action=f"resource_folder.{action}", resource_type="resource_folder",
+                resource_id=str(folder.id),
+                metadata_json=json.dumps(metadata, ensure_ascii=False, sort_keys=True),
+            ))
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
 
     def get_folder(self, *, workspace_id: UUID, folder_id: UUID) -> ResourceFolder | None:
         return self.db.scalar(
             select(ResourceFolder).where(
                 ResourceFolder.workspace_id == workspace_id,
                 ResourceFolder.id == folder_id,
-            )
+            ).execution_options(populate_existing=True)
         )
 
     def validate_folder(

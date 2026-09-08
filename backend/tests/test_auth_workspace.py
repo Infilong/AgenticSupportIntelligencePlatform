@@ -309,7 +309,7 @@ def test_owner_can_list_add_update_and_remove_workspace_members(client: TestClie
     add_response = client.post(
         f"/api/v1/workspaces/{workspace['id']}/members",
         headers=auth_headers(owner_token),
-        json={"email": "MEMBER-admin-target@example.com", "role": "member"},
+        json={"email": "MEMBER-admin-target@example.com", "role": "operator"},
     )
     list_response = client.get(
         f"/api/v1/workspaces/{workspace['id']}/members",
@@ -323,7 +323,7 @@ def test_owner_can_list_add_update_and_remove_workspace_members(client: TestClie
     demote_response = client.patch(
         f"/api/v1/workspaces/{workspace['id']}/members/{member['id']}",
         headers=auth_headers(owner_token),
-        json={"role": "member"},
+        json={"role": "operator"},
     )
     remove_response = client.delete(
         f"/api/v1/workspaces/{workspace['id']}/members/{member['id']}",
@@ -337,7 +337,7 @@ def test_owner_can_list_add_update_and_remove_workspace_members(client: TestClie
     assert owner["id"] != member["id"]
     assert add_response.status_code == 201
     assert add_response.json()["email"] == "member-admin-target@example.com"
-    assert add_response.json()["role"] == "member"
+    assert add_response.json()["role"] == "operator"
     assert "workspace:read" in add_response.json()["permissions"]
     assert list_response.status_code == 200
     assert [item["email"] for item in list_response.json()] == [
@@ -347,7 +347,7 @@ def test_owner_can_list_add_update_and_remove_workspace_members(client: TestClie
     assert promote_response.status_code == 200
     assert promote_response.json()["role"] == "owner"
     assert demote_response.status_code == 200
-    assert demote_response.json()["role"] == "member"
+    assert demote_response.json()["role"] == "operator"
     assert remove_response.status_code == 204
     assert [item["email"] for item in final_list.json()] == ["member-admin-owner@example.com"]
 
@@ -374,17 +374,17 @@ def test_workspace_member_management_rejects_missing_duplicate_and_non_owner(
     missing = client.post(
         f"/api/v1/workspaces/{workspace['id']}/members",
         headers=auth_headers(owner_token),
-        json={"email": "missing-member@example.com", "role": "member"},
+        json={"email": "missing-member@example.com", "role": "operator"},
     )
     duplicate = client.post(
         f"/api/v1/workspaces/{workspace['id']}/members",
         headers=auth_headers(owner_token),
-        json={"email": "member-management-existing@example.com", "role": "member"},
+        json={"email": "member-management-existing@example.com", "role": "operator"},
     )
     non_owner_add = client.post(
         f"/api/v1/workspaces/{workspace['id']}/members",
         headers=auth_headers(existing_token),
-        json={"email": "missing-member@example.com", "role": "member"},
+        json={"email": "missing-member@example.com", "role": "operator"},
     )
 
     assert missing.status_code == 404
@@ -392,7 +392,8 @@ def test_workspace_member_management_rejects_missing_duplicate_and_non_owner(
     assert duplicate.status_code == 409
     assert duplicate.json()["detail"]["code"] == "workspace_member_already_exists"
     assert non_owner_add.status_code == 403
-    assert non_owner_add.json()["detail"]["code"] == "workspace_owner_required"
+    assert non_owner_add.json()["detail"]["code"] == "workspace_permission_required"
+    assert non_owner_add.json()["detail"]["required_permission"] == "members:manage"
 
 
 def test_workspace_member_management_preserves_owner_membership(
@@ -416,7 +417,7 @@ def test_workspace_member_management_preserves_owner_membership(
     self_demote = client.patch(
         f"/api/v1/workspaces/{workspace['id']}/members/{owner['id']}",
         headers=auth_headers(owner_token),
-        json={"role": "member"},
+        json={"role": "operator"},
     )
     self_remove = client.delete(
         f"/api/v1/workspaces/{workspace['id']}/members/{owner['id']}",
@@ -823,7 +824,7 @@ def test_workspace_permission_matrix_is_workspace_scoped(
 
     assert viewer_matrix.status_code == 200
     roles = {entry["role"]: entry["permissions"] for entry in viewer_matrix.json()["roles"]}
-    assert "owner" in roles
+    assert set(roles) == {"viewer", "operator", "admin", "owner"}
     assert "workspace:manage" in roles["owner"]
     assert "viewer" in roles
     assert "data:write" not in roles["viewer"]
@@ -879,7 +880,7 @@ def test_owner_can_archive_restore_and_archived_workspace_is_read_only(
     blocked_member_add = client.post(
         f"/api/v1/workspaces/{workspace['id']}/members",
         headers=auth_headers(owner_token),
-        json={"email": "archive-reviewer@example.com", "role": "reviewer"},
+        json={"email": "archive-reviewer@example.com", "role": "operator"},
     )
     blocked_member_update = client.patch(
         f"/api/v1/workspaces/{workspace['id']}/members/{developer['id']}",

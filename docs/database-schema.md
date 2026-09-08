@@ -1,6 +1,35 @@
 # Database Schema Draft
 
+Revision 0032 adds nullable `ai_runs.execution_id` and `execution_protocol`. Both are absent
+for legacy rows; owned rows require protocol `pg-session-v1` and an execution UUID. A check
+constraint rejects partial/unknown protocol metadata. Downgrade locks the ledger table and
+refuses to erase any ownership history. This metadata currently serves embedding dispatch;
+it does not imply every model call supports interrupted-execution recovery.
+
+Revision 0029 adds `retrieval_traces.outcome` (unknown/pending/succeeded/failed) and nullable
+`error_code`. Historical outcomes remain unknown. Completed empty searches succeed with
+`no_source=true`; post-validation embedding failures are marked failed with a stable code.
+The direct API persists these failures and exposes permission-gated trace lookup; graph callers
+retain transaction ownership. See [API failure inspection](api-design.md).
+
 This is the starting database model. Exact SQLAlchemy models and Alembic migrations will be created during implementation milestones.
+
+## Budget reservation schema
+Migration `0030_evaluation_reservations` adds nullable `evaluation_run_id`, makes `graph_run_id`
+nullable, and requires exactly one of those contexts. Both owners are foreign keys; services
+validate workspace ownership. Baseline usage joins reservations to AI ledger rows, while monthly
+usage counts all workspace model calls and active reservations. Existing graph rows are unchanged.
+Downgrade refuses evaluation reservation history; active evaluation reservations also block
+application-level deletion. See [token economy](token-economy-design.md) for admission semantics.
+
+Migration `0026_model_call_reservations` adds workspace/run-scoped estimates with a unique optional
+AI-run link, purpose, status, denial reason, expiry and creation/finalization timestamps.
+Nonnegative estimates and allowed statuses are database constraints. Admission and reconciliation
+serialize on the workspace row. All unresolved reserved rows count toward admission, even after
+their expiry timestamp; expiry is not evidence of unbilled completion. Consumed
+ones are represented by their AI ledger row. Denied/released rows remain history without reserving
+budget. Agent classification and drafting now use this storage; see the
+[budget execution plan](exec-plans/completed/run-budget-enforcement.md).
 
 ## Global Rules
 - Every workspace-owned entity must include `workspace_id`.
@@ -139,7 +168,8 @@ Embedding
 - document_chunk_id
 - provider
 - model
-- vector: pgvector vector(16) for local mock provider in v1
+- vector: dimension-flexible pgvector `vector` since revision 0027; mock vectors remain 16-dimensional.
+  Retrieval validates configured dimensions and provider/model compatibility before vector scoring.
 - created_at
 
 RetrievalTrace
@@ -194,6 +224,7 @@ GraphRun
 
 GraphStep
 - id
+- sequence nullable for legacy rows; positive and unique per graph_run_id for new steps
 - span_id
 - parent_span_id
 - workspace_id
@@ -331,6 +362,12 @@ WorkspaceBudgetPolicy
 ```
 
 Every model call should create an `AIRun`. Every AI run should record the resolved `model_config_id` when a workspace or agent model config is used, and should record prompt template and version when a prompt template is used. Workspace budget policy is owner-managed and read by cost summaries, system health, and agent runtime rate/token-budget enforcement.
+
+Revision 0028 extends AIRun status with `pending` and `uncertain` for durable embedding attempts.
+Those rows hold estimated usage until a definitive response; timeout/error reconciliation retains
+an estimate and explicit uncertainty. Downgrade refuses while either state exists, preserving data.
+The model maps to the migration's explicit `ai_run_status` enum name. Existing chat call statuses
+remain succeeded/failed; this does not retrofit durable pre-dispatch recording to all model calls.
 
 ## Evaluation
 ```text

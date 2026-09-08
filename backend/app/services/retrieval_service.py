@@ -6,9 +6,9 @@ import time
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.language import (
     LanguageDetectionError,
     SupportedLanguage,
@@ -16,18 +16,16 @@ from app.core.language import (
 )
 from app.models.knowledge import (
     DocumentChunk,
-    DocumentStatus,
     DocumentVersion,
     Embedding,
     KnowledgeDocument,
 )
 from app.models.retrieval import RetrievalTrace, RetrievedChunk
 from app.services.embedding_provider import EmbeddingProvider, MockEmbeddingProvider
+from app.services.embedding_runtime import configured_embedding_provider
 from app.services.lexical_search import lexical_score
-
-
-class RetrievalError(ValueError):
-    pass
+from app.services.retrieval_candidates import candidate_statement, postgres_candidates
+from app.services.retrieval_embeddings import RetrievalError, embed_query
 
 
 @dataclass(frozen=True)
@@ -61,14 +59,23 @@ class RetrievalCandidate:
     embedding: Embedding
     version: DocumentVersion
     document: KnowledgeDocument
+    database_score: float | None = None
 
 
 class RetrievalService:
-    strategy = "hybrid"
-
-    def __init__(self, db: Session, embedding_provider: EmbeddingProvider | None = None):
+    def __init__(self, db: Session, embedding_provider: EmbeddingProvider | None = None,
+                 *, strategy: str = "hybrid", allowed_document_ids: list[UUID] | None = None):
+        if strategy not in {"hybrid", "vector", "lexical"}:
+            raise ValueError("Unsupported retrieval strategy")
+        self.strategy = strategy
+        self.allowed_document_ids = allowed_document_ids
         self.db = db
         self.embedding_provider = embedding_provider or MockEmbeddingProvider()
+        self.configured = (embedding_provider is None
+                           and get_settings().embedding_provider == "openai")
+        if (strategy == "hybrid" and self.embedding_provider.provider == "mock"
+                and not self.configured):
+            self.strategy = "lexical"
 
     def search(
         self,
@@ -79,33 +86,60 @@ class RetrievalService:
         top_k: int,
         min_score: float,
         document_id: UUID | None,
+        graph_run_id: UUID | None = None,
     ) -> RetrievalSearchResult:
         started = time.perf_counter()
         resolved_language = language or self._detect_language(query)
+        if self.configured:
+            self.embedding_provider = configured_embedding_provider(
+                self.db, workspace_id=workspace_id,
+                language=resolved_language, purpose="embedding_query", graph_run_id=graph_run_id)
         filters = {
             "language": resolved_language.value,
             "document_id": str(document_id) if document_id else None,
         }
+        if self.allowed_document_ids is not None:
+            filters["allowed_document_ids"] = [str(value) for value in self.allowed_document_ids]
         trace = RetrievalTrace(
             workspace_id=workspace_id,
-            graph_run_id=None,
+            graph_run_id=graph_run_id,
             query=query,
             language=resolved_language,
             strategy=self.strategy,
             filters_json=json.dumps(filters, sort_keys=True),
             latency_ms=0,
             no_source=False,
+            outcome="pending",
         )
         self.db.add(trace)
         self.db.flush()
 
-        candidates = self._load_candidates(
-            workspace_id=workspace_id,
-            language=resolved_language,
-            document_id=document_id,
-        )
+        query_vector = []
+        postgres = self.db.get_bind().dialect.name == "postgresql" and self.strategy != "lexical"
+        if postgres:
+            try:
+                statement = candidate_statement(
+                    workspace_id=workspace_id, language=resolved_language,
+                    document_id=document_id, allowed_document_ids=self.allowed_document_ids,
+                    strategy=self.strategy, provider=self.embedding_provider)
+                rows, query_vector = postgres_candidates(
+                    self.db, statement, self.embedding_provider, query,
+                    top_k if self.strategy == "vector" else max(100, top_k * 10))
+                candidates = [RetrievalCandidate(chunk, embedding, version, document,
+                    max(0.0, min(1.0, 1.0 - distance / 2.0)))
+                    for chunk, embedding, version, document, distance in rows]
+            except (RuntimeError, ValueError) as exc:
+                trace.no_source = True
+                trace.outcome = "failed"
+                trace.error_code = "embedding_failed"
+                trace.latency_ms = max(1, int((time.perf_counter() - started) * 1000))
+                raise RetrievalError(str(exc), trace_id=trace.id) from exc
+        else:
+            candidates = self._load_candidates(workspace_id=workspace_id,
+                language=resolved_language, document_id=document_id)
         if not candidates:
             trace.no_source = True
+            trace.outcome = "succeeded"
             trace.latency_ms = max(1, int((time.perf_counter() - started) * 1000))
             self.db.commit()
             self.db.refresh(trace)
@@ -117,7 +151,16 @@ class RetrievalService:
                 results=[],
             )
 
-        query_vector = self.embedding_provider.embed_texts([query])[0]
+        if self.strategy != "lexical" and not postgres:
+            try:
+                query_vector = embed_query(self.embedding_provider, query,
+                    [candidate.embedding.vector for candidate in candidates])
+            except (RuntimeError, ValueError) as exc:
+                trace.no_source = True
+                trace.outcome = "failed"
+                trace.error_code = "embedding_failed"
+                trace.latency_ms = max(1, int((time.perf_counter() - started) * 1000))
+                raise RetrievalError(str(exc), trace_id=trace.id) from exc
         scored = [
             self._score_candidate(query, query_vector, resolved_language, candidate)
             for candidate in candidates
@@ -127,6 +170,7 @@ class RetrievalService:
         limited = scored[:top_k]
 
         trace.no_source = not limited
+        trace.outcome = "succeeded"
         trace.latency_ms = max(1, int((time.perf_counter() - started) * 1000))
         for rank, result in enumerate(limited, start=1):
             self.db.add(
@@ -158,22 +202,9 @@ class RetrievalService:
         language: SupportedLanguage,
         document_id: UUID | None,
     ) -> list[RetrievalCandidate]:
-        statement = (
-            select(DocumentChunk, Embedding, DocumentVersion, KnowledgeDocument)
-            .join(Embedding, Embedding.document_chunk_id == DocumentChunk.id)
-            .join(DocumentVersion, DocumentVersion.id == DocumentChunk.document_version_id)
-            .join(KnowledgeDocument, KnowledgeDocument.id == DocumentVersion.knowledge_document_id)
-            .where(
-                DocumentChunk.workspace_id == workspace_id,
-                Embedding.workspace_id == workspace_id,
-                DocumentVersion.workspace_id == workspace_id,
-                KnowledgeDocument.workspace_id == workspace_id,
-                KnowledgeDocument.status == DocumentStatus.indexed,
-                DocumentChunk.language == language,
-            )
-        )
-        if document_id is not None:
-            statement = statement.where(KnowledgeDocument.id == document_id)
+        statement = candidate_statement(workspace_id=workspace_id, language=language,
+            document_id=document_id, allowed_document_ids=self.allowed_document_ids,
+            strategy=self.strategy, provider=self.embedding_provider)
         rows = self.db.execute(statement).all()
         return [
             RetrievalCandidate(chunk=chunk, embedding=embedding, version=version, document=document)
@@ -187,9 +218,17 @@ class RetrievalService:
         language: SupportedLanguage,
         candidate: RetrievalCandidate,
     ) -> RetrievalResult:
-        vector_score = _cosine_similarity(query_vector, candidate.embedding.vector)
-        lex_score = lexical_score(query, candidate.chunk.content, language)
-        combined_score = round((0.35 * vector_score) + (0.65 * lex_score), 6)
+        vector_score = (None if self.strategy == "lexical" else
+                        candidate.database_score if candidate.database_score is not None else
+                        _cosine_similarity(query_vector, candidate.embedding.vector))
+        lex_score = (lexical_score(query, candidate.chunk.content, language)
+                     if self.strategy != "vector" else 0.0)
+        if self.strategy == "lexical":
+            combined_score = round(lex_score, 6)
+        elif self.strategy == "vector":
+            combined_score = round(vector_score, 6)
+        else:
+            combined_score = round((0.35 * vector_score) + (0.65 * lex_score), 6)
         citation = _citation(candidate.document, candidate.version, candidate.chunk)
         return RetrievalResult(
             chunk_id=candidate.chunk.id,
@@ -200,8 +239,8 @@ class RetrievalService:
             language=language,
             content=candidate.chunk.content,
             token_count=candidate.chunk.token_count,
-            vector_score=round(vector_score, 6),
-            lexical_score=round(lex_score, 6),
+            vector_score=round(vector_score, 6) if vector_score is not None else None,
+            lexical_score=round(lex_score, 6) if self.strategy != "vector" else None,
             combined_score=combined_score,
             citation=citation,
         )

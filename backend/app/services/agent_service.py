@@ -12,13 +12,13 @@ from app.models.agent import AgentConfig, GraphRun, GraphRunStatus, GraphStep
 from app.models.ai import AIRun, ModelConfig
 from app.models.evaluation import EvaluationResult, EvaluationRun
 from app.models.user import User
+from app.services.agent_run_context import prepare_agent_run
 from app.services.budget_policy_service import BudgetPolicyService
 from app.services.folder_service import ResourceFolderService
-from app.services.guardrails import GuardrailService, has_blocking_guardrail
-from app.services.human_review_service import HumanReviewService
+from app.services.graph_outcome import publish_graph_outcome
+from app.services.graph_step_ordering import step_order, step_sort_key
 from app.services.model_config_service import ModelConfigService
-from app.services.support_agent_graph import SupportAgentGraphRunner, complete_graph_run
-from app.services.support_agent_state import SupportAgentState
+from app.services.support_agent_graph import SupportAgentGraphRunner
 
 
 class AgentNotFoundError(ValueError):
@@ -201,6 +201,7 @@ class AgentService:
         agent_id: UUID,
         input_message: str,
         current_user: User,
+        language: str | None = None,
     ) -> GraphRun:
         agent = self.get_agent(workspace_id=workspace_id, agent_id=agent_id)
         if agent is None:
@@ -213,58 +214,13 @@ class AgentService:
         effective_token_budget = budget_service.effective_run_token_budget(
             workspace_id=workspace_id, agent_token_budget=agent.token_budget
         )
-        graph_run = GraphRun(
-            workspace_id=workspace_id,
-            agent_config_id=agent.id,
-            user_id=current_user.id,
-            input_message=input_message.strip(),
-            status=GraphRunStatus.running,
+        graph_run, state = prepare_agent_run(
+            self.db, workspace_id=workspace_id, agent=agent, current_user=current_user,
+            input_message=input_message, token_budget=effective_token_budget,
+            settings=_agent_settings(agent), language=language,
         )
-        self.db.add(graph_run)
-        self.db.commit()
-        self.db.refresh(graph_run)
-        state: SupportAgentState = {
-            "workspace_id": str(workspace_id),
-            "agent_config_id": str(agent.id),
-            "agent_model_config_id": str(agent.model_config_id) if agent.model_config_id else None,
-            "user_id": str(current_user.id),
-            "graph_run_id": str(graph_run.id),
-            "input_message": input_message.strip(),
-            "agent_token_budget": effective_token_budget,
-            "agent_settings": _agent_settings(agent),
-            "errors": [],
-        }
         final_state = SupportAgentGraphRunner(self.db).run(state)
-        graph_run = complete_graph_run(self.db, graph_run, final_state)
-        route_step = self._latest_step(
-            workspace_id=workspace_id,
-            graph_run_id=graph_run.id,
-            step_name="route_review_or_finalize",
-        )
-        decisions = GuardrailService(self.db).evaluate_and_store(
-            workspace_id=workspace_id,
-            graph_run_id=graph_run.id,
-            graph_step_id=route_step.id if route_step else None,
-            state=final_state,
-        )
-        if graph_run.status != GraphRunStatus.completed or has_blocking_guardrail(decisions):
-            route_reasons = list(final_state.get("route_reasons", []))
-            failed_types = [
-                decision.guardrail_type for decision in decisions if not decision.passed
-            ]
-            review_reasons = sorted(set(route_reasons + failed_types))
-            graph_run.status = GraphRunStatus.needs_human_review
-            graph_run.route_decision = "human_review"
-            graph_run.final_answer = None
-            self.db.commit()
-            self.db.refresh(graph_run)
-            HumanReviewService(self.db).create_pending(
-                workspace_id=workspace_id,
-                graph_run_id=graph_run.id,
-                reason=", ".join(review_reasons) or "human_review_route",
-                proposed_answer=final_state.get("draft_answer"),
-            )
-        return graph_run
+        return publish_graph_outcome(self.db, graph_run, final_state)
 
     def get_agent(self, *, workspace_id: UUID, agent_id: UUID) -> AgentConfig | None:
         return self.db.scalar(
@@ -291,11 +247,10 @@ class AgentService:
         return self.db.scalar(
             select(GraphStep)
             .where(
-                GraphStep.workspace_id == workspace_id,
-                GraphStep.graph_run_id == graph_run_id,
+                GraphStep.workspace_id == workspace_id, GraphStep.graph_run_id == graph_run_id,
                 GraphStep.step_name == step_name,
             )
-            .order_by(GraphStep.created_at.desc())
+            .order_by(*step_order(descending=True))
             .limit(1)
         )
 
@@ -422,7 +377,7 @@ class AgentService:
         )
         if run is None:
             raise GraphRunNotFoundError("Graph run was not found.")
-        run.steps.sort(key=lambda step: step.created_at)
+        run.steps.sort(key=step_sort_key)
         return run
 
     def get_operational_summary(self, *, workspace_id: UUID, agent_id: UUID) -> dict[str, Any]:

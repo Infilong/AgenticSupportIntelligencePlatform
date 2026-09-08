@@ -1,68 +1,46 @@
-# Project Context
+# Project context
 
-This is the concise standing context to read before most tasks. Detailed rules live in focused design docs.
+## Product and scope
 
-## Product
-Build the Multilingual Agentic Support Intelligence Platform: a local-first internal AI platform for multilingual support, product, and community workflows. It imports English/Japanese/Chinese conversations, curates labels, indexes knowledge documents, runs a LangGraph support-agent workflow with RAG and human review, evaluates output quality per language, and tracks every model call for token cost, latency, cache use, and quality.
+Build a small internal data-processing administration app with RAG and AI agents for English,
+Japanese and Chinese. The active [data processing goal](exec-plans/active/data-processing-admin.md)
+supersedes the earlier five-area product direction below. Target: Records, Knowledge, Settings
+and an embedded admin assistant; persisted inputs, attempts, results and intermediate evidence.
+The running UI still uses the earlier layout until the active migration is implemented and verified.
+The approved Dify-inspired rebuild replaces the earlier dataset/evaluation-dashboard product.
+Use [product spec](product-spec.md) for scope, [architecture](../ARCHITECTURE.md) for ownership,
+and the [acceptance audit](audits/simple-admin-acceptance.md) for evidence and limits.
 
-## Primary Goal
-Demonstrate production-style AI/backend engineering:
-- backend architecture
-- multilingual AI systems
-- dataset curation
-- RAG quality
-- LangChain usage
-- LangGraph orchestration
-- human review
-- guardrails
-- evaluation
-- token economy
-- observability
-- auditability
-- permission isolation
-- Docker-based local deployment
-- clean documentation
-- production-defensible decisions
+Five areas: Work, Knowledge, Agents, Activity and Settings. Work is the landing page.
+The ordinary journey is knowledge upload, agent configuration, support request, cited answer,
+human intervention and an inspectable record. Browser and CLI use the same backend.
 
-## First-Class Requirements
-- Token economy is first-class.
-- Multilingual support is first-class.
-- Workspace isolation is first-class.
-- Evaluation is first-class.
-- Observability is first-class.
-- Every feature should have clear rationale, tradeoffs, and operational behavior.
+## Invariants
 
-## Supported Languages
-V1 supports `en`, `ja`, and `zh`. Future languages must be added through language configuration, prompt templates, chunking strategy, and evaluation rubrics rather than invasive rewrites.
+- Backend owns authentication, authorization, transactions, persistence and accounting.
+- Every workspace-owned entity is scoped before data enters retrieval, tools or model context.
+- Fixed authority increases through Viewer, Operator, Admin and Owner. Prevent self-promotion
+  and removal of the last owner. Retired roles cannot be assigned.
+- Agent actions require both initiating-user permission and configured agent capability.
+  Approval covers exact action inputs; retries must not repeat completed effects.
+- Tasks are durable and bounded by steps, time and budget. Stop is authoritative before
+  subsequent steps/actions; in-flight calls may finish and incur charges.
+- Retrieve/filter/pack permitted ready knowledge before model calls. Documents are untrusted
+  data. Target behavior distinguishes clarification, missing knowledge and genuine admin approval;
+  never invent facts. The current graph still routes missing evidence to review pending migration.
+- Record model/provider, token use, estimated cost, timings, failures and human interventions.
+  Do not expose secrets or private model reasoning. Scoped trace redaction is not universal PII detection.
+- Tests use deterministic providers. Real-provider quality is separate and currently unverified.
 
-## Non-Negotiable AI Rules
-- Use deterministic code before LLM calls when possible.
-- Do not use an LLM for simple parsing, routing, formatting, or validation if normal code is enough.
-- Avoid sending raw long documents to models.
-- Use retrieval, filtering, reranking, compression, and caching before model calls.
-- Track prompt tokens, completion tokens, total tokens, model, provider, latency, estimated cost, cache hit rate, language, graph run, graph step, and evaluation result for every AI run.
-- Tests must use mock LLM and embedding providers.
+## Interface and development
 
-## Non-Negotiable Workspace Rules
-- Every workspace-owned entity has `workspace_id`.
-- A user must not access, retrieve, evaluate, or view data from a workspace they do not belong to.
-- Permission denial must be tested for documents, datasets, examples, labels, graph runs, human reviews, evaluations, cost summaries, and audit logs.
+Use cohesive modules, normally below 300 lines. Give each feature one primary home; Work and
+Activity share run detail. Lists are bounded, important resources searchable, advanced details
+collapsed. Preserve drafts on recoverable failures and discard state when workspace/session changes.
+Use the [frontend guide](../frontend/README.md) for current modules and visual ownership.
 
-
-## Resource And File Management Rules
-- Upload/import is never a complete resource workflow by itself. User-owned resources must have permission-gated list, detail, edit or reindex, move, and delete paths where deletion is safe for the domain.
-- Growing collections such as knowledge documents, datasets, imports, and future file-backed resources must not render as unbounded flat lists in the frontend. Use folders, search, filters, bounded/paginated lists, and detail inspectors.
-- Folder IDs and resource IDs are workspace-scoped. Cross-workspace folder assignment, move, delete, and retrieval must be rejected by the backend.
-- Frontend permission states are explanatory only; the backend must enforce create, move, edit, delete, and folder-management permissions.
-- Large source content and indexed chunks belong in bounded inspectors or detail panels, not expanding page sections that grow with every file name or chunk.
-
-## UI Design Reference
-Frontend work must follow docs/ui-design-system.md. Keep page-level workflows top-to-bottom, use GitHub-like neutral/semantic color, keep growing lists bounded, preserve focus while typing, and verify UI changes in a browser when practical.
-
-## Human And Codex Roles
-The human engineer owns requirements, scope decisions, architecture approval, code review, test review, final merge decisions, project narrative, and quality bar.
-
-Codex assists with planning, boilerplate, implementation, tests, debugging, docs, refactoring, code review, and explaining code.
-
-## Working Loop
-For each milestone or feature: plan, update architecture docs, break into tickets, implement one small ticket, add tests, run validation, explain the diff, update learning notes, self-review, then stop for human review.
+Follow [AGENTS.md](../AGENTS.md), [coding rules](../codingRules.md) and [PLANS](PLANS.md).
+Use only OpenAI development tools/skills. Continue within approved scope; do not infer new
+features from historical portfolio milestones. Backend evaluation/import APIs and old evidence
+may remain, but they do not expand the five-area interface. Preserve unrelated changes and
+verified recovery copies. Do not commit unless asked.

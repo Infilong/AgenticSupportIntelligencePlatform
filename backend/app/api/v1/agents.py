@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from app.api.v1.agent_settings import agent_settings
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.workspace import require_workspace_permission
@@ -21,7 +22,6 @@ from app.schemas.agent import (
     AgentOperationalSummaryResponse,
     AgentResponse,
     AgentRunRequest,
-    AgentUpdateRequest,
     AgentWorkflowSummaryResponse,
     AIRunTraceResponse,
     CheckpointTraceResponse,
@@ -38,7 +38,9 @@ from app.schemas.agent import (
     WorkflowNodeFailureResponse,
     WorkflowNodeResponse,
 )
+from app.schemas.agent_configuration import AgentUpdateRequest
 from app.schemas.model_config import model_config_response
+from app.schemas.task import TaskRunStatusFilter
 from app.services.agent_service import (
     AgentModelConfigNotFoundError,
     AgentNotFoundError,
@@ -72,9 +74,7 @@ UnfiledFilter = Annotated[bool, Query()]
 AgentId = Annotated[UUID, Path()]
 RunId = Annotated[UUID, Path()]
 GraphRunAgentFilter = Annotated[UUID | None, Query()]
-GraphRunStatusFilter = Annotated[
-    Literal["all", "running", "completed", "needs_human_review", "failed"], Query(alias="status")
-]
+GraphRunStatusFilter = Annotated[TaskRunStatusFilter, Query(alias="status")]
 GraphRunCostViewFilter = Annotated[Literal["all", "high_cost"], Query(alias="cost_view")]
 GraphRunCostThreshold = Annotated[float, Query(ge=0, le=100000)]
 
@@ -285,15 +285,7 @@ def update_agent(
     current_user: CurrentUser,
     db: DbSession,
 ) -> AgentResponse:
-    settings = {
-        key: value
-        for key, value in {
-            "confidence_threshold": payload.confidence_threshold,
-            "retrieval_top_k": payload.retrieval_top_k,
-            "retrieval_min_score": payload.retrieval_min_score,
-        }.items()
-        if value is not None
-    }
+    settings = agent_settings(db, workspace.id, payload)
     update_model_config = "model_config_id" in payload.model_fields_set
     try:
         agent = AgentService(db).update_agent(
@@ -373,7 +365,7 @@ def run_agent(
         run = AgentService(db).run_agent(
             workspace_id=workspace.id,
             agent_id=agent_id,
-            input_message=payload.input_message,
+            **payload.model_dump(),
             current_user=current_user,
         )
     except AgentNotFoundError as exc:

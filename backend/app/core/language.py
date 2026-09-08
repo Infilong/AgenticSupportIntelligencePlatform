@@ -46,3 +46,9 @@ def _is_cjk_ideograph(ch: str) -> bool:
         or 0x4E00 <= codepoint <= 0x9FFF
         or 0xF900 <= codepoint <= 0xFAFF
     )
+
+
+def select_support_language(text: str, requested: str | None = None) -> dict[str, str]:
+    language = SupportedLanguage(requested) if requested is not None else detect_language(text)
+    return {"detected_language": language.value,
+            "language_source": "requested" if requested is not None else "detected"}

@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.guardrail import GuardrailPolicy
-from app.models.review import GuardrailResult
+from app.services.guardrail_catalog_stats import (
+    EMPTY_USAGE,
+    GuardrailFailure,
+    GuardrailUsageSummary,
+    catalog_failures,
+    catalog_usage,
+)
 
 
 class GuardrailPolicyNotFoundError(ValueError):
@@ -40,24 +45,6 @@ class GuardrailEffectivePolicy:
     severity: str
     action_on_fail: str
     threshold: float | None
-
-
-@dataclass(frozen=True)
-class GuardrailUsageSummary:
-    total_evaluations: int
-    failed_evaluations: int
-    pass_rate: float
-    last_failed_at: datetime | None
-
-
-@dataclass(frozen=True)
-class GuardrailFailure:
-    id: UUID
-    graph_run_id: UUID
-    graph_step_id: UUID | None
-    severity: str
-    message: str
-    created_at: datetime
 
 
 @dataclass(frozen=True)
@@ -117,7 +104,7 @@ RUNTIME_GUARDRAIL_DEFINITIONS = [
         guardrail_type="citation_required",
         label="Citation required",
         description=(
-            "Requires retrieved source citations before finalizing grounded support answers."
+            "Requires an exact packed-source citation in the draft before finalization."
         ),
         stage="post-retrieval answer validation",
         enabled=True,
@@ -129,7 +116,7 @@ RUNTIME_GUARDRAIL_DEFINITIONS = [
     GuardrailDefinition(
         guardrail_type="unsupported_answer",
         label="Unsupported answer",
-        description="Blocks answers when no retrieved evidence supports the response.",
+        description="Flags missing evidence or numeric durations absent from cited source text.",
         stage="post-retrieval answer validation",
         enabled=True,
         configurable=True,
@@ -227,14 +214,9 @@ class GuardrailCatalogService:
         definitions_by_type = {
             definition.guardrail_type: definition for definition in RUNTIME_GUARDRAIL_DEFINITIONS
         }
-        discovered_types = {
-            guardrail_type
-            for guardrail_type in self.db.scalars(
-                select(GuardrailResult.guardrail_type)
-                .where(GuardrailResult.workspace_id == workspace_id)
-                .distinct()
-            ).all()
-        }
+        usage = catalog_usage(self.db, workspace_id)
+        failures = catalog_failures(self.db, workspace_id)
+        discovered_types = set(usage)
         for guardrail_type in sorted(discovered_types - definitions_by_type.keys()):
             definitions_by_type[guardrail_type] = _discovered_guardrail_definition(guardrail_type)
 
@@ -244,14 +226,8 @@ class GuardrailCatalogService:
                 definition=definition,
                 policy=policies.get(definition.guardrail_type)
                 or _effective_policy(definition, None),
-                usage=self._usage(
-                    workspace_id=workspace_id,
-                    guardrail_type=definition.guardrail_type,
-                ),
-                recent_failures=self._recent_failures(
-                    workspace_id=workspace_id,
-                    guardrail_type=definition.guardrail_type,
-                ),
+                usage=usage.get(definition.guardrail_type, EMPTY_USAGE),
+                recent_failures=failures.get(definition.guardrail_type, []),
             )
             for definition in sorted(definitions_by_type.values(), key=lambda item: item.label)
         ]
@@ -325,57 +301,13 @@ class GuardrailCatalogService:
         )
 
     def _usage(self, *, workspace_id: UUID, guardrail_type: str) -> GuardrailUsageSummary:
-        filters = (
-            GuardrailResult.workspace_id == workspace_id,
-            GuardrailResult.guardrail_type == guardrail_type,
-        )
-        total = self.db.scalar(select(func.count(GuardrailResult.id)).where(*filters)) or 0
-        failed = (
-            self.db.scalar(
-                select(func.count(GuardrailResult.id)).where(
-                    *filters, GuardrailResult.passed.is_(False)
-                )
-            )
-            or 0
-        )
-        last_failed_at = self.db.scalar(
-            select(func.max(GuardrailResult.created_at)).where(
-                *filters, GuardrailResult.passed.is_(False)
-            )
-        )
-        return GuardrailUsageSummary(
-            total_evaluations=int(total),
-            failed_evaluations=int(failed),
-            pass_rate=round(((int(total) - int(failed)) / int(total)) if total else 0.0, 4),
-            last_failed_at=last_failed_at,
-        )
+        return catalog_usage(self.db, workspace_id).get(guardrail_type, EMPTY_USAGE)
 
     def _recent_failures(
         self, *, workspace_id: UUID, guardrail_type: str
     ) -> list[GuardrailFailure]:
-        failures = list(
-            self.db.scalars(
-                select(GuardrailResult)
-                .where(
-                    GuardrailResult.workspace_id == workspace_id,
-                    GuardrailResult.guardrail_type == guardrail_type,
-                    GuardrailResult.passed.is_(False),
-                )
-                .order_by(GuardrailResult.created_at.desc())
-                .limit(8)
-            ).all()
-        )
-        return [
-            GuardrailFailure(
-                id=failure.id,
-                graph_run_id=failure.graph_run_id,
-                graph_step_id=failure.graph_step_id,
-                severity=failure.severity,
-                message=failure.message,
-                created_at=failure.created_at,
-            )
-            for failure in failures
-        ]
+        return catalog_failures(self.db, workspace_id).get(guardrail_type, [])
+
 
 
 def _definition_for_update(guardrail_type: str) -> GuardrailDefinition:

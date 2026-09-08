@@ -76,7 +76,9 @@ def parse_classification_output(text: str) -> ClassificationOutput:
     return CLASSIFICATION_OUTPUT_PARSER.invoke(text)
 
 
-def create_search_documents_tool(*, db, workspace_id: UUID) -> StructuredTool:
+def create_search_documents_tool(*, db, workspace_id: UUID,
+                                 graph_run_id: UUID | None = None,
+                                 allowed_document_ids: list[UUID] | None = None) -> StructuredTool:
     """Create a workspace-scoped LangChain tool around the app retrieval service."""
 
     def search_documents(
@@ -87,13 +89,14 @@ def create_search_documents_tool(*, db, workspace_id: UUID) -> StructuredTool:
     ) -> dict[str, Any]:
         """Search workspace knowledge documents and return cited chunks."""
         normalized_language = SupportedLanguage(language)
-        retrieval = RetrievalService(db).search(
+        retrieval = RetrievalService(db, allowed_document_ids=allowed_document_ids).search(
             workspace_id=workspace_id,
             query=query,
             language=normalized_language,
             top_k=top_k,
             min_score=min_score,
             document_id=None,
+            graph_run_id=graph_run_id,
         )
         return {
             "framework": "langchain_core.tools.StructuredTool",

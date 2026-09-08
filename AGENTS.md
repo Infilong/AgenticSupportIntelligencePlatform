@@ -1,77 +1,56 @@
-# Repository Instructions
+# Repository instructions
 
 ## Project
-Multilingual Agentic Support Intelligence Platform is a serious mid-to-senior AI/backend portfolio project. It must look like a small but production-minded internal AI platform, not a tutorial chatbot.
+Local-first Multilingual Agentic Support Intelligence Platform for a small internal team.
+English, Japanese and Chinese are first-class. Build a production-minded platform; do not
+claim enterprise infrastructure or production readiness without evidence.
 
-V1 supports English, Japanese, and Chinese. It starts local-first for a small team and documents a future scale path without pretending to implement enterprise infrastructure in v1.
+## Context map
+- Start with [docs/README.md](docs/README.md); load only the relevant task row.
+- Structure: [ARCHITECTURE.md](ARCHITECTURE.md), then the linked local module guide.
+- Before source edits: [codingRules.md](codingRules.md).
+- Product decisions: [project context](docs/PROJECT_CONTEXT.md) and [product spec](docs/product-spec.md).
+- Planning/history: [PLANS](docs/PLANS.md) and [execution plans](docs/exec-plans/README.md).
+- Quality and failures: [QUALITY_SCORE](docs/QUALITY_SCORE.md), [RELIABILITY](docs/RELIABILITY.md).
+- Commands/evidence: [testing](docs/testing.md). Principles: [CORE_BELIEFS](docs/CORE_BELIEFS.md).
 
-## Context Loading
-Codex loads this file automatically. Keep other context selective:
-- Read `docs/README.md` first when choosing which docs apply.
-- Read `docs/PROJECT_CONTEXT.md` for almost every real implementation task.
-- Read `codingRules.md` before code edits, refactors, or architecture recovery work.
-- Read `docs/architecture-tree.md` for quick architecture/tool orientation.
-- Read `docs/PLANS.md` only when creating a ticket plan.
-- Read `docs/milestone-plan.md` only for milestone sequencing or scope checks.
-- Read focused design docs only when the task touches that subsystem.
-- Do not read every doc by default; preserve context for implementation and verification.
+## Task workflow
+1. Understand the goal, constraints and acceptance criteria; inspect relevant code and docs.
+2. Classify: simple work can proceed directly; complex/high-risk work needs a plan first.
+   Persist a plan only for the criteria in PLANS.md. Keep one focused implementation owner.
+3. Implement, verify, review and fix until the accepted scope is complete. Preserve unrelated edits.
+4. Update the owning docs and evidence; record durable decisions in the plan and learning notes.
+   Continue within existing authorization. Ask only when a decision or action needs new authority.
 
-## Operating Rules
-- Plan before coding complex tasks.
-- Implement one focused ticket at a time.
-- Keep diffs small and reviewable.
-- Do not implement broad milestones in one pass.
-- Do not add unrelated refactors.
-- Do not create fake implementations that only look complete.
-- Do not hide errors with broad exception handling.
-- Ask clarifying questions only when a decision blocks implementation.
-- Prefer a small, correct vertical slice over broad shallow features.
+## Agent delegation
+Do not spawn agents by default. Use them only when independent search, root-cause analysis,
+verification, security or performance review materially improves the outcome. Give each a
+bounded task and ownership; keep tightly coupled changes under one owner and never revert
+others' edits. If routing is available and permitted, use a lightweight model for search and
+mechanical work, a mid-tier model for ordinary implementation/tests, and the strongest model
+for architecture, security or difficult debugging. Respect session restrictions and actual tools.
+Use only OpenAI-provided tools and skills.
 
-## Architecture Rules
-- Backend owns database schema, permission checks, trace persistence, AI run ledger, evaluation logic, token accounting, audit logs, and API boundaries.
-- LangChain is used for model abstraction, prompt templates, structured outputs, retrievers, tools, and document loaders when useful.
-- LangGraph is used for inspectable stateful workflows, conditional routing, checkpointing, and human review.
-- Every workspace-owned entity must include `workspace_id`.
-- Every workspace-scoped operation must enforce permission checks.
-- Every model call must create an AI run ledger record.
-- Every graph node execution must create graph trace data.
-- Every retrieval call must create retrieval trace data.
-- Uploaded/imported resources need permission-gated management paths, and growing resource lists must use folders, search, and bounded UI.
+## Core invariants
+- Backend owns authentication, authorization, schema, persistence, evaluation and accounting.
+- Every workspace-owned entity has workspace_id. Check permission before protected data enters
+  retrieval, tools or model context; frontend controls never replace server enforcement.
+- Every model call needs an AI ledger record; graph nodes and retrieval calls need trace data.
+  Account for token/cost use and failures. Route unsafe/unsupported cases explicitly to review.
+- Prefer deterministic code; retrieve/filter/compress before model calls. Never send raw long
+  documents. Automated tests use deterministic mock LLM/embedding providers.
+- Uploaded/imported resources need permission-gated management and bounded/searchable lists.
+- Keep files cohesive, normally under 300 lines. Existing oversize exceptions may not grow.
+  Never add fake implementations, hidden broad exception handling, secrets or PII in logs.
 
-## AI And Token Rules
-- Token economy is a first-class requirement.
-- Use deterministic code before LLM calls whenever possible.
-- Never send raw long documents to models.
-- Use retrieval, filtering, reranking, compression, caching, and token budgeting before model calls.
-- Use mock LLM and embedding providers in automated tests.
+## Verification and failure handling
+Run checks for the changed boundary using testing.md. Features require happy-path, failure
+and permission-denial coverage; UI behavior requires browser evidence, not only type checks.
+Inspect the diff and fix unresolved P0/P1 issues before calling the feature done. Preserve
+failed evidence, diagnose the cause, and turn recurring failures into tests or harness checks.
+Never weaken assertions or hide failures to make a run green. Revalidate live process handles
+before restarting work. Report missing verification honestly; do not infer readiness from setup.
 
-## Security Review Rules
-Verify:
-- every protected route has authentication.
-- workspace isolation is enforced.
-- retrieval cannot leak another workspace's chunks.
-- no secrets are hardcoded.
-- PII is not logged.
-- prompt injection and unsafe tool calls are handled.
-
-## Testing Rules
-Every feature must include tests. Cover happy paths, failure paths, and permission denial. Use mock providers for LLM responses, embeddings, token counts, latency simulation, and error simulation.
-
-## Documentation Rules
-Update docs when architecture, APIs, workflows, or evaluation behavior changes. Add or update learning notes after each milestone.
-
-## Commands
-Milestone 1 must finalize these commands:
-
-```bash
-make setup
-make backend-test
-make backend-lint
-make frontend-test
-make frontend-build
-make frontend-e2e
-docker compose up --build
-```
-
-## Definition Of Done
-A feature is not done until requirements are implemented, non-goals are respected, tests pass, workspace permissions are checked, errors are explicit, docs are updated if needed, learning notes are added when relevant, and self-review has no unresolved P0/P1 issues.
+## Progress
+Work autonomously. At meaningful checkpoints report Done, Current, Next and Blocker as relevant;
+do not end work just to report. Final output names changes, verification and remaining limits.

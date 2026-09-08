@@ -304,7 +304,7 @@ def test_support_agent_uses_chinese_knowledge_in_trace(client: TestClient) -> No
     assert body["language"] == "zh"
     assert body["status"] == "completed"
     assert body["route_decision"] == "finalize"
-    assert "购买后30天内可以申请退款" in body["final_answer"]
+    assert "用户在购买后30天内，且账号状态正常时，可以申请退款。" in body["final_answer"]
 
     trace = client.get(
         f"/api/v1/workspaces/{workspace['id']}/agent-runs/{body['id']}/trace",
@@ -485,7 +485,7 @@ def test_support_agent_routes_proactive_model_budget_failure_to_human_review(
         step for step in trace_body["steps"] if step["step_name"] == "classify_intent"
     )
     assert classify_step["status"] == "failed"
-    assert "token_budget_exceeded" in classify_step["error_message"]
+    assert "model_context_exceeded" in classify_step["error_message"]
     assert classify_step["ai_run"] is None
     assert not trace_body["ai_runs"]
     assert any(

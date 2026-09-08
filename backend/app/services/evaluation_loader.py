@@ -47,6 +47,12 @@ def load_jsonl_cases(content: str) -> list[LoadedEvaluationCase]:
             ) from exc
         if not external_id or not input_message:
             raise EvaluationCaseLoadError(f"Blank evaluation case field at line {line_number}.")
+        limit = raw.get("max_prompt_tokens")
+        if limit is not None and (type(limit) is not int or not 0 <= limit <= 2147483647):
+            raise EvaluationCaseLoadError(
+                f"max_prompt_tokens must be null or an integer from 0 to 2147483647 "
+                f"at line {line_number}."
+            )
         cases.append(
             LoadedEvaluationCase(
                 external_id=external_id,
@@ -58,7 +64,7 @@ def load_jsonl_cases(content: str) -> list[LoadedEvaluationCase]:
                 must_not_include=list(raw.get("must_not_include", [])),
                 expected_route=str(raw.get("expected_route", "finalize")),
                 safety_risk=str(raw.get("safety_risk", "low")),
-                max_prompt_tokens=raw.get("max_prompt_tokens"),
+                max_prompt_tokens=limit,
                 expected_tool_calls=list(raw.get("expected_tool_calls", [])),
                 expected_guardrail_failures=list(raw.get("expected_guardrail_failures", [])),
                 metadata=dict(raw.get("metadata", {})),

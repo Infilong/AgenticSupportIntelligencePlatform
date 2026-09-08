@@ -1,113 +1,23 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import normalize_email
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
-
-BASE_PERMISSIONS = [
-    "workspace:read",
-    "tasks:read",
-    "settings:read",
-]
-
-VIEWER_PERMISSIONS = [
-    *BASE_PERMISSIONS,
-    "data:read",
-    "knowledge:read",
-    "agents:read",
-    "traces:read",
-    "reviews:read",
-    "evaluations:read",
-    "costs:read",
-]
-
-REVIEWER_PERMISSIONS = [
-    *BASE_PERMISSIONS,
-    "knowledge:read",
-    "agents:read",
-    "traces:read",
-    "reviews:read",
-    "costs:read",
-    "reviews:resolve",
-]
-
-DEVELOPER_PERMISSIONS = [
-    *VIEWER_PERMISSIONS,
-    "tools:read",
-    "guardrails:read",
-    "prompts:read",
-    "models:read",
-    "system:read",
-    "data:write",
-    "knowledge:write",
-    "agents:run",
-    "agents:configure",
-    "tools:configure",
-    "evaluations:run",
-    "prompts:write",
-    "resource_folders:manage",
-]
-
-MEMBER_PERMISSIONS = [
-    *VIEWER_PERMISSIONS,
-    "tools:read",
-    "guardrails:read",
-    "system:read",
-    "data:write",
-    "knowledge:write",
-    "agents:run",
-    "agents:configure",
-    "reviews:resolve",
-    "evaluations:run",
-]
-
-OWNER_PERMISSIONS = [
-    *DEVELOPER_PERMISSIONS,
-    "reviews:resolve",
-    "members:read",
-    "audit:read",
-    "budget_policy:read",
-    "workspace:manage",
-    "resources:delete",
-    "agents:delete",
-    "models:write",
-    "guardrails:configure",
-    "budget_policy:manage",
-]
-
-ROLE_PERMISSIONS = {
-    WorkspaceRole.owner: OWNER_PERMISSIONS,
-    WorkspaceRole.developer: DEVELOPER_PERMISSIONS,
-    WorkspaceRole.member: MEMBER_PERMISSIONS,
-    WorkspaceRole.reviewer: REVIEWER_PERMISSIONS,
-    WorkspaceRole.viewer: VIEWER_PERMISSIONS,
-}
-
-ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS = [
-    "workspace:read",
-    "workspace:manage",
-    "settings:read",
-    "tasks:read",
-    "members:read",
-    "audit:read",
-    "data:read",
-    "knowledge:read",
-    "agents:read",
-    "traces:read",
-    "reviews:read",
-    "evaluations:read",
-    "costs:read",
-    "budget_policy:read",
-    "tools:read",
-    "guardrails:read",
-    "prompts:read",
-    "models:read",
-    "system:read",
-]
+from app.services.membership_authority import (
+    MembershipAuthorityError,
+    authorize_membership_change,
+    lock_workspace,
+)
+from app.services.workspace_permissions import (
+    ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS as ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS,
+)
+from app.services.workspace_permissions import (
+    ROLE_PERMISSIONS as ROLE_PERMISSIONS,
+)
 
 
 class WorkspaceMemberError(ValueError):
@@ -126,8 +36,7 @@ class WorkspaceMemberNotFoundError(WorkspaceMemberError):
     pass
 
 
-class WorkspaceMemberOwnerError(WorkspaceMemberError):
-    pass
+WorkspaceMemberOwnerError = MembershipAuthorityError
 
 
 class WorkspaceNameConflictError(ValueError):
@@ -139,7 +48,7 @@ class WorkspaceDeleteConfirmationError(ValueError):
 
 
 def permissions_for_role(role: WorkspaceRole) -> list[str]:
-    return ROLE_PERMISSIONS.get(role, VIEWER_PERMISSIONS).copy()
+    return ROLE_PERMISSIONS.get(role, []).copy()
 
 
 class WorkspaceService:
@@ -225,6 +134,8 @@ class WorkspaceService:
         return workspace
 
     def leave_workspace(self, *, workspace_id: UUID, user_id: UUID) -> None:
+        lock_workspace(self.db, workspace_id)
+        self.db.expire_all()
         membership = self.get_membership(workspace_id, user_id)
         if membership is None:
             raise WorkspaceMemberNotFoundError("Workspace member was not found.")
@@ -250,18 +161,28 @@ class WorkspaceService:
             statement = statement.where(Workspace.id != exclude_workspace_id)
         return self.db.scalar(statement.limit(1)) is not None
 
-    def list_members(self, *, workspace_id: UUID) -> list[WorkspaceMember]:
+    def list_members(self, *, workspace_id: UUID, limit: int = 20,
+                     offset: int = 0, search: str = "") -> list[WorkspaceMember]:
         statement = (
             select(WorkspaceMember)
+            .join(User, User.id == WorkspaceMember.user_id)
             .options(joinedload(WorkspaceMember.user))
             .where(WorkspaceMember.workspace_id == workspace_id)
             .order_by(WorkspaceMember.created_at.asc())
+            .limit(limit).offset(offset)
         )
+        if search.strip():
+            pattern = f"%{search.strip()}%"
+            statement = statement.where(or_(User.email.ilike(pattern),
+                                            User.display_name.ilike(pattern)))
         return list(self.db.scalars(statement).all())
 
     def add_member_by_email(
-        self, *, workspace_id: UUID, email: str, role: WorkspaceRole = WorkspaceRole.member
+        self, *, workspace_id: UUID, email: str, actor_user_id: UUID,
+        role: WorkspaceRole = WorkspaceRole.viewer,
     ) -> WorkspaceMember:
+        authorize_membership_change(self.db, workspace_id=workspace_id,
+                                    actor_user_id=actor_user_id, new_role=role)
         user = self.db.scalar(select(User).where(User.email == normalize_email(email)))
         if user is None:
             raise WorkspaceMemberUserNotFoundError("User must register before joining a workspace.")
@@ -277,6 +198,8 @@ class WorkspaceService:
     def update_member_role(
         self, *, workspace_id: UUID, user_id: UUID, role: WorkspaceRole, actor_user_id: UUID
     ) -> WorkspaceMember:
+        authorize_membership_change(self.db, workspace_id=workspace_id,
+            actor_user_id=actor_user_id, target_user_id=user_id, new_role=role)
         membership = self.get_membership(workspace_id, user_id)
         if membership is None:
             raise WorkspaceMemberNotFoundError("Workspace member was not found.")
@@ -295,6 +218,8 @@ class WorkspaceService:
         return self._refresh_member_user(membership)
 
     def remove_member(self, *, workspace_id: UUID, user_id: UUID, actor_user_id: UUID) -> None:
+        authorize_membership_change(self.db, workspace_id=workspace_id,
+                                    actor_user_id=actor_user_id, target_user_id=user_id)
         membership = self.get_membership(workspace_id, user_id)
         if membership is None:
             raise WorkspaceMemberNotFoundError("Workspace member was not found.")

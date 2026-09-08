@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.models.agent import GraphRun
 from app.models.ai import AIRun
 from app.models.budget import WorkspaceBudgetPolicy
+from app.models.workspace import Workspace
 
 
 @dataclass(frozen=True)
@@ -31,8 +32,17 @@ class BudgetPolicyService:
         )
         if policy is not None:
             return policy
-        policy = WorkspaceBudgetPolicy(workspace_id=workspace_id)
-        self.db.add(policy)
+        # Costs, policy reads and admission can all initialize this row. Share admission's
+        # workspace lock, then re-read after a competing initializer has committed.
+        self.db.scalar(select(Workspace.id).where(Workspace.id == workspace_id)
+                       .with_for_update(key_share=True))
+        policy = self.db.scalar(
+            select(WorkspaceBudgetPolicy).where(WorkspaceBudgetPolicy.workspace_id == workspace_id)
+        )
+        if policy is None:
+            policy = WorkspaceBudgetPolicy(workspace_id=workspace_id)
+            self.db.add(policy)
+        # Release this initialization lock even when another caller created the policy.
         self.db.commit()
         self.db.refresh(policy)
         return policy

@@ -21,10 +21,19 @@ def _terms(text: str, language: SupportedLanguage) -> set[str]:
     if not normalized:
         return set()
     if language == SupportedLanguage.en:
-        return {token for token in re.findall(r"[a-z0-9]+", normalized) if len(token) > 1}
+        return {_english_term(token) for token in re.findall(r"[a-z0-9]+", normalized)
+                if len(token) > 1}
     compact = re.sub(r"\s+", "", normalized)
     if len(compact) <= 2:
         return {compact} if compact else set()
     bigrams = {compact[index : index + 2] for index in range(len(compact) - 1)}
     trigrams = {compact[index : index + 3] for index in range(len(compact) - 2)}
     return bigrams | trigrams
+
+
+def _english_term(token: str) -> str:
+    if len(token) > 4 and token.endswith("ies"):
+        return token[:-3] + "y"
+    if len(token) > 3 and token.endswith("s") and not token.endswith(("ss", "us", "is")):
+        return token[:-1]
+    return token

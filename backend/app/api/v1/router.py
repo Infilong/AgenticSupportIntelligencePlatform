@@ -8,15 +8,24 @@ from app.api.v1 import (
     budget_policies,
     costs,
     datasets,
+    embedding_reconciliation,
     evaluations,
     folders,
     guardrails,
     human_reviews,
     knowledge,
+    knowledge_versions,
     model_configs,
     prompt_templates,
+    record_artifacts,
+    record_clarifications,
+    record_reviews,
+    records,
     retrieval,
     system_health,
+    task_actions,
+    task_attempts,
+    tasks,
     tools,
     workspaces,
 )
@@ -27,6 +36,13 @@ api_router.include_router(workspaces.router)
 api_router.include_router(budget_policies.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(agents.router)
+api_router.include_router(tasks.router)
+api_router.include_router(records.router)
+api_router.include_router(record_artifacts.router)
+api_router.include_router(record_clarifications.router)
+api_router.include_router(record_reviews.router)
+api_router.include_router(task_actions.router)
+api_router.include_router(task_attempts.router)
 api_router.include_router(attention.router)
 api_router.include_router(human_reviews.router)
 api_router.include_router(datasets.router)
@@ -34,9 +50,11 @@ api_router.include_router(evaluations.router)
 api_router.include_router(folders.router)
 api_router.include_router(guardrails.router)
 api_router.include_router(knowledge.router)
+api_router.include_router(knowledge_versions.router)
 api_router.include_router(model_configs.router)
 api_router.include_router(prompt_templates.router)
 api_router.include_router(retrieval.router)
 api_router.include_router(system_health.router)
 api_router.include_router(tools.router)
 api_router.include_router(costs.router)
+api_router.include_router(embedding_reconciliation.router)

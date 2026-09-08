@@ -1,15 +1,32 @@
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import String, case, cast, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.agent import Checkpoint, GraphRun, GraphRunStatus
+from app.models.agent import GraphRun
 from app.models.review import HumanReview, ReviewDecision
 from app.models.user import User
+from app.services.review_answer_validation import validate_review_answer
+from app.services.review_outcome import apply_review_decision
+from app.services.review_transaction import (
+    HumanReviewAlreadyResolvedError as HumanReviewAlreadyResolvedError,
+)
+from app.services.review_transaction import (
+    HumanReviewAssignmentConflictError as HumanReviewAssignmentConflictError,
+)
+from app.services.review_transaction import (
+    HumanReviewInvalidDecisionError as HumanReviewInvalidDecisionError,
+)
+from app.services.review_transaction import (
+    HumanReviewNotFoundError as HumanReviewNotFoundError,
+)
+from app.services.review_transaction import (
+    commit_review,
+    pending_review,
+)
 
 CRITICAL_REVIEW_REASONS = (
     "prompt_injection",
@@ -20,22 +37,6 @@ CRITICAL_REVIEW_REASONS = (
 HIGH_REVIEW_REASONS = ("model_budget_failure", "unsupported_answer", "citation_required")
 EVIDENCE_REVIEW_REASONS = ("unsupported_answer", "citation_required", "confidence_threshold")
 MODEL_REVIEW_REASONS = ("model_provider_failure", "model_budget_failure")
-
-
-class HumanReviewNotFoundError(ValueError):
-    pass
-
-
-class HumanReviewAlreadyResolvedError(ValueError):
-    pass
-
-
-class HumanReviewInvalidDecisionError(ValueError):
-    pass
-
-
-class HumanReviewAssignmentConflictError(ValueError):
-    pass
 
 
 class HumanReviewService:
@@ -155,30 +156,18 @@ class HumanReviewService:
         return review
 
     def claim(self, *, workspace_id: UUID, review_id: UUID, reviewer: User) -> HumanReview:
-        review = self.get_review(workspace_id=workspace_id, review_id=review_id)
-        if review.reviewer_decision != ReviewDecision.pending:
-            raise HumanReviewAlreadyResolvedError("Human review was already resolved.")
-        if review.reviewer_id is not None and review.reviewer_id != reviewer.id:
-            raise HumanReviewAssignmentConflictError(
-                "Human review is assigned to another reviewer."
-            )
+        review = pending_review(
+            self.db, workspace_id=workspace_id, review_id=review_id, reviewer=reviewer
+        )
         review.reviewer_id = reviewer.id
-        self.db.commit()
-        self.db.refresh(review)
-        return review
+        return commit_review(self.db, review=review, reviewer=reviewer, action="claimed")
 
     def release(self, *, workspace_id: UUID, review_id: UUID, reviewer: User) -> HumanReview:
-        review = self.get_review(workspace_id=workspace_id, review_id=review_id)
-        if review.reviewer_decision != ReviewDecision.pending:
-            raise HumanReviewAlreadyResolvedError("Human review was already resolved.")
-        if review.reviewer_id is not None and review.reviewer_id != reviewer.id:
-            raise HumanReviewAssignmentConflictError(
-                "Human review is assigned to another reviewer."
-            )
+        review = pending_review(
+            self.db, workspace_id=workspace_id, review_id=review_id, reviewer=reviewer
+        )
         review.reviewer_id = None
-        self.db.commit()
-        self.db.refresh(review)
-        return review
+        return commit_review(self.db, review=review, reviewer=reviewer, action="released")
 
     def resolve(
         self,
@@ -190,101 +179,17 @@ class HumanReviewService:
         edited_answer: str | None,
         comments: str | None,
     ) -> HumanReview:
-        review = self.get_review(workspace_id=workspace_id, review_id=review_id)
-        if review.reviewer_decision != ReviewDecision.pending:
-            raise HumanReviewAlreadyResolvedError("Human review was already resolved.")
-        if review.reviewer_id is not None and review.reviewer_id != reviewer.id:
-            raise HumanReviewAssignmentConflictError(
-                "Human review is assigned to another reviewer."
-            )
-        if decision == ReviewDecision.approved and not review.proposed_answer:
-            raise HumanReviewInvalidDecisionError(
-                "Cannot approve a review without a proposed answer."
-            )
-        if decision == ReviewDecision.edited and not edited_answer:
-            raise HumanReviewInvalidDecisionError("Edited reviews require an edited answer.")
+        review = pending_review(
+            self.db, workspace_id=workspace_id, review_id=review_id, reviewer=reviewer
+        )
+        validate_review_answer(self.db, review, decision, edited_answer, reviewer)
         review.reviewer_id = reviewer.id
         review.reviewer_decision = decision
         review.edited_answer = edited_answer
         review.comments = comments
         review.resolved_at = datetime.now(UTC)
-        self._apply_review_decision_to_run(review=review, reviewer=reviewer)
-        self.db.commit()
-        self.db.refresh(review)
-        return review
-
-    def _apply_review_decision_to_run(self, *, review: HumanReview, reviewer: User) -> None:
-        run = self.db.scalar(
-            select(GraphRun).where(
-                GraphRun.workspace_id == review.workspace_id,
-                GraphRun.id == review.graph_run_id,
-            )
-        )
-        if run is None:
-            return
-        final_answer = _final_answer_for_review(review)
-        if review.reviewer_decision in {ReviewDecision.approved, ReviewDecision.edited}:
-            run.status = GraphRunStatus.completed
-            run.route_decision = f"human_{review.reviewer_decision.value}"
-            run.final_answer = final_answer
-        else:
-            run.status = GraphRunStatus.failed
-            run.route_decision = "human_rejected"
-            run.final_answer = None
-        run.completed_at = review.resolved_at
-        self.db.add(
-            Checkpoint(
-                workspace_id=review.workspace_id,
-                graph_run_id=review.graph_run_id,
-                checkpoint_key=f"human_review_{review.reviewer_decision.value}:after",
-                state_json=json.dumps(
-                    _review_checkpoint_state(review=review, run=run, reviewer=reviewer),
-                    ensure_ascii=False,
-                    default=str,
-                ),
-            )
-        )
-
-
-def _final_answer_for_review(review: HumanReview) -> str | None:
-    if review.reviewer_decision == ReviewDecision.approved:
-        return review.proposed_answer
-    if review.reviewer_decision == ReviewDecision.edited:
-        return review.edited_answer
-    return None
-
-
-def _review_checkpoint_state(*, review: HumanReview, run: GraphRun, reviewer: User) -> dict:
-    return {
-        "input_message": run.input_message,
-        "detected_language": run.language,
-        "route_decision": run.route_decision,
-        "final_answer": run.final_answer,
-        "human_review": {
-            "review_id": str(review.id),
-            "reviewer_id": str(reviewer.id),
-            "decision": review.reviewer_decision.value,
-            "reason": review.reason,
-            "comments": review.comments,
-        },
-        "checkpoint": {
-            "completed_step": f"human_review_{review.reviewer_decision.value}",
-            "status": "succeeded" if run.status == GraphRunStatus.completed else "failed",
-            "error_message": None,
-            "state_keys": [
-                "input_message",
-                "detected_language",
-                "route_decision",
-                "final_answer",
-                "human_review",
-            ],
-            "retrieved_chunk_count": 0,
-            "citation_count": 0,
-            "has_draft_answer": bool(review.proposed_answer),
-            "has_final_answer": bool(run.final_answer),
-        },
-    }
-
+        apply_review_decision(self.db, review=review, reviewer=reviewer)
+        return commit_review(self.db, review=review, reviewer=reviewer, action="resolved")
 
 def _reason_contains_any(reasons: tuple[str, ...]):
     return or_(*[HumanReview.reason.ilike(f"%{reason}%") for reason in reasons])

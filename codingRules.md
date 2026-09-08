@@ -25,7 +25,7 @@ File size and structure constraints:
 * If a file would exceed 300 lines, stop and propose a split before continuing.
 * If a component/service grows beyond one clear responsibility, split it.
 * If a diff touches more than 5 files or exceeds 300 lines, explain why before implementing.
-* If the task requires a larger change, break it into milestones and stop after one milestone.
+* If the task requires a larger change, break it into milestones and verify each before continuing within the authorized scope.
 * Prefer vertical feature slices: frontend UI, API client, backend route/service, tests — only as needed for the current behavior.
 
 Before editing:
@@ -45,7 +45,7 @@ Before editing:
    * database/repository
    * tests
 6. Identify any file that risks becoming too large or too coupled.
-7. Wait for approval if the change is large, ambiguous, or crosses multiple layers.
+7. Resolve blocking ambiguity before implementation; request approval only when the proposed action exceeds existing authorization.
 
 During implementation:
 

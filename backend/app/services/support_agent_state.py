@@ -10,6 +10,10 @@ class SupportAgentState(TypedDict, total=False):
     input_message: str
     agent_token_budget: int
     agent_settings: dict
+    attempt_instructions: str
+    task_history: dict
+    requested_language: str | None
+    language_source: str
     detected_language: str
     intent: str
     sentiment: str

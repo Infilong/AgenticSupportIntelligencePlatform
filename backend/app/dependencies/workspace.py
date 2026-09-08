@@ -59,7 +59,7 @@ def require_workspace_owner(
 
 
 def require_workspace_permission(
-    permission: str,
+    permission: str, *, requires_active_workspace: bool = False,
 ) -> Callable[[WorkspaceId, CurrentUser, DbSession], Workspace]:
     def dependency(
         workspace_id: WorkspaceId,
@@ -91,7 +91,8 @@ def require_workspace_permission(
             )
         archived_write_blocked = (
             workspace.archived_at is not None
-            and permission not in ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS
+            and (requires_active_workspace
+                 or permission not in ARCHIVED_WORKSPACE_ALLOWED_PERMISSIONS)
         )
         if archived_write_blocked:
             raise HTTPException(
