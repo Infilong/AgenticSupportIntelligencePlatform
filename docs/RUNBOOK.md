@@ -60,7 +60,8 @@ Original ignored backend/frontend/scripts files were moved into
 its contents were preserved individually. No old dependencies were copied into the new project.
 Other ignored `.artifacts` backups/runtimes remain in place.
 
-The old `asi-verification` stack uses ports 5173/8000/5432 and remains running.
+At the M0 checkpoint the old `asi-verification` stack was running on ports 5173/8000/5432.
+Recheck its current state before runtime operations; this observation is not a live status feed.
 The new namespace is `asi-rebuild-v1`; planned ports are 5180/8010/5440 and planned volumes must
 use that namespace. No new stack, schema or volumes were created at M0. Never use old data as
 disposable test data; never run `down -v` against the old project.

@@ -2,8 +2,8 @@
 
 Milestone: **M0 preparation complete**. Product implementation is not authorized by this task.
 Branch: `codex/fresh-start`. Starting revision: `c70f254562463b8cf8bc342e30d66f57e6058eb5`.
-The M0 checkpoint is the local commit titled `chore: prepare isolated V1 rebuild (M0)`;
-resolve its exact hash with `git log -1 --format=%H` after the checkpoint is created.
+The M0 checkpoint is `d3c8e4b1317507f8f0fd5e47d386cdfcb7d1e41c`
+(`chore: prepare isolated V1 rebuild (M0)`).
 The previous implementation goal is retired; do not resume it.
 
 ## Preparation evidence
@@ -17,7 +17,8 @@ The previous implementation goal is retired; do not resume it.
 - Final verification: 10 preparation tests passed; one Chromium environment test passed.
   All five PREP gates are satisfied for this local Windows preparation scope. Product gates
   remain NOT_IMPLEMENTED, and Linux/macOS preparation has not been verified.
-- Final command results and exact code fingerprint: `.artifacts/m0/summary.json`.
+- Latest working-tree results and fingerprint: `.artifacts/m0/summary.json` (mutable summary;
+  the timestamped underlying reports retain the checkpoint evidence).
 - Browser trace/screenshot and command evidence: timestamped directories under `.artifacts/m0/`.
 
 M0 verification is preparation only. All product gates in [ACCEPTANCE.md](ACCEPTANCE.md) are
@@ -36,6 +37,25 @@ before M2 tuning. No claim is made about production readiness or app usability.
   output directory is retained; it was not treated as an application/browser acceptance pass.
 
 ## Next exact action
+
+The user now authorizes frequent commits and pushes of coherent verified steps to the rebuild
+branch. Merge/deployment/live-spend authority is unchanged. The reusable
+[full rebuild goal](REBUILD_GOAL.md) includes this correction; product execution still awaits
+activation of that goal. The preparation documentation is ready for a branch checkpoint.
+
+[Independent preparation review](PREPARATION_REVIEW.md) records alignment, corrected
+instruction conflicts and remaining executable-harness gaps. It does not certify autonomous
+product delivery. M1 must prove the first real demand-to-browser-and-log verification loop.
+
+Post-M0 documentation follow-up: root instructions now route to local frontend, backend,
+evaluation, scripts, infrastructure and documentation guides. Shared execution guidance is in
+[DEVELOPMENT.md](DEVELOPMENT.md). This adds no product implementation or M1 authorization.
+The follow-up also makes Codex responsible for writing execution prompts, repairing from
+verification feedback and choosing the next slice within an authorized goal. The protocol
+has not yet been demonstrated on a complete product feature; M1 must provide that evidence.
+The original M0 evidence above belongs to the checkpoint; this documentation change makes its
+whole-repository fingerprint stale. Validate updated links/preparation checks separately;
+the browser environment probe does not need repeating for instruction-only edits.
 
 Stop after the M0 checkpoint and user review. On explicit M1 authorization, begin with an
 isolated runnable foundation: implement Compose/app/worker/database configuration, compatible

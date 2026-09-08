@@ -419,7 +419,9 @@ under 300 lines. Avoid generic frameworks, empty module hierarchies and parallel
 
 Initially this plan is the product/release contract. Add only:
 
-- `AGENTS.md`: short map, working commands and critical development boundaries.
+- `AGENTS.md`: concise director for scope, routing and coordination; no implementation recipes.
+  Each substantive area owns a linked local `AGENTS.md` for its rules and verification guidance.
+  The runbook owns working commands; design documents own implementation details.
 - `README.md`: setup and verified demo, updated as commands become executable.
 - `docs/ARCHITECTURE.md`: actual components, state ownership and durable decisions.
 - `docs/ACCEPTANCE.md`: stable gates and associated checks.
@@ -506,8 +508,9 @@ browser or provider check stays visibly blocked/unverified rather than becoming 
 Resolve routine choices without repeated confirmation. Ask for credentials/access, explicit
 live spending, destructive changes, or material scope/security/architecture changes. Maintained
 dependencies needed by the approved stack are permitted once this plan becomes the active goal.
-Do not install third-party Codex skills. Local checkpoint commits are permitted; new pushes,
-merges, public deployment and migration of old data require authorization.
+Do not install third-party Codex skills. Commit and push each coherent verified slice to the
+working rebuild branch. Merges, public deployment and migration of old data require separate
+authorization. Follow DEVELOPMENT for staged review, remote confirmation and CI feedback.
 
 ## 13. Definition of done
 
