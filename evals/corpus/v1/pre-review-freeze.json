@@ -1,0 +1,27 @@
+{
+  "files": {
+    "corpus/v1/manifest.json": "9879184d33544a9c45d257a984f2d17c5a55eeae5be6c895b6e61bef132db078",
+    "cases/retrieval-v1.json": "cebf3605735e19a1017ce38240b1909422e95d2e770a011c52d4695db0a4ef26",
+    "corpus/v1/README.md": "ebc36546659efcd63677a4a680c48b872fb0dd53182f81df2707236b80092b24",
+    "fixtures/policies/refunds-en-v1.md": "08c49adae903186fd44322b348c26e325522c4df0c350e14a60991f595f41842",
+    "fixtures/policies/refunds-en-v2.md": "71222f161373d17225e25246e1bcc4dabb94eab34c4c093e2c43134af5a436ee",
+    "fixtures/policies/refunds-ja-v2.md": "f8aeba39f81f9ff5a171fc65f4550ecb05fa33ac62245b9876ded5368092f478",
+    "fixtures/policies/refunds-zh-v2.md": "b0f836c2ee17e9037f6c009a4a0d3c62a479fe96846010d04c26e6b7fbb3fec6",
+    "fixtures/policies/incidents-en-v1.md": "105090ded8369d53a24312549cbadc93eb052f094159910f9da5455ac9357075",
+    "corpus/v1/customer-handbook-en.md": "c1c28e9a3964aacb79edf5947e15a821fe9e764cd0cc71ec09d5bc551f568f92",
+    "corpus/v1/service-operations-en.md": "03812e89e3e4da7ca7421cc263efbd48597dc14f805a77aa014a62bbca0db993",
+    "corpus/v1/operations-ja.md": "5ebf34e5e8b666475e209d641bb58ffdda668083e3b5503ca073a9fd54f701e4",
+    "corpus/v1/operations-zh.md": "6f26ae258db76a18cd549bb48636cd1be6f62429303663dc6c1a8f362846050c",
+    "corpus/v1/trial-conflict-en.md": "e4c0809732bb2fa790a749bddf7c12bba372dd4e69649f393982cfc189ad6fa9",
+    "corpus/v1/withdrawn-support-en.md": "3a4bdefa49cc72765b0cbb16ea878cf650f53fd0dacf0647d7b10349ed0b0927",
+    "corpus/v1/foreign-private-en.md": "9b2847573382b20461171c5d54a46523ec9c7a91b93ec20ccdf770ace8194107"
+  },
+  "source_bytes": 81502,
+  "english_style_words": 10129,
+  "cjk_characters": 3997,
+  "page_equivalents": 38.2,
+  "recall_at": 5,
+  "overall_target": 0.9,
+  "language_target": 0.8,
+  "warm_p95_seconds": 3
+}

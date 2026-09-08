@@ -18,3 +18,13 @@ Before tuning: expand to at least ten cases per language and a coherent 30–50-
 policy corpus; add genuine active conflicts, boundary days, renewals, and withdrawn evidence.
 Freeze thresholds, denominators and source-equivalence mapping in ACCEPTANCE.md before live tuning.
 Model grading is auxiliary. Keep representative answers for human support/citation review.
+
+## M2 frozen corpus
+
+The expanded [v1 corpus and scoring protocol](corpus/v1/README.md) now contains two substantial
+company manuals, selected Japanese/Chinese translations, historical/withdrawn/foreign sources
+and an active policy conflict. It totals 81,502 bytes and 38.2 page equivalents under the
+recorded convention. Thirty fixed cases and factual spans are independent evaluator inputs.
+Run `python evals/freeze_retrieval.py` to check its frozen hashes. Initial review snapshots are
+retained separately; all strengthening occurred before the first retrieval measurement.
+Actual application retrieval measurement is pending; corpus size is not a quality result.

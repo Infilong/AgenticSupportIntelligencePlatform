@@ -213,3 +213,11 @@ With the real runtime/model ready, run `npx playwright test tests/e2e/knowledge.
 `frontend`, with `PLAYWRIGHT_BROWSERS_PATH` set to the prepared `.artifacts/browsers` and
 `ASI_EVIDENCE_DIR` to an ignored output directory. This suite uses actual CPU embeddings;
 it creates a synthetic travel policy and does not run in baseline CI without model preparation.
+
+For the full frozen retrieval corpus, run `python evals/freeze_retrieval.py`, then
+`uv run --project backend --frozen python evals/run_retrieval.py` from the repository root.
+Requires `up`, `seed-demo` and `prepare-model`. It verifies API/worker container source hashes,
+creates new isolated synthetic evaluation workspaces, uploads/indexes all sources through the
+API and runs fixed multilingual queries. It preserves reports under `.artifacts/m2/retrieval-eval-*`.
+Expected facts are read only by the evaluator. The run includes real local embeddings and
+PostgreSQL, not live generation; it does not authorize or require a paid API.

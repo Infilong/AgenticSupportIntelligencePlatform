@@ -102,3 +102,12 @@ Sources: [model card](https://huggingface.co/intfloat/multilingual-e5-small),
   reloads clear protected document details. Successful uploads reset the native picker and search
   results retain their submitted query label. Final build and repaired browser journeys 2/2 passed
   at `.artifacts/m2/knowledge-ui-repaired`, including exact-version/offset navigation.
+- Knowledge UI pushed `c9053a8`; CI `34248740061` passed. Expanded corpus: 81,502 bytes,
+  10,129 English-style words and 3,997 CJK characters, 38.2 equivalents under the fixed
+  300-word/900-CJK-character convention. Two long English manuals plus selected JA/ZH policies;
+  not every long chapter has a translation. Thirty cases include 26 evidence-bearing cases.
+- Pre-measurement review strengthened section discovery with factual-span coverage, explicit
+  case-success/group-recall denominators, top-five enforcement, timing protocol and targeted
+  leakage probes. Initial freeze snapshots are retained; no measurement preceded corrections.
+  Runner checks actual API/worker code hashes and image IDs against the host backend before
+  attributing results. Synthetic provisioning creates new workspaces without changing old roles.

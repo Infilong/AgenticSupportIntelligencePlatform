@@ -41,6 +41,9 @@ backend slice is being checkpointed before knowledge UI and long-corpus evaluati
 Retrieval pushed `f04b86f`; CI `34247160191` passed. Knowledge UI is implemented and actual
 upload/search/preview/withdrawal/restore plus mobile viewer journeys passed (2/2); existing
 browser regression suite passed (5/5). UI review/checkpoint is active; long corpus remains next.
+Knowledge UI pushed `c9053a8`; CI `34248740061` passed. The substantial 38.2-page-equivalent
+corpus and 30-case multilingual evaluation are prepared and reviewed. Actual corpus retrieval
+measurement is next; factual coverage, isolation and latency must pass independently of setup.
 
 ## Verified baseline and remaining gaps
 

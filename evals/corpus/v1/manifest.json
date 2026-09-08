@@ -1,0 +1,18 @@
+{
+  "synthetic": true,
+  "version": "retrieval-v1",
+  "documents": [
+    {"id":"refund-en-v1","family":"refund-en","language":"en","state":"superseded","path":"fixtures/policies/refunds-en-v1.md"},
+    {"id":"refund-en-v2","family":"refund-en","language":"en","state":"active","path":"fixtures/policies/refunds-en-v2.md"},
+    {"id":"refund-ja-v2","family":"refund-ja","language":"ja","state":"active","path":"fixtures/policies/refunds-ja-v2.md"},
+    {"id":"refund-zh-v2","family":"refund-zh","language":"zh","state":"active","path":"fixtures/policies/refunds-zh-v2.md"},
+    {"id":"incidents-en","family":"incidents-en","language":"en","state":"active","path":"fixtures/policies/incidents-en-v1.md"},
+    {"id":"customer-handbook","family":"customer-handbook","language":"en","state":"active","path":"corpus/v1/customer-handbook-en.md"},
+    {"id":"service-operations","family":"service-operations","language":"en","state":"active","path":"corpus/v1/service-operations-en.md"},
+    {"id":"operations-ja","family":"operations-ja","language":"ja","state":"active","path":"corpus/v1/operations-ja.md"},
+    {"id":"operations-zh","family":"operations-zh","language":"zh","state":"active","path":"corpus/v1/operations-zh.md"},
+    {"id":"trial-conflict","family":"trial-conflict","language":"en","state":"active","path":"corpus/v1/trial-conflict-en.md"},
+    {"id":"withdrawn-support","family":"withdrawn-support","language":"en","state":"withdrawn","path":"corpus/v1/withdrawn-support-en.md"},
+    {"id":"foreign-private","family":"foreign-private","language":"en","state":"foreign","path":"corpus/v1/foreign-private-en.md"}
+  ]
+}
