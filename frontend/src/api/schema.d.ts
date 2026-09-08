@@ -228,6 +228,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspace_id}/retrieval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Search */
+        post: operations["search_api_workspaces__workspace_id__retrieval_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -314,6 +331,64 @@ export interface components {
             email: string;
             /** Display Name */
             display_name: string;
+        };
+        /** QueryInput */
+        QueryInput: {
+            /** Query */
+            query: string;
+            /**
+             * Limit
+             * @default 5
+             */
+            limit: number;
+        };
+        /** RetrievalResult */
+        RetrievalResult: {
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Status */
+            status: string;
+            /** Results */
+            results: components["schemas"]["RetrievedPassage"][];
+        };
+        /** RetrievedPassage */
+        RetrievedPassage: {
+            /**
+             * Chunk Id
+             * Format: uuid
+             */
+            chunk_id: string;
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Title */
+            title: string;
+            /** Section */
+            section: string;
+            /** Text */
+            text: string;
+            /** Start Offset */
+            start_offset: number;
+            /** End Offset */
+            end_offset: number;
+            /** Checksum */
+            checksum: string;
+            /** Cosine Similarity */
+            cosine_similarity: number;
+            /** Rank Score */
+            rank_score: number;
         };
         /** RoleChange */
         RoleChange: {
@@ -882,6 +957,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_workspaces__workspace_id__retrieval_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetrievalResult"];
                 };
             };
             /** @description Validation Error */

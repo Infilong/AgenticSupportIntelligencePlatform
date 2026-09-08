@@ -35,6 +35,9 @@ Embedding slice pushed as `b8d04bf`; CI `34242469472` passed. Knowledge ingestio
 ingestion stored vectors and model-call accounting and preserved the original file. Bounded
 splitting refinement is under final runtime recheck. Retrieval API, knowledge UI, long-corpus
 evaluation and generation workflow remain incomplete; this is not a completed RAG claim.
+Ingestion pushed `59fc6c9`, CI `34245863644` passed. Real retrieval API smoke now passed,
+including exact source-span verification; 35 PostgreSQL integration tests pass. Retrieval
+backend slice is being checkpointed before knowledge UI and long-corpus evaluation.
 
 ## Verified baseline and remaining gaps
 

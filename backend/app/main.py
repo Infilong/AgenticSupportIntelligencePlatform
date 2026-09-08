@@ -11,6 +11,7 @@ from app.core.request_logging import RequestLogging
 from app.core.settings import Settings
 from app.db.engine import make_engine
 from app.modules.identity.routes import router as identity_router
+from app.modules.knowledge.retrieval_routes import router as retrieval_router
 from app.modules.knowledge.routes import router as knowledge_router
 from app.modules.workspaces.routes import router as workspace_router
 
@@ -35,6 +36,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(identity_router)
     app.include_router(workspace_router)
     app.include_router(knowledge_router)
+    app.include_router(retrieval_router)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, error):

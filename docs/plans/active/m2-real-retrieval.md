@@ -76,3 +76,17 @@ Sources: [model card](https://huggingface.co/intfloat/multilingual-e5-small),
 - Final bounded-splitter CPU ingestion passed:
   `.artifacts/m0/ingestion-20260908T153529065817Z`. Frontend generated contract/build,
   preparation 14/14, Ruff and documentation checks passed. Full retrieval evaluation remains next.
+- Ingestion pushed `59fc6c9`; CI `34245863644` passed. Retrieval API now performs exact
+  PostgreSQL cosine ranking with a lexical-overlap boost (not BM25), returning bounded exact
+  passages and recording query embedding/retrieval metadata. Permission is checked before
+  embedding and again under the workspace lock before reading source candidates.
+- PostgreSQL integration 35/35 passed at `.artifacts/m0/integration-20260908T154451968045Z`,
+  including best-scoring foreign chunks, replacement/withdrawal and mid-query revocation.
+  Initial lexical comparator failure was fixed using PostgreSQL ARRAY rather than generic ARRAY.
+- Real query smoke returned the 14-day policy and verified all five passage offsets against
+  source previews. Trace `0fd9cc46-89fc-4d14-bf61-7eb4829a6a01`: 2,647.03 ms cold total,
+  13 query embedding tokens. Not a corpus-quality or p95 result. Initial probe invocation used
+  the wrong cwd; corrected to backend. Preserve `.artifacts/m2-retrieval-smoke.log` failure.
+- Independent review: no P0/P1 filtering bug. Matched ORM unique constraint to migration;
+  added adversarial foreign-chunk test. Abandoned synchronous retrieval/model-call records
+  still need uncertain-state reconciliation in observability work; never call them completed.

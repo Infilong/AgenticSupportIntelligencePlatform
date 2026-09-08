@@ -9,7 +9,16 @@ from app.providers.local_embeddings import MODEL, REVISION
 
 
 def encode_recorded(
-    engine, provider, workspace_id, actor_id, texts, kind, job_id=None, job_attempt=None, authorize=None
+    engine,
+    provider,
+    workspace_id,
+    actor_id,
+    texts,
+    kind,
+    job_id=None,
+    job_attempt=None,
+    authorize=None,
+    retrieval_id=None,
 ):
     with Session(engine, expire_on_commit=False) as db, db.begin():
         if authorize:
@@ -19,6 +28,7 @@ def encode_recorded(
             actor_id=actor_id,
             job_id=job_id,
             job_attempt=job_attempt,
+            retrieval_id=retrieval_id,
             operation="embed_" + kind,
             provider="local_cpu",
             model=MODEL,

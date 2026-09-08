@@ -195,3 +195,14 @@ document, 500 MiB retained originals, 50,000 retained chunks per workspace, 1,00
 Splitting checks cancellation between bounded 8,000-character blocks and preserves section and
 normalized Unicode character offsets. Opaque ASCII tokens longer than 4,096 characters fail.
 Original bytes and checksum remain available separately from normalized text.
+
+## Real retrieval smoke
+
+After indexing the policy, run `uv run --frozen python -m app.retrieval_probe` from `backend`.
+The authenticated API embeds the query locally, searches actual PostgreSQL vectors and returns
+exact passages. The probe checks the standard refund rule and resolves every returned span.
+This one-policy smoke does not replace frozen multilingual corpus evaluation.
+Search returns candidates, not an asserted supported answer. Ranking uses cosine distance
+with a lexical-overlap boost and reciprocal rank fusion; it is not BM25. Each search records
+a protected workspace trace and linked embedding attempt. Queries are limited to 1,000
+characters and the model's 512-token cap; at most ten passages may be returned.
