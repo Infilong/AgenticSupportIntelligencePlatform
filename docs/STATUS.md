@@ -55,6 +55,8 @@ Final stable-source verification passed at `.artifacts/m2/retrieval-eval-2026090
 foreign request 404. Runtime/source fingerprints matched. Backend 16/16, PostgreSQL 43/43,
 harness 19/19 and real knowledge browser journeys 2/2 passed. This verifies frozen-corpus local
 retrieval, not generated answers or general production readiness. Development cited draft is next.
+Retrieval repair pushed as `01ee83f`; CI `34254935876` passed. The UI now labels only responses
+as simulated. Rebuilt desktop/mobile journeys passed at `.artifacts/m2/provider-label-rebuilt-ui`.
 
 ## Verified baseline and remaining gaps
 

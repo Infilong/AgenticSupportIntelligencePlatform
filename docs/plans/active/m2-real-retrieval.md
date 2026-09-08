@@ -151,3 +151,12 @@ Sources: [model card](https://huggingface.co/intfloat/multilingual-e5-small),
   leaks; foreign request 404; unchanged source/runtime fingerprints. Generation and workflow
   outcomes remain NOT_VERIFIED. This corpus is a regression/acceptance set used during tuning,
   not an unseen generalization benchmark. No paid model calls were made.
+- Retrieval pushed `01ee83f`; CI `34254935876` passed. Actual database ledger inspection
+  (`.artifacts/m2/rerank-runtime-ledger.txt`) found 14 passage embedding batches, 33 query
+  embeddings and 33 reranking calls, all local/succeeded with recorded tokens/durations and
+  zero external charge. Explicit two-model preparation passed at
+  `.artifacts/m0/prepare-model-20260908T170804920142Z`.
+- Changed the ambiguous "Simulated AI" badge to "Simulated responses". Initial browser
+  screenshots exposed an outdated frontend container; rebuilt it and added a visible-mode
+  assertion to the knowledge journey. Final build and 2/2 desktop/mobile journeys passed at
+  `.artifacts/m2/provider-label-rebuilt-ui`; the new mobile screenshot was visually inspected.

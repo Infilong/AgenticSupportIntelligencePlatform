@@ -9,6 +9,7 @@ async function login(page: Page, role: string) {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByRole('link', { name: 'Knowledge', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Knowledge', exact: true })).toBeVisible();
+  await expect(page.getByText('Simulated responses · Development', { exact: true })).toBeVisible();
 }
 
 test('real upload, source preview, search, replacement failure and withdrawal', async ({ page }) => {

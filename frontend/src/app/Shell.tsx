@@ -36,7 +36,7 @@ export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: U
       <nav aria-label="Main navigation"><NavLink to={base} end><Inbox size={19} />Workbench</NavLink>
         <NavLink to={`${base}/knowledge`}><BookOpen size={19} />Knowledge</NavLink>
         {workspace.role === 'admin' && <NavLink to={`${base}/members`}><Settings size={19} />Members</NavLink>}</nav>
-      <div className="sidebar-bottom"><span className="mode-badge">Simulated AI · Development</span>
+      <div className="sidebar-bottom"><span className="mode-badge">Simulated responses · Development</span>
         <div className="identity"><span className="avatar">{user.display_name.slice(0, 1)}</span><div><strong>{user.display_name}</strong><span>{user.email}</span></div></div>
         <button className="quiet" onClick={signOut}><LogOut size={17} />Sign out</button></div>
     </aside>
