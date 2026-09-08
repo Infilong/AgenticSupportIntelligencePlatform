@@ -1,87 +1,66 @@
 # Current status
 
-Goal: **M1–M6 authorized and active**. Current milestone: M2 real retrieval.
+Goal: **M1–M6 authorized and active; not complete**. Current milestone: M2.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M2 execution plan](plans/active/m2-real-retrieval.md) owns current slices and next steps;
-[M1 history](plans/active/m1-foundation.md) retains foundation decisions and evidence.
+[M2 execution plan](plans/active/m2-real-retrieval.md) owns current decisions and evidence;
+[M1 history](plans/active/m1-foundation.md) retains foundation work.
 Normal verified commits/pushes to this branch are authorized. No merge/deploy/paid API authority.
+The existing unattended cutoff is **2026-09-08 17:34 UTC**; this checkpoint does not extend it.
 
-## Current work
+## Verified current behavior
 
-Harness pushed at `a8308bf`; all 13 local regression tests and CI run `34233220196` passed
-on Windows and Ubuntu. The isolated API/database now starts and migrates with pgvector enabled.
-Two backend tests and lint passed. Real database outage/recovery and request log correlation
-passed; source-linked runtime evidence lives in `.artifacts/m1/runtime-<timestamp>/`.
-Foundation pushed as `2dd4048`; backend/preparation CI run `34234381342` passed.
-Session/workspace APIs and PostgreSQL security tests are implemented; independent review
-fixes are applied; 14 real PostgreSQL integration tests pass. Auth was pushed as `7d5e63d`;
-CI run `34236314227` passed. Browser login/workspace/member UI and synthetic provisioning now
-work with the real API/database. Five application browser journeys, two component tests,
-TypeScript/build, two backend tests and 14 PostgreSQL tests pass. Chrome desktop/mobile
-inspection and console check completed. UI slice final review/push is in progress.
-UI pushed as `690f9dd`; CI `34239190845` passed all jobs, including the actual browser suite.
-Worker foundation now exists; 23 PostgreSQL integration tests pass, including lease takeover,
-concurrent claims/enqueue, rollback, cancellation and mid-handler revocation. The separate worker
-processed a diagnostic in one attempt and all four containers are healthy. Worker slice review/push
-is in progress. Real document ingestion/retrieval is M2; release gates remain incomplete.
-Worker pushed as `5749308`; CI `34240525106` passed. M2 CPU embedding preparation is active:
-actual EN/JA/ZH vectors were produced with the pinned model; warm query smoke latency was 47 ms.
-Six backend unit tests and 23 PostgreSQL tests pass with the new dependency lock. Docker model
-preparation now passed in the app volume (warm query 15.24 ms). Document ingestion and real
-retrieval acceptance remain to complete; embedding smoke success is not a RAG quality result.
-Continue through the full goal within authority; no milestone-by-milestone approval is needed.
-Embedding slice pushed as `b8d04bf`; CI `34242469472` passed. Knowledge ingestion now has
-11 passing unit tests and 30 passing PostgreSQL integration tests. Actual API→worker→CPU-model
-ingestion stored vectors and model-call accounting and preserved the original file. Bounded
-splitting refinement is under final runtime recheck. Retrieval API, knowledge UI, long-corpus
-evaluation and generation workflow remain incomplete; this is not a completed RAG claim.
-Ingestion pushed `59fc6c9`, CI `34245863644` passed. Real retrieval API smoke now passed,
-including exact source-span verification; 35 PostgreSQL integration tests pass. Retrieval
-backend slice is being checkpointed before knowledge UI and long-corpus evaluation.
-Retrieval pushed `f04b86f`; CI `34247160191` passed. Knowledge UI is implemented and actual
-upload/search/preview/withdrawal/restore plus mobile viewer journeys passed (2/2); existing
-browser regression suite passed (5/5). UI review/checkpoint is active; long corpus remains next.
-Knowledge UI pushed `c9053a8`; CI `34248740061` passed. The substantial 38.2-page-equivalent
-corpus and 30-case multilingual evaluation are prepared and reviewed. Actual corpus retrieval
-measurement is next; factual coverage, isolation and latency must pass independently of setup.
-Corpus checkpoint pushed `d8870bd`; CI `34251685801` passed. First actual frozen evaluation
-failed quality: EN 8/8, JA 6/9 and ZH 6/9 evidence cases; 20/27 section groups found.
-Warm p95 was 0.156 seconds, with zero forbidden source leaks and denied foreign access (404).
-Evidence: `.artifacts/m2/retrieval-eval-20260908T163239Z/report.json`. Cross-language ranking
-repair now includes a real local reranker over 20 authorized vector candidates. Diagnostic
-coverage improved to 26/26 evidence cases and 27/27 section groups at p95 2.48 seconds.
-Final stable-source verification passed at `.artifacts/m2/retrieval-eval-20260908T170142Z`:
-26/26 evidence cases, 27/27 source groups, warm p95 2.5 seconds, zero forbidden leaks and
-foreign request 404. Runtime/source fingerprints matched. Backend 16/16, PostgreSQL 43/43,
-harness 19/19 and real knowledge browser journeys 2/2 passed. This verifies frozen-corpus local
-retrieval, not generated answers or general production readiness. Development cited draft is next.
-Retrieval repair pushed as `01ee83f`; CI `34254935876` passed. The UI now labels only responses
-as simulated. Rebuilt desktop/mobile journeys passed at `.artifacts/m2/provider-label-rebuilt-ui`.
+- Real login, sessions, workspace roles and server-enforced permissions.
+- PostgreSQL jobs with claims, leases, cancellation and fenced publication; one worker.
+- TXT/Markdown originals, versions, bounded background indexing, withdrawal and restore.
+- Real pinned local CPU embeddings and PostgreSQL/pgvector retrieval, followed by a measured
+  local multilingual reranker over 20 authorized candidates. No external API needed for search.
+- Knowledge upload/search/source inspection UI, including exact cited versions and offsets.
+- Persisted model identity, status, locally counted tokens, duration and zero external charge.
+- The UI labels **responses** as simulated; retrieval is real.
 
-## Verified baseline and remaining gaps
+## Current verification
 
-- M0 checkpoint: `d3c8e4b1317507f8f0fd5e47d386cdfcb7d1e41c`; 10 preparation tests and one
-  synthetic Chromium environment probe passed at that source snapshot. This was not app QA.
-- The previous implementation is archived and must remain untouched. Runtime observations
-  from M0 require reinspection before operations; no existing process is assumed live.
-- Thirty frozen EN/JA/ZH cases and a 38.2-page-equivalent corpus now exist. Actual knowledge
-  UI/API/worker flows are verified, but the multilingual retrieval quality gate failed.
-  Generation, agent workflows, restoration and the full release gates remain incomplete.
-- [Preparation review](PREPARATION_REVIEW.md) records earlier findings; this slice addresses
-  automated guide coverage and initial CI. Runtime and architecture enforcement remain open.
-- Evidence is timestamped under `.artifacts/m0/` for preparation checks; summaries are mutable
-  and whole-repository changes invalidate earlier source fingerprints.
+| Boundary | Evidence |
+| --- | --- |
+| Frozen retrieval | 26/26 evidence cases; 27/27 groups; EN 8/8, JA 9/9, ZH 9/9; warm p95 2.5 seconds; zero forbidden leaks; foreign request 404 |
+| Backend | 16 unit tests and 43 real PostgreSQL tests pass |
+| Harness | 19 preparation checks pass |
+| Knowledge UI | Two real desktop/mobile journeys pass; source/search screenshots inspected |
+| Frontend | TypeScript/build and two component tests pass; baseline browser suite also passed |
+| Models | Explicit preparation/inference passed for both pinned local models |
+| Git/CI | Retrieval `01ee83f`, CI `34254935876` passed; UI clarification `1a0e0e6`, CI `34255679023` passed |
 
-## Access and failures
+Final stable retrieval evidence: `.artifacts/m2/retrieval-eval-20260908T170142Z`.
+Final label/browser evidence: `.artifacts/m2/provider-label-rebuilt-ui`.
+Detailed command artifacts and prior failures are retained in the M2 execution record.
+No full production-readiness, generated-answer quality or completed release claim is supported.
 
-User currently has no API. Codex cannot act as the app's runtime API. No paid calls authorized;
-use explicit deterministic test providers while implementing real integration interfaces.
-User requests a Codex-assisted development handoff: app requests can be answered by this session
-and imported through the provider contract, with accurate provenance and separate verification.
-Generation API quality remains NOT_VERIFIED and cannot be passed from mocks or handoffs.
-Retrieval is implemented with real local multilingual embeddings, PostgreSQL vector indexing
-and document-derived passages. Its measured multilingual quality still needs improvement.
-M0 failures and repairs (Windows file handles, sandbox network access, UTF-8 capture) remain
-recorded in the preparation checkpoint/runbook; preserve failed evidence.
-Auth integration initially failed due to overridden PostgreSQL search_path connection options;
-the engine now preserves them and migrations commit explicitly. Failed reports remain in artifacts.
+## Failures and limits
+
+- Original multilingual ranking failed (20/26 cases); the unchanged frozen corpus now passes
+  after measured reranking. This set was used during tuning, not held out for generalization.
+- One revocation test failed initially. An indexed-source precondition was added; isolated
+  and full stable reruns pass, but the original intermittent cause is not established.
+- Early checks whose source files changed mid-run remain invalid as overall evidence even
+  when individual tests passed. Final verification ran against an unchanged snapshot.
+- Chrome lists the app tabs, but interactive screenshot capture timed out. New visual proof
+  comes from the actual application browser suite; do not call it a completed Chrome demo.
+- Upstream AnyIO and model cache-argument deprecation warnings remain visible.
+- Synchronous model/retrieval records abandoned by a process crash need reconciliation.
+- Generated responses, message processing, LangGraph checkpoints, review, imports, complete
+  observability, comparative evaluation and restoration remain incomplete.
+
+## Next connected slice
+
+Persist an original customer message and processing attempt, run real retrieval, pause for an
+explicit Codex-assisted development answer, then validate and persist a cited draft. Use the
+planned LangGraph/PostgreSQL checkpoint path; keep handoff waiting separate from human review.
+Recheck permissions and source validity on resume. Never import evaluation expected answers
+as runtime responses, invent API usage, or treat citation-ID validity as semantic support proof.
+Continue within the existing goal and time boundary; missing APIs do not block real local search.
+
+## Preserved history
+
+The old implementation/data/services and archive branch remain untouched. Foundation and
+knowledge milestones are documented in the owning execution records rather than repeated here.
+Future work must revalidate live services before operating on them.

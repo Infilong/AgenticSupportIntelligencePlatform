@@ -160,3 +160,40 @@ Sources: [model card](https://huggingface.co/intfloat/multilingual-e5-small),
   screenshots exposed an outdated frontend container; rebuilt it and added a visible-mode
   assertion to the knowledge journey. Final build and 2/2 desktop/mobile journeys passed at
   `.artifacts/m2/provider-label-rebuilt-ui`; the new mobile screenshot was visually inspected.
+
+## Next execution brief — persisted cited development draft
+
+Classification: deep; one implementation owner, bounded read-only security review.
+User outcome: enter an original EN/JA/ZH customer message, inspect actual retrieval, and obtain
+an explicitly attributed development draft with exact source links. Advances RAG/LANG/TRACE;
+does not complete semantic generation quality, ordinary human review or release gates.
+
+Use small message/run/handoff modules and the supported LangGraph PostgreSQL checkpointer.
+Graph: validate → retrieve → pack bounded context → development-generation interrupt →
+validate citations → persist draft. Keep jobs as scheduling, checkpoints as continuation,
+domain records as user-visible history. Do not create a competing temporary workflow engine.
+
+- Save immutable original text/requested language and message/run/job atomically. Operator/Admin
+  may submit; Viewer reads. Apply workspace composite references and the existing lock order.
+- Preserve prompt/config version, run/attempt identity, retrieval trace and context hash. A
+  handoff exports only authorized original input and bounded source snapshots, never test answers.
+- Pause as waiting for a development response, distinct from administrator review. The worker
+  must be released. Resume uses a server-derived graph thread and authenticated domain endpoint;
+  never accept arbitrary graph state from a client or unauthenticated file drop.
+- Bind submissions to handoff/context/revision. Same submission is idempotent; conflicting or
+  concurrent submissions fail. Recheck membership, cancellation and source validity before resume
+  and publication. Preserve changed evidence as history and require fresh retrieval for publication.
+- Validate citation ownership/version/checksum/exact quotes and offsets. This proves provenance,
+  not semantic support: keep an explicit support-review status and the result as a draft.
+- Attribute `codex_assisted_development`, contributor and handoff elapsed time. Do not invent an
+  OpenAI API model, billed tokens or inference latency. External generation remains NOT_VERIFIED.
+
+Verification: real API/UI/worker/retrieval/handoff/resume with one EN/JA/ZH example; restart while
+waiting; duplicate/concurrent response, foreign denial, withdrawn/replaced source and revocation
+tests. Read root/backend/frontend guides before edits, inspect current supported LangGraph APIs,
+and review replay semantics before introducing schema or checkpoint effects. The same graph
+will be extended in M3 for broader review/cancellation/retry behavior.
+
+Independent read-only design review confirmed these boundaries. This is a plan, not implemented
+message/graph behavior. Do not start a partial substitute if the existing unattended cutoff leaves
+insufficient time to implement and verify the connected slice; preserve this exact resume point.

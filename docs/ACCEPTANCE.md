@@ -1,8 +1,9 @@
 # Acceptance matrix
 
 M0 preparation gates are separate from product/release gates. PASS requires direct current
-evidence. NOT_IMPLEMENTED and NOT_VERIFIED are not equivalent to PASS. No live API calls are
-authorized at present; live quality remains LIVE_NOT_VERIFIED.
+evidence. NOT_IMPLEMENTED and NOT_VERIFIED are not equivalent to PASS. No paid API calls are
+authorized at present; external generation quality remains LIVE_NOT_VERIFIED. Real local
+embedding/retrieval quality has separate evidence and does not require an external API.
 
 ## Preparation gates
 
@@ -14,7 +15,7 @@ authorized at present; live quality remains LIVE_NOT_VERIFIED.
 | PREP-FIXTURES | Synthetic versioned sources resolve; cases cover three languages and cross-language evidence | `manage.py verify-prep` |
 | PREP-CONTRACT | Scope, topology, roles, gates, authority and next slice are explicit | Plan/docs review and local checkpoint |
 
-## Product gates — all NOT_IMPLEMENTED at M0
+## Product gates
 
 | ID | Pass/fail contract | Planned check, not yet executable |
 | --- | --- | --- |
@@ -38,16 +39,43 @@ applicable. Product checks use real PostgreSQL and application paths; determinis
 fakes cannot prove live semantic quality. Zero unauthorized disclosure is a mandatory security
 criterion, not an average score. Browser screenshots alone do not prove backend behavior.
 
+### Current partial evidence
+
+The table above is the release contract, not a claim that all gates passed. Current evidence
+and exact artifact paths are recorded in [status](STATUS.md) and the
+[M2 execution record](plans/active/m2-real-retrieval.md).
+
+- AUTH: implemented with API/database and browser tests. Full release-session/security matrix
+  remains to be checked with the completed application.
+- TENANT/JOB: foundation and knowledge paths have real PostgreSQL coverage, including
+  concurrent claims, lease takeover, revocation and source withdrawal/replacement. Future
+  message/graph/review paths have no implementation or proof yet.
+- KNOW: real TXT/Markdown upload, indexing, exact originals, versions, replacement failure,
+  withdrawal/restore and desktop/mobile knowledge journeys pass.
+- RAG: frozen local retrieval gate passes (26/26 evidence cases, 27/27 source groups,
+  zero forbidden leaks, 2.5-second warm p95). Cited generation and semantic claim support
+  remain unverified; therefore the full RAG gate is not complete.
+- LANG: cross-language retrieval is measured; response-language behavior remains unverified.
+- TRACE: real local embedding/reranking ledger entries exist; the complete processing UI,
+  generation accounting and abandoned synchronous-call reconciliation remain incomplete.
+- ROUTE/REVIEW/DATA/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
+
 ## Evaluation expansion gate before M2 tuning
 
-M0 has 15 seed cases and five source files, including one inactive version. It does not meet
-the release requirement of at least ten cases per language or a 30–50-page-equivalent corpus.
-Expand coverage before tuning: paraphrases, renewals, day boundaries, missing information,
-active conflicts, withdrawal, prompt injection, and cross-language retrieval.
+M0 started with 15 seed cases. M2 expanded and froze 30 cases (10 per language) and a
+38.2-page-equivalent synthetic corpus before measurement; see
+[the corpus contract](../evals/corpus/v1/README.md) and [freeze](../evals/corpus/v1/freeze.json).
+It covers renewals, day boundaries, active conflicts, withdrawal, document instructions and
+cross-language retrieval. Four cases concern generation/routing outcomes and are not counted
+as retrieval evidence cases.
 
 Before measuring improvements, record source-equivalence mapping, retrieval k, expected
 facts, scoring rubrics, per-language denominators, numeric pass thresholds and latency budgets.
-Thresholds are currently NOT_SET; selecting easier thresholds after seeing failures is not allowed.
+Frozen retrieval thresholds are at least 90% overall and 80% per language for both evidence-case
+success@5 and required-section-group recall@5, zero forbidden leaks, and warm p95 <= 3 seconds.
+The fixed denominators are 26 cases/27 groups. These thresholds were set before measurement;
+selecting easier thresholds after seeing failures is not allowed. Generation thresholds and
+three-pipeline comparisons remain separate pending work.
 If an approved criterion must change, record the change and obtain product approval.
 Compare identical case sets and compatible generation settings across all three pipelines.
 
