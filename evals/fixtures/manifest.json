@@ -1,0 +1,11 @@
+{
+  "synthetic": true,
+  "scope": "M0 seed only; not the full release corpus",
+  "documents": [
+    {"id":"refund-en","version":1,"language":"en","active":false,"path":"policies/refunds-en-v1.md"},
+    {"id":"refund-en","version":2,"language":"en","active":true,"path":"policies/refunds-en-v2.md"},
+    {"id":"refund-ja","version":2,"language":"ja","active":true,"path":"policies/refunds-ja-v2.md"},
+    {"id":"refund-zh","version":2,"language":"zh","active":true,"path":"policies/refunds-zh-v2.md"},
+    {"id":"incidents-en","version":1,"language":"en","active":true,"path":"policies/incidents-en-v1.md"}
+  ]
+}
