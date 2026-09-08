@@ -44,6 +44,17 @@ browser regression suite passed (5/5). UI review/checkpoint is active; long corp
 Knowledge UI pushed `c9053a8`; CI `34248740061` passed. The substantial 38.2-page-equivalent
 corpus and 30-case multilingual evaluation are prepared and reviewed. Actual corpus retrieval
 measurement is next; factual coverage, isolation and latency must pass independently of setup.
+Corpus checkpoint pushed `d8870bd`; CI `34251685801` passed. First actual frozen evaluation
+failed quality: EN 8/8, JA 6/9 and ZH 6/9 evidence cases; 20/27 section groups found.
+Warm p95 was 0.156 seconds, with zero forbidden source leaks and denied foreign access (404).
+Evidence: `.artifacts/m2/retrieval-eval-20260908T163239Z/report.json`. Cross-language ranking
+repair now includes a real local reranker over 20 authorized vector candidates. Diagnostic
+coverage improved to 26/26 evidence cases and 27/27 section groups at p95 2.48 seconds.
+Final stable-source verification passed at `.artifacts/m2/retrieval-eval-20260908T170142Z`:
+26/26 evidence cases, 27/27 source groups, warm p95 2.5 seconds, zero forbidden leaks and
+foreign request 404. Runtime/source fingerprints matched. Backend 16/16, PostgreSQL 43/43,
+harness 19/19 and real knowledge browser journeys 2/2 passed. This verifies frozen-corpus local
+retrieval, not generated answers or general production readiness. Development cited draft is next.
 
 ## Verified baseline and remaining gaps
 
@@ -51,8 +62,9 @@ measurement is next; factual coverage, isolation and latency must pass independe
   synthetic Chromium environment probe passed at that source snapshot. This was not app QA.
 - The previous implementation is archived and must remain untouched. Runtime observations
   from M0 require reinspection before operations; no existing process is assumed live.
-- Fifteen synthetic EN/JA/ZH cases exist. Full corpus, quality thresholds, live retrieval,
-  actual UI/API/worker flows, restoration and release gates remain incomplete.
+- Thirty frozen EN/JA/ZH cases and a 38.2-page-equivalent corpus now exist. Actual knowledge
+  UI/API/worker flows are verified, but the multilingual retrieval quality gate failed.
+  Generation, agent workflows, restoration and the full release gates remain incomplete.
 - [Preparation review](PREPARATION_REVIEW.md) records earlier findings; this slice addresses
   automated guide coverage and initial CI. Runtime and architecture enforcement remain open.
 - Evidence is timestamped under `.artifacts/m0/` for preparation checks; summaries are mutable
@@ -65,8 +77,8 @@ use explicit deterministic test providers while implementing real integration in
 User requests a Codex-assisted development handoff: app requests can be answered by this session
 and imported through the provider contract, with accurate provenance and separate verification.
 Generation API quality remains NOT_VERIFIED and cannot be passed from mocks or handoffs.
-Retrieval must be real: local multilingual embeddings, actual vector indexing and document-derived
-results will be implemented in M2. Local embedding quality must be measured independently.
+Retrieval is implemented with real local multilingual embeddings, PostgreSQL vector indexing
+and document-derived passages. Its measured multilingual quality still needs improvement.
 M0 failures and repairs (Windows file handles, sandbox network access, UTF-8 capture) remain
 recorded in the preparation checkpoint/runbook; preserve failed evidence.
 Auth integration initially failed due to overridden PostgreSQL search_path connection options;

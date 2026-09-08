@@ -9,16 +9,26 @@ from app.modules.knowledge.retrieval_models import RetrievalTrace
 from app.modules.knowledge.service import set_withdrawn
 from app.modules.usage.models import ModelCall
 from app.modules.workspaces.service import change_member
+from app.providers.local_reranker import InvalidRerankResult, RerankBatch
+from tests.integration.conftest import login
 from tests.integration.test_knowledge import TestEmbeddings, add_version, ingest
 
 
-def search(system, **kwargs):
+class TestReranker:
+    __test__ = False
+
+    def score(self, query, passages):
+        return RerankBatch([float(len(passages) - i) for i in range(len(passages))], 10, 1)
+
+
+def search(system, ranking_provider=None, **kwargs):
     return retrieve(
         system["engine"],
         system["workspace"],
         system["users"]["viewer"].id,
         "refund deadline",
         provider=TestEmbeddings(),
+        ranking_provider=ranking_provider or TestReranker(),
         **kwargs,
     )
 
@@ -41,8 +51,14 @@ def test_real_sql_vector_ranking_active_filters_and_ledger(system):
         trace = db.get(RetrievalTrace, result["trace_id"])
         assert trace.status == "succeeded" and trace.results
         assert "text" not in trace.results[0]
-        call = db.scalar(select(ModelCall).where(ModelCall.retrieval_id == trace.id))
+        call = db.scalar(
+            select(ModelCall).where(ModelCall.retrieval_id == trace.id, ModelCall.operation == "embed_query")
+        )
         assert call.status == "succeeded" and call.operation == "embed_query"
+        ranked = db.scalar(
+            select(ModelCall).where(ModelCall.retrieval_id == trace.id, ModelCall.operation == "rerank")
+        )
+        assert ranked.status == "succeeded" and ranked.input_tokens == 10
     with Session(system["engine"]) as db, db.begin():
         set_withdrawn(db, system["workspace"], system["users"]["admin"].id, first.document_id, True)
     assert str(second.id) not in {row["version_id"] for row in search(system)["results"]}
@@ -124,3 +140,94 @@ def test_revocation_during_embedding_prevents_source_materialization(system):
     with Session(system["engine"]) as db:
         trace = db.scalar(select(RetrievalTrace))
         assert trace.status == "failed" and trace.results == []
+
+
+@pytest.mark.parametrize("change", ["withdraw", "replace", "revoke"])
+def test_rerank_revalidates_sources_and_permissions_after_inference(system, change):
+    original = add_version(system)
+    ingest(system)
+    with Session(system["engine"]) as db:
+        assert db.scalar(select(Chunk).where(Chunk.version_id == original.id)) is not None
+
+    class Changed(TestReranker):
+        def score(self, query, passages):
+            if change == "replace":
+                add_version(system, b"# Replacement\nNew active policy.", original.document_id)
+                ingest(system)
+            elif change == "withdraw":
+                with Session(system["engine"]) as db, db.begin():
+                    set_withdrawn(
+                        db, system["workspace"], system["users"]["admin"].id, original.document_id, True
+                    )
+            else:
+                with Session(system["engine"]) as db:
+                    change_member(
+                        db,
+                        system["workspace"],
+                        system["users"]["admin"].id,
+                        system["users"]["viewer"].id,
+                        None,
+                    )
+            return super().score(query, passages)
+
+    if change == "revoke":
+        with pytest.raises(HTTPException) as failure:
+            search(system, ranking_provider=Changed())
+        assert failure.value.status_code == 404
+    else:
+        result = search(system, ranking_provider=Changed())
+        assert result["status"] == "sources_changed" and result["results"] == []
+    with Session(system["engine"]) as db:
+        call = db.scalar(select(ModelCall).where(ModelCall.operation == "rerank"))
+        assert call.status == "succeeded"  # Actual model work survives denied publication.
+
+
+@pytest.mark.parametrize("scores", [[], [float("nan")], [float("inf")]])
+def test_malformed_reranking_is_an_explicit_recorded_failure(system, scores):
+    add_version(system)
+    ingest(system)
+
+    class Malformed(TestReranker):
+        def score(self, *_):
+            return RerankBatch(scores, 10, 1)
+
+    with pytest.raises(InvalidRerankResult, match="malformed"):
+        search(system, ranking_provider=Malformed())
+    with Session(system["engine"]) as db:
+        assert db.scalar(select(ModelCall).where(ModelCall.operation == "rerank")).status == "failed"
+        trace = db.scalar(select(RetrievalTrace))
+        assert trace.status == "failed" and trace.results == []
+
+
+def test_foreign_sources_never_reach_reranker(system):
+    foreign = {
+        **system,
+        "workspace": system["foreign"],
+        "users": {**system["users"], "admin": system["users"]["other"]},
+    }
+    add_version(foreign, b"# Private\nForbidden marker.")
+    ingest(foreign)
+    own = add_version(system)
+    ingest(system)
+
+    class Inspected(TestReranker):
+        def score(self, query, passages):
+            assert len(passages) == 1 and "Forbidden marker" not in passages[0]
+            return super().score(query, passages)
+
+    assert search(system, ranking_provider=Inspected())["results"][0]["version_id"] == str(own.id)
+
+
+def test_internal_reranker_failure_is_not_reported_as_invalid_user_input(system, monkeypatch):
+    def broken(*args, **kwargs):
+        raise InvalidRerankResult("malformed scores")
+
+    monkeypatch.setattr("app.modules.knowledge.retrieval.retrieve", broken)
+    client = system["client"]
+    response = client.post(
+        f"/api/workspaces/{system['workspace']}/retrieval",
+        headers=login(client, "viewer"),
+        json={"query": "valid question", "limit": 5},
+    )
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Search scoring failed. Please retry."

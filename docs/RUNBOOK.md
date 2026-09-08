@@ -202,10 +202,18 @@ After indexing the policy, run `uv run --frozen python -m app.retrieval_probe` f
 The authenticated API embeds the query locally, searches actual PostgreSQL vectors and returns
 exact passages. The probe checks the standard refund rule and resolves every returned span.
 This one-policy smoke does not replace frozen multilingual corpus evaluation.
-Search returns candidates, not an asserted supported answer. Ranking uses cosine distance
-with a lexical-overlap boost and reciprocal rank fusion; it is not BM25. Each search records
-a protected workspace trace and linked embedding attempt. Queries are limited to 1,000
+Search returns candidates, not an asserted supported answer. Ranking retrieves the best 20
+authorized PostgreSQL cosine candidates, then scores question/passage pairs with the pinned
+local multilingual cross-encoder. The initial overlap-fusion baseline remains in git history;
+it is not BM25. Each search records a protected workspace trace and linked embedding/reranking
+attempts. Reranker input tokens are computed locally using its tokenizer, not provider billing.
+Pairs are bounded to 512 model tokens; original passages and offsets remain unchanged.
+Membership and current source versions are rechecked after scoring; changed sources cannot
+be published under replacement identities. Queries are limited to 1,000
 characters and the model's 512-token cap; at most ten passages may be returned.
+`prepare-model` now prepares both pinned local models. The reranker is
+`cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` at
+`1427fd652930e4ba29e8149678df786c240d8825`; runtime never downloads weights implicitly.
 
 Knowledge UI is at `/w/<workspace-id>/knowledge`. Admins upload/replace/withdraw/restore;
 viewers can inspect documents and search. The current file formats are TXT/Markdown only.

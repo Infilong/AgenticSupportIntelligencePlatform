@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.modules.identity.dependencies import CurrentUser
+from app.providers.local_reranker import InvalidRerankResult
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}/retrieval", tags=["retrieval"])
 
@@ -43,4 +44,6 @@ def search(workspace_id: UUID, payload: QueryInput, user: CurrentUser, request: 
     except ValueError as error:
         raise HTTPException(422, "Query cannot be embedded; shorten it and retry") from error
     except OSError as error:
-        raise HTTPException(503, "Local embedding model is unavailable") from error
+        raise HTTPException(503, "Local retrieval model is unavailable") from error
+    except InvalidRerankResult as error:
+        raise HTTPException(503, "Search scoring failed. Please retry.") from error

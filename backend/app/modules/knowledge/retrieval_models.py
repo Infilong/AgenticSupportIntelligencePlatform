@@ -16,7 +16,7 @@ class RetrievalTrace(Base):
     actor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     query: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="started")
-    strategy: Mapped[str] = mapped_column(String(64), default="cosine20-lexical20-rrf60-v1")
+    strategy: Mapped[str] = mapped_column(String(64), default="cosine20-mmarco-rerank-v2")
     results: Mapped[list] = mapped_column(JSONB, default=list)
     duration_ms: Mapped[float | None]
     error_code: Mapped[str | None] = mapped_column(String(64))

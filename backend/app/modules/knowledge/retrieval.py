@@ -9,10 +9,11 @@ from sqlalchemy.orm import Session
 from app.modules.knowledge.ingestion import SPACE, embeddings
 from app.modules.knowledge.models import Chunk, Document, DocumentVersion
 from app.modules.knowledge.retrieval_models import RetrievalTrace
-from app.modules.knowledge.splitting import lexical_terms
 from app.modules.workspaces.models import Workspace
 from app.modules.workspaces.service import membership
+from app.providers.local_reranker import MAX_CANDIDATES, reranker
 from app.providers.recorded_embeddings import encode_recorded
+from app.providers.recorded_reranking import score_recorded, start_reranking
 
 
 def access(db, workspace_id, actor_id):
@@ -23,7 +24,7 @@ def access(db, workspace_id, actor_id):
     membership(db, workspace_id, actor_id)
 
 
-def candidates(db, workspace_id, vector, query, limit):
+def candidates(db, workspace_id, vector):
     distance = Chunk.embedding.cosine_distance(vector)
     base = (
         select(Chunk, Document.title, DocumentVersion.checksum, distance.label("distance"))
@@ -36,24 +37,8 @@ def candidates(db, workspace_id, vector, query, limit):
             Chunk.workspace_id == workspace_id, Document.withdrawn.is_(False), Chunk.embedding_space == SPACE
         )
     )
-    semantic = list(db.execute(base.order_by(distance, Chunk.id).limit(20)))
-    terms = lexical_terms(query)
-    lexical = (
-        list(
-            db.execute(base.where(Chunk.lexical_terms.overlap(terms)).order_by(distance, Chunk.id).limit(20))
-        )
-        if terms
-        else []
-    )
-    fused, rows = {}, {}
-    for ranking in (semantic, lexical):
-        for rank, row in enumerate(ranking, start=1):
-            key = row[0].id
-            rows[key] = row
-            fused[key] = fused.get(key, 0) + 1 / (60 + rank)
     results = []
-    for key in sorted(fused, key=lambda key: (-fused[key], str(key)))[:limit]:
-        chunk, title, checksum, value = rows[key]
+    for chunk, title, checksum, value in db.execute(base.order_by(distance, Chunk.id).limit(MAX_CANDIDATES)):
         results.append(
             {
                 "chunk_id": str(chunk.id),
@@ -73,13 +58,13 @@ def candidates(db, workspace_id, vector, query, limit):
                 "end_offset": chunk.end_offset,
                 "checksum": checksum,
                 "cosine_similarity": 1 - value,
-                "rank_score": fused[key],
+                "rank_score": 1 - value,
             }
         )
     return results
 
 
-def retrieve(engine, workspace_id, actor_id, query, limit=5, provider=None):
+def retrieve(engine, workspace_id, actor_id, query, limit=5, provider=None, ranking_provider=None):
     query = query.strip()
     if not query or len(query) > 1000 or not 1 <= limit <= 10:
         raise HTTPException(422, "Use a query of 1–1000 characters and a limit of 1–10")
@@ -103,7 +88,32 @@ def retrieve(engine, workspace_id, actor_id, query, limit=5, provider=None):
         )
         with Session(engine) as db, db.begin():
             access(db, workspace_id, actor_id)
-            results = candidates(db, workspace_id, batch.vectors[0], query, limit)
+            snapshots = candidates(db, workspace_id, batch.vectors[0])
+            call_id = start_reranking(db, workspace_id, actor_id, trace_id) if snapshots else None
+        if snapshots:
+            scores = score_recorded(
+                engine, ranking_provider or reranker(), call_id, query, [row["text"] for row in snapshots]
+            )
+            for row, score in zip(snapshots, scores, strict=True):
+                row["rank_score"] = score
+        with Session(engine) as db, db.begin():
+            access(db, workspace_id, actor_id)
+            # Withdrawal/replacement may have completed while the local model was scoring.
+            active = {
+                str(value)
+                for value in db.scalars(
+                    select(Document.active_version_id).where(
+                        Document.workspace_id == workspace_id,
+                        Document.withdrawn.is_(False),
+                        Document.active_version_id.is_not(None),
+                        Document.id.in_([row["document_id"] for row in snapshots]),
+                    )
+                )
+            }
+            results = sorted(
+                [row for row in snapshots if row["version_id"] in active],
+                key=lambda row: (-row["rank_score"], row["chunk_id"]),
+            )[:limit]
             trace = db.get(RetrievalTrace, trace_id)
             trace.status = "succeeded"
             # Keep identifiers/scores, not duplicate protected passages in the trace.
@@ -114,7 +124,7 @@ def retrieve(engine, workspace_id, actor_id, query, limit=5, provider=None):
             return {
                 "trace_id": trace_id,
                 "duration_ms": trace.duration_ms,
-                "status": "candidates" if results else "no_sources",
+                "status": "candidates" if results else ("sources_changed" if snapshots else "no_sources"),
                 "results": results,
             }
     except Exception as error:

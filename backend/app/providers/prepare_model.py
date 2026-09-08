@@ -6,6 +6,9 @@ import sys
 from dataclasses import asdict
 
 from app.providers.local_embeddings import LocalEmbeddings
+from app.providers.local_reranker import MODEL as RERANK_MODEL
+from app.providers.local_reranker import REVISION as RERANK_REVISION
+from app.providers.local_reranker import LocalReranker
 
 
 def main():
@@ -20,6 +23,9 @@ def main():
         ]
     )
     query = provider.encode_batch(["What is the refund deadline?"], "query")
+    rank = LocalReranker(
+        cache_dir=os.environ.get("ASI_EMBEDDING_CACHE"), allow_download="--offline" not in sys.argv
+    ).score("What is the refund deadline?", ["Refund requests must arrive within fourteen days."])
     metadata = asdict(result)
     vectors = metadata.pop("vectors")
     norms = [sum(value * value for value in vector) ** 0.5 for vector in vectors]
@@ -35,6 +41,12 @@ def main():
                 "cosine_scores": scores,
                 "quality_gate": "not_evaluated",
                 "query_duration_ms": query.duration_ms,
+                "reranker": {
+                    "model": RERANK_MODEL,
+                    "revision": RERANK_REVISION,
+                    "duration_ms": rank.duration_ms,
+                    "scores": rank.scores,
+                },
             }
         )
     )

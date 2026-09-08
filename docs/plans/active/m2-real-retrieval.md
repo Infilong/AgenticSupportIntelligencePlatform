@@ -111,3 +111,43 @@ Sources: [model card](https://huggingface.co/intfloat/multilingual-e5-small),
   leakage probes. Initial freeze snapshots are retained; no measurement preceded corrections.
   Runner checks actual API/worker code hashes and image IDs against the host backend before
   attributing results. Synthetic provisioning creates new workspaces without changing old roles.
+- First frozen measurement failed: EN 8/8, JA 6/9, ZH 6/9 evidence cases; section groups
+  20/27. Warm p95 0.156 seconds; no forbidden-version leaks and foreign access returned 404.
+  Preserve `.artifacts/m2/retrieval-eval-20260908T163239Z/report.json` as the failed baseline.
+- Repair brief (normal scoped investigation): inspect raw semantic candidates before changing
+  ranking. Japanese trial-conflict sources occur at semantic ranks 15 and 17, below unrelated
+  same-language passages. Equal-weight overlap fusion further favors same-script results.
+  Experiment with a pinned local multilingual cross-encoder over bounded, authorized semantic
+  candidates; measure the same frozen cases before integrating. No fixture edits, translations
+  derived from expected answers, paid APIs or readiness claims. Keep the experiment separate
+  from app acceptance; integrate only with permission rechecks, ledger and regression coverage.
+- Local reranker experiment: 40 candidates recovered all 26 evidence cases/27 section groups
+  but p95 was 4.43 seconds; 20 candidates retained the same coverage at 2.48 seconds.
+  Evidence `.artifacts/m2/rerank40-results.json`, `rerank20-results.json`, `rerank20-summary.json`.
+  These are diagnostic measurements, not app acceptance. Selected the bounded 20-candidate
+  configuration, pinned model revision `1427fd652930e4ba29e8149678df786c240d8825`.
+- Implemented snapshot → local inference → permission/current-version revalidation, separate
+  reranking ledger, explicit source-change result, finite/count checks and internal-failure 503.
+  Independent read-only review found no P0/P1; internal-error-as-422 finding was fixed. Token
+  counts are locally computed, not provider billing. Frozen corpus and thresholds remain intact.
+- First integrated API measurement recovered 26/26 cases and 27/27 groups, p95 2.5 seconds,
+  zero leaks. `.artifacts/m2/retrieval-eval-20260908T165315Z` is NOT a final pass: concurrent
+  test-source edits invalidated its source fingerprint. Repeat on a stable snapshot.
+- First security suite had 41 passing/one failed revocation scenario; isolated rerun of all
+  three change scenarios passed with an explicit indexed-source precondition. Root cause of
+  that intermittent failure is not established. Preserve both reports; full-suite recheck pending.
+- Full-suite recheck executed 43/43 tests successfully, but documentation edits during the run
+  invalidated harness source-stability verification. Final checks must run after all edits stop;
+  do not confuse test success with an overall evidence-wrapper pass.
+- Final stable checks passed: PostgreSQL 43/43 at
+  `.artifacts/m0/integration-20260908T165923103696Z`, backend 16/16 at
+  `.artifacts/m0/backend-20260908T170045368182Z`, harness 19/19 at
+  `.artifacts/m0/prep-20260908T170122375591Z`; browser journeys 2/2 at
+  `.artifacts/m2/reranked-knowledge-ui`. Build/component tests passed; desktop/mobile artifacts
+  were visually inspected. Chrome tab listing works, but interactive screenshot capture timed
+  out twice; new visual proof comes from the application browser suite, not a claimed Chrome demo.
+- Final actual API quality gate PASSED at `.artifacts/m2/retrieval-eval-20260908T170142Z`:
+  EN 8/8, JA 9/9, ZH 9/9 cases; 27/27 required groups; warm p95 2.5 seconds; zero forbidden
+  leaks; foreign request 404; unchanged source/runtime fingerprints. Generation and workflow
+  outcomes remain NOT_VERIFIED. This corpus is a regression/acceptance set used during tuning,
+  not an unseen generalization benchmark. No paid model calls were made.
