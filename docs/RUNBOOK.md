@@ -229,3 +229,10 @@ creates new isolated synthetic evaluation workspaces, uploads/indexes all source
 API and runs fixed multilingual queries. It preserves reports under `.artifacts/m2/retrieval-eval-*`.
 Expected facts are read only by the evaluator. The run includes real local embeddings and
 PostgreSQL, not live generation; it does not authorize or require a paid API.
+
+LangGraph persistence compatibility is included in `python scripts/manage.py verify-integration`.
+`test_graph_checkpoints.py` initializes the supported checkpointer only in disposable test
+schemas, closes/reopens connections and reconstructs graphs to verify interrupt and failure
+recovery. This is a prerequisite test, not the support application's graph or authorization
+implementation. Production checkpoint initialization and the message/handoff workflow remain
+the next slice; never expose raw checkpoint reads or arbitrary resume commands to clients.

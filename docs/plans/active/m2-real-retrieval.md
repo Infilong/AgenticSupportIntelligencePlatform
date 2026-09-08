@@ -197,3 +197,26 @@ will be extended in M3 for broader review/cancellation/retry behavior.
 Independent read-only design review confirmed these boundaries. This is a plan, not implemented
 message/graph behavior. Do not start a partial substitute if the existing unattended cutoff leaves
 insufficient time to implement and verify the connected slice; preserve this exact resume point.
+
+### Checkpoint prerequisite slice
+
+Within the remaining unattended window, install/lock the supported LangGraph and PostgreSQL
+checkpointer and verify its real database interrupt/resume and failed-node recovery contracts.
+This is dependency compatibility evidence in isolated test schemas, not the application graph,
+message API, human-review flow or workspace authorization. Preserve the existing retrieval
+runtime, verify the resolved dependency set, and checkpoint before the original 17:34 UTC limit.
+
+Result: locked LangGraph 1.2.11, checkpoint-postgres 3.1.2 (checkpoint 4.2.0); existing
+LangChain/model packages remain unchanged. The resolver changed websockets 17.1 → 16.1.1.
+Tests use real PostgreSQL in the fixture's isolated schema and fresh connections/graph instances.
+They verify retained EN/JA/ZH input, interrupt/resume, persisted completion and failed-node
+recovery. They do not prove an application workflow, process-kill recovery or authorization.
+
+Initial failures came from SQLAlchemy URL query encoding ('+' spaces) passed directly to libpq;
+fixed by supplying explicit connection options, retaining the schema. Preserve
+`.artifacts/m0/integration-20260908T172152370097Z`. Focused 2/2 then full 45/45 passed;
+final evidence `.artifacts/m0/integration-20260908T172545791661Z`. Unit 16/16, Ruff and rebuilt
+four-service health passed. Runtime package versions were inspected. Real retrieval/source-span
+smoke passed after rebuilding: trace `7503fc4e-a562-4bcd-9b57-2b8dbbb26d80`, 5,814.04 ms cold;
+not a new warm latency or full-corpus quality measurement. No application checkpoint tables or
+message workflow were introduced; next connected slice remains defined above.

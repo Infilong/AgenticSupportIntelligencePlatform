@@ -23,16 +23,21 @@ The existing unattended cutoff is **2026-09-08 17:34 UTC**; this checkpoint does
 | Boundary | Evidence |
 | --- | --- |
 | Frozen retrieval | 26/26 evidence cases; 27/27 groups; EN 8/8, JA 9/9, ZH 9/9; warm p95 2.5 seconds; zero forbidden leaks; foreign request 404 |
-| Backend | 16 unit tests and 43 real PostgreSQL tests pass |
+| Backend | 16 unit tests and 45 real PostgreSQL tests pass |
 | Harness | 19 preparation checks pass |
 | Knowledge UI | Two real desktop/mobile journeys pass; source/search screenshots inspected |
 | Frontend | TypeScript/build and two component tests pass; baseline browser suite also passed |
 | Models | Explicit preparation/inference passed for both pinned local models |
+| Graph prerequisite | Supported LangGraph/PostgreSQL interrupt and failed-node recovery pass after connection reconstruction; application workflow remains pending |
 | Git/CI | Retrieval `01ee83f`, CI `34254935876` passed; UI clarification `1a0e0e6`, CI `34255679023` passed |
 
 Final stable retrieval evidence: `.artifacts/m2/retrieval-eval-20260908T170142Z`.
 Final label/browser evidence: `.artifacts/m2/provider-label-rebuilt-ui`.
 Detailed command artifacts and prior failures are retained in the M2 execution record.
+LangGraph `1.2.11` and PostgreSQL checkpointer `3.1.2` are installed in the rebuilt runtime.
+Latest PostgreSQL evidence: `.artifacts/m0/integration-20260908T172545791661Z`.
+The real retrieval smoke still passes after dependency installation; the full frozen quality
+measurement above belongs to the earlier retrieval snapshot and was not rerun for this lock change.
 No full production-readiness, generated-answer quality or completed release claim is supported.
 
 ## Failures and limits
