@@ -31,6 +31,7 @@ jobs:
       - run: python scripts/manage.py init-env
       - run: python scripts/manage.py up
       - run: python scripts/manage.py seed-demo
+      - run: python scripts/manage.py verify-worker
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
       - run: npm run test:app
@@ -38,7 +39,7 @@ jobs:
         env:
           ASI_EVIDENCE_DIR: ../.artifacts/m1/ci-browser
       - if: failure()
-        run: docker compose -p asi-rebuild-v1 logs --tail 80 api frontend
+        run: docker compose -p asi-rebuild-v1 logs --tail 80 api frontend worker
       - if: always()
         run: python scripts/manage.py down
   preparation:

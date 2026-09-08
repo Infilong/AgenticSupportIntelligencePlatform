@@ -73,6 +73,24 @@ for each slice. Gate completion requires actual behavior; documentation is not e
   mutations, stale workspace navigation and repeat seed restoring removed memberships.
   Session-loss and workspace-list-refresh browser regressions now pass.
 - Next: finish UI commit/CI, then the PostgreSQL worker foundation and real M2 retrieval.
+- UI pushed as `690f9dd`; remote revision confirmed, CI `34239190845` is running.
+
+## Worker slice execution brief
+
+Implement the planned PostgreSQL queue with atomic claims, bounded attempts, lease fencing,
+cooperative cancellation and a real database diagnostic handler. Keep scheduling separate from
+future ingestion/domain results and LangGraph checkpoints. No Redis or external job system.
+Verify concurrent claims, expired lease takeover, stale-writer rejection, cancelled work,
+revoked actor access, payload-bound idempotency and actual worker process execution.
+Use server-derived workspace/actor identity; no public generic job-submission endpoint.
+
+Worker evidence: 23 integration tests passed, including added barrier-based concurrency and
+mid-handler cancellation/revocation. Independent review identified a future sensitive-output
+race; workspace-first locking now serializes authorization with publication. Handler cancellation
+is cooperative, never thread preemption. Source passed lint/format. Actual worker probe job
+`d863ca70-0554-48ac-bdbd-82eaab6772c3` succeeded in one attempt, reporting pgvector 0.8.2 and
+schema 0003_jobs; evidence `.artifacts/m0/worker-20260908T144450875148Z`.
+All four development services became healthy. UI CI `34239190845` passed every job.
 - User requires real RAG retrieval without API access: M2 will use a real local multilingual
   embedding model, actual PostgreSQL vectors and document-derived retrieval. Only generation
   API transport is simulated; Codex assists with genuine answers from the retrieved evidence.

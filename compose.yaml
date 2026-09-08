@@ -16,6 +16,7 @@ services:
       timeout: 3s
       retries: 20
   api:
+    image: asi-rebuild-v1-api
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -31,6 +32,20 @@ services:
       test: ["CMD", "uv", "run", "--frozen", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=5)"]
       interval: 5s
       timeout: 8s
+      retries: 12
+  worker:
+    image: asi-rebuild-v1-api
+    command: ["uv", "run", "--frozen", "python", "-m", "app.worker"]
+    environment:
+      ASI_DATABASE_URL: postgresql+psycopg://asi_rebuild:${ASI_DATABASE_PASSWORD:?Run init-env}@postgres:5432/asi_rebuild
+      ASI_PROVIDER_MODE: mock
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "uv", "run", "--frozen", "python", "-m", "app.worker", "--health"]
+      interval: 5s
+      timeout: 5s
       retries: 12
   frontend:
     build:

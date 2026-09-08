@@ -18,7 +18,11 @@ CI run `34236314227` passed. Browser login/workspace/member UI and synthetic pro
 work with the real API/database. Five application browser journeys, two component tests,
 TypeScript/build, two backend tests and 14 PostgreSQL tests pass. Chrome desktop/mobile
 inspection and console check completed. UI slice final review/push is in progress.
-Worker foundation remains; M1 is not complete. Real document ingestion/retrieval is M2.
+UI pushed as `690f9dd`; CI `34239190845` passed all jobs, including the actual browser suite.
+Worker foundation now exists; 23 PostgreSQL integration tests pass, including lease takeover,
+concurrent claims/enqueue, rollback, cancellation and mid-handler revocation. The separate worker
+processed a diagnostic in one attempt and all four containers are healthy. Worker slice review/push
+is in progress. Real document ingestion/retrieval is M2; release gates remain incomplete.
 Continue through the full goal within authority; no milestone-by-milestone approval is needed.
 
 ## Verified baseline and remaining gaps

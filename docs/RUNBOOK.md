@@ -123,8 +123,8 @@ disposable test data; never run `down -v` against the old project.
 
 ## Current limitations
 
-API/database, authentication and frontend foundation now exist. Worker,
-ingestion and RAG remain to implement. Development generation will use explicit mock/Codex-assisted
+API/database, authentication, frontend and worker foundation now exist.
+Ingestion and RAG remain to implement. Development generation will use explicit mock/Codex-assisted
 responses; the user requires real local embeddings and retrieval. Live provider access and paid
 spending remain unavailable; API connectivity/quality gates cannot be inferred from development data.
 
@@ -151,4 +151,14 @@ The generated declaration is a size exception; API owners change response schema
 
 Development uses Vite's same-origin API proxy; frontend container file ownership permits
 temporary config/cache writes by its non-root user. No external font service is required.
-Release static-asset serving, worker and the remaining product journeys are not complete.
+Release static-asset serving and the remaining product journeys are not complete.
+
+## Worker verification
+
+`python scripts/manage.py up` starts all four development services, including the worker.
+After `seed-demo`, run `python scripts/manage.py verify-worker`: it enqueues a real database
+diagnostic and waits for the separate worker to persist its result. Reports include the job ID
+for correlation with `docker compose -p asi-rebuild-v1 logs worker`; raw payloads are not logged.
+The worker health check requires a recent successful database poll/lease renewal, not just a PID.
+`verify-integration` covers atomic claims, idempotency, rollback, retries, cancellation, expired
+leases, stale writer rejection and actor revocation while a handler is running.

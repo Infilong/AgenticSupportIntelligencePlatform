@@ -36,7 +36,7 @@ def execute(command):
         for args in [("up", "-d", "--wait", "postgres"),
                      ("build", "api", "frontend"),
                      ("run", "--rm", "api", "uv", "run", "--frozen", "alembic", "upgrade", "head"),
-                     ("up", "-d", "--wait", "api", "frontend")]:
+                     ("up", "-d", "--wait", "api", "frontend", "worker")]:
             code = compose(*args)
             if code:
                 return code
