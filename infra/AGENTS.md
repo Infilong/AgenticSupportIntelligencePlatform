@@ -1,7 +1,7 @@
 # Infrastructure guidance
 
 Scope: this directory; also read this guide for root runtime/configuration changes.
-Read the [root director](../AGENTS.md). No rebuild runtime exists at M0.
+Read the [root director](../AGENTS.md). M1 has an isolated API/database runtime; see the runbook.
 
 - [Architecture](../docs/ARCHITECTURE.md) owns runtime decisions;
   [runbook](../docs/RUNBOOK.md) owns namespace, ports, setup and recovery instructions.

@@ -7,9 +7,12 @@ Normal verified commits/pushes to this branch are authorized. No merge/deploy/pa
 
 ## Current work
 
-First M1 slice: automated coverage of local guide links and instruction limits, plus
-Linux/Windows preparation CI. All 13 local regression tests passed; remote CI inspection is pending.
-Next: isolated runnable API/PostgreSQL foundation, then auth/workspaces and real browser UI.
+Harness pushed at `a8308bf`; all 13 local regression tests and CI run `34233220196` passed
+on Windows and Ubuntu. The isolated API/database now starts and migrates with pgvector enabled.
+Two backend tests and lint passed. Real database outage/recovery and request log correlation
+passed; source-linked runtime evidence lives in `.artifacts/m1/runtime-<timestamp>/`.
+Backend CI is added in the runtime slice and awaits its branch push/verification.
+Next: session authentication/workspace APIs, then real browser UI and worker foundation.
 Continue through the full goal within authority; no milestone-by-milestone approval is needed.
 
 ## Verified baseline and remaining gaps
@@ -31,6 +34,8 @@ User currently has no API. Codex cannot act as the app's runtime API. No paid ca
 use explicit deterministic test providers while implementing real integration interfaces.
 User requests a Codex-assisted development handoff: app requests can be answered by this session
 and imported through the provider contract, with accurate provenance and separate verification.
-Live API/embedding quality remains NOT_VERIFIED and cannot be passed from mocks or handoffs.
+Generation API quality remains NOT_VERIFIED and cannot be passed from mocks or handoffs.
+Retrieval must be real: local multilingual embeddings, actual vector indexing and document-derived
+results will be implemented in M2. Local embedding quality must be measured independently.
 M0 failures and repairs (Windows file handles, sandbox network access, UTF-8 capture) remain
 recorded in the preparation checkpoint/runbook; preserve failed evidence.

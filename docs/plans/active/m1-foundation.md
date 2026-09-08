@@ -40,9 +40,16 @@ for each slice. Gate completion requires actual behavior; documentation is not e
 
 - Initial state: clean `codex/fresh-start`, no backend application. M0 probe/fixtures exist.
 - Harness slice: 13 local preparation tests passed, including nested guides and failure cases.
-  Remote CI verification follows the branch push.
+  Pushed `a8308bf`; CI run `34233220196` passed Windows and Ubuntu jobs.
 - M2 access: no API available; $0 spending. Continue offline work; live quality remains unverified.
 - User clarified development AI: add a Codex-assisted request/response handoff in M2 so the app
   can consume answers produced in this coding session through its provider contract. Label its
   provenance accurately; it does not prove API connectivity, embeddings, latency or billing.
-- Next: verify/push harness, inspect CI, then implement the runnable foundation.
+- Runtime slice: fresh database/vector migration and API startup passed; real outage returned
+  readiness 503 while liveness stayed 200, then readiness recovered to 200. Request IDs matched
+  server logs. Two backend tests and lint passed; final source-linked verification/push follows.
+- Next: session authentication and workspace APIs with PostgreSQL integration/security tests.
+- User requires real RAG retrieval without API access: M2 will use a real local multilingual
+  embedding model, actual PostgreSQL vectors and document-derived retrieval. Only generation
+  API transport is simulated; Codex assists with genuine answers from the retrieved evidence.
+  This explicitly permits the local embedding dependency needed for development; no GPU is required.

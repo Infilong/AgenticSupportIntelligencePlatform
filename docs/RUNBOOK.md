@@ -1,4 +1,36 @@
-# M0 preparation runbook
+# Local development runbook
+
+## M1 API/database foundation
+
+From the repository root, with Docker Desktop, Python 3.12 and uv installed:
+
+```powershell
+python scripts/manage.py init-env
+python scripts/manage.py up
+uv sync --project backend --frozen
+python scripts/manage.py verify-backend
+uv run --project backend ruff check backend
+uv run --project backend ruff format --check backend
+```
+
+`init-env` generates a database password in ignored `.env` without displaying it; existing
+files are preserved. `up` starts only the fixed `asi-rebuild-v1` database, builds the API,
+applies migrations, then waits for API health. It currently starts no worker or frontend.
+Health endpoints: `http://127.0.0.1:8010/api/health/live` and `/api/health/ready`.
+Readiness requires database access, current Alembic revision and pgvector extension.
+`python scripts/manage.py migrate` reapplies pending migrations; `down` preserves volumes.
+
+`python scripts/verify_runtime.py` performs a controlled stop/restart of only the rebuild
+database, checks 200→503→200 readiness, API liveness during outage and request-log correlation.
+It uses the default API port 8010; leave the default ports for this test. A finally block
+restores the database. Evidence is saved under `.artifacts/m1/runtime-<timestamp>/`.
+Request logs contain server-generated correlation IDs, route templates, status and duration;
+bodies, query strings, arbitrary paths and credentials are excluded.
+
+Backend unit evidence currently uses `.artifacts/m0/backend-<timestamp>/` via the shared
+command wrapper; its scope is explicitly the named command, not full M0 or product acceptance.
+The current TestClient dependencies emit upstream httpx/AnyIO deprecation warnings; tests
+pass, but these warnings remain visible and are not application runtime failures.
 
 ## Verified entry points
 
@@ -75,7 +107,7 @@ disposable test data; never run `down -v` against the old project.
 
 ## Current limitations
 
-No runtime `.env`, live provider access, API spending budget, backend dependency lockfile,
-application startup, authentication, ingestion or RAG exists yet. `.env.example` lists proposed
-settings only. M1 must replace proposals with implemented configuration and tested commands.
-M2 must obtain live access/spend authority and verify model/embedding compatibility.
+The API/database foundation and backend lockfile now exist. Authentication, frontend, worker,
+ingestion and RAG remain to implement. Development generation will use explicit mock/Codex-assisted
+responses; the user requires real local embeddings and retrieval. Live provider access and paid
+spending remain unavailable; API connectivity/quality gates cannot be inferred from development data.

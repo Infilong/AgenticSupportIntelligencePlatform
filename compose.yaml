@@ -1,0 +1,36 @@
+name: asi-rebuild-v1
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.2-pg16
+    environment:
+      POSTGRES_DB: asi_rebuild
+      POSTGRES_USER: asi_rebuild
+      POSTGRES_PASSWORD: ${ASI_DATABASE_PASSWORD:?Run python scripts/manage.py init-env}
+    ports:
+      - "127.0.0.1:${ASI_DATABASE_PORT:-5440}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asi_rebuild -d asi_rebuild"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      ASI_DATABASE_URL: postgresql+psycopg://asi_rebuild:${ASI_DATABASE_PASSWORD:?Run init-env}@postgres:5432/asi_rebuild
+      ASI_PROVIDER_MODE: mock
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${ASI_API_PORT:-8010}:8000"
+    healthcheck:
+      test: ["CMD", "uv", "run", "--frozen", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready', timeout=5)"]
+      interval: 5s
+      timeout: 8s
+      retries: 12
+volumes:
+  postgres_data:

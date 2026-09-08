@@ -1,7 +1,7 @@
 # Backend guidance
 
 Scope: this directory and its descendants. Read the [root director](../AGENTS.md).
-This guide prepares future work; no backend implementation exists at M0.
+M1 has health, configuration, request logging and a vector-extension migration; see STATUS for progress.
 
 ## Ownership
 
@@ -33,4 +33,4 @@ This guide prepares future work; no backend implementation exists at M0.
 - Fake only external AI providers in offline application journeys. Follow
   [evaluation guidance](../evals/AGENTS.md) for live quality claims.
 - Add executable setup/test commands to [runbook](../docs/RUNBOOK.md) as implemented;
-  no backend command currently exists. Never validate against the archived runtime.
+  `python scripts/manage.py verify-backend` runs current tests. Never validate against the archived runtime.

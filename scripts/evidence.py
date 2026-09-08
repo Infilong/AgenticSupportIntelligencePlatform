@@ -50,7 +50,7 @@ def run_checked(name, command, cwd, env=None):
         sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
     print(output.decode("utf-8", errors="replace"), end="")
     after = source_state()
-    report = {"name": name, "scope": "M0 preparation only", "command": command,
+    report = {"name": name, "scope": "Named command only; not full application acceptance", "command": command,
               "exit_code": result.returncode, "source": before,
               "source_unchanged": before["source_sha256"] == after["source_sha256"],
               "elapsed_seconds": (datetime.now(timezone.utc) - started).total_seconds()}

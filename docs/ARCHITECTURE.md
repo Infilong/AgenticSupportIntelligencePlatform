@@ -1,13 +1,14 @@
 # Architecture decision record — M0
 
-Status: intended architecture; no product services are implemented yet.
+Status: M1 foundation in progress. API/database, vector extension migration, health and request
+logging are implemented. Auth, frontend, worker and AI processing remain to implement.
 
 ## Runtime
 
 Development: Vite frontend → FastAPI → PostgreSQL/pgvector; one Python worker reads the same
 database. Local release: FastAPI serves built frontend assets, reducing this to app, worker,
 database. Docker project `asi-rebuild-v1`; reserve loopback ports 5180, 8010, 5440 for development.
-No service is started in M0. Port availability is a moment-in-time observation.
+M1 currently runs the isolated API/database on 8010/5440. Frontend/worker follow in later slices.
 
 The old `asi-verification` stack is separate and remains untouched. The old Redis container
 belongs to that stack; it is not part of the rebuild. New volumes must carry the new namespace.

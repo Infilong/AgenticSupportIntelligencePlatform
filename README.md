@@ -1,6 +1,6 @@
 # Multilingual Support Workbench
 
-Fresh rebuild on `codex/fresh-start`. **M0 preparation only: no product application exists yet.**
+Fresh rebuild on `codex/fresh-start`. **M1 in progress: API/database foundation exists; product UI is pending.**
 The scoped product is a local EN/JA/ZH support workbench using LangChain, LangGraph and
 PostgreSQL/pgvector, with one worker and no Redis or cloud platform.
 
@@ -25,8 +25,9 @@ For first-time Playwright installation, follow the [runbook](docs/RUNBOOK.md).
 The browser command tests an environment probe; it does not demonstrate the planned app.
 Evidence lives under `.artifacts/m0/` and is intentionally excluded from Git.
 
-`up`, `migrate`, `seed-demo`, `verify-live`, backup and restore commands will be implemented
-with their owning milestones. They are not available now. Do not start the archived app as
+For the isolated API/database, use `init-env`, then `up` from the [runbook](docs/RUNBOOK.md).
+`migrate`, `down` and `verify-backend` also exist. `seed-demo`, `verify-live`, backup and restore
+remain to implement. Do not start the archived app as
 proof of this rebuild. API spending is zero until explicitly authorized.
 
 The previous implementation and history remain on `archive/previous-platform-2026-09-08`.
