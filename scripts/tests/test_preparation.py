@@ -1,6 +1,5 @@
 import copy
 import json
-import re
 import socket
 import sys
 import tempfile
@@ -13,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from check_fixtures import load, validate
 from doctor import command_check, port_check
 import evidence
+from check_docs import repository_docs, validate as validate_docs
 
 
 class PreparationTests(unittest.TestCase):
@@ -82,11 +82,38 @@ class PreparationTests(unittest.TestCase):
 
     def test_document_links_resolve(self):
         root = Path(__file__).resolve().parents[2]
-        docs = [root / "README.md", root / "AGENTS.md", root / "REBUILD_PLAN.md", *root.glob("docs/**/*.md")]
-        for doc in docs:
-            for link in re.findall(r"\]\(([^)]+)\)", doc.read_text(encoding="utf-8")):
-                if "://" not in link and not link.startswith("#"):
-                    self.assertTrue((doc.parent / link.split("#")[0]).exists(), f"{doc.name}: {link}")
+        docs = repository_docs(root)
+        self.assertIn("frontend/AGENTS.md", docs)
+        self.assertIn("backend/AGENTS.md", docs)
+        self.assertEqual(validate_docs(root, docs), [])
+
+    def test_nested_broken_link_is_actionable(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "frontend").mkdir()
+            (root / "frontend/AGENTS.md").write_text("[guide](missing.md)", encoding="utf-8")
+            errors = validate_docs(root, ["frontend/AGENTS.md"])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("frontend/AGENTS.md", errors[0])
+            self.assertIn("fix the path", errors[0])
+
+    def test_instruction_limit_rejects_200_lines(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            guide = root / "AGENTS.md"
+            guide.write_text("rule\n" * 199, encoding="utf-8")
+            self.assertEqual(validate_docs(root, ["AGENTS.md"]), [])
+            guide.write_text("rule\n" * 200, encoding="utf-8")
+            self.assertIn("under 200 lines", validate_docs(root, ["AGENTS.md"])[0])
+
+    def test_encoded_local_link_and_external_reference(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "a file.md").write_text("target", encoding="utf-8")
+            (root / "README.md").write_text(
+                '[local](a%20file.md#section) [web](https://example.test/missing)\n'
+                '```text\n[example](not-a-real-file)\n```', encoding="utf-8")
+            self.assertEqual(validate_docs(root, ["README.md"]), [])
 
 
 if __name__ == "__main__":

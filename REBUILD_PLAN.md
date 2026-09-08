@@ -1,12 +1,12 @@
 # Multilingual Support Workbench — local V1 rebuild plan
 
-Status: M0 preparation authorized on 2026-09-08. Product implementation awaits the next
-explicit start instruction; this document is not a readiness claim.
+Status: full M1–M6 execution authorized on 2026-09-08. Follow STATUS for current progress;
+authorization and this plan are not readiness claims.
 
 This plan replaces the previous rebuild plan. Build a small, user-friendly RAG application
 using LangChain, LangGraph and PostgreSQL. No Redis, RQ, cloud platform or large-data stack.
 The previous implementation goal is retired. This contract governs the fresh rebuild;
-the current task is limited to M0 preparation and its local checkpoint.
+the active goal now covers M1–M6 with verified commits and working-branch pushes.
 
 ## 1. Product purpose
 

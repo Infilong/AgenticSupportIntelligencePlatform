@@ -45,6 +45,13 @@ evidence messages; judge their unittest results, not those injected command exit
 
 ## Sandbox and network behavior
 
+The documentation checker is `python scripts/check_docs.py`; `verify-prep` runs it through
+regression tests, including nested-guide broken links and instruction size failures. It scans
+Git's nonignored Markdown list, not archived artifacts/dependencies. Inline local file links
+are checked; remote URLs, fragment anchors and reference-style Markdown links are not validated.
+The Verify workflow runs the preparation suite on Linux and Windows for branch pushes/PRs;
+inspect the actual run before treating a configured workflow as passed CI.
+
 The initial sandboxed npm metadata request failed with EACCES. An approved retry succeeded.
 Registry downloads, Docker access, browser launches and Git writes may require tool approval
 in Codex's execution environment. Treat these as access boundaries; do not bypass controls.

@@ -1,6 +1,6 @@
 # Reusable full-rebuild goal
 
-Status: proposed goal text for the user to activate, not an active M1 instruction.
+Status: activated by the user on 2026-09-08. STATUS records current execution and constraints.
 
 Rebuild AgenticSupportIntelligencePlatform in this repository through M1–M6, following
 REBUILD_PLAN.md, the acceptance matrix and applicable root/local AGENTS.md instructions.

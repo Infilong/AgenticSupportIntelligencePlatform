@@ -1,0 +1,48 @@
+# M1 — runnable isolated foundation
+
+Status: active. Entire M1–M6 goal authorized on 2026-09-08, starting at `2c292d0`.
+Session work began 13:34 UTC; save a resumption checkpoint by 17:34 UTC if unattended.
+Root/local guides and REBUILD_PLAN own constraints. One implementation owner.
+
+## Execution brief
+
+Outcome: a fresh local install serves a usable login/workspace shell, enforces membership and
+role boundaries, and exposes enough logs/tests for Codex to demonstrate and repair failures.
+Gates: BOOT, AUTH, TENANT and the M1 portion of UX/TRACE. Product AI is M2 onward.
+
+Authority: normal working-branch commits/pushes and offline isolated services/tests allowed.
+No old services/data changes, main/archive updates, merge/deploy or paid API calls.
+The user has no API currently. This Codex session cannot be the runtime provider; implement
+real provider interfaces with explicit deterministic offline verification, leaving live gates open.
+
+Approach: first enforce the preparation rules already reviewed, then a pinned backend with
+PostgreSQL migrations, health and structured request logs, then session auth/workspace APIs,
+then the actual frontend and browser acceptance. Build only needed module boundaries.
+Risks: authentication/session/CSRF design, last-admin concurrency, leaked foreign workspace data,
+Windows runtime tooling, unproven live provider. Use real PostgreSQL for database claims.
+
+## Slices and acceptance evidence
+
+1. Harness: discover all nonignored Markdown, check local links and instruction limits, add
+   broken-link/size regressions and Linux/Windows CI. Verify locally and inspect remote CI.
+2. Runtime: isolated Compose database/API, lockfile, migrations, health/readiness and request
+   logs. Verify fresh migration, healthy response and controlled database-unavailable recovery.
+3. Auth/workspaces: server sessions, login/logout/expiry, roles and last-admin protection.
+   Verify successful/denied requests, foreign IDs and concurrent demotion with PostgreSQL.
+4. UI: minimal responsive workbench shell/login/workspace navigation, failure states.
+   Verify actual browser login, workspace denial, keyboard/viewport behavior and request logs.
+5. Independent boundary review, repairs and M1 evidence checkpoint; continue to M2.
+
+Commands are added to RUNBOOK only when executable. Capture commands, exit codes and artifacts
+for each slice. Gate completion requires actual behavior; documentation is not evidence.
+
+## Progress and decisions
+
+- Initial state: clean `codex/fresh-start`, no backend application. M0 probe/fixtures exist.
+- Harness slice: 13 local preparation tests passed, including nested guides and failure cases.
+  Remote CI verification follows the branch push.
+- M2 access: no API available; $0 spending. Continue offline work; live quality remains unverified.
+- User clarified development AI: add a Codex-assisted request/response handoff in M2 so the app
+  can consume answers produced in this coding session through its provider contract. Label its
+  provenance accurately; it does not prove API connectivity, embeddings, latency or billing.
+- Next: verify/push harness, inspect CI, then implement the runnable foundation.
