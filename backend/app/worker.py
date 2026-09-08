@@ -15,7 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import Settings
 from app.db.engine import make_engine
-from app.jobs.queue import LeaseLost, authorize, claim, finish, heartbeat, owned
+from app.jobs.contracts import Publication
+from app.jobs.queue import JobCancelled, LeaseLost, authorize, claim, finish, heartbeat, owned
 from app.modules.identity import models as identity_models  # noqa: F401
 
 LOG = logging.getLogger("asi.worker")
@@ -29,7 +30,14 @@ def diagnostic(engine, job):
     return {"database": "reachable", "vector_version": version, "schema_revision": revision}
 
 
-HANDLERS = {"database_check": diagnostic}
+def index_document(engine, job):
+    # Load model/splitter dependencies only for indexing, never for health probes.
+    from app.modules.knowledge.ingestion import index_document as execute
+
+    return execute(engine, job)
+
+
+HANDLERS = {"database_check": diagnostic, "index_document": index_document}
 
 
 def run_once(engine, handlers=None, health_callback=lambda: None):
@@ -67,7 +75,17 @@ def run_once(engine, handlers=None, health_callback=lambda: None):
         result = handler(engine, job)
         with Session(engine) as db, db.begin():
             authorize(db, job.workspace_id, job.actor_id)
+            if isinstance(result, Publication):
+                result = result.publish(db, job)
             outcome = finish(db, job.id, job.lease_token, result=result).state
+    except JobCancelled:
+        try:
+            with Session(engine) as db, db.begin():
+                current = owned(db, job.id, job.lease_token)
+                current.cancel_requested = True
+                outcome = finish(db, job.id, job.lease_token).state
+        except (LeaseLost, SQLAlchemyError):
+            outcome = "cancellation_unconfirmed"
     except LeaseLost:
         outcome = "lease_lost"
     except Exception as error:

@@ -59,3 +59,20 @@ Sources: [model card](https://huggingface.co/intfloat/multilingual-e5-small),
 - Independent ingestion design review selected bounded in-memory chunks followed by atomic
   insertion/activation, avoiding a partial staging subsystem. Use desired-version fencing,
   admin rechecks, composite ownership constraints and workspace→document→job lock order.
+- Ingestion implemented: retained originals, bounded UTF-8 TXT/Markdown uploads, queued versions,
+  real CPU embedding ledger and atomic vector/active-version publication. PDF/DOC remain pending.
+  Eleven unit tests and 30 PostgreSQL tests pass, including withdrawal/replacement/demotion
+  during embedding. Evidence: `.artifacts/m0/backend-20260908T153150040989Z` and
+  `.artifacts/m0/integration-20260908T153232881757Z` (before documentation/contract updates).
+- Actual API upload/worker smoke passed at `.artifacts/m0/ingestion-20260908T152911661659Z`:
+  original 2,196 bytes preserved, two 384-dimensional pgvector rows, 483 embedding tokens,
+  337.71 ms batch duration and zero API charge. This preceded bounded splitter refinement;
+  final runtime recheck follows. It is not full-corpus retrieval evidence.
+- Review found no concrete P0/P1 publication bug. Fixed worker health timeout by lazy-loading
+  indexing imports; fixed demotion test transaction ownership without changing assertions.
+  Split within headings and 8,000-character blocks, rechecking permission/cancellation between
+  blocks; retain exact source offsets. Reject opaque ASCII tokens over 4,096 characters.
+  Quota-race and publication-rollback fault-injection coverage remain to broaden in M2.
+- Final bounded-splitter CPU ingestion passed:
+  `.artifacts/m0/ingestion-20260908T153529065817Z`. Frontend generated contract/build,
+  preparation 14/14, Ruff and documentation checks passed. Full retrieval evaluation remains next.

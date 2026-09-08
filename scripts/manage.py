@@ -12,7 +12,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["doctor", "verify-prep", "verify-browser", "evidence",
                                             "init-env", "up", "migrate", "down", "verify-backend",
-                                            "verify-integration", "seed-demo", "verify-worker", "prepare-model"])
+                                            "verify-integration", "seed-demo", "verify-worker", "prepare-model",
+                                            "verify-ingestion"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
     args = parser.parse_args()
     if args.offline and args.command != "doctor":
@@ -27,6 +28,9 @@ def main():
         from seed_demo import main as seed
         return seed()
     from evidence import run_checked, summarize
+    if args.command == "verify-ingestion":
+        return run_checked("ingestion", [shutil.which("uv") or "uv", "run", "--frozen", "python",
+                           "-m", "app.ingestion_probe"], ROOT / "backend")
     if args.command in {"verify-worker", "prepare-model"}:
         module = "app.worker_probe" if args.command == "verify-worker" else "app.providers.prepare_model"
         return run_checked(args.command, ["docker", "compose", "--project-directory", str(ROOT),

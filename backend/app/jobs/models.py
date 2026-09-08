@@ -12,6 +12,7 @@ class Job(Base):
     __tablename__ = "jobs"
     __table_args__ = (
         UniqueConstraint("workspace_id", "idempotency_key", name="uq_job_key"),
+        UniqueConstraint("workspace_id", "id", name="uq_job_workspace"),
         CheckConstraint("state IN ('queued','running','succeeded','failed','cancelled')", name="job_state"),
         CheckConstraint("attempts >= 0 AND max_attempts BETWEEN 1 AND 5", name="job_attempts"),
         Index("ix_jobs_schedule", "state", "available_at", "priority"),

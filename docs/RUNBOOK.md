@@ -179,3 +179,19 @@ The local Windows cache used for verification is ignored `.artifacts/models`; Do
 own cache volume. Each input includes the model-required query/passage prefix. Inputs above
 512 model tokens are rejected instead of silently truncated; batches are limited to 16.
 This inference smoke test does not prove document retrieval or answer quality.
+
+## Knowledge ingestion
+
+After `up`, `seed-demo` and `prepare-model`, run `python scripts/manage.py verify-ingestion`.
+It signs in with ignored synthetic credentials, submits a fresh policy through the API, waits
+for the real worker/CPU model, checks activation and downloads the exact original. It creates
+a new smoke document on each run; it is not the long-corpus quality gate.
+
+The current ingestion API accepts UTF-8 TXT/Markdown up to 5 MiB. PDF/DOC extraction is pending.
+Admins upload/replace/withdraw; all workspace members may list and preview sources. Uploads
+require an idempotency key. Replacements become active only after successful indexing; failed
+replacements preserve the old active version. Limits: 500 active documents, 20 versions per
+document, 500 MiB retained originals, 50,000 retained chunks per workspace, 1,000 per document.
+Splitting checks cancellation between bounded 8,000-character blocks and preserves section and
+normalized Unicode character offsets. Opaque ASCII tokens longer than 4,096 characters fail.
+Original bytes and checksum remain available separately from normalized text.

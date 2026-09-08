@@ -30,6 +30,11 @@ Six backend unit tests and 23 PostgreSQL tests pass with the new dependency lock
 preparation now passed in the app volume (warm query 15.24 ms). Document ingestion and real
 retrieval acceptance remain to complete; embedding smoke success is not a RAG quality result.
 Continue through the full goal within authority; no milestone-by-milestone approval is needed.
+Embedding slice pushed as `b8d04bf`; CI `34242469472` passed. Knowledge ingestion now has
+11 passing unit tests and 30 passing PostgreSQL integration tests. Actual API→worker→CPU-model
+ingestion stored vectors and model-call accounting and preserved the original file. Bounded
+splitting refinement is under final runtime recheck. Retrieval API, knowledge UI, long-corpus
+evaluation and generation workflow remain incomplete; this is not a completed RAG claim.
 
 ## Verified baseline and remaining gaps
 

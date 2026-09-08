@@ -6,10 +6,11 @@ import uuid
 from datetime import timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from app.jobs.models import Job
+from app.modules.usage.models import ModelCall
 from app.modules.workspaces.models import Workspace
 from app.modules.workspaces.service import membership
 
@@ -17,6 +18,10 @@ LEASE_SECONDS = 60
 
 
 class LeaseLost(Exception):
+    pass
+
+
+class JobCancelled(Exception):
     pass
 
 
@@ -84,6 +89,12 @@ def claim(db):
     )
     if job is None:
         return None
+    if job.attempts:
+        db.execute(
+            update(ModelCall)
+            .where(ModelCall.job_id == job.id, ModelCall.status == "started")
+            .values(status="uncertain")
+        )
     if job.cancel_requested or job.attempts >= job.max_attempts:
         job.state = "cancelled" if job.cancel_requested else "failed"
         job.error_code = None if job.cancel_requested else "lease_attempts_exhausted"
