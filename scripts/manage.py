@@ -12,7 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["doctor", "verify-prep", "verify-browser", "evidence",
                                             "init-env", "up", "migrate", "down", "verify-backend",
-                                            "verify-integration", "seed-demo", "verify-worker"])
+                                            "verify-integration", "seed-demo", "verify-worker", "prepare-model"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
     args = parser.parse_args()
     if args.offline and args.command != "doctor":
@@ -27,11 +27,13 @@ def main():
         from seed_demo import main as seed
         return seed()
     from evidence import run_checked, summarize
-    if args.command == "verify-worker":
-        return run_checked("worker", ["docker", "compose", "--project-directory", str(ROOT),
+    if args.command in {"verify-worker", "prepare-model"}:
+        module = "app.worker_probe" if args.command == "verify-worker" else "app.providers.prepare_model"
+        return run_checked(args.command, ["docker", "compose", "--project-directory", str(ROOT),
                            "--env-file", str(ROOT / ".env"), "-f", str(ROOT / "compose.yaml"),
                            "-p", "asi-rebuild-v1", "run", "--rm", "api", "uv", "run",
-                           "--frozen", "python", "-m", "app.worker_probe"], ROOT)
+                           "--frozen", "python", "-m", module], ROOT,
+                           timeout=600 if args.command == "prepare-model" else 180)
     if args.command == "verify-integration":
         from verify_integration import main as integration
         return integration()

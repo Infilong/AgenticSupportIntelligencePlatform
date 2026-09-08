@@ -1,8 +1,9 @@
 # Current status
 
-Goal: **M1–M6 authorized and active**. Current milestone: M1 foundation.
+Goal: **M1–M6 authorized and active**. Current milestone: M2 real retrieval.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[Active execution plan](plans/active/m1-foundation.md) owns slices, decisions and exact next steps.
+[M2 execution plan](plans/active/m2-real-retrieval.md) owns current slices and next steps;
+[M1 history](plans/active/m1-foundation.md) retains foundation decisions and evidence.
 Normal verified commits/pushes to this branch are authorized. No merge/deploy/paid API authority.
 
 ## Current work
@@ -23,6 +24,11 @@ Worker foundation now exists; 23 PostgreSQL integration tests pass, including le
 concurrent claims/enqueue, rollback, cancellation and mid-handler revocation. The separate worker
 processed a diagnostic in one attempt and all four containers are healthy. Worker slice review/push
 is in progress. Real document ingestion/retrieval is M2; release gates remain incomplete.
+Worker pushed as `5749308`; CI `34240525106` passed. M2 CPU embedding preparation is active:
+actual EN/JA/ZH vectors were produced with the pinned model; warm query smoke latency was 47 ms.
+Six backend unit tests and 23 PostgreSQL tests pass with the new dependency lock. Docker model
+preparation now passed in the app volume (warm query 15.24 ms). Document ingestion and real
+retrieval acceptance remain to complete; embedding smoke success is not a RAG quality result.
 Continue through the full goal within authority; no milestone-by-milestone approval is needed.
 
 ## Verified baseline and remaining gaps

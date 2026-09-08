@@ -29,7 +29,7 @@ def source_state():
             "dirty": bool(read("status", "--porcelain").strip()), "file_sha256": hashes}
 
 
-def run_checked(name, command, cwd, env=None):
+def run_checked(name, command, cwd, env=None, timeout=180):
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     directory = ARTIFACTS / f"{name}-{stamp}"
     directory.mkdir(parents=True)
@@ -38,9 +38,10 @@ def run_checked(name, command, cwd, env=None):
     environment = {**os.environ, **(env or {}), "ASI_EVIDENCE_DIR": str(directory)}
     try:
         result = subprocess.run(command, cwd=cwd, env=environment, capture_output=True,
-                                timeout=180)
-    except subprocess.TimeoutExpired:
-        result = subprocess.CompletedProcess(command, 124, b"", b"Command timed out after 180 seconds.\n")
+                                timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        result = subprocess.CompletedProcess(command, 124, error.stdout or b"",
+            (error.stderr or b"") + f"Command timed out after {timeout} seconds.\n".encode())
     except OSError:
         result = subprocess.CompletedProcess(command, 127, b"", b"Command could not be launched.\n")
     output = result.stdout + result.stderr

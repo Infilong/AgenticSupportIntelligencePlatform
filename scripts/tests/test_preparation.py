@@ -72,6 +72,15 @@ class PreparationTests(unittest.TestCase):
             code = evidence.run_checked("source-change", [sys.executable, "-c", "pass"], Path(temp))
             self.assertEqual(code, 1)
 
+    def test_timed_out_command_retains_partial_output(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(evidence, "ARTIFACTS", Path(temp)), \
+                patch.object(evidence, "source_state", return_value={"source_sha256": "fixed"}):
+            command = [sys.executable, "-c", "import time; print('before timeout', flush=True); time.sleep(5)"]
+            self.assertEqual(evidence.run_checked("timeout", command, Path(temp), timeout=1), 124)
+            output = next(Path(temp).glob("*/command.log")).read_bytes()
+            self.assertIn(b"before timeout", output)
+            self.assertIn(b"timed out after 1 seconds", output)
+
     def test_utf8_process_output_is_preserved_as_bytes(self):
         raw = "返金 / 退款 / ✓".encode("utf-8")
         with tempfile.TemporaryDirectory() as temp, patch.object(evidence, "ARTIFACTS", Path(temp)), \

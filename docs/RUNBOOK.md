@@ -162,3 +162,20 @@ for correlation with `docker compose -p asi-rebuild-v1 logs worker`; raw payload
 The worker health check requires a recent successful database poll/lease renewal, not just a PID.
 `verify-integration` covers atomic claims, idempotency, rollback, retries, cancellation, expired
 leases, stale writer rejection and actor revocation while a handler is running.
+
+## Real local embedding preparation
+
+The pinned multilingual-e5-small model runs on CPU, with 384-dimensional normalized vectors.
+Dependencies are locked; Linux/Windows PyTorch comes from the explicit official CPU index.
+After rebuilding with `up`, run `python scripts/manage.py prepare-model` to download the pinned
+public weights into the isolated persistent `embedding_models` volume and run actual EN/JA/ZH
+inference. No provider key or paid API is needed. The initial download is separate from query
+latency. The command allows ten minutes and preserves partial output on timeout.
+
+Application embeddings default to local-files-only loading and fail if weights are missing.
+To check offline inference explicitly, run `python -m app.providers.prepare_model --offline`
+inside the backend environment with `ASI_EMBEDDING_CACHE` pointing to prepared weights.
+The local Windows cache used for verification is ignored `.artifacts/models`; Docker has its
+own cache volume. Each input includes the model-required query/passage prefix. Inputs above
+512 model tokens are rejected instead of silently truncated; batches are limited to 16.
+This inference smoke test does not prove document retrieval or answer quality.
