@@ -206,3 +206,10 @@ Search returns candidates, not an asserted supported answer. Ranking uses cosine
 with a lexical-overlap boost and reciprocal rank fusion; it is not BM25. Each search records
 a protected workspace trace and linked embedding attempt. Queries are limited to 1,000
 characters and the model's 512-token cap; at most ten passages may be returned.
+
+Knowledge UI is at `/w/<workspace-id>/knowledge`. Admins upload/replace/withdraw/restore;
+viewers can inspect documents and search. The current file formats are TXT/Markdown only.
+With the real runtime/model ready, run `npx playwright test tests/e2e/knowledge.spec.ts` from
+`frontend`, with `PLAYWRIGHT_BROWSERS_PATH` set to the prepared `.artifacts/browsers` and
+`ASI_EVIDENCE_DIR` to an ignored output directory. This suite uses actual CPU embeddings;
+it creates a synthetic travel policy and does not run in baseline CI without model preparation.

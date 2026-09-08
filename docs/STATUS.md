@@ -38,6 +38,9 @@ evaluation and generation workflow remain incomplete; this is not a completed RA
 Ingestion pushed `59fc6c9`, CI `34245863644` passed. Real retrieval API smoke now passed,
 including exact source-span verification; 35 PostgreSQL integration tests pass. Retrieval
 backend slice is being checkpointed before knowledge UI and long-corpus evaluation.
+Retrieval pushed `f04b86f`; CI `34247160191` passed. Knowledge UI is implemented and actual
+upload/search/preview/withdrawal/restore plus mobile viewer journeys passed (2/2); existing
+browser regression suite passed (5/5). UI review/checkpoint is active; long corpus remains next.
 
 ## Verified baseline and remaining gaps
 

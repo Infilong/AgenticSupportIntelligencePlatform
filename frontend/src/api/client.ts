@@ -18,7 +18,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   try {
     response = await fetch(`/api${path}`, {
       ...options, credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf, ...options.headers },
+      headers: { ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-CSRF-Token': csrf, ...options.headers },
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;

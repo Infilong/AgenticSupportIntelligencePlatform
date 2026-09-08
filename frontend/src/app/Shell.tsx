@@ -1,12 +1,16 @@
-import { Inbox, LogOut, Settings, ShieldCheck } from 'lucide-react';
+import { BookOpen, Inbox, LogOut, Settings, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api, type User, type Workspace } from '../api/client';
 import { Members } from '../features/settings/Members';
+import { Knowledge } from '../features/knowledge/Knowledge';
+import { DocumentView } from '../features/knowledge/DocumentView';
+import { SearchKnowledge } from '../features/knowledge/SearchKnowledge';
 
 export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: User; workspaces: Workspace[]; logout: () => Promise<void>; refreshWorkspaces: () => void }) {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
@@ -30,6 +34,7 @@ export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: U
       <div className="brand"><span className="brand-symbol">a</span><strong>aster</strong></div>
       <p className="sidebar-label">WORKSPACE</p>
       <nav aria-label="Main navigation"><NavLink to={base} end><Inbox size={19} />Workbench</NavLink>
+        <NavLink to={`${base}/knowledge`}><BookOpen size={19} />Knowledge</NavLink>
         {workspace.role === 'admin' && <NavLink to={`${base}/members`}><Settings size={19} />Members</NavLink>}</nav>
       <div className="sidebar-bottom"><span className="mode-badge">Simulated AI · Development</span>
         <div className="identity"><span className="avatar">{user.display_name.slice(0, 1)}</span><div><strong>{user.display_name}</strong><span>{user.email}</span></div></div>
@@ -43,6 +48,9 @@ export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: U
       <main id="main-content" className="page-content">
         {actionError && <p role="alert" className="error">{actionError}</p>}
         <Routes><Route index element={<Workbench />} />
+          <Route path="knowledge" element={<Knowledge key={workspace.id} workspace={workspace} />} />
+          <Route path="knowledge/search" element={<SearchKnowledge key={workspace.id} workspace={workspace} />} />
+          <Route path="knowledge/:documentId" element={<DocumentView key={`${workspace.id}/${location.pathname}${location.search}`} workspace={workspace} />} />
           <Route path="members" element={<Members workspace={workspace} onChange={() => setRevision(x => x + 1)} />} />
           <Route path="*" element={<div className="empty-state"><h1>Page not found</h1><NavLink to={base}>Back to workbench</NavLink></div>} />
         </Routes>

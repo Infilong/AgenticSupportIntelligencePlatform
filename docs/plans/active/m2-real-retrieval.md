@@ -90,3 +90,15 @@ Sources: [model card](https://huggingface.co/intfloat/multilingual-e5-small),
 - Independent review: no P0/P1 filtering bug. Matched ORM unique constraint to migration;
   added adversarial foreign-chunk test. Abandoned synchronous retrieval/model-call records
   still need uncertain-state reconciliation in observability work; never call them completed.
+- Retrieval pushed `f04b86f`; CI `34247160191` passed. Knowledge UI implements document lists,
+  progress, original previews/downloads, versions, replacement/withdrawal/restore and real search.
+  New browser journeys 2/2 passed with the real model (`.artifacts/m2/knowledge-ui-first`),
+  existing journeys 5/5 passed (`.artifacts/m2/app-regression`), component tests 2/2 and build passed.
+  Chrome desktop inspection showed the real refund passage; console errors/warnings empty.
+  Narrow-layout evidence is from the application browser suite; the old Chrome viewport handle
+  could not capture after tab recovery and was reset. Do not represent that as Chrome mobile proof.
+- UI review fixes: citation links retain version/offset instead of following a newly active
+  replacement; withdrawal suppresses contradictory search-availability banners; denied/not-found
+  reloads clear protected document details. Successful uploads reset the native picker and search
+  results retain their submitted query label. Final build and repaired browser journeys 2/2 passed
+  at `.artifacts/m2/knowledge-ui-repaired`, including exact-version/offset navigation.
