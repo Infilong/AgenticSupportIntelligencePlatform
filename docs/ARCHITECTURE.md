@@ -1,7 +1,8 @@
 # Architecture decision record — M0
 
 Status: M1 foundation in progress. API/database, vector extension migration, health and request
-logging are implemented. Auth, frontend, worker and AI processing remain to implement.
+logging are implemented. Session/workspace APIs now exist; frontend, worker and AI processing
+remain to implement. M1 has not passed its browser or full BOOT/AUTH/TENANT gates yet.
 
 ## Runtime
 
@@ -50,7 +51,11 @@ accent color; status must also be expressed in text. This is a direction, not a 
 
 ## Questions to resolve during the owning milestone
 
-M1 chooses compatible pinned backend/frontend dependencies, secure sessions and CSRF handling.
+M1 uses opaque PostgreSQL sessions with hashed random cookie tokens, Argon2 passwords,
+absolute/idle expiry, synchronizer CSRF tokens and exact configured Origin validation. The
+cookie name is distinct from archived apps because cookies are not isolated by port.
+Membership writes lock the workspace and recheck authority/admin count inside the transaction.
+Frontend dependencies and complete browser behavior remain to implement.
 M2 specifies token/context limits, chunking parameters, source-equivalence mappings and initial
 quality thresholds before tuning. M3 verifies worker lease timing and graph resume behavior.
 These choices cannot weaken the release contract; material changes need approval.

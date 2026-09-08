@@ -7,6 +7,15 @@ class Settings(BaseSettings):
 
     database_url: SecretStr
     provider_mode: str = "mock"
+    session_seconds: int = 28800
+    session_idle_seconds: int = 3600
+    secure_cookies: bool = False  # Local loopback HTTP only; HTTPS deployments must enable this.
+    allowed_origins: list[str] = [
+        "http://127.0.0.1:5180",
+        "http://localhost:5180",
+        "http://127.0.0.1:8010",
+        "http://localhost:8010",
+    ]
 
     @field_validator("database_url")
     @classmethod

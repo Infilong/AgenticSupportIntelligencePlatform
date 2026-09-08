@@ -149,6 +149,13 @@ Do not implement custom model HTTP clients or a reusable queue framework.
 Pin compatible versions and commit lockfiles after checking compatibility.
 The RTX 3060 is not required; live providers are the primary AI path.
 
+Development clarification (2026-09-08): the user has no API key and requests simulated generation
+API data with Codex-assisted answers. Document parsing, chunking, local multilingual embedding,
+PostgreSQL vector indexing and retrieval must be real. Implement the development provider behind
+the same internal contract, label its provenance, and preserve the real OpenAI integration path.
+Local CPU embeddings are authorized for this purpose. Neither development handoffs nor mocks
+prove external API connectivity, generation latency, billing or live-provider quality.
+
 For a local release, build frontend assets and serve them from FastAPI at the same origin.
 This reduces release services to app, worker and PostgreSQL. Keep Vite for development.
 Bind local ports to loopback. Remote/public deployment requires a separate contract.

@@ -9,6 +9,7 @@ python scripts/manage.py init-env
 python scripts/manage.py up
 uv sync --project backend --frozen
 python scripts/manage.py verify-backend
+python scripts/manage.py verify-integration
 uv run --project backend ruff check backend
 uv run --project backend ruff format --check backend
 ```
@@ -31,6 +32,21 @@ Backend unit evidence currently uses `.artifacts/m0/backend-<timestamp>/` via th
 command wrapper; its scope is explicitly the named command, not full M0 or product acceptance.
 The current TestClient dependencies emit upstream httpx/AnyIO deprecation warnings; tests
 pass, but these warnings remain visible and are not application runtime failures.
+
+`verify-integration` creates the dedicated `asi_rebuild_test` database if missing, migrates
+temporary test schemas, and removes only those schemas after tests. It verifies sessions,
+CSRF, roles/workspace denial and concurrent last-admin changes against real PostgreSQL.
+It does not change the application database or any archived database. CI uses an ephemeral
+PostgreSQL service and runs the same integration cases.
+
+Session endpoints are `GET /api/session`, `POST /api/session/login` and `/logout`. Get a
+session CSRF token first; unsafe requests require it in `X-CSRF-Token` and an allowed Origin.
+The rebuild cookie is HttpOnly/SameSite=Lax, insecure only for the local loopback HTTP setup;
+HTTPS deployment must enable secure cookies and configure exact trusted origins.
+Sessions expire after eight hours or one idle hour; anonymous sessions after 15 minutes.
+Login throttling uses persistent identity/client counters. New anonymous sessions prune expired
+records in bounded batches and are rate-limited. Passwords and tokens must never enter logs.
+User provisioning and browser login are the next M1 slice; no default admin password exists.
 
 ## Verified entry points
 

@@ -11,8 +11,11 @@ Harness pushed at `a8308bf`; all 13 local regression tests and CI run `342332201
 on Windows and Ubuntu. The isolated API/database now starts and migrates with pgvector enabled.
 Two backend tests and lint passed. Real database outage/recovery and request log correlation
 passed; source-linked runtime evidence lives in `.artifacts/m1/runtime-<timestamp>/`.
-Backend CI is added in the runtime slice and awaits its branch push/verification.
-Next: session authentication/workspace APIs, then real browser UI and worker foundation.
+Foundation pushed as `2dd4048`; backend/preparation CI run `34234381342` passed.
+Session/workspace APIs and PostgreSQL security tests are implemented; independent review
+fixes are applied; 14 real PostgreSQL integration tests pass. Final runtime checks/push are
+in progress. Browser UI/provisioning and worker
+foundation remain. M1 is not complete; next slice delivers the actual login/workspace journey.
 Continue through the full goal within authority; no milestone-by-milestone approval is needed.
 
 ## Verified baseline and remaining gaps
@@ -39,3 +42,5 @@ Retrieval must be real: local multilingual embeddings, actual vector indexing an
 results will be implemented in M2. Local embedding quality must be measured independently.
 M0 failures and repairs (Windows file handles, sandbox network access, UTF-8 capture) remain
 recorded in the preparation checkpoint/runbook; preserve failed evidence.
+Auth integration initially failed due to overridden PostgreSQL search_path connection options;
+the engine now preserves them and migrations commit explicitly. Failed reports remain in artifacts.

@@ -48,7 +48,18 @@ for each slice. Gate completion requires actual behavior; documentation is not e
 - Runtime slice: fresh database/vector migration and API startup passed; real outage returned
   readiness 503 while liveness stayed 200, then readiness recovered to 200. Request IDs matched
   server logs. Two backend tests and lint passed; final source-linked verification/push follows.
-- Next: session authentication and workspace APIs with PostgreSQL integration/security tests.
+- Foundation pushed as `2dd4048`; CI run `34234381342` passed.
+- Auth/workspace APIs: PostgreSQL-backed revocable sessions, CSRF/Origin validation, Argon2,
+  bounded throttling/cleanup, membership enforcement and serialized last-admin writes implemented.
+  Independent security review found no P1 bypass; fixed malformed-CSRF handling, cleanup and
+  missing delete coverage. Also made pre-login token consumption atomic. Follow-up review
+  identified cleanup/counter races; replaced read-then-increment with atomic upsert/returning,
+  guarded cleanup against refreshed rows and added concurrent cleanup regression. All 14 real
+  PostgreSQL integration tests passed. Two unit tests and lint pass; final runtime rebuild/push follows.
+- Retained failure: initial integration run had six failures because engine connect options
+  overwrote test search_path. Preserved URL options and added explicit migration transaction
+  commit; integration cases then passed. Final suite includes throttle-window regression.
+- Next: verify/push auth slice, inspect CI, then provision synthetic users and implement browser UI.
 - User requires real RAG retrieval without API access: M2 will use a real local multilingual
   embedding model, actual PostgreSQL vectors and document-derived retrieval. Only generation
   API transport is simulated; Codex assists with genuine answers from the retrieved evidence.

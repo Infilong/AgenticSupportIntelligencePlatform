@@ -27,6 +27,7 @@ class RequestLogging:
                 message["headers"] = list(message.get("headers", [])) + [
                     (b"x-request-id", request_id.encode()),
                     (b"x-content-type-options", b"nosniff"),
+                    (b"cache-control", b"no-store"),
                 ]
             await send(message)
 

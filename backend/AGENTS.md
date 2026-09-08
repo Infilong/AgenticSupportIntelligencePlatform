@@ -1,7 +1,7 @@
 # Backend guidance
 
 Scope: this directory and its descendants. Read the [root director](../AGENTS.md).
-M1 has health, configuration, request logging and a vector-extension migration; see STATUS for progress.
+M1 has health, request logging, session/workspace APIs and migrations; see STATUS for progress.
 
 ## Ownership
 

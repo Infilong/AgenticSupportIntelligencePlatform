@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["doctor", "verify-prep", "verify-browser", "evidence",
-                                            "init-env", "up", "migrate", "down", "verify-backend"])
+                                            "init-env", "up", "migrate", "down", "verify-backend",
+                                            "verify-integration"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
     args = parser.parse_args()
     if args.offline and args.command != "doctor":
@@ -23,6 +24,9 @@ def main():
         from runtime import execute
         return execute(args.command)
     from evidence import run_checked, summarize
+    if args.command == "verify-integration":
+        from verify_integration import main as integration
+        return integration()
     if args.command == "verify-backend":
         uv = shutil.which("uv")
         if not uv:
