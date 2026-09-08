@@ -12,7 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["doctor", "verify-prep", "verify-browser", "evidence",
                                             "init-env", "up", "migrate", "down", "verify-backend",
-                                            "verify-integration"])
+                                            "verify-integration", "seed-demo"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
     args = parser.parse_args()
     if args.offline and args.command != "doctor":
@@ -23,6 +23,9 @@ def main():
     if args.command in {"init-env", "up", "migrate", "down"}:
         from runtime import execute
         return execute(args.command)
+    if args.command == "seed-demo":
+        from seed_demo import main as seed
+        return seed()
     from evidence import run_checked, summarize
     if args.command == "verify-integration":
         from verify_integration import main as integration

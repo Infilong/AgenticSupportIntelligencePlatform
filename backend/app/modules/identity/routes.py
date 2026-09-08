@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import delete, select
 
 from app.modules.identity.dependencies import Database
 from app.modules.identity.models import LoginSession, User
+from app.modules.identity.schemas import Credentials, SessionResponse
 from app.modules.identity.security import (
     COOKIE,
     DUMMY_HASH,
@@ -19,12 +19,6 @@ from app.modules.identity.security import (
 router = APIRouter(prefix="/api/session", tags=["session"])
 
 
-class Credentials(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    email: str = Field(min_length=3, max_length=254)
-    password: str = Field(min_length=1, max_length=256)
-
-
 def identity_payload(db, session):
     user = db.get(User, session.user_id) if session.user_id else None
     return {
@@ -35,7 +29,7 @@ def identity_payload(db, session):
     }
 
 
-@router.get("")
+@router.get("", response_model=SessionResponse)
 def get_session(request: Request, response: Response, db: Database):
     response.headers["Cache-Control"] = "no-store"
     session = read_session(db, request)
@@ -46,7 +40,7 @@ def get_session(request: Request, response: Response, db: Database):
     return identity_payload(db, session)
 
 
-@router.post("/login")
+@router.post("/login", response_model=SessionResponse)
 def login(body: Credentials, request: Request, response: Response, db: Database):
     session = read_session(db, request)
     check_csrf(request, session)

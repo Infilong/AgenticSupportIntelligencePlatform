@@ -123,7 +123,32 @@ disposable test data; never run `down -v` against the old project.
 
 ## Current limitations
 
-The API/database foundation and backend lockfile now exist. Authentication, frontend, worker,
+API/database, authentication and frontend foundation now exist. Worker,
 ingestion and RAG remain to implement. Development generation will use explicit mock/Codex-assisted
 responses; the user requires real local embeddings and retrieval. Live provider access and paid
 spending remain unavailable; API connectivity/quality gates cannot be inferred from development data.
+
+## Development sign-in and frontend verification
+
+Run `python scripts/manage.py up`, then `python scripts/manage.py seed-demo`.
+Open `http://127.0.0.1:5180`. Generated synthetic account credentials are kept in ignored
+`.artifacts/m1/demo-credentials.json`; do not commit them. Seeding is explicit and limited to
+the rebuild database. Repeated seeding preserves existing passwords, changed roles and removed
+memberships. Lost credentials are an error; the command never resets an existing account.
+
+From `frontend`, run `npm ci`, `npm run build`, `npm test`, and `npm run test:app`.
+Application tests require the running stack, seeded accounts and installed Playwright Chromium;
+the older `test:environment` remains only a synthetic browser probe. On this Windows machine,
+set `PLAYWRIGHT_BROWSERS_PATH` to the repository `.artifacts/browsers` before browser tests.
+Set `ASI_EVIDENCE_DIR` to a new ignored output directory for each retained browser run.
+Application tests exercise real API/database flows; explicit outage and revocation response
+injection verifies UI recovery, while server expiry/revocation is tested against PostgreSQL.
+
+To regenerate the frontend API contract, run `uv run --frozen python -m app.export_schema`
+from `backend`, redirect UTF-8 output to `.artifacts/openapi.json`, then run
+`npm run generate:api` from `frontend`. This does not connect to a database.
+The generated declaration is a size exception; API owners change response schemas and regenerate.
+
+Development uses Vite's same-origin API proxy; frontend container file ownership permits
+temporary config/cache writes by its non-root user. No external font service is required.
+Release static-asset serving, worker and the remaining product journeys are not complete.

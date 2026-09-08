@@ -60,6 +60,19 @@ for each slice. Gate completion requires actual behavior; documentation is not e
   overwrote test search_path. Preserved URL options and added explicit migration transaction
   commit; integration cases then passed. Final suite includes throttle-window regression.
 - Next: verify/push auth slice, inspect CI, then provision synthetic users and implement browser UI.
+- Auth pushed as `7d5e63d`, remote CI `34236314227` passed.
+- UI slice: generated OpenAPI types, responsive login/workspace/members, explicit synthetic
+  provisioning and non-root frontend container. Five E2E journeys pass against the running
+  stack; component tests 2/2, build/typecheck, backend 2/2 and integration 14/14 pass.
+  Chrome desktop/mobile inspection found no horizontal overflow or console errors.
+  Evidence: `.artifacts/m1/ui-recovery/`, backend/integration reports at 20260908T1431 UTC.
+- Retained UI failures: Vite container could not write root-owned config temp files; fixed
+  build ownership. One initial test expected different last-admin wording; corrected to the
+  existing exact API message while retaining the unchanged-role assertion.
+- Independent UI review: no P0/P1 found. Fixed expired-session recovery without replaying
+  mutations, stale workspace navigation and repeat seed restoring removed memberships.
+  Session-loss and workspace-list-refresh browser regressions now pass.
+- Next: finish UI commit/CI, then the PostgreSQL worker foundation and real M2 retrieval.
 - User requires real RAG retrieval without API access: M2 will use a real local multilingual
   embedding model, actual PostgreSQL vectors and document-derived retrieval. Only generation
   API transport is simulated; Codex assists with genuine answers from the retrieved evidence.

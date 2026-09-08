@@ -13,9 +13,12 @@ Two backend tests and lint passed. Real database outage/recovery and request log
 passed; source-linked runtime evidence lives in `.artifacts/m1/runtime-<timestamp>/`.
 Foundation pushed as `2dd4048`; backend/preparation CI run `34234381342` passed.
 Session/workspace APIs and PostgreSQL security tests are implemented; independent review
-fixes are applied; 14 real PostgreSQL integration tests pass. Final runtime checks/push are
-in progress. Browser UI/provisioning and worker
-foundation remain. M1 is not complete; next slice delivers the actual login/workspace journey.
+fixes are applied; 14 real PostgreSQL integration tests pass. Auth was pushed as `7d5e63d`;
+CI run `34236314227` passed. Browser login/workspace/member UI and synthetic provisioning now
+work with the real API/database. Five application browser journeys, two component tests,
+TypeScript/build, two backend tests and 14 PostgreSQL tests pass. Chrome desktop/mobile
+inspection and console check completed. UI slice final review/push is in progress.
+Worker foundation remains; M1 is not complete. Real document ingestion/retrieval is M2.
 Continue through the full goal within authority; no milestone-by-milestone approval is needed.
 
 ## Verified baseline and remaining gaps

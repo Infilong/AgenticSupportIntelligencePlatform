@@ -1,7 +1,7 @@
 # Frontend guidance
 
 Scope: this directory and its descendants. Read the [root director](../AGENTS.md).
-Product UI is not implemented at M0; the existing browser test is an environment probe.
+M1 implements login, workspace navigation and members. The inbox remains a foundation shell.
 
 ## Ownership and design
 
@@ -23,3 +23,5 @@ Product UI is not implemented at M0; the existing browser test is an environment
 - Inspect browser screenshots/traces for layout, small screens and zoom; type checks alone
   do not prove usable UI. Synthetic pages do not prove application behavior.
 - Keep provider keys and protected data out of client bundles and browser logs.
+- `src/api/schema.d.ts` is generated from backend OpenAPI; its size is an explicit generated
+  contract exception. Regenerate it with the runbook command; never edit it manually.

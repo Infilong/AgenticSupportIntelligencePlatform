@@ -34,9 +34,9 @@ def execute(command):
         return init_env()
     if command == "up":
         for args in [("up", "-d", "--wait", "postgres"),
-                     ("build", "api"),
+                     ("build", "api", "frontend"),
                      ("run", "--rm", "api", "uv", "run", "--frozen", "alembic", "upgrade", "head"),
-                     ("up", "-d", "--wait", "api")]:
+                     ("up", "-d", "--wait", "api", "frontend")]:
             code = compose(*args)
             if code:
                 return code
