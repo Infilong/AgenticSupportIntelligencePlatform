@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
-const credentials = JSON.parse(readFileSync('../.artifacts/m1/demo-credentials.json', 'utf8'));
-const base = 'http://127.0.0.1:5180';
+const credentials = JSON.parse(readFileSync(process.env.ASI_DEMO_CREDENTIALS ?? '../.artifacts/m1/demo-credentials.json', 'utf8'));
+const base = process.env.ASI_APP_BASE_URL ?? 'http://127.0.0.1:5180';
 async function login(page: Page, role = 'admin') {
   await page.goto(base);
   await page.getByLabel('Email address').fill(credentials.accounts[role]);
@@ -33,7 +33,7 @@ for (const [language, question, answer] of [
     const value = await source.locator('option').filter({ hasText: 'REFUND-STANDARD' }).first().getAttribute('value');
     await source.selectOption(value!);
     const quote = await page.locator('.development-form .source-excerpt').innerText();
-    expect(quote).toContain('14 calendar days');
+    expect(quote).toMatch(/14 calendar\s+days/); // Policy line wrapping must not change the fact check.
     await page.getByLabel('Exact supporting quote').fill(quote);
     // Explicit deterministic development contribution; the retrieval and application are real.
     await page.getByLabel('Development answer', { exact: true }).fill(answer);

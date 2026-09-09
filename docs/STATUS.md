@@ -54,8 +54,14 @@ its interrupted run as UX evidence. Goal continuation is active. The
 [current-schema restoration](plans/completed/m6-current-schema-restore.md) passes all23-table
 snapshot fingerprints plus a new ASGI/worker request and authenticated restored evaluation/trace
 reads with foreign denial. Evidence: `.artifacts/m6/restore-20260909T132319Z`.
-Next: checkpoint the reviewed recovery/CI evidence, then verify the complete existing multilingual
-review journeys against packaged release assets. Preserve all databases and the14:58 UTC boundary.
+Recovery/CI evidence is committed/pushed as5f5a869;46 preparation checks passed at
+`.artifacts/m0/prep-20260909T133241541823Z`. The
+[complete multilingual review journeys](plans/completed/m6-release-workbench.md) now cover all
+ten cases across the retained initial run and focused repaired reruns against packaged assets.
+EN approve/copy, JA edit/copy and ZH reject/history pass with real retrieval and fixed development
+drafts; no live-generation claim. Exact citations remain checked. Current: close independent
+review/preparation and checkpoint, then assess the standalone backup command from M6.
+Preserve all databases and the14:58 UTC boundary.
 Keep RAG tuning deferred; five retrieval strategies
 do not complete EVAL and the workload profile does not exercise generation.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as

@@ -353,6 +353,16 @@ The linked-attempt journey also checks clarification, cancellation/retry and pre
 This is not a browser-native zoom or live generation-quality measurement. Baseline `test:app`
 also exercises a persisted clarification flow without prepared models, including in CI.
 
+For the built release, set ASI_APP_BASE_URL to http://127.0.0.1:8011 and ASI_DEMO_CREDENTIALS
+to ../.artifacts/m6/release-credentials.json in the frontend shell. The same workbench.spec.ts
+and workflow-inspector.spec.ts use those overrides; development remains the default. Prepare
+the real local models and index the long synthetic customer handbook first. Exact quote checks
+preserve original whitespace; fact checks allow policy line wrapping.
+Repeated suites reuse seeded accounts and may reach the unchanged ten-logins-per15-minute
+account limit, including successful logins. Retain429 evidence and wait for the normal window
+expiry before a focused rerun; do not reset counters or weaken authentication to clear a test.
+Use separate browser contexts and never publish raw login snapshots or credential files.
+
 ## Retrieval recovery checks
 
 `python scripts/manage.py verify-integration` allows a bounded 420 seconds for the expanded
