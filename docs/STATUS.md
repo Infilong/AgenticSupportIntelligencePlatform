@@ -25,9 +25,16 @@ instrumented focused recovery run passes9 checks with the unchanged20-second dis
 Full rerun passes144 checks in360.11s at `.artifacts/m0/integration-20260909T113404211217Z`.
 Release checkpoint49d2829 is pushed; GitHub CI34347103025 passed.46 prep checks passed at
 `.artifacts/m0/prep-20260909T114259823684Z`.
-The scoped js-yaml4.3.2 development dependency repair is verified: audit zero, generated API
-types unchanged,39 frontend tests/build pass. Next: checkpoint that repair and expose
-permission-scoped historical evaluation results in Quality. Keep RAG tuning deferred.
+The scoped js-yaml4.3.2 development dependency repair is pushed as b35214e;
+GitHub CI34348039265 passed. Audit zero, generated API types unchanged,39 frontend tests/build pass.
+Latest completed feature: [historical evaluation results in Quality](plans/completed/m5-historical-evaluations.md).
+155 full PostgreSQL checks pass at `.artifacts/m0/integration-20260909T122535921561Z`;
+65 backend units and42 frontend tests/build pass. Three real browser journeys pass in11.5s at
+`.artifacts/m5/evaluation-browser-fixed-20260909`, including failed traces, workspace switch,
+foreign denial, outage recovery and360/768/1440 layouts. The live synthetic report is registered
+in its actual evaluation workspace; registration does not rerun retrieval or certify source facts.
+Next: checkpoint this slice, then five concurrent operator sessions with bounded ingestion in
+the isolated built release. Keep RAG tuning deferred; five retrieval strategies do not complete EVAL.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped

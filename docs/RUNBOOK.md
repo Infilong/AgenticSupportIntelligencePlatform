@@ -172,7 +172,7 @@ The generated declaration is a size exception; API owners change response schema
 
 Development uses Vite's same-origin API proxy; frontend container file ownership permits
 temporary config/cache writes by its non-root user. No external font service is required.
-Release static-asset serving and the remaining product journeys are not complete.
+Built release serving has separate setup and evidence below; remaining release gates are incomplete.
 
 ## Worker verification
 
@@ -447,8 +447,9 @@ Quality → Model usage shows the current workspace's last1,7,30 or90 days.
 `GET /api/workspaces/{id}/usage?days=7` accepts1–90 days for any workspace member. Known sums
 exclude missing measurements; missing counts remain visible. External charge is ledger-recorded,
 not verified billing or total operating cost. Started/uncertain records remain distinct from
-success/failure. At most20 groups are shown; aggregate totals include all groups. Quality does
-not yet expose evaluation reports or certify answer correctness.
+success/failure. At most20 groups are shown; aggregate totals include all groups. Quality also
+exposes registered historical retrieval reports through the command described below; neither
+view certifies generated-answer correctness.
 
 
 ## Fresh snapshot restoration drill
@@ -522,3 +523,29 @@ an affected js-yaml version, so frontend/package.json selects js-yaml4.3.2 for t
 This addresses GHSA-2883-xcg3-v3hh without a broad toolchain upgrade. Reassess the override when
 upgrading Redocly/openapi-typescript; require a clean audit and unchanged generated API types
 (or a separately explained schema change) before removing it.
+
+## Register historical retrieval results
+
+`uv run --frozen python -m app.register_evaluation REPORT.json --actor-id ADMIN_UUID`
+runs from backend with ASI_DATABASE_URL configured through the normal secret environment.
+This local administrator command registers existing evidence; it does not run AI or evaluations.
+For the isolated development container, copy the synthetic report to a temporary container path,
+then run the same module with `docker exec asi-rebuild-v1-api-1 uv run --frozen python -m
+app.register_evaluation /tmp/REPORT.json --actor-id ADMIN_UUID`. Resolve the actual seeded actor ID;
+never pass database passwords on the command line. Require migration0014 first through normal `up`.
+
+The command accepts at most8 MiB and only completed valid v1 five-strategy comparisons with
+30 cases per strategy and two negative probes. It rejects inconsistent outcomes and missing,
+foreign or mismatched trace references. The actor must administer the report's actual primary
+workspace. It never aliases evidence into a different workspace. Identical raw bytes are
+idempotent; changed bytes are a separate historical record. Raw foreign probe metadata and
+local file maps are discarded from the stored projection. An accepted hash establishes identity,
+not independent truth. The raw report remains a protected local artifact.
+
+In that workspace open Quality → Retrieval checks. Compare strategies, filter failed/excluded
+cases and languages, then open Retrieval evidence for stored traces. Provenance distinguishes
+registration time from the report's unknown execution timestamp. Other workspaces show their
+own history or an empty state. Generation evaluation remains unverified.
+Run `npx playwright test tests/e2e/evaluations.spec.ts` after registering the existing real
+`.artifacts/m2/strategy-comparison-20260909T083207Z/report.json`; ASI_EVALUATION_REPORT can select
+another compatible registered report. The browser test uses the existing synthetic demo users.

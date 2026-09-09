@@ -8,22 +8,23 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 
 | Path | Source files |
 | --- | ---: |
-| `backend/app/` | 9 |
+| `backend/app/` | 10 |
 | `backend/app/core/` | 5 |
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |
-| `backend/app/modules/` | 48 |
+| `backend/app/modules/` | 53 |
 | `backend/app/providers/` | 5 |
 | `backend/app/workflows/` | 3 |
 | `frontend/src/` | 2 |
 | `frontend/src/api/` | 2 |
 | `frontend/src/app/` | 2 |
-| `frontend/src/features/` | 46 |
+| `frontend/src/features/` | 50 |
 | `frontend/src/test/` | 1 |
 
 ## Backend module directories
 
 - `backend/app/modules/conversations/`
+- `backend/app/modules/evaluations/`
 - `backend/app/modules/identity/`
 - `backend/app/modules/knowledge/`
 - `backend/app/modules/reviews/`

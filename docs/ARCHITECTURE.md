@@ -1,6 +1,6 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for saved customer imports, settings and recorded usage views.
+Updated 2026-09-09 for historical retrieval results and isolated built-asset packaging.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
@@ -26,6 +26,7 @@ AgenticSupportIntelligencePlatform/
 │   │   │   ├── conversations/ # JSONL imports, labels and saved-message admission
 │   │   │   ├── support/       # Original messages, runs, handoffs and cited drafts
 │   │   │   ├── reviews/       # Attributable decisions and fenced final responses
+│   │   │   ├── evaluations/   # Workspace-scoped historical report registration and reads
 │   │   │   └── usage/         # Model-call records
 │   │   ├── providers/         # Local embeddings/reranker and recorded calls
 │   │   └── workflows/         # LangGraph orchestration and PostgreSQL checkpoints
@@ -35,7 +36,7 @@ AgenticSupportIntelligencePlatform/
 │   ├── src/api/               # Client and generated API types
 │   ├── src/features/auth/     # Login and session state
 │   ├── src/features/settings/ # Workspace defaults, provider configuration and members
-│   ├── src/features/quality/  # Workspace model-call usage and measurement gaps
+│   ├── src/features/quality/  # Model usage, historical retrieval checks and measurement gaps
 │   ├── src/features/workbench/ # Inbox, run details, citations, development and review
 │   ├── src/features/knowledge/ # Upload, search and source inspection
 │   └── tests/e2e/             # Browser journeys
@@ -48,8 +49,23 @@ AgenticSupportIntelligencePlatform/
 
 Each substantive area has a local `AGENTS.md`, linked from the root director. These paths
 exist now. The [target topology](../REBUILD_PLAN.md#target-project-topology) includes future
-modules: a separate retrieval module and evaluation-results UI are not yet implemented. Support currently owns original messages and their processing runs; retrieval
+modules: a separate retrieval module and generation-pipeline evaluation execution are not yet implemented. Support currently owns original messages and their processing runs; retrieval
 remains in knowledge. Do not create empty target directories.
+
+## Historical evaluation records
+
+Historical evaluation records are a separate read model, introduced by migration0014.
+The local `app.register_evaluation` command accepts a bounded completed retrieval-strategies-v1
+report, requires its primary-workspace administrator under the membership-writer lock, and
+checks all160 case/probe traces against stored workspace/query/strategy/status. It stores an
+immutable allowlisted projection, registering actor/time and report/source/corpus hashes.
+Counts and nearest-rank p95 are recomputed from consistent recorded outcomes; registration
+does not independently rescore source facts, rerun retrieval or certify supplied metadata.
+Raw reports include foreign-workspace test data and remain local artifacts, never API responses.
+Member-scoped list/detail routes return20 summaries per page and bounded150-case snapshots.
+Quality separates model usage from historical comparisons, showing one strategy's30 cases and
+lazy existing trace/source inspection. No generation quality or four-pipeline EVAL completion
+follows from this capability; later source/document changes leave historical scores unchanged.
 
 ## Implemented knowledge data flow
 
@@ -325,7 +341,8 @@ The configuration endpoint never returns credentials, connection strings or cach
 Development generation is explicitly attributed and automatic external generation is unavailable;
 configuration values are not a live provider-health probe.
 
-Quality currently exposes model usage only, not evaluation/answer-quality results. Authorized
+Quality separates model usage from registered historical retrieval checks; answer quality remains
+unverified. Authorized
 members query1–90 days of their workspace ledger. One SQL statement gives totals and the20
 most-used model/operation/revision groups the same snapshot; totals include omitted groups.
 Known token/cost/duration sums retain separate missing-value counts and call status counts.

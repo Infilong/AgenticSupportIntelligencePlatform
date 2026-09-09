@@ -89,6 +89,11 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   completes a Japanese imported message through an attributed draft and internal approval.
   This proves the scoped DATA flow, not bulk processing or semantic generation quality.
 - ROUTE/REVIEW/EVAL and full BOOT/UX release coverage remain incomplete.
+- Quality now presents registered historical five-strategy retrieval comparisons, per-language
+  denominators, failed cases and authorized traces.155 PostgreSQL checks and three real browser
+  journeys pass on2026-09-09; [record](plans/completed/m5-historical-evaluations.md) retains exact
+  artifacts and failures. This is historical evidence presentation, not execution of the four
+  generation pipelines, held-out semantic quality or current retrieval measurement.
 - RESTORE passed a fresh-snapshot drill on 2026-09-09:
   `.artifacts/m6/restore-20260909T095111Z/report.json`. All 22 public-table fingerprints and
   extension metadata match before clone mutations; no public sequences exist. Authenticated

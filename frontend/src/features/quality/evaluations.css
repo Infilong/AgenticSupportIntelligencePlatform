@@ -1,0 +1,20 @@
+.quality-views { display: flex; flex-direction: row; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+.quality-views button[aria-pressed="true"] { background: #244d3f; color: white; border-color: #244d3f; }
+.evaluation-view h2 { margin-top: 0; }.evaluation-view { font-size: 14px; line-height: 1.7; min-width: 0; }
+.evaluation-history { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 20px 0; }
+.evaluation-history select { max-width: 100%; min-width: 0; }
+.evaluation-notice { background: #edf3ed; border-left: 3px solid #56816a; padding: 16px 20px; margin: 20px 0; border-radius: 4px; }
+.evaluation-notice p { margin: 4px 0 0; }.evaluation-comparison { overflow-x: auto; }
+.evaluation-comparison table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13px; }
+.evaluation-comparison th,.evaluation-comparison td { padding: 14px; text-align: left; border-bottom: 1px solid #e6ebe4; }
+.evaluation-comparison th { font-weight: 500; }.evaluation-comparison thead { background: #f7f9f5; }
+.evaluation-comparison caption { text-align: left; padding: 16px; font-weight: 600; }
+.selected-strategy { background: #f0f5ed; }.selected-strategy button { border-color: #56816a; }
+.evaluation-languages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 22px 0; }
+.evaluation-languages p { margin: 2px 0; }.evaluation-filters,.evaluation-paging { display: flex; flex-direction: row; gap: 16px; flex-wrap: wrap; align-items: center; }
+.evaluation-filters label { display: grid; gap: 6px; }.evaluation-cases { padding: 0; list-style: none; }
+.evaluation-cases > li { padding: 14px 0; border-top: 1px solid #e6ebe4; overflow-wrap: anywhere; }
+.evaluation-cases summary { cursor: pointer; }.evaluation-cases details details { margin: 12px 0; }
+.evaluation-provenance { margin: 24px 0; font-size: 12px; overflow-wrap: anywhere; }
+.evaluation-provenance dd { margin: 0 0 12px; font-family: monospace; }
+@media (max-width: 600px) { .evaluation-languages { grid-template-columns: 1fr; gap: 12px; }.evaluation-history select { width: 100%; }.evaluation-filters label { width: 100%; } }

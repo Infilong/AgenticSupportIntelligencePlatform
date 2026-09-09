@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "858af7962df4a7355516fa537eba362af90791e797dbe9a20097793f68f26546",
+    "fingerprint": "6cffa28ddf86fa7ef74f5aa0975a78f840a4545c27b0699d995a8a04c8ecb9f7",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/completeddependencyrecord review withactualnarrowdiff andsavedfullaudit. Dev-onlygenerator repair qualified,no liveprovider/UIfeature claim;priorrelease/fullPG evidence remainshistorical. Nextpermission-scopedevaluationUI notyetimplemented andRAGtuningdeferred."
+    "rationale": "Independent STATUS/completedM5plan/architecture/entrypoint review against155PG65unit reports,3browser11.5s andactualregistration receipt. Newhistoricalpresentation capability accuratelyupdates oldusage-only statements;priorfullrelease/provider/RAGlimits preserved. Fullgoal remainsincomplete withnextboundedworkload slice."
   },
   "frontend": {
-    "fingerprint": "a53d72f01855c7a3dc11daf785632a799f5652bc1b7984c29fd9d38bfe29efe6",
+    "fingerprint": "dd77513823c95fe662edcfc8dffffdde62d519a3993ea5f1e54e28c5e1020381",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent dependencydiff andowningclaims review:parent-scopedRedoclyoverride selectsjs-yaml4.3.2;lockchange limitedversion/URL/integrity fordevleaf. RetainedfullauditJSON zeroallfindings andgeneratedAPIschema noHEADdiff verified.39frontend/build evidence reflectscompatibility,no newUI/APIbehavior."
+    "rationale": "Independent Quality/Evaluations/Results andguide review:historicalchecks separateusage,failed/excludedcases andENJA-ZH denominators preserved,lazytrace access,registrationtimenotmeasurementtime. Retained3browser11.5s report supports populated/failed/empty/foreign/outage journeys with42frontend/build evidence;synthetic503 notrealoutageproof."
   },
   "tooling": {
-    "fingerprint": "7648cd13eaa9486c0acdb1babc6a1397e51b86df550bd828398addeaa316266c",
+    "fingerprint": "f7d1e67b4347cf9d53c045e9164efd10b25f7e8d8c1c210a36dfcf289b405050",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK maintenanceguidance againstpackageoverride/lock:oneRedoclychild pin,notbroadtoolchainupgrade;reassesswhenupgrading generator andverifyaudit/schema compatibility. Exportedtypes unchanged;retainedaudit zero. No commandworkflow orproductionruntimebehavior claimedchanged."
+    "rationale": "Independent register_evaluation CLI andRUNBOOK discoverability review:bounded8MiBread,normalenvDB,explicitactor,actualprimaryworkspace,tracereference checks,idempotentrawhash andsafeerrors. Updatedusage-only staleclaims corrected. No uploadHTTP/automaticexecution,rawforeignmetadata orlocalfilemaps exposed."
   },
   "evaluation": {
-    "fingerprint": "e2a71123780800965d66bb0bffde2e6b4467625e98279c1328e3234f2c352106",
+    "fingerprint": "b2a3fccfbe15522f27af8438d14f854cd4a212fa59785cc7ce7751ccbe32bb75",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent sharedACCEPTANCE BOOTwording review against localrelease source/evidence. Freshisolatedbuild/migrate/checkpoints/healthy andbrowser/knowledge proofs advance localpackaging only;remaining semantic/provider/security/fullrelease gates explicit.144PG softwareflow evidence notRAGquality orcalibratedavailability."
+    "rationale": "Independent sharedACCEPTANCE/provenance review:registeredreport SHA matches earlier e7aec139 historicalcomparison;no rerun/defaultswitch ornewqualitymeasurements.155PG/3browserverify presentation/authorization only;fourgenerationpipelines,heldoutsemanticquality remainopen. Failedcases andsubstring/group limitations preserved."
   },
   "backend": {
-    "fingerprint": "4dc43991da707a5d2eb4424a524186aa50832aa4f992f0e2d7d028c8ad42f425",
+    "fingerprint": "397c90c57e2bb4650963205ee225fecde9691add73586c25825d6a9f69fc3a7d",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent builtfrontend/cachepolicy/recoverydiagnostic review against architecture/acceptance. FixedUUIDnavigation/routes/assets do notfallbackAPI/privateerrors;API defaultsnostore andauth/CSRF unchanged. Retained144PG360.11s report/log passeswithunchangedsource;143pass1predispatchfailure preserved. Diagnostic20s bound/sourceownership/accounting semantics retained,not originalrootcause proof."
+    "rationale": "Independent historicalevaluation module/projection/registration/routes/migration review against owningdocs. Adminprimaryworkspace lock,160distinct traceidentity/query/status/strategy checks,immutableallowlisted150caseprojection,20summarypages andmemberrechecks align. Arithmetic/factflag consistency isnotindependent source rescoring;155PG/65unit retainedreports passwithstablesource. CLI freshprocess mappingrepair covered."
   },
   "infrastructure": {
-    "fingerprint": "e9533e2c7dc761c6cc02c85c230928ad0470fd978c5c3006bbc1687acda75181",
+    "fingerprint": "0cac977439d35fb5721de2bd3d192fb7c90229f4847d1fbf093b0caefa6a65a6",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged release/runtime boundary againstsharedRUNBOOK:js-yaml isdevdependency infrontendbuild/generator chain,patchedlock usedbyfuture npmci. No newservice,deploymentorprovider claim;fullaudit snapshot zero notblanketfuturesecuritycertification."
+    "rationale": "Independent additiveevaluationrecordmigration0014 andsharedRUNBOOK/architecture boundary review. Existinglocalruntime only,immutableworkspacebound snapshot rather than exposingartifactfilesystem;normalguardedmigration remains. No newcloud/modelservice,currentquality,restoreddeployment orlivegeneration claim."
   }
 }

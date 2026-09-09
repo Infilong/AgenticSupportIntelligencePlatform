@@ -433,6 +433,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspace_id}/evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluations */
+        get: operations["evaluations_api_workspaces__workspace_id__evaluations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/evaluations/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evaluation */
+        get: operations["evaluation_api_workspaces__workspace_id__evaluations__record_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspace_id}/settings": {
         parameters: {
             query?: never;
@@ -703,6 +737,125 @@ export interface components {
             job_status: string | null;
             /** Error Code */
             error_code: string | null;
+        };
+        /** EvaluationCase */
+        EvaluationCase: {
+            /** Id */
+            id: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "ja" | "zh";
+            /** Question */
+            question: string;
+            /**
+             * Trace Id
+             * Format: uuid
+             */
+            trace_id: string;
+            /** Passed */
+            passed: boolean | null;
+            /** Groups Found */
+            groups_found: number;
+            /** Total Groups */
+            total_groups: number;
+            /** Elapsed Seconds */
+            elapsed_seconds: number;
+        };
+        /** EvaluationDetail */
+        EvaluationDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Registered At
+             * Format: date-time
+             */
+            registered_at: string;
+            /** Report Sha256 */
+            report_sha256: string;
+            /** Source Commit */
+            source_commit: string;
+            snapshot: components["schemas"]["EvaluationSnapshot"];
+        };
+        /** EvaluationList */
+        EvaluationList: {
+            /** Items */
+            items: components["schemas"]["EvaluationSummary"][];
+            /** More */
+            more: boolean;
+        };
+        /** EvaluationScore */
+        EvaluationScore: {
+            /** Passed */
+            passed: number;
+            /** Total */
+            total: number;
+            /** Groups Found */
+            groups_found: number;
+            /** Total Groups */
+            total_groups: number;
+        };
+        /** EvaluationSnapshot */
+        EvaluationSnapshot: {
+            /** Scorer Version */
+            scorer_version: string;
+            /** Source Commit */
+            source_commit: string;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Corpus Sha256 */
+            corpus_sha256: string;
+            /**
+             * Generation
+             * @default not_verified
+             * @constant
+             */
+            generation: "not_verified";
+            /** Strategies */
+            strategies: components["schemas"]["EvaluationStrategy"][];
+        };
+        /** EvaluationStrategy */
+        EvaluationStrategy: {
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "vector" | "bm25" | "hybrid" | "vector_rerank" | "hybrid_rerank";
+            /** Scores */
+            scores: {
+                [key: string]: components["schemas"]["EvaluationScore"];
+            };
+            /** Warm P95 Seconds */
+            warm_p95_seconds: number;
+            /** Measured Requests */
+            measured_requests: number;
+            /** Safety Passed */
+            safety_passed: boolean;
+            /** Retrieval Gate Passed */
+            retrieval_gate_passed: boolean;
+            /** Cases */
+            cases: components["schemas"]["EvaluationCase"][];
+        };
+        /** EvaluationSummary */
+        EvaluationSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Registered At
+             * Format: date-time
+             */
+            registered_at: string;
+            /** Report Sha256 */
+            report_sha256: string;
+            /** Source Commit */
+            source_commit: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2267,6 +2420,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessageCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluations_api_workspaces__workspace_id__evaluations_get: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluation_api_workspaces__workspace_id__evaluations__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvaluationDetail"];
                 };
             };
             /** @description Validation Error */
