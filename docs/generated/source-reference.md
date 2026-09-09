@@ -35,6 +35,7 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 ## Developer dispatcher commands
 
 ```text
+python scripts/manage.py backup
 python scripts/manage.py doctor
 python scripts/manage.py down
 python scripts/manage.py evidence

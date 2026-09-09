@@ -462,6 +462,25 @@ exposes registered historical retrieval reports through the command described be
 view certifies generated-answer correctness.
 
 
+## Standalone development database backup
+
+`python scripts/manage.py backup` exports the isolated **development** database in
+`asi-rebuild-v1-postgres-1`, using the connection configured by `.env`. It does not select the
+packaged release database or archived stack. It validates the container identity, exports a
+read-only PostgreSQL snapshot, fingerprints its public tables and writes a custom-format
+`snapshot.dump` plus `report.json` under `.artifacts/m6/backup-<timestamp>/`.
+The report includes the archive byte count and SHA-256; a failed or empty export exits nonzero.
+Partial archives and failed reports remain for diagnosis and must not be treated as backups.
+
+This command creates no database and runs no restore, login, worker or model operation.
+`status: passed` means export succeeded; `restoration_verified: false` remains explicit.
+Sequence values are observational metadata, not transactionally frozen sequence state.
+Backups contain application data, documents and authentication records. Keep them protected;
+they are ignored by Git. They exclude `.env`, model caches and machine configuration.
+This command does not implement encryption, off-device retention or a recovery-time objective.
+Use the separate drill below for a fresh-snapshot restoration check; it does not consume a
+previously saved backup file.
+
 ## Fresh snapshot restoration drill
 
 `python scripts/manage.py verify-restore` is a local verification operation. It validates the

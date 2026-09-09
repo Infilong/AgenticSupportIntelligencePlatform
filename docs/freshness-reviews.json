@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "f5d23a172b4ca547d91d003e048cb856f52ad30fd82c7d69246d2450474aef0a",
+    "fingerprint": "1924504577646c2cf1c09b7e113fe6889f71f013bc2cc84e565f2881d61da690",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/completed workbench record and entry-point review against initial seven passes/three failures, repaired two passes/one login failure and final Chinese pass in17.332s. Ten distinct aggregate cases verified; bounded saved API summary has one429 and no5xx. Fixed development drafts, existing corpus reuse and unverified native zoom/semantic generation remain explicit; next backup work is planned only."
+    "rationale": "Independent README/STATUS/completed backup plan review against actual 4093256-byte export, 23 source table fingerprints, matching dump SHA and unchanged inventory. Separate fresh-snapshot restore report has 23-table parity and new three-checkpoint zero-call clarification. Existing test failures and scope limits retained; no saved-backup restore, native zoom or generation-quality completion claim."
   },
   "frontend": {
     "fingerprint": "451fbf3b3f60fd527056abd2d362f374e26911d05e604bc6aaac722fb09f91dd",
@@ -12,10 +12,10 @@
     "rationale": "Independent review of two test-only origin/credential overrides and whitespace fact assertion repair. Development defaults and raw submitted quote/provenance remain unchanged. Parsed three retained browser reports confirm ten distinct passing journeys in aggregate, not a single clean run; final Chinese case passes after normal login-window expiry. No UI/product change or native zoom evidence."
   },
   "tooling": {
-    "fingerprint": "55f88267d264b8f1849beba630f2c544d893f96a97e6a4af89d0f9993f03092e",
+    "fingerprint": "0f1946b145cdb73fb6d94af479e765e22e39b9f6e03011e933c154dadb863447",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK release test recipe review against both harnesses and login throttle source. Overrides, model/policy prerequisites and ten-attempt fifteen-minute limit including successes are accurate; documented focused retry preserves failure and normal expiry without counter resets. Exact source submission remains unchanged by the wrapping-tolerant fact assertion."
+    "rationale": "Independent manage backup dispatch and restore_drill early-return review against RUNBOOK. Export remains on read-only exported development snapshot and returns before createdb/restore/exercise; failure/empty archives remain failed. Recomputed actual dump SHA, unchanged database inventory and retained archive listing support export-only success. Separate restore made its own snapshot; saved-archive restoration remains unverified."
   },
   "evaluation": {
     "fingerprint": "baffb1e4665fdbcc962f47d586c64c5a3b2be825a28b0340691e92b2bd34f7f0",
@@ -24,15 +24,15 @@
     "rationale": "Independent restored historical-evaluation evidence review: verifier compares clone API projection with clone stored snapshot, five strategies/150 cases and retained ja02 failure, with authenticated succeeded trace and foreign 404. Source-snapshot equivalence derives from earlier table parity. No rerun, changed quality score, generation or corpus-tuning claim."
   },
   "backend": {
-    "fingerprint": "85ad37c399d927e8ccffb7a8ffe2b179d9eb71b4db5b6ef48b8c27d6c3d693d4",
+    "fingerprint": "66fbc2d82d32accf3675d9160e439e683a877fb3478fd4f3bcb13385dc63deca",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ACCEPTANCE restoration claim review against unchanged restore implementation and retained current-schema report: all 23 table fingerprints/metadata equal and dump SHA recomputed; new restored ASGI/worker clarification has three checkpoints and zero calls. Supplementary clone API checks match stored row and deny foreign trace access. No source API comparison, network deployment or new runtime claim."
+    "rationale": "Independent new backup-boundary unit test review: backup has no clone/exercise calls or parity claim; partial and empty exports fail; default restore path remains exercised. These are synthetic mode-isolation tests, complemented by retained actual export and separate restore evidence, not runtime product changes."
   },
   "infrastructure": {
-    "fingerprint": "30e902dd827e2e43c68f0eb0a8e6dee823472f992878da3d577eed0ace679374",
+    "fingerprint": "5905aae17199e21e0e629ca3e90d08d4dde4ff0fefc332fc1a309611cff4aaf6",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared RUNBOOK review for packaged workbench execution: existing8011 release stack and separate seeded credentials/models are used through test overrides; no runtime/image/schema change. Saved aggregate journeys support built-release workflow checks, not new deployment, model quality, native zoom or a pristine retrieval benchmark."
+    "rationale": "Independent shared backup RUNBOOK namespace and data boundary review: hard-coded validated asi-rebuild-v1 PostgreSQL container, configured development connection, no packaged-release/archive selection, no created database in backup mode. Documents/auth data included, model/config caches excluded; sequence metadata observational and encryption/retention/RTO absent. No new deployment or destructive action."
   }
 }

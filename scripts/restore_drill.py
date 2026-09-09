@@ -1,4 +1,5 @@
-"""Restore a fresh snapshot into a new disposable database; never overwrite an existing database."""
+"""Export a fresh snapshot; optionally verify it in a new disposable database."""
+import argparse
 import hashlib
 import json
 import re
@@ -117,7 +118,7 @@ def exercise(url, report, engine):
             report["new_request"]["checkpoint_count"] = checkpoints
 
 
-def main():
+def main(*, backup_only=False):
     identity = docker("inspect", CONTAINER, "--format",
         '{{index .Config.Labels "com.docker.compose.project"}} {{.State.Running}}', capture_output=True, text=True).stdout.strip()
     if identity != "asi-rebuild-v1 true":
@@ -125,11 +126,17 @@ def main():
     target = "asi_restore_" + uuid.uuid4().hex[:12]
     if not re.fullmatch(r"asi_restore_[a-f0-9]{12}", target):
         raise ValueError("Refusing a non-disposable restoration target")
-    directory = ROOT / ".artifacts" / "m6" / ("restore-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
+    mode = "backup" if backup_only else "restore"
+    directory = ROOT / ".artifacts" / "m6" / (mode + "-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
     directory.mkdir(parents=True, exist_ok=False)
     dump = directory / "snapshot.dump"
-    report = {"status": "started", "source_database": "asi_rebuild", "target_database": target,
-              "scope": "fresh snapshot parity and restored API/worker clarification; no generation/RAG quality claim"}
+    report = {"status": "started", "source_database": "asi_rebuild"}
+    if backup_only:
+        report.update(scope="database snapshot export only; restoration not attempted",
+                      restoration_verified=False)
+    else:
+        report.update(target_database=target,
+                      scope="fresh snapshot parity and restored API/worker clarification; no generation/RAG quality claim")
     values = dict(line.split("=", 1) for line in (ROOT / ".env").read_text(encoding="utf-8").splitlines()
                   if "=" in line and not line.startswith("#"))
     prefix = f"postgresql+psycopg://asi_rebuild:{quote(values['ASI_DATABASE_PASSWORD'], safe='')}@127.0.0.1:{int(values.get('ASI_DATABASE_PORT', '5440'))}/"
@@ -149,6 +156,11 @@ def main():
         with dump.open("rb") as original:
             report["dump_sha256"] = hashlib.file_digest(original, "sha256").hexdigest()
         report["dump_bytes"] = dump.stat().st_size
+        if report["dump_bytes"] == 0:
+            raise RuntimeError("Database export produced an empty archive")
+        if backup_only:
+            report["status"] = "passed"
+            return 0
         # createdb fails if a target already exists. No --clean, overwrite or drop operation exists.
         docker("exec", CONTAINER, "createdb", "-U", "asi_rebuild", target)
         report["database_created"] = True
@@ -174,9 +186,14 @@ def main():
         if clone is not None:
             clone.dispose()
         (directory / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-        print(f"Restoration evidence: {directory}; disposable target: {target} (created={report.get('database_created', False)})")
+        if backup_only:
+            print(f"Backup evidence: {directory}; restoration not attempted")
+        else:
+            print(f"Restoration evidence: {directory}; disposable target: {target} (created={report.get('database_created', False)})")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--backup-only", action="store_true", help="Export without creating or exercising a restore database")
+    raise SystemExit(main(backup_only=parser.parse_args().backup_only))

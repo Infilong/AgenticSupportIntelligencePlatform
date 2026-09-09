@@ -43,7 +43,9 @@ open `http://127.0.0.1:8011`. It serves built assets from FastAPI and has separa
 volumes. [The runbook](docs/RUNBOOK.md#built-local-release) explains setup and verification.
 `verify-restore` creates a fresh backup snapshot, restores a new disposable database, checks
 table fingerprints and exercises the restored API/worker. It preserves the source and existing
-databases. A standalone backup command and `verify-live` remain unimplemented; no external
+databases. `backup` exports the isolated development database without creating a restore clone;
+see the [backup runbook](docs/RUNBOOK.md#standalone-development-database-backup) for scope and limits.
+`verify-live` remains unimplemented; no external
 generation has been verified. Do not use the archived app as proof of this rebuild.
 API spending is zero until explicitly authorized.
 

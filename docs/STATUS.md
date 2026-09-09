@@ -59,8 +59,15 @@ Recovery/CI evidence is committed/pushed as5f5a869;46 preparation checks passed 
 [complete multilingual review journeys](plans/completed/m6-release-workbench.md) now cover all
 ten cases across the retained initial run and focused repaired reruns against packaged assets.
 EN approve/copy, JA edit/copy and ZH reject/history pass with real retrieval and fixed development
-drafts; no live-generation claim. Exact citations remain checked. Current: close independent
-review/preparation and checkpoint, then assess the standalone backup command from M6.
+drafts; no live-generation claim. Exact citations remain checked. Workbench checkpointfb2db23
+is committed/pushed;46 preparation checks passed at `.artifacts/m0/prep-20260909T135242955476Z`.
+Workbench GitHub CI34360000750 passed. The
+[standalone backup command](plans/completed/m6-standalone-backup.md) now exports the development
+database without database creation/restoration. Real4,093,256-byte backup, hash/archive inspection
+and unchanged database inventory pass; the default fresh-snapshot restore regression also passes
+23-table parity and a new ASGI/worker request.69 unit tests pass. Current: close backup independent
+review/preparation and checkpoint. Saved-archive restoration remains unverified; do not equate
+the separate fresh-snapshot drill with consuming this saved backup.
 Preserve all databases and the14:58 UTC boundary.
 Keep RAG tuning deferred; five retrieval strategies
 do not complete EVAL and the workload profile does not exercise generation.
