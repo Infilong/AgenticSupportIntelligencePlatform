@@ -86,3 +86,15 @@ test('workspace denial refreshes the list instead of returning to a stale destin
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
 });
+
+test('operator message survives reload and asks for clarification without a model', async ({ page }) => {
+  await login(page, 'operator');
+  await page.getByRole('button', { name: 'New message', exact: true }).click();
+  await page.getByLabel('Customer message', { exact: true }).fill('w');
+  await page.getByRole('button', { name: 'Start processing', exact: true }).click();
+  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Clarification needed', { timeout: 15000 });
+  await page.reload();
+  await expect(page.locator('.original-message')).toHaveText('w');
+  await expect(page.locator('.response-text')).toContainText('describe your question');
+  await expect(page.getByText('Development response controls', { exact: true })).toHaveCount(0);
+});

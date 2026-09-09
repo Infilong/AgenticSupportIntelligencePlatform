@@ -54,3 +54,17 @@ class SourcePreview(BaseModel):
     checksum: str
     active: bool
     withdrawn: bool
+
+
+class RetrievedPassage(BaseModel):
+    chunk_id: UUID
+    version_id: UUID
+    document_id: UUID
+    title: str
+    section: str
+    text: str
+    start_offset: int
+    end_offset: int
+    checksum: str
+    cosine_similarity: float
+    rank_score: float

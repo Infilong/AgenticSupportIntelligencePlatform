@@ -1,8 +1,8 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for the support backend slice built on `c9e8fa1`.
+Updated 2026-09-09 for the connected workbench slice built on `8cff3bb`.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
-The workbench UI and human review remain unfinished. [STATUS](STATUS.md) owns verification.
+The workbench UI is connected; human review remains unfinished. [STATUS](STATUS.md) owns verification.
 
 ## Current project topology
 
@@ -33,6 +33,7 @@ AgenticSupportIntelligencePlatform/
 │   ├── src/api/               # Client and generated API types
 │   ├── src/features/auth/     # Login and session state
 │   ├── src/features/settings/ # Workspace members
+│   ├── src/features/workbench/ # Inbox, run details, citations and development response
 │   ├── src/features/knowledge/ # Upload, search and source inspection
 │   └── tests/e2e/             # Browser journeys
 ├── evals/                     # Frozen multilingual corpus and retrieval evaluation
@@ -44,7 +45,7 @@ AgenticSupportIntelligencePlatform/
 
 Each substantive area has a local `AGENTS.md`, linked from the root director. These paths
 exist now. The [target topology](../REBUILD_PLAN.md#target-project-topology) includes future
-modules: separate retrieval, conversations/reviews and workbench/quality features are not
+modules: separate retrieval, conversations/reviews and quality features are not
 implemented. Support currently owns original messages and their processing runs; retrieval
 remains in knowledge. Do not create empty target directories.
 
@@ -170,4 +171,24 @@ before inference so failed runs retain model-call evidence. Raw checkpoints are 
 Real PostgreSQL tests cover authorization, cancellation, concurrent submissions and simulated
 lease loss between checkpoint and publication. EN/JA/ZH API/worker smokes use actual local
 models and explicitly attributed Codex-assisted drafts. These are not process-kill recovery,
-external API generation, semantic answer-quality or completed UI/review evidence.
+external API generation, semantic answer-quality or human-review evidence.
+
+## Connected workbench
+
+Workspace inbox → original message and outcome → numbered source excerpt → expandable timeline
+and model records. A paginated search list stays beside the selected run on larger screens;
+below 800px, list and detail become separate views with back navigation. Sources retain exact
+saved quotes and link to the original document version; current source activity is checked in
+the document view. Technical IDs remain in optional details.
+
+Operators/admins enter messages and cancel active runs; viewers inspect records. The admin-only
+development section loads authorized handoff evidence and submits a draft with an exact quote.
+It is separate from human approval, which is not implemented yet. Typed public projections
+generate frontend contracts without exposing checkpoints.
+
+Resource reads are keyed to route/workspace and aborted on navigation. Transient polling failures
+preserve an unfinished answer; authorization failures clear protected data. Late message POST
+responses cannot navigate back after leaving the screen. Aborting a request does not undo its
+server write; retries of unchanged input reuse the same idempotency key within the form.
+Run-state changes refresh the inbox. Review filters, linked retries and decision history remain
+the next workflow slice; the current UI does not claim those controls exist.

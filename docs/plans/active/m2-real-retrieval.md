@@ -264,3 +264,50 @@ final stable preparation run. Worker logs show all six initial/resume jobs succe
 job IDs and timings, without message bodies. The known upstream deprecation warnings persist.
 Documentation review caught stale acceptance and historical STATUS wording; corrected those
 claims and added ACCEPTANCE to backend's owning-document map so backend changes trigger review.
+
+### Workbench connected slice
+
+Backend checkpoint `8cff3bb` pushed and remote SHA confirmed. Final preparation checks: 35 pass
+in `.artifacts/m0/prep-20260909T012000948069Z`; all six independent freshness receipts current.
+
+Outcome: close the M2 ask → cited draft → source-inspection UI gap while preserving the M3
+review boundary. Normal connected frontend implementation, root owns all edits. Build searchable
+paged inbox and routed selected run, original-language input, explicit waiting/failed/clarification
+states, progressive citation/model/step details and operator/admin cancellation. Admin-only
+development response form reads the actual handoff and submits exact quotes; it is not approval.
+Strengthen response schemas so generated frontend types describe these domain projections.
+Use existing session/CSRF client and workspace routes; abort stale fetches and keep failed input.
+Verify real browser desktop/mobile/zoom, viewer denial, cancellation, source inspection and
+EN/JA/ZH handoff/draft flows against the running real database/worker/local models. No paid API.
+Review evidence and docs, commit/push this coherent slice, then proceed to M3 review/recovery.
+
+Workbench result: real EN/JA/ZH draft/source flows, cancellation, viewer controls, transient
+poll-error input preservation and stale-navigation prevention passed (6 tests) in
+`.artifacts/m2/workbench-ui-first`. Independent review identified the latter two defects;
+fixed them, synchronized selected-run/inbox state, and strengthened keyboard/source inspection
+at 360/768/1440px. Final six-test pass: `.artifacts/m2/workbench-ui-final`; screenshots inspected.
+Content zoom is CSS doubling, not a browser-native zoom claim. Chrome itself also now supports
+interaction and screenshots; inspected the Chinese draft/source/model records and a new `w`
+clarification run. Baseline browser five-test pass: `.artifacts/m2/workbench-baseline`.
+TypeScript/Vite build passed; four component tests cover sign-in and message lifetime/idempotency.
+
+Retained failures: `.artifacts/m0/integration-20260909T013336479096Z` had 61 passes and one
+unexpected empty resume claim. Independent investigation narrowed it to scheduling before graph
+execution, but did not establish a cause. No retry or assertion was weakened. Added nonintrusive
+queue-state diagnostics to the existing failing assertion. The first diagnostic implementation
+incorrectly raised on the cancellation test's deliberately empty queue; preserve
+`.artifacts/m0/integration-20260909T013730323514Z`. Restored the helper's Boolean behavior;
+final 62-test pass is `.artifacts/m0/integration-20260909T014243087341Z`. Original claim cause
+remains unknown, not described as fixed.
+
+Added a persisted, model-free clarification flow to baseline CI browser coverage. Its first
+six-test run (`.artifacts/m2/workbench-ci-path`) passed five cases but admin sign-in received429
+after repeated QA sign-ins. API logs confirm the existing rate limiter fired; retain the failed
+trace. Do not disable/reset the limiter or extend assertions to conceal it; rerun after expiry.
+
+Read-only database inspection confirmed the admin throttle expired at 01:47:56 UTC. Its single
+failed case then passed unchanged in `.artifacts/m2/workbench-admin-after-expiry`. All six
+baseline cases thus have local pass evidence across runs, not one all-green combined run.
+CI will run the full model-free baseline against a fresh database. Final build/Ruff passed;
+four component tests passed, including late-response suppression after unmount and retained
+idempotency keys after a network error. No runtime source edits followed the final browser pass.

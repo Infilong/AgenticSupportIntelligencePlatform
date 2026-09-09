@@ -36,7 +36,8 @@ def test_real_graph_retrieval_handoff_and_cited_draft(system, original, language
         path + f"/development-handoff/{handoff['id']}", headers=auth, json=draft_payload(handoff, answer)
     )
     assert submitted.status_code == 202, submitted.text
-    assert run_support(system)  # New graph and database connection resume the saved interrupt.
+    # New graph and database connection resume the saved interrupt.
+    assert run_support(system), system.get("claim_diagnostic")
     result = client.get(path).json()
     assert result["state"] == "draft", result
     assert result["draft"] == answer

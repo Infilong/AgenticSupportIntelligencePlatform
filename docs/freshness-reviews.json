@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "c596614376ba98212ab798206e358d34d34b5773578850ca345bc34cbe9a4a42",
+    "fingerprint": "ec0111b40fff8033babce1cc1a8744ae4caf66e8e887f221b2884e0b95b708c2",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared README and updated STATUS with support implementation, retained 62 PostgreSQL and 16 unit logs, and EN/JA/ZH draft artifacts. Historical September 8 evidence is explicitly dated; UI, human review and semantic quality remain incomplete. No new runtime verification by reviewer."
+    "rationale": "Compared updated README and STATUS with connected workbench source and retained test reports. Unknown resume-claim cause and baseline throttle failure remain explicit; historical backend evidence and unfinished review/recovery are distinguished."
   },
   "frontend": {
-    "fingerprint": "473836ea0923db3df0f969e2714cd3705d42c009fc6efe2b343a9e6cb188aee1",
+    "fingerprint": "6a82fd870a5a41ee1b1b71c50d0b9c16cf78812c8d48276124ad1188e58865ae",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed generated support API schema against backend route and response declarations. Architecture accurately says workbench UI remains unfinished; no new browser verification by reviewer."
+    "rationale": "Reviewed connected inbox, run/source/details, development form, polling and submission lifecycle against owning claims and six-pass browser report. CSS content doubling is explicitly distinct from native zoom; human review remains pending."
   },
   "tooling": {
-    "fingerprint": "b63313f396d359075a6d08922777018108fd2d725953b62b26e9d2132d846968",
+    "fingerprint": "0894e2d90c04349d901f263b9d031225ad27fabb5b4d9dae62e1c7c4705a03b2",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared runtime up checkpointer initialization and support API recipes against executable source. Owning runbook accurately limits recovery and generation claims; reviewer did not restart services."
+    "rationale": "Reviewed workbench demo and verification recipe against component labels, browser tests and existing commands; retained baseline five-of-six plus isolated passing case is honestly distinguished from one green suite."
   },
   "evaluation": {
-    "fingerprint": "fd150a079cd067ae88c9f61daa66cbbebe3a14e94d355bbacf83acea98bdc2c4",
+    "fingerprint": "611c3cb49ec81da3bfb72d3d5365fde1737a2908b4896eeb56ff33b9e6d2d6e1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed corrected acceptance partial evidence against stored multilingual draft smokes and test logs. Corpus thresholds unchanged; development provenance is not semantic generation quality."
+    "rationale": "Reviewed partial TRACE and UX evidence updates without changing release thresholds. Stored six-pass workbench report supports bounded journeys, not generation quality or full release acceptance."
   },
   "backend": {
-    "fingerprint": "222460229c006af5007d76b791ff730c651bddd4be52d0a9da8d19e0abe94bd9",
+    "fingerprint": "867d1e858e97f97a2bbae6fc1281f163549b597fe854a77097842cb996ef656c",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared support routes, guards, graph, checkpoint setup, migration and tests with architecture and acceptance. Retained 62 PostgreSQL and 16 unit logs agree; provenance proof is separated from semantic quality and UI/recovery gaps."
+    "rationale": "Reviewed typed support projections and shared retrieval passage contract against routes, tests and architecture; retained final 62 PostgreSQL log passes. No semantic generation or full recovery claim."
   },
   "infrastructure": {
-    "fingerprint": "0c683d69e234fd436bc3016dc23fbc22d23ca42b546fd15703815267dbf2ae27",
+    "fingerprint": "68e5ee6fbf2b50ad4dd3e88c73a09ee4f6b99deba5f8c3ed81e9075addd12221",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared documented checkpointer preparation with runtime startup implementation; four-service namespace and isolation unchanged. No new infrastructure or live readiness claim from review."
+    "rationale": "Reviewed shared architecture/runbook changes: connected UI and typed public projections described accurately, runtime topology unchanged; no new deployment or readiness claims."
   }
 }

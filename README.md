@@ -1,8 +1,9 @@
 # Multilingual Support Workbench
 
 Fresh rebuild on `codex/fresh-start`. Foundation and knowledge ingestion/search UI exist.
-The backend processes messages into cited development drafts; its workbench UI and human-review
-flow remain unfinished. See [current status](docs/STATUS.md)
+The connected workbench processes messages into cited development drafts, exposes sources and
+processing records, and supports cancellation. Human review and release gates remain unfinished.
+See [current status](docs/STATUS.md)
 for the milestone, execution boundary and dated verification evidence.
 The scoped product is a local EN/JA/ZH support workbench using LangChain, LangGraph and
 PostgreSQL/pgvector, with one worker and no Redis or cloud platform.

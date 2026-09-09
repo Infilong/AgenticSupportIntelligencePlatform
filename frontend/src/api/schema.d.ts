@@ -342,6 +342,32 @@ export interface components {
             /** Document Id */
             document_id?: string | null;
         };
+        /** CallSummary */
+        CallSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Operation */
+            operation: string;
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /** Revision */
+            revision: string;
+            /** Status */
+            status: string;
+            /** Input Tokens */
+            input_tokens: number | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Api Cost Usd */
+            api_cost_usd: number | null;
+            /** Error Code */
+            error_code: string | null;
+        };
         /** CitationInput */
         CitationInput: {
             /**
@@ -352,12 +378,65 @@ export interface components {
             /** Quote */
             quote: string;
         };
+        /** CitedPassage */
+        CitedPassage: {
+            /**
+             * Chunk Id
+             * Format: uuid
+             */
+            chunk_id: string;
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Title */
+            title: string;
+            /** Section */
+            section: string;
+            /** Text */
+            text: string;
+            /** Start Offset */
+            start_offset: number;
+            /** End Offset */
+            end_offset: number;
+            /** Checksum */
+            checksum: string;
+            /** Cosine Similarity */
+            cosine_similarity: number;
+            /** Rank Score */
+            rank_score: number;
+            /** Quote */
+            quote: string;
+            /** Quote Start */
+            quote_start: number;
+            /** Quote End */
+            quote_end: number;
+        };
         /** Credentials */
         Credentials: {
             /** Email */
             email: string;
             /** Password */
             password: string;
+        };
+        /** DevelopmentContext */
+        DevelopmentContext: {
+            /** Original */
+            original: string;
+            /** Language */
+            language: string;
+            /** Instruction */
+            instruction: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Sources */
+            sources: components["schemas"]["RetrievedPassage"][];
         };
         /** DevelopmentResponse */
         DevelopmentResponse: {
@@ -407,6 +486,46 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HandoffExport */
+        HandoffExport: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Context Hash */
+            context_hash: string;
+            /** Provider */
+            provider: string;
+            /** Prompt Version */
+            prompt_version: string;
+            context: components["schemas"]["DevelopmentContext"];
+        };
+        /** HandoffSummary */
+        HandoffSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Context Hash */
+            context_hash: string;
+            /** Provider */
+            provider: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Submitted At */
+            submitted_at: string | null;
+            /** Contributor Id */
+            contributor_id: string | null;
+            /** Handoff Elapsed Ms */
+            handoff_elapsed_ms: number | null;
         };
         /** MemberResponse */
         MemberResponse: {
@@ -592,21 +711,12 @@ export interface components {
             /** Draft */
             draft: string | null;
             /** Citations */
-            citations: {
-                [key: string]: unknown;
-            }[];
-            /** Handoff */
-            handoff: {
-                [key: string]: unknown;
-            } | null;
+            citations: components["schemas"]["CitedPassage"][];
+            handoff: components["schemas"]["HandoffSummary"] | null;
             /** Steps */
-            steps: {
-                [key: string]: unknown;
-            }[];
+            steps: components["schemas"]["StepSummary"][];
             /** Model Calls */
-            model_calls: {
-                [key: string]: unknown;
-            }[];
+            model_calls: components["schemas"]["CallSummary"][];
             /** Retrieval Id */
             retrieval_id: string | null;
             /**
@@ -640,6 +750,24 @@ export interface components {
             active: boolean;
             /** Withdrawn */
             withdrawn: boolean;
+        };
+        /** StepSummary */
+        StepSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Node */
+            node: string;
+            /** Status */
+            status: string;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Job Attempt */
+            job_attempt: number;
+            /** Error Code */
+            error_code: string | null;
         };
         /** UploadResult */
         UploadResult: {
@@ -1376,7 +1504,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HandoffExport"];
                 };
             };
             /** @description Validation Error */

@@ -32,6 +32,33 @@ The new work window starts **2026-09-09 00:44:58 UTC** and ends **04:44:58 UTC**
   the worker at a development handoff, and resumes into an exact-source cited draft.
 - Run-level cancellation, requester/contributor checks and current-source validation protect
   resume/publication. Clarification and insufficient evidence are separate terminal outcomes.
+- Connected workbench: searchable paginated messages, selected original/draft, exact citations,
+  expandable graph/model records, cancellation and admin development-response controls.
+
+## September 9 connected workbench evidence
+
+Built on pushed backend checkpoint `8cff3bb87fbcf467519dfd164fc8ee3a159782be`;
+CI `34298862586` passed. The rebuilt app uses typed run/handoff projections.
+- Final PostgreSQL suite: 62 passed in `.artifacts/m0/integration-20260909T014243087341Z`.
+- Workbench browser suite: 6 passed in `.artifacts/m2/workbench-ui-final`; EN/JA/ZH drafts,
+  actual local retrieval, source/version navigation, cancellation, viewer denial, keyboard
+  source focus, 360/768/1440px and doubled content size. Screenshots inspected.
+- TypeScript/Vite build and 4 component tests passed. Baseline browser coverage now includes
+  model-free persisted clarification. Its six-case run passed five but hit the existing admin
+  login throttle; the missing admin case passed after verified expiry. Evidence:
+  `.artifacts/m2/workbench-ci-path` and `.artifacts/m2/workbench-admin-after-expiry`.
+  This is combined local evidence, not a single all-green six-case baseline run; fresh CI will
+  run the full suite against its own isolated database.
+- Chrome live interaction and screenshot capture now work: inspected the persisted Chinese
+  draft, source and model details, and submitted `w`, which produced clarification.
+- Independent review caught transient polling erasing an unfinished answer and a late POST
+  navigating back after leaving; fixed and covered by regressions. Inbox status now refreshes
+  when the selected run changes state.
+
+One initial PostgreSQL run returned no claimable resume job (61 passed, 1 failed). The next run
+did not reproduce it but exposed a diagnostic-helper mistake in an intentional empty-queue test;
+that helper mistake is fixed. The final 62-test run passes. The original claim cause is still
+unknown; failures and nonintrusive diagnostics remain in the M2 execution record.
 
 ## September 9 support backend evidence
 
@@ -48,8 +75,8 @@ PostgreSQL checkpointer setup ran in the rebuilt four-service development stack.
   failed retrieval records needed early run association. Both were fixed; expanded tests passed.
   Prior interrupted graph steps are now marked uncertain on a subsequent attempt.
 
-The workbench UI is not connected yet. Human review, full process-kill recovery and semantic
-generation-quality gates remain incomplete. The older table below is retained historical evidence.
+At that backend checkpoint the workbench UI was not connected. Human review, full process-kill
+recovery and semantic generation-quality gates remain incomplete. The table below is historical.
 
 ## September 8 historical verification
 
@@ -83,21 +110,21 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
   and full stable reruns pass, but the original intermittent cause is not established.
 - Early checks whose source files changed mid-run remain invalid as overall evidence even
   when individual tests passed. Final verification ran against an unchanged snapshot.
-- Chrome lists the app tabs, but interactive screenshot capture timed out. New visual proof
-  comes from the actual application browser suite; do not call it a completed Chrome demo.
+- Earlier Chrome screenshot attempts timed out; connected workbench interaction/capture now
+  works. This does not establish completed release/demo coverage.
 - Upstream AnyIO and model cache-argument deprecation warnings remain visible.
 - Synchronous model/retrieval records abandoned by a process crash need reconciliation.
 - The release plan's lexical/fusion requirement differs from the implemented vector-plus-reranker
   path; comparative evidence or an explicit scope decision remains outstanding.
-- The backend development draft path is implemented; its user-facing workbench, human review,
-  imports, complete observability, comparative evaluation and restoration remain incomplete.
+- The connected development draft path is implemented; human review, imports, complete
+  observability, comparative evaluation and restoration remain incomplete.
 
 ## Next connected slice
 
-Finish the reviewed backend checkpoint and connect its API to a simple workbench: submit/list
-original messages, inspect the selected draft and exact sources, expand processing details,
-and cancel an active run. Keep the admin-only development handoff separate from human review.
-Verify real desktop/mobile and permission-denied journeys before claiming the UI complete.
+Finish the reviewed workbench checkpoint, then implement governed human review and linked
+retry/clarification attempts with distinct execution/outcome fields. Preserve original drafts,
+exact sources and attributable decisions; enforce operator/admin versus policy-exception roles.
+Prove conflicting decisions cannot double-finalize and real worker restart resumes correctly.
 Never import evaluation answers as runtime responses, invent API usage or equate exact citations
 with semantic support. Continue into the planned human-review/recovery gates after this slice.
 The user resumed this implementation window; missing APIs do not block real local search.

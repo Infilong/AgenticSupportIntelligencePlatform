@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.modules.support.projections import CallSummary, CitedPassage, HandoffSummary, StepSummary
+
 
 class MessageInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -68,9 +70,9 @@ class RunDetail(BaseModel):
     job_id: UUID
     error_code: str | None
     draft: str | None
-    citations: list[dict]
-    handoff: dict | None
-    steps: list[dict]
-    model_calls: list[dict]
+    citations: list[CitedPassage]
+    handoff: HandoffSummary | None
+    steps: list[StepSummary]
+    model_calls: list[CallSummary]
     retrieval_id: UUID | None
     support_status: str = "not_verified"

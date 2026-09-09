@@ -5,6 +5,7 @@ from fastapi import APIRouter, Header, Query
 
 from app.modules.identity.dependencies import CurrentUser, Database
 from app.modules.support import reading, service
+from app.modules.support.projections import HandoffExport
 from app.modules.support.schemas import (
     DevelopmentResponse,
     MessageCreated,
@@ -53,7 +54,7 @@ def cancel(workspace_id: UUID, run_id: UUID, user: CurrentUser, db: Database):
     return reading.detail(db, workspace_id, user.id, run_id)
 
 
-@router.get("/runs/{run_id}/development-handoff")
+@router.get("/runs/{run_id}/development-handoff", response_model=HandoffExport)
 def export(workspace_id: UUID, run_id: UUID, user: CurrentUser, db: Database):
     return reading.export_handoff(db, workspace_id, user.id, run_id)
 

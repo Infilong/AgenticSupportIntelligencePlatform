@@ -6,6 +6,7 @@ import { Members } from '../features/settings/Members';
 import { Knowledge } from '../features/knowledge/Knowledge';
 import { DocumentView } from '../features/knowledge/DocumentView';
 import { SearchKnowledge } from '../features/knowledge/SearchKnowledge';
+import { Workbench } from '../features/workbench/Workbench';
 
 export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: User; workspaces: Workspace[]; logout: () => Promise<void>; refreshWorkspaces: () => void }) {
   const { workspaceId } = useParams();
@@ -47,7 +48,8 @@ export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: U
         <span className="role-badge">{workspace.role}</span></header>
       <main id="main-content" className="page-content">
         {actionError && <p role="alert" className="error">{actionError}</p>}
-        <Routes><Route index element={<Workbench />} />
+        <Routes><Route index element={<Workbench key={workspace.id} workspace={workspace} />} />
+          <Route path="runs/:runId" element={<Workbench key={workspace.id} workspace={workspace} />} />
           <Route path="knowledge" element={<Knowledge key={workspace.id} workspace={workspace} />} />
           <Route path="knowledge/search" element={<SearchKnowledge key={workspace.id} workspace={workspace} />} />
           <Route path="knowledge/:documentId" element={<DocumentView key={`${workspace.id}/${location.pathname}${location.search}`} workspace={workspace} />} />
@@ -57,13 +59,4 @@ export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: U
       </main>
     </div>
   </div>;
-}
-
-function Workbench() {
-  return <><div className="page-heading"><p className="eyebrow">CUSTOMER SUPPORT</p><h1>Workbench</h1>
-    <p className="muted">Every request, its context, and the next step.</p></div>
-    <section className="inbox-panel" aria-label="Conversation inbox"><div className="panel-heading"><h2>Conversations</h2><span className="count">0</span></div>
-      <div className="empty-state"><div className="empty-icon"><Inbox size={30} /></div><h2>A clear space for your support work</h2>
-        <p>No conversations yet. Customer requests will appear here with their supporting knowledge and processing history.</p></div>
-    </section></>;
 }

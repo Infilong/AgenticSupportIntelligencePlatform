@@ -1,3 +1,7 @@
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.jobs.models import Job
 from app.modules.knowledge.retrieval import retrieve
 from app.modules.support.processing import process
 from app.worker import run_once
@@ -51,6 +55,13 @@ def run_support(system, expect_failure=False):
     worked = run_once(system["engine"], handlers={"support_run": handler})
     if errors and not expect_failure:
         raise errors[0]
+    if not worked and not expect_failure:
+        with Session(system["engine"]) as db:
+            rows = db.execute(
+                select(Job.id, Job.state, Job.attempts, Job.available_at, Job.cancel_requested)
+            ).all()
+            now = db.scalar(select(func.clock_timestamp()))
+        system["claim_diagnostic"] = f"database time={now}; jobs={rows}"
     return worked
 
 

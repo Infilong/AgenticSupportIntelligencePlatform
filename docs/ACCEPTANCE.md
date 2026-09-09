@@ -57,8 +57,11 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   semantic claim support remains unverified, so the full RAG gate is not complete.
 - LANG: cross-language retrieval is measured; EN/JA/ZH Codex-assisted response smokes pass.
   These manually authored development drafts do not establish a generation-language quality gate.
-- TRACE: real local embedding/reranking ledger entries exist; the complete processing UI,
-  generation accounting and abandoned synchronous-call reconciliation remain incomplete.
+- TRACE: the workbench exposes graph steps and local embedding/reranking records, including
+  identity, duration, tokens and external charge. Complete generation accounting and abandoned
+  synchronous-call reconciliation remain incomplete.
+- UX: connected draft/source/cancellation journeys pass, including 360/768/1440px, keyboard
+  source focus and doubled content size. Browser-native zoom and full release journeys remain open.
 - ROUTE/REVIEW/DATA/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
 
 ## Evaluation expansion gate before M2 tuning

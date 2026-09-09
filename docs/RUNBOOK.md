@@ -138,8 +138,8 @@ disposable test data; never run `down -v` against the old project.
 ## Current limitations
 
 API/database, authentication, frontend and worker foundation now exist.
-TXT/Markdown ingestion, real retrieval and the message-to-cited-draft backend exist; its UI and
-human review remain unfinished. Development generation uses explicitly attributed Codex-assisted
+TXT/Markdown ingestion, real retrieval and the connected message-to-cited-draft workbench exist;
+human review remains unfinished. Development generation uses explicitly attributed Codex-assisted
 responses; the user requires real local embeddings and retrieval. Live provider access and paid
 spending remain unavailable; API connectivity/quality gates cannot be inferred from development data.
 
@@ -275,4 +275,24 @@ different submissions return conflict. Operator/admin cancellation uses `/runs/{
 These are development contributions with contributor identity and handoff elapsed time, not
 OpenAI API calls or inference latency. Exact citations prove source provenance, not semantic
 support. Drafts remain unverified and are not approved customer responses. Human-review actions
-and the workbench UI are the next application work, not part of this backend checkpoint.
+remain the next application work.
+
+## Workbench demo and verification
+
+After runtime/model preparation, open `http://127.0.0.1:5180` and sign in with the seeded admin.
+Select **New message**, enter a customer question and response language, then **Start processing**.
+The selected message shows progress. For an evidence-backed question, open **Development response
+controls**, choose a retrieved passage, supply an exact quote and a response grounded in that
+evidence, then **Submit development draft**. The worker resumes and persists the draft.
+Select a numbered citation to inspect its saved excerpt, then open the exact document version.
+Expand **Processing details** for graph steps, model identity, timings, tokens and external charges.
+Use **Cancel processing** while a run is queued, processing or waiting; cancellation is a server
+operation, not browser navigation. A single `w` asks for clarification without invoking a model.
+
+With indexed synthetic refund-policy smoke knowledge present, run
+`npx playwright test tests/e2e/workbench.spec.ts` from `frontend` using the browser/evidence
+environment variables described above. The suite uses actual local retrieval and deterministic
+development contributions, plus explicit network-failure injection. It covers EN/JA/ZH drafts,
+sources, cancellation, viewer access, 360/768/1440px, keyboard focus and doubled content size.
+This is not a browser-native zoom or live generation-quality measurement. Baseline `test:app`
+also exercises a persisted clarification flow without prepared models, including in CI.

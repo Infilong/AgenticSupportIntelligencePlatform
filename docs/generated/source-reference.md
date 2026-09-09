@@ -12,13 +12,13 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 | `backend/app/core/` | 4 |
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |
-| `backend/app/modules/` | 26 |
+| `backend/app/modules/` | 27 |
 | `backend/app/providers/` | 5 |
 | `backend/app/workflows/` | 2 |
 | `frontend/src/` | 2 |
 | `frontend/src/api/` | 2 |
 | `frontend/src/app/` | 2 |
-| `frontend/src/features/` | 10 |
+| `frontend/src/features/` | 19 |
 | `frontend/src/test/` | 1 |
 
 ## Backend module directories

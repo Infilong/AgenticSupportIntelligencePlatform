@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.modules.identity.dependencies import CurrentUser
+from app.modules.knowledge.schemas import RetrievedPassage
 from app.providers.local_reranker import InvalidRerankResult
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}/retrieval", tags=["retrieval"])
@@ -12,20 +13,6 @@ router = APIRouter(prefix="/api/workspaces/{workspace_id}/retrieval", tags=["ret
 class QueryInput(BaseModel):
     query: str = Field(min_length=1, max_length=1000)
     limit: int = Field(default=5, ge=1, le=10)
-
-
-class RetrievedPassage(BaseModel):
-    chunk_id: UUID
-    version_id: UUID
-    document_id: UUID
-    title: str
-    section: str
-    text: str
-    start_offset: int
-    end_offset: int
-    checksum: str
-    cosine_similarity: float
-    rank_score: float
 
 
 class RetrievalResult(BaseModel):
