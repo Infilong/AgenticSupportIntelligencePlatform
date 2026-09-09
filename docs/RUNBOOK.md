@@ -362,6 +362,13 @@ Repeated suites reuse seeded accounts and may reach the unchanged ten-logins-per
 account limit, including successful logins. Retain429 evidence and wait for the normal window
 expiry before a focused rerun; do not reset counters or weaken authentication to clear a test.
 Use separate browser contexts and never publish raw login snapshots or credential files.
+The same release overrides also apply to app.spec.ts, settings-usage.spec.ts,
+message-import.spec.ts and inbox-views.spec.ts. These reuse the existing session/admin/import
+journeys against built assets. The settings harness restores the captured original language on
+success or failure; cleanup failures remain visible alongside the original error. Run these only
+against the isolated synthetic demo workspace, not concurrently with a human editing its defaults.
+The arbitrary unavailable-workspace URL in app.spec.ts is UI recovery evidence; use the separate
+real private-workspace release smoke and PostgreSQL matrix for actual tenant-isolation claims.
 
 ## Retrieval recovery checks
 

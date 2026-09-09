@@ -9,9 +9,11 @@ Preserve the archive, all existing databases, unrelated edits and secrets. Small
 and pushes to `codex/fresh-start` are authorized; merging, public deployment and paid calls are not.
 
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
-Current: assess the remaining M5 generation-provider/four-pipeline contract against implemented code
-and select one bounded executable slice. Keep real retrieval working; do not resume the parked
-capacity/tuning experiment. At the deadline, save the exact continuation point and stop.
+The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
+Current: close the [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) review
+and checkpoint. Next source slice is the connected recorded-generation path in that assessment;
+do not begin an unreviewed cross-boundary refactor near this window's deadline. Keep RAG tuning
+deferred. At the deadline, save the exact continuation point and stop.
 
 [REBUILD_GOAL](REBUILD_GOAL.md) and [release plan](../REBUILD_PLAN.md) own the goal and scope;
 [ACCEPTANCE](ACCEPTANCE.md) owns gates. This file routes current work, not historical execution.
@@ -20,6 +22,12 @@ capacity/tuning experiment. At the deadline, save the exact continuation point a
 
 - Application/tooling checkpoint: **fb29b6f**, trusted saved-backup restoration, committed/pushed.
   Hosted CI34362786364 passed. Subsequent status navigation changes are documentation only.
+- Status-navigation checkpointf1cb7ad is committed/pushed;53 preparation checks passed at
+  `.artifacts/m0/prep-20260909T142552861669Z`.
+- Packaged admin/session/import/inbox run:9 passes at `.artifacts/m6/release-admin-20260909`.
+  After settings-test cleanup and promise-handling repairs, both settings cases pass at
+  `.artifacts/m6/release-settings-final-20260909`. Other eight cases are unchanged; no full
+  security/expiry/nativezoom claim. Independent review and checkpoint closure follow.
 - Independent safety and documentation reviews closed with no actionable findings.
 - All71 backend units pass: `.artifacts/m0/backend-20260909T141032167323Z`.
 - All53 preparation checks pass: `.artifacts/m0/prep-20260909T141735149948Z`.

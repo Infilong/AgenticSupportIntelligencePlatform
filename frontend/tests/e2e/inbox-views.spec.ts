@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
-const credentials = JSON.parse(readFileSync('../.artifacts/m1/demo-credentials.json', 'utf8'));
+const credentials = JSON.parse(readFileSync(process.env.ASI_DEMO_CREDENTIALS ?? '../.artifacts/m1/demo-credentials.json', 'utf8'));
 
 test('inbox views preserve filters across full-width detail and responsive table navigation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto('http://127.0.0.1:5180');
+  await page.goto(process.env.ASI_APP_BASE_URL ?? 'http://127.0.0.1:5180');
   await page.getByLabel('Email address').fill(credentials.accounts.admin);
   await page.getByLabel('Password', { exact: true }).fill(credentials.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
