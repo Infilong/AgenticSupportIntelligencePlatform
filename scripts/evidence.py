@@ -7,7 +7,10 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from command_process import capture
+if __package__:
+    from .command_process import capture
+else:
+    from command_process import capture
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".artifacts" / "m0"

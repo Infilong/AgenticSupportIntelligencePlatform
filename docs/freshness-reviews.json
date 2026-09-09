@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "5cb50b45872498b00ba8179f5050897b0cd1d0ca11e9deb646ac8f1843650aa4",
+    "fingerprint": "ba256ddf9bf53bd1bf5c37b993640656852ddaec760239fd9b697ae1a53ab321",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/startup plan against final7-check log and child phases: targeted child dispatch succeeds within unchanged20s before intentional kill, yielding uncertain records. Initial73 units and26/1 PG are explicitly earlier; no fresh full-suite claim. Parent-verified all-five CI34373738322 pertains prior timeout repair, distinct from current startup source; next M5 remains incomplete."
+    "rationale": "Reviewed STATUS and completed timeout follow-up against reproduced package import failure and final3-test log. Reviewed next four-pipeline brief as prospective only: direct has no retrieval, system links real governed support, baseline configurations/comparability and per-pipeline prompt isolation specified, original versus reviewed outputs separated. External provider/accounting/full corpus remain required; no implementation or semantic-quality completion claim."
   },
   "frontend": {
     "fingerprint": "7738549aae917cc8550397ea274828f1a30fa49b5c9e9bc96b85409b818a098e",
@@ -12,10 +12,10 @@
     "rationale": "Independent shared ARCHITECTURE claim review for backend-only import extraction. No frontend/API shape or submission behavior changed; retrieval starts without document-splitting/Torch imports, with actual model loading still deferred. Existing UI evidence is not represented as a newly run browser suite."
   },
   "tooling": {
-    "fingerprint": "68949a5b75cfa2ab16e19bfb46fad1512c92f8ae1c31ec784a72048142cc70ee",
+    "fingerprint": "740b7c6c751fdfb41ac43be5c820a903f6a1a6ae889040b415866ddf5a892d37",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent command_process/evidence integration and regression review: file-backed capture avoids inherited-pipe hang, Windows tree/POSIX group termination is bounded,124 and partial output remain on termination denial. Retained actual Windows child/sibling and mocked-denial tests pass2 in7.657s. POSIX implemented but locally unexercised; detached descendants outside guarantee; hosted CI pending."
+    "rationale": "Independent import compatibility review: evidence chooses relative command_process only in package mode, preserves direct-module mode; new subprocess regression exercises both without invoking commands. Retained log confirms all3 focused tests7.834s including timeout/sibling and denied-termination cases. Prior hosted CI and pending new verification remain revision-specific; no capture/runtime semantic change."
   },
   "evaluation": {
     "fingerprint": "150ba1194216e5ef9cfaeea224cf144eef963733fc74ed73e747f56d9195fd77",

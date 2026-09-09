@@ -14,6 +14,16 @@ from command_process import capture
 
 
 class CommandTreeTests(unittest.TestCase):
+    def test_evidence_imports_as_package_and_script_module(self):
+        root = Path(__file__).resolve().parents[2]
+        for module, cwd in (("scripts.evidence", root), ("evidence", root / "scripts")):
+            with self.subTest(module=module):
+                result = subprocess.run(
+                    [sys.executable, "-c", f"from {module} import run_checked; assert callable(run_checked)"],
+                    cwd=cwd, capture_output=True, timeout=10,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+
     def test_failed_termination_preserves_timeout_and_partial_output(self):
         process = Mock(pid=123)
         process.wait.side_effect = subprocess.TimeoutExpired(["synthetic"], 1)

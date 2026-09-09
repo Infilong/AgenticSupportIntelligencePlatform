@@ -103,3 +103,50 @@ Reference: [LangChain RunnableLambda](https://reference.langchain.com/python/lan
   command-timeout descendant cleanup, then resume the M5 evaluation/provider work.
 
 Preparation after independent review:53 passed in9.871s, .artifacts/m0/prep-20260909T154700956254Z. This appended evidence note changes no application or mapped contract source.
+
+
+## Next execution brief: one resumable four-pipeline comparison
+
+Root remains the single implementation owner. EVAL/TRACE/LANG: add an administrator-created,
+workspace-scoped comparison for one persisted question/language, with four immutable pipeline
+records. No API key or paid dispatch; use attributed development transport. Ordinary support
+requests keep their default strategy and publication safeguards. Implement the connected case
+before extending the runner to the frozen30-case corpus and its per-language scoring.
+
+- direct_llm: no retrieval invocation or trace, empty evidence, evaluation-only prompt/response
+  allowing no citations. Never route it through the support cited-draft submission endpoint.
+- vector_rag and hybrid_rag: real declared retrieval strategies, bounded context, distinct trace
+  identities and the same versioned generation settings. Retain missing/failed evidence explicitly.
+- system_v1: actual governed support/LangGraph path with immutable server-selected hybrid
+  configuration, existing clarification/source/cancellation checks and human review. Link its
+  real support run; do not imitate that workflow inside an evaluation-only helper.
+- Persist admission/jobs atomically, request/context hashes, contributor and response identity,
+  attempts/failures and terminal outcomes. Recheck membership and sources before protected
+  context export, response acceptance and publication. Bound lists and comparison admission.
+- Generation receives only whitelisted question/language and retrieved source data. Case IDs,
+  expected facts, rubrics and scoring inputs stay evaluator-only. New schemas reject extra fields.
+- Provide a working CLI/API create→request export→attributed submission→resume/read flow.
+  Reuse existing session/CSRF and workspace enforcement; no client-selected arbitrary graph state.
+  A comparison's manual outputs prove plumbing, not external inference or semantic quality.
+
+Review design before source edits. Required evidence: direct makes zero retrieval calls; other
+pipelines retain correct real strategy traces; system alone follows review/early-exit workflow;
+request-bound idempotent resume, changed-evidence and cancellation denial, foreign-workspace and
+revoked-member denial. Then run one real local comparison through the CLI with actual retrieval.
+Keep the still-required external provider/accounting path and full30-case comparison visible;
+this executable slice does not redefine M5 completion.
+
+
+Independent design-review guardrails for that next slice:
+- Keep initial contributions separate from edited/approved system responses. Report both stages;
+  never score a human-revised system answer as if it were the original generation.
+- vector_rag uses vector; hybrid_rag and system_v1 use hybrid with matching retrieval/context
+  limits. Persist exact configurations and active corpus/version fingerprints. A changed corpus
+  during resumable preparation invalidates comparability explicitly; do not silently mix versions.
+- Baseline RAG with no sources records terminal insufficient_evidence; preserve it in denominators.
+  Direct remains a source-free attributed request. Incomplete/failed pipelines are never dropped.
+- Comparison cancellation fences pending jobs and the linked unfinished support run. Already
+  completed outputs remain immutable history; cancelled comparisons reject further request export
+  and submission regardless of matching hashes.
+- Each generation export contains only that pipeline's rendered request, never other pipeline
+  answers, review edits or scoring fixtures. Full admin comparison inspection is a separate read.

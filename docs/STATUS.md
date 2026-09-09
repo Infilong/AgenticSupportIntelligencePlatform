@@ -12,10 +12,12 @@ and pushes to `codex/fresh-start` are authorized; merging, public deployment and
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
 The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
 The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
-Current: generation request contract pushed asdfbcac5 and timeout/CI-format repair asd92068e.
-Verify the [retrieval startup repair](plans/active/m6-retrieval-startup.md), then continue provider
-dispatch and the four-way runner. [Timeout cleanup](plans/completed/m6-command-timeout.md) retains
-its Windows evidence; hosted run34373738322 passed all five jobs, including POSIX cleanup. Keep RAG tuning deferred. The previous
+Current: request contractdfbcac5, timeout/format repaird92068e and startup repaire42f898 are pushed.
+Finish the timeout helper's package-import compatibility checkpoint and inspect startup CI.
+Next: implement the independently reviewed single-case four-pipeline comparison in the M5 record,
+then expand the frozen corpus runner. External provider dispatch/accounting remains required work.
+[Timeout cleanup](plans/completed/m6-command-timeout.md) retains Windows evidence and hosted
+run34373738322 passed all five jobs, including POSIX cleanup; evidence is revision-specific. Keep RAG tuning deferred. The previous
 window checkpoint records the earlier stop; it does not impose a current deadline.
 
 [REBUILD_GOAL](REBUILD_GOAL.md) and [release plan](../REBUILD_PLAN.md) own the goal and scope;

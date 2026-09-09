@@ -37,3 +37,16 @@ Independent review closed the fallback termination finding; doc receipts are cur
 Hosted checkpointd92068e, run34373738322: all five jobs passed, including Windows and Linux
 preparation (actual process-tree/group tests), backend regression, frontend and release smoke.
 This closes the harness slice; the original local regression timeout remains preserved evidence.
+
+
+Follow-up package compatibility repair: evaluation entrypoints import scripts.evidence as a
+package, unlike manage.py's direct module import. The initial helper's absolute import failed
+there (reproduced ModuleNotFoundError). Select a relative import in package mode, preserve the
+direct import otherwise. New real-subprocess regression covers both import modes; all3 focused
+tests passed7.834s in .artifacts/m0/evidence-import-20260909T161252806974Z. Actual run_retrieval
+and compare_retrieval imports pass without invoking their main functions or touching app data.
+Full preparation and new hosted checkpoint pending; earlier CI evidence stays revision-specific.
+
+Follow-up preparation completed:56 tests passed in20.254s at
+`.artifacts/m0/prep-20260909T161558166438Z`. Independent review covered both import modes.
+This appended evidence does not change the tested helper or its tests.
