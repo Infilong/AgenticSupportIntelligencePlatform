@@ -549,3 +549,27 @@ own history or an empty state. Generation evaluation remains unverified.
 Run `npx playwright test tests/e2e/evaluations.spec.ts` after registering the existing real
 `.artifacts/m2/strategy-comparison-20260909T083207Z/report.json`; ASI_EVALUATION_REPORT can select
 another compatible registered report. The browser test uses the existing synthetic demo users.
+
+## Five-session release profile
+
+After isolated release setup and model preparation, run
+`npx playwright test tests/e2e/small-team.spec.ts` from frontend with PLAYWRIGHT_BROWSERS_PATH
+and ASI_EVIDENCE_DIR set as above. It uses release-credentials.json, adds two synthetic long
+policies, opens five separate sessions of the seeded operator, and concurrently admits EN/JA/ZH
+requests with background ingestion. Each operator inspects real retrieval/model records and
+cancels at the development handoff. It does not exercise generation or five distinct accounts.
+Artifacts retain incremental outcomes on failure; failed runs may leave admitted work for inspection.
+Repeated runs preserve existing data and add synthetic records; this is not a pristine-corpus benchmark.
+
+Read the resulting profile.json for workspace/run/document IDs. Inside the release container run
+`uv run --frozen python -m app.profile_release --workspace-id UUID --run-ids R1 R2 R3 R4 R5
+--document-ids INITIAL_DOCUMENT BACKGROUND_DOCUMENT` using `docker exec asi-release-v1-api-1`.
+This trusted local database command takes a read-only repeatable snapshot, scopes all records to
+the workspace and refuses partial/missing sets. It is not an HTTP endpoint or member authorization API.
+The second document identifies the background workload. Save its JSON alongside the browser report.
+Compare recorded admission-to-indexed and admission-to-handoff intervals to establish overlap;
+both include queued work and do not prove simultaneous inference. Admission-to-first-node also
+includes pre-node work. Null means unmeasured; negative values remain clock anomalies.
+Current corpus counts describe collection time, not an inferred historical snapshot.
+Inspect bounded worker/API logs and screenshots before drawing conclusions. See the
+[recorded profile](plans/completed/m6-small-team-profile.md) for sample timings and limits.

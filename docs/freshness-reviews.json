@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "6cffa28ddf86fa7ef74f5aa0975a78f840a4545c27b0699d995a8a04c8ecb9f7",
+    "fingerprint": "260e9db4963d7f5abd927d39a61459061cefb9708a74c246fa2acc2d849f9991",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/completedM5plan/architecture/entrypoint review against155PG65unit reports,3browser11.5s andactualregistration receipt. Newhistoricalpresentation capability accuratelyupdates oldusage-only statements;priorfullrelease/provider/RAGlimits preserved. Fullgoal remainsincomplete withnextboundedworkload slice."
+    "rationale": "Independent STATUS, completed profile plan and entry-point scope review against saved final browser, database and API logs. Timing ranges and corpus counts match; 158 successful 200 and seven 202 responses retained. Full prior suite is explicitly historical; current checkpoint and unfinished generation/release gates remain honest."
   },
   "frontend": {
-    "fingerprint": "dd77513823c95fe662edcfc8dffffdde62d519a3993ea5f1e54e28c5e1020381",
+    "fingerprint": "a1beb0838a5390cadf5a7b6dc999e77fbaaf1dbe2ad901421a414ae8d1f5113a",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent Quality/Evaluations/Results andguide review:historicalchecks separateusage,failed/excludedcases andENJA-ZH denominators preserved,lazytrace access,registrationtimenotmeasurementtime. Retained3browser11.5s report supports populated/failed/empty/foreign/outage journeys with42frontend/build evidence;synthetic503 notrealoutageproof."
+    "rationale": "Independent small-team browser harness review and retained final browser/profile evidence: five distinct sessions of one operator, two uploads, real retrieval inspection and cancellation; one test passed with no page errors. Promise settlement preserves failed evidence. No UI product change or generation quality claim."
   },
   "tooling": {
-    "fingerprint": "f7d1e67b4347cf9d53c045e9164efd10b25f7e8d8c1c210a36dfcf289b405050",
+    "fingerprint": "6cfe6325b6000ab4bb9b6452af63efa562557b1cdf2f4bd5fb0c784cc7fbf7e1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent register_evaluation CLI andRUNBOOK discoverability review:bounded8MiBread,normalenvDB,explicitactor,actualprimaryworkspace,tracereference checks,idempotentrawhash andsafeerrors. Updatedusage-only staleclaims corrected. No uploadHTTP/automaticexecution,rawforeignmetadata orlocalfilemaps exposed."
+    "rationale": "Independent RUNBOOK commands compared with browser environment handling and local profile CLI. Exact five run/two document arguments, second document background meaning, trusted local authorization boundary and retained failure artifacts are accurate. No scripts behavior change; generated inventory includes the new backend helper."
   },
   "evaluation": {
-    "fingerprint": "b2a3fccfbe15522f27af8438d14f854cd4a212fa59785cc7ce7751ccbe32bb75",
+    "fingerprint": "f7eb08beb69fadfcaf9567b15674340d4296b82af9b3d948e25cb999eebad75e",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent sharedACCEPTANCE/provenance review:registeredreport SHA matches earlier e7aec139 historicalcomparison;no rerun/defaultswitch ornewqualitymeasurements.155PG/3browserverify presentation/authorization only;fourgenerationpipelines,heldoutsemanticquality remainopen. Failedcases andsubstring/group limitations preserved."
+    "rationale": "Independent ACCEPTANCE and completed profile record review against actual browser and database evidence. Bounded pre-generation workload sample adds BOOT/TRACE/JOB/UX evidence only. Existing corpus/scoring and historical quality results unchanged; no SLO, simultaneous inference, generation approval throughput or completed EVAL claim."
   },
   "backend": {
-    "fingerprint": "397c90c57e2bb4650963205ee225fecde9691add73586c25825d6a9f69fc3a7d",
+    "fingerprint": "17ddeab490bb3971f7edd01e709f4814a08dd146e7eb0e544e36e6543244e068",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent historicalevaluation module/projection/registration/routes/migration review against owningdocs. Adminprimaryworkspace lock,160distinct traceidentity/query/status/strategy checks,immutableallowlisted150caseprojection,20summarypages andmemberrechecks align. Arithmetic/factflag consistency isnotindependent source rescoring;155PG/65unit retainedreports passwithstablesource. CLI freshprocess mappingrepair covered."
+    "rationale": "Independent review of profile_release and five SQL checks: read-only repeatable snapshot, exact workspace-bound sets, unknown/negative timing and persisted interval overlap agree with docs. Final stored report has five cancelled runs, seven succeeded jobs and collection-time corpus 5 documents/128 chunks. No runtime, API or schema change; prior full suite predates this helper."
   },
   "infrastructure": {
-    "fingerprint": "0cac977439d35fb5721de2bd3d192fb7c90229f4847d1fbf093b0caefa6a65a6",
+    "fingerprint": "de1c1820b921b8bdcc9e0213c3027ff9c4cfc47034b0c2bf8e9c197b7463e451",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent additiveevaluationrecordmigration0014 andsharedRUNBOOK/architecture boundary review. Existinglocalruntime only,immutableworkspacebound snapshot rather than exposingartifactfilesystem;normalguardedmigration remains. No newcloud/modelservice,currentquality,restoreddeployment orlivegeneration claim."
+    "rationale": "Independent release profile RUNBOOK and existing runtime boundary review: test targets isolated built release with prepared local models, preserves previous synthetic data, uses a read-only local DB collector. No infrastructure configuration change or new deployment, pristine benchmark, simultaneous model inference or full production readiness assertion."
   }
 }

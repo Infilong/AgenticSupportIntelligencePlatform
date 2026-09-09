@@ -8,7 +8,7 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 
 | Path | Source files |
 | --- | ---: |
-| `backend/app/` | 10 |
+| `backend/app/` | 11 |
 | `backend/app/core/` | 5 |
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |

@@ -108,6 +108,12 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   source management after release-scoped model preparation. API/worker run as UID10001;
   runtime has no Node/Vite. This is local development-provider packaging, not external generation
   verification or completion of all release/security/UX gates.
+- BOOT/TRACE/JOB/UX small-team profile: five independent operator sessions and two real policy
+  ingestions pass against the built release, with workspace-scoped trace/model inspection and
+  cancellation at the development handoff. Database intervals confirm overlapping admitted
+  workloads. [The record](plans/completed/m6-small-team-profile.md) retains corpus size, timings,
+  screenshots, logs and independent review. This is a bounded pre-generation sample, not an SLO,
+  five simultaneous inferences, generation/approval throughput or a complete release gate.
 
 ## Evaluation expansion gate before M2 tuning
 

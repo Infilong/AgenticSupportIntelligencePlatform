@@ -33,8 +33,15 @@ Latest completed feature: [historical evaluation results in Quality](plans/compl
 `.artifacts/m5/evaluation-browser-fixed-20260909`, including failed traces, workspace switch,
 foreign denial, outage recovery and360/768/1440 layouts. The live synthetic report is registered
 in its actual evaluation workspace; registration does not rerun retrieval or certify source facts.
-Next: checkpoint this slice, then five concurrent operator sessions with bounded ingestion in
-the isolated built release. Keep RAG tuning deferred; five retrieval strategies do not complete EVAL.
+Historical results are pushed as855d1e1; GitHub CI34351992984 passed;46 preparation checks pass at
+`.artifacts/m0/prep-20260909T123445042611Z`. The
+[five-session release profile](plans/completed/m6-small-team-profile.md) now passes against built
+assets: five independent operator sessions inspect actual retrieval and cancel at development
+handoff while real knowledge ingestion proceeds. Final browser evidence is
+`.artifacts/m6/small-team-final-20260909`; database intervals confirm admitted-work overlap.
+Five focused PostgreSQL measurement checks pass. Current: finish independent documentation review
+and checkpoint this profile, then select the next bounded release-verification gap. Keep RAG tuning
+deferred; five retrieval strategies do not complete EVAL and this profile does not exercise generation.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped
