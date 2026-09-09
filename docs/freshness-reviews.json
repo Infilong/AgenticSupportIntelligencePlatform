@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "4b2a91aa6894d9f7ea1c8ba3e077900d7481f02295f2de78830df7e83f1248eb",
+    "fingerprint": "7564119862bbe959d2121365982c7e13f4989d323e760ba3768631c51de37045",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/completedcopyplan/entrypoint review:10:58–14:58resumedwindow explicit,restorationheading correctedpreviousslice.39component/build and3multilingualbrowser+1finalJAlayout evidence scoped;BOOTstaticserving/Qualityevaluation remainunimplemented,fullgoal incomplete andRAGtuningdeferred."
+    "rationale": "Independent STATUS/completedlocalreleaseplan/entrypoint review:final144PG360.11s and3+2browserreport counts verified;52unit/freshruntime evidence qualified. Earlier143pass1timeout and9focused narrative retained withunknowncause. LatestlocalBOOTcomplete whilejs-yamldevadvisory/Qualityeval/fullgoal remainopen;window anddeferredRAGscope intact."
   },
   "frontend": {
-    "fingerprint": "31831b49ac3b449b7a5af1a0f6fc331da0f32e88546dd203796966acfd807ae2",
+    "fingerprint": "e4337242bb0a593a401cbe9200267092965e7456b194ffe245cebb600405e9ed",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent CopyResponse/RunResult/eligibility-reset-denial tests review against frontendguide/architecture. Exactstored finaltext sentto browserclipboard,nativebutton/statusannouncement,retry andmanualfallback;keyresets feedback perresult. Retained3ENJA-ZHbrowserpasses56.7s plusfinalJA21.4s layout report inspected;denial iscomponentfake,notbrowserfailureproof."
+    "rationale": "Independent unchanged appbehavior plus releasebrowser/knowledgefixture review against docs. Retained3finalbrowser8.9s and2knowledge16.9s reports confirm sameorigin/nestednavigation/actualprivateworkspace andprovisionedmodel journeys. Builtassets servedbyFastAPI,notVite;no livegeneration/heldoutquality/fullUX claim."
   },
   "tooling": {
-    "fingerprint": "fe0220603b466960150ecec5f156a84316027cd0cf0629f257aa66e2bed378f8",
+    "fingerprint": "2c33e1bdb6dc2f889956aee9b1ca3dedd69b1fcb9e6521f3aa65ff6ff2f031cf",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK copyrecipe versus source/tests:approvedtext only,nodraft/citationappend,successmeanslocalclipboard notdelivery;denialmanualfallback andviewerinspectionpermission accurate. No commands/tooling changes;generatedinventory adds component/tests."
+    "rationale": "Independent manage/release_runtime/testdiagnostic changes andRUNBOOK review:separaterelease commands/env/credentials,stop-beforemigration/failclosed ordering,explicitmodelprepare,uniquepytest tempbase. Recoverychild phase/exit/stack evidence preserves20sdeadline anduncertainaccounting. Fullrerun144passes retained without deletingfailedrun;forcedoutercleanup unverified."
   },
   "evaluation": {
-    "fingerprint": "4cd214d0e84bd381d5e7d7ce54cc43f985d13b9c3d6a536abced8153fed32fc7",
+    "fingerprint": "e2a71123780800965d66bb0bffde2e6b4467625e98279c1328e3234f2c352106",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent sharedACCEPTANCE restorationgate review: freshsnapshot parity andnewdeterministic request satisfy statedscopedRESTOREflow;explicit exclusions preserve network/browser,oldbackupRPO,inheritedjob andRAGgeneration limits. No new semanticquality,evaluationpipeline or provider proof inferred."
+    "rationale": "Independent sharedACCEPTANCE BOOTwording review against localrelease source/evidence. Freshisolatedbuild/migrate/checkpoints/healthy andbrowser/knowledge proofs advance localpackaging only;remaining semantic/provider/security/fullrelease gates explicit.144PG softwareflow evidence notRAGquality orcalibratedavailability."
   },
   "backend": {
-    "fingerprint": "077a2261b1ec074853d1594eb3b407e2fa7f2011fcff15b8b72a4fb6f10f6f0f",
+    "fingerprint": "4dc43991da707a5d2eb4424a524186aa50832aa4f992f0e2d7d028c8ad42f425",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged backend boundary review against sharedarchitecture copy claim. Completedapproved eligibility andstoredreviewed_response usedclient-side;no approval,API,persistence orcustomer-delivery behavior changed. Existingpermission-scoped response inspection remains authorityboundary."
+    "rationale": "Independent builtfrontend/cachepolicy/recoverydiagnostic review against architecture/acceptance. FixedUUIDnavigation/routes/assets do notfallbackAPI/privateerrors;API defaultsnostore andauth/CSRF unchanged. Retained144PG360.11s report/log passeswithunchangedsource;143pass1predispatchfailure preserved. Diagnostic20s bound/sourceownership/accounting semantics retained,not originalrootcause proof."
   },
   "infrastructure": {
-    "fingerprint": "a421fb4eeccb3836176948b304e53962471bef00a534bb9533660735d526100c",
+    "fingerprint": "fbddea48f6e27892190817430225d22564e475270bce5073892a74c71e303fc2",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent sharedarchitecture/RUNBOOK review with unchanged infrastructure. Copyusesbrowsernativeclipboard onexistingauthorizedresponse;no serverwrite,newservice,networksend,provider ordeployment claim. Existingruntime andrestorationlimits unaffected."
+    "rationale": "Independent releaseDockerfile/compose/runtime andsharedRUNBOOK/architecture review:loopback8011,separateappworkerdbvolumes,nonrootUID10001,builtdist/noNoderuntime,unpublishedPG andnormal auth/CSRF. Explicitmodelprovisioning required;cookiecrossport caution accurate. Freshlocalpackaging notexternaldeployment,oldbackuprestore orforcedtimeoutcleanup proof."
   }
 }

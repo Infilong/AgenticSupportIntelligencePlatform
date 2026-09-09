@@ -79,8 +79,14 @@ counts, duration and zero external cost. Crash-abandoned synchronous records nee
 ## Runtime
 
 Development: Vite frontend → FastAPI → PostgreSQL/pgvector; one Python worker reads the same
-database. Planned local release: FastAPI serves built frontend assets, reducing this to app, worker,
-database. Docker project `asi-rebuild-v1`; reserve loopback ports 5180, 8010, 5440 for development.
+database. Local release: FastAPI serves built frontend assets with a worker and PostgreSQL;
+`infra/Dockerfile.release` builds the locked frontend and copies only dist into `/app/web`.
+Release project `asi-release-v1` exposes loopback port 8011 and has separate database/model
+volumes; PostgreSQL has no published release port. Explicit frontend_dist enables only built
+assets and known UUID workspace navigation routes. API/private/missing-asset errors remain
+errors. The shell is no-store; public assets are immutable-cacheable. API responses default to
+no-store and continue to require normal authentication, workspace checks and CSRF.
+Docker project `asi-rebuild-v1` reserves loopback ports 5180, 8010, 5440 for development.
 Development config uses API/database on 8010/5440, frontend on 5180 and a worker without a public
 port. This describes configuration, not current service health.
 

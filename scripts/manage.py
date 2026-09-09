@@ -3,6 +3,7 @@ import argparse
 import os
 import shutil
 import sys
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,7 +14,7 @@ def main():
     parser.add_argument("command", choices=["doctor", "verify-prep", "verify-browser", "evidence",
                                             "init-env", "up", "migrate", "down", "verify-backend",
                                             "verify-integration", "verify-inbox-capacity", "seed-demo", "verify-worker", "prepare-model",
-                                            "verify-ingestion", "verify-restore"])
+                                            "verify-ingestion", "verify-restore", "release-up", "release-seed", "release-prepare-model", "release-down"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
     args = parser.parse_args()
     if args.offline and args.command != "doctor":
@@ -28,6 +29,9 @@ def main():
         from seed_demo import main as seed
         return seed()
     from evidence import run_checked, summarize
+    if args.command.startswith("release-"):
+        return run_checked(args.command, [sys.executable, str(ROOT / "scripts/release_runtime.py"),
+                           args.command.removeprefix("release-")], ROOT, timeout=900)
     if args.command == "verify-restore":
         return run_checked("restore", [shutil.which("uv") or "uv", "run", "--frozen", "python",
                            str(ROOT / "scripts" / "restore_drill.py")], ROOT / "backend", timeout=240)
@@ -49,7 +53,9 @@ def main():
         if not uv:
             print("uv is required for backend checks.", file=sys.stderr)
             return 1
-        return run_checked("backend", [uv, "run", "--frozen", "pytest", "-q"], ROOT / "backend")
+        temporary = ROOT / ".artifacts" / "pytest" / uuid.uuid4().hex
+        temporary.parent.mkdir(parents=True, exist_ok=True)
+        return run_checked("backend", [uv, "run", "--frozen", "pytest", "-q", "--basetemp", str(temporary)], ROOT / "backend")
     if args.command == "evidence":
         return summarize()
     if args.command == "verify-prep":

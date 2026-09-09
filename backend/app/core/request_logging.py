@@ -5,6 +5,8 @@ import logging
 import time
 import uuid
 
+from starlette.datastructures import MutableHeaders
+
 logger = logging.getLogger("workbench.requests")
 
 
@@ -24,11 +26,10 @@ class RequestLogging:
             nonlocal status
             if message["type"] == "http.response.start":
                 status = message["status"]
-                message["headers"] = list(message.get("headers", [])) + [
-                    (b"x-request-id", request_id.encode()),
-                    (b"x-content-type-options", b"nosniff"),
-                    (b"cache-control", b"no-store"),
-                ]
+                headers = MutableHeaders(scope=message)
+                headers["x-request-id"] = request_id
+                headers["x-content-type-options"] = "nosniff"
+                headers.setdefault("cache-control", "no-store")
             await send(message)
 
         try:

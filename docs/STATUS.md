@@ -16,8 +16,15 @@ not redirected. This is not restored network/browser operation, inherited-job re
 Approved-response copying is implemented and verified: [record](plans/completed/m4-approved-copy.md).
 39 component tests/build pass; three real multilingual review journeys pass, plus a final
 360/768/1440 Japanese layout journey. Independent frontend review found no actionable issue.
-Next slice: built-asset serving from FastAPI (BOOT), then permission-scoped evaluation results
-in Quality. Neither is implemented yet. Keep RAG tuning deferred.
+Copy checkpoint301e747 is pushed; GitHub CI34343861442 passed.
+Latest completed slice: [built local release](plans/completed/m6-local-release.md).
+Fresh release-up/model preparation and three final real browser journeys
+pass; two real knowledge journeys pass. Evidence and failed checks are in the linked record.
+52 backend unit tests pass. Full PostgreSQL run had143 passes and one pre-dispatch child timeout;
+instrumented focused recovery run passes9 checks with the unchanged20-second dispatch limit.
+Full rerun passes144 checks in360.11s at `.artifacts/m0/integration-20260909T113404211217Z`.
+Next: checkpoint release, patch the identified development-only
+js-yaml advisory, then permission-scoped historical evaluation results in Quality. Keep RAG tuning deferred.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped

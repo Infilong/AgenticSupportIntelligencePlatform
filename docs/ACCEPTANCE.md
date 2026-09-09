@@ -95,6 +95,14 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   ASGI requests and the real worker/LangGraph completed a new clarification with three persisted
   checkpoints and no model calls. This does not prove restored network/browser deployment,
   old-backup recovery objectives, inherited-job replay or restored RAG/generation quality.
+- BOOT local packaging: a fresh isolated release stack built assets, migrated, initialized
+  checkpoints and became healthy at `.artifacts/m0/release-up-20260909T111652893904Z`.
+  Final browser proof `.artifacts/m6/release-browser-final-20260909` covers same-origin login,
+  nested refresh, real worker clarification, logout, CSRF/viewer denial and a real private
+  workspace. `.artifacts/m6/release-knowledge-20260909` verifies real ingestion/retrieval and
+  source management after release-scoped model preparation. API/worker run as UID10001;
+  runtime has no Node/Vite. This is local development-provider packaging, not external generation
+  verification or completion of all release/security/UX gates.
 
 ## Evaluation expansion gate before M2 tuning
 

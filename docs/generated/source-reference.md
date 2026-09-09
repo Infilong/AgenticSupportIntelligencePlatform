@@ -9,7 +9,7 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 | Path | Source files |
 | --- | ---: |
 | `backend/app/` | 9 |
-| `backend/app/core/` | 4 |
+| `backend/app/core/` | 5 |
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |
 | `backend/app/modules/` | 48 |
@@ -40,6 +40,10 @@ python scripts/manage.py evidence
 python scripts/manage.py init-env
 python scripts/manage.py migrate
 python scripts/manage.py prepare-model
+python scripts/manage.py release-down
+python scripts/manage.py release-prepare-model
+python scripts/manage.py release-seed
+python scripts/manage.py release-up
 python scripts/manage.py seed-demo
 python scripts/manage.py up
 python scripts/manage.py verify-backend

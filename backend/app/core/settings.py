@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,6 +10,7 @@ class Settings(BaseSettings):
     database_url: SecretStr
     provider_mode: str = "mock"
     embedding_cache: str | None = None
+    frontend_dist: Path | None = None
     session_seconds: int = 28800
     session_idle_seconds: int = 3600
     secure_cookies: bool = False  # Local loopback HTTP only; HTTPS deployments must enable this.

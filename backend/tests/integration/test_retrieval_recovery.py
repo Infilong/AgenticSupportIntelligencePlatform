@@ -1,10 +1,14 @@
+import json
 import multiprocessing
+import os
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, select, text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.modules.knowledge.recovery import RetrievalOwner, RetrievalOwnershipLost, reconcile
@@ -12,6 +16,7 @@ from app.modules.knowledge.retrieval import retrieve
 from app.modules.knowledge.retrieval_models import RetrievalTrace
 from app.modules.usage.models import ModelCall
 from app.providers.local_embeddings import EmbeddingBatch
+from tests.integration.retrieval_process import killed_retrieval
 
 
 class BlockedEmbedding:
@@ -146,24 +151,9 @@ def test_fair_cursor_finds_abandoned_trace_behind_live_owner_and_preserves_finis
             )
 
 
-def killed_retrieval(url, workspace_id, actor_id, pipe):
-    """Real spawned process; fake only model latency, not database/ownership/retrieval code."""
-    from app.modules.identity import models as identity_models  # noqa: F401
-
-    class Model:
-        def encode_batch(self, texts, kind):
-            pipe.send("inference_started")
-            pipe.recv()
-            raise AssertionError("Parent should terminate this process")
-
-    engine = create_engine(url, hide_parameters=True)
-    try:
-        retrieve(engine, workspace_id, actor_id, "synthetic crash test", provider=Model())
-    finally:
-        engine.dispose()
-
-
-def test_real_process_kill_releases_ownership_and_concurrent_sweeps_converge(system):
+def test_real_process_kill_releases_ownership_and_concurrent_sweeps_converge(system, tmp_path):
+    evidence = Path(os.environ.get("ASI_EVIDENCE_DIR", str(tmp_path)))
+    phases = []
     context = multiprocessing.get_context("spawn")
     parent, child = context.Pipe()
     process = context.Process(
@@ -173,12 +163,18 @@ def test_real_process_kill_releases_ownership_and_concurrent_sweeps_converge(sys
             system["workspace"],
             system["users"]["admin"].id,
             child,
+            str(evidence / "retrieval-child-stack.log"),
         ),
     )
     process.start()
     try:
-        assert parent.poll(20), "Child did not reach persisted model dispatch"
-        assert parent.recv() == "inference_started"
+        deadline = time.monotonic() + 20
+        while not phases or phases[-1]["phase"] != "inference_started":
+            remaining = deadline - time.monotonic()
+            assert remaining > 0 and parent.poll(remaining), (
+                f"Child did not reach persisted model dispatch; phases={phases}; exit={process.exitcode}"
+            )
+            phases.append(parent.recv())
         assert reconcile(system["engine"])[1] == 0
         process.terminate()
         process.join(10)
@@ -193,5 +189,23 @@ def test_real_process_kill_releases_ownership_and_concurrent_sweeps_converge(sys
         if process.is_alive():
             process.terminate()
             process.join(10)
+        with Session(system["engine"]) as db:
+            diagnostics = {
+                "phases": phases,
+                "exit_code": process.exitcode,
+                "trace_statuses": list(
+                    db.scalars(
+                        select(RetrievalTrace.status).where(
+                            RetrievalTrace.workspace_id == system["workspace"]
+                        )
+                    )
+                ),
+                "model_statuses": list(
+                    db.scalars(select(ModelCall.status).where(ModelCall.workspace_id == system["workspace"]))
+                ),
+            }
+        (evidence / "retrieval-child-phases.json").write_text(
+            json.dumps(diagnostics, indent=2), encoding="utf-8"
+        )
         parent.close()
         child.close()

@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.body_limit import BodyLimit
+from app.core.frontend import install_frontend
 from app.core.health import router as health_router
 from app.core.request_logging import RequestLogging
 from app.core.settings import Settings
@@ -47,6 +48,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(settings_router)
     app.include_router(usage_router)
     app.include_router(review_router)
+    if settings.frontend_dist is not None:
+        install_frontend(app, settings.frontend_dist)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, error):

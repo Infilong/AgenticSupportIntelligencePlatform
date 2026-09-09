@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
-const credentials = JSON.parse(readFileSync('../.artifacts/m1/demo-credentials.json', 'utf8'));
+const credentials = JSON.parse(readFileSync(process.env.ASI_DEMO_CREDENTIALS ?? '../.artifacts/m1/demo-credentials.json', 'utf8'));
 async function login(page: Page, role: string) {
-  await page.goto('http://127.0.0.1:5180');
+  await page.goto(process.env.ASI_APP_BASE_URL ?? 'http://127.0.0.1:5180');
   await page.getByLabel('Email address').fill(credentials.accounts[role]);
   await page.getByLabel('Password', { exact: true }).fill(credentials.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();

@@ -475,3 +475,44 @@ approved wording, including edits and line breaks, without adding the original d
 The success message confirms the browser clipboard operation, not delivery to a customer.
 If clipboard access fails, select the visible response text manually or retry. All workspace
 members who can inspect an approved response can copy it; the action does not modify data.
+
+## Built local release
+
+From the repository root, run in order:
+
+```text
+python scripts/manage.py release-up
+python scripts/manage.py release-seed
+python scripts/manage.py release-prepare-model
+```
+
+Open `http://127.0.0.1:8011`. This separate `asi-release-v1` stack contains API, worker and
+PostgreSQL; FastAPI serves the built UI without Node/Vite in the runtime image. Its port and
+trusted origins are explicitly fixed to localhost/127.0.0.1:8011 in infra/compose.release.yaml.
+The shell is public; protected data still requires login and workspace authorization. Invalid
+API paths, missing assets, private filenames and unsupported SPA routes do not return HTML.
+
+release-up generates `.artifacts/m6/release.env` once, builds the image, stops existing release
+writers, migrates, initializes checkpoints and starts healthy release services. Any failed step
+stops the sequence; migration failure leaves writers stopped. release-seed creates separate
+synthetic credentials at `.artifacts/m6/release-credentials.json`; never use it on customer data.
+release-prepare-model downloads the pinned existing CPU embedding/reranking models to the
+release-only model volume and verifies actual inference. Run it before uploading knowledge;
+startup health alone does not prove cached models exist. No paid generation is enabled.
+
+Use a separate browser profile/context for development versus release: cookies for the same
+hostname are shared across ports. `python scripts/manage.py release-down` stops only the release
+project and preserves its volumes. The development/archive stack remains untouched. Do not use
+Compose volume deletion for routine restart. Commands retain logs/fingerprints under
+`.artifacts/m0/release-*`; outer forced-termination cleanup is not proven by successful runs.
+
+After release setup, run `npx playwright test tests/e2e/release.spec.ts` in frontend with the
+normal browser/evidence environment variables. For the existing knowledge journeys, additionally
+set `ASI_APP_BASE_URL=http://127.0.0.1:8011` and
+`ASI_DEMO_CREDENTIALS=../.artifacts/m6/release-credentials.json`, then run
+`npx playwright test tests/e2e/knowledge.spec.ts`. These tests use isolated browser contexts.
+
+Backend unit verification now allocates a unique ignored `.artifacts/pytest/<uuid>` base to
+avoid shared Windows pytest-temp ownership failures. Process-kill retrieval tests retain phase,
+exit-status and scoped trace/ledger-state diagnostics, plus a bounded stack dump on slow startup.
+Their 20-second dispatch deadline and recovery assertions are unchanged.
