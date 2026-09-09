@@ -25,7 +25,7 @@ the need for complete active-population metadata, nullable absent scores and bou
 - Same workspace/current-version/not-withdrawn/embedding-space population for vector, BM25 and
   collection statistics. BM25 positive IDF `ln(1+(N-df+0.5)/(df+0.5))`, k1=1.2, b=0.75;
   zero-token chunks remain in population statistics and never match. Empty population returns none.
-- Candidate funnel: vector20 + BM2520 → identity union<=40 → equal-weight RRF, one-based ranks,
+- Candidate funnel: vector20 + BM2520 → identity union <=40 → equal-weight RRF, one-based ranks,
   k=60 → top20 → existing reranker → final K. Absent branch rank contributes zero; deterministic
   chunk-ID tie breaks. Do not collapse different sources with equal text or suppress conflicts.
 - Record recipe, raw scores/ranks, fusion/pre-rerank/final selection and exclusions without
@@ -119,3 +119,37 @@ Screenshot review found an overly long expanded mobile inspector. A five-record 
 explicit full-list expansion now passes both real journeys in18.0s at
 `.artifacts/rag-hardening/strategy-browser-compact-20260909`; all recorded candidates remain
 inspectable. Documentation review corrected the release plan’s historical nonimplementation note.
+
+
+## Comparison execution brief
+
+Strategy checkpoint `3403d82` pushed; preparation40 passed at
+`.artifacts/m0/prep-20260909T082745432597Z`. Next owner remains root, classified deep because
+measurement must not confuse candidate discovery, final evidence and semantic generation.
+Use one fresh ingestion and one separate comparison runner; leave v1 inputs/scorer/runner intact.
+Warm all five strategies, rotate order by case, time only POST, fetch traces afterward. Keep all 30
+requests per strategy,26evidence cases/27groups, frozen thresholds and failed/missing cases visible.
+Report vector20/BM2520/union <=40/selected 20 source-group discovery separately from final 5facts.
+Per-strategy safety includes negative probes and foreign404; traces do not replace persisted
+candidate isolation tests. Record paired regressions against vector_rerank and runtime/source
+fingerprints. No default switch on an aggregate tie, no held-out/answer-quality claim.
+Independent reviewer confirmed these constraints. This slice adds evaluation evidence, not model
+prompts, new source content, threshold tuning or new infrastructure. After comparison, separately
+measure50kchunks with bounded query/SQLplan evidence before choosing any search-index optimization.
+
+
+## Comparison outcome
+
+Shared fresh corpus: `.artifacts/m2/strategy-comparison-20260909T083207Z/report.json` completed
+with source/runtime unchanged. Default 26/26, hybrid-rerank 25/26, vector 22/26, BM25/hybrid 20/26;
+all safety probes/foreign404 pass. Default p95 2.516s; hybrid-rerank 2.437s. Both reranked methods
+pass aggregate gates, but hybrid newly failsja02:23-candidate union has both conflicting groups,
+selected 20 loses TRIAL-CONVERSION. Keep default; do not tune away the observed failure using
+case-specific routing or claim hybrid superiority. No held-out/generation result is implied.
+
+Independent review reproduced missing/inappropriate/noncontiguous branch ranks accepted by the
+new validator. Two failing regressions retained in
+`.artifacts/rag-hardening/comparison-validator-before.log`; stricter per-strategy/rank-pair and
+contiguous-rank checks repair the evaluator.12 metric/freeze tests pass. All 160 original saved
+case/probe traces pass `strict-trace-validation.json` bound to original report and validator hashes.
+This revalidates trace structure only; measured latency/quality was not rerun or overwritten.

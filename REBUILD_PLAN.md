@@ -217,7 +217,8 @@ the subsequent audit brief requires measured lexical/hybrid comparison. See [RAG
 BM25/fusion parameters remain a measured design choice; reranker results do not complete this work.
 Current explicit BM25/hybrid strategies and candidate inspection are tracked in the
 [hybrid plan](docs/plans/active/m2-hybrid-retrieval.md). The default remains vector-rerank;
-measured comparison and the remaining release gates are incomplete.
+the shared development-corpus comparison supports retaining it. Held-out comparison and
+the remaining release gates are incomplete.
 
 1. Apply workspace, active-version and allowed-knowledge filters before model context.
 2. Use database-side exact pgvector search, not application-side scanning of all vectors.

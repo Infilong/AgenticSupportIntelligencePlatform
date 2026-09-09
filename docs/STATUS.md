@@ -7,10 +7,21 @@ the completed [RAG span/context repair](plans/completed/rag-span-context.md) and
 the completed [workflow and inbox scale plan](plans/completed/m4-workflow-inbox-scale.md).
 The latest user approval renews full-goal execution, not just the audit.
 
+Latest checkpoint `3403d82` is pushed; GitHub CI `34329277751` passed. Preparation 40 passed at
+`.artifacts/m0/prep-20260909T082745432597Z`. One shared frozen-corpus comparison completed at
+`.artifacts/m2/strategy-comparison-20260909T083207Z/report.json`, with unchanged source/runtime.
+Vector-rerank 26/26, hybrid-rerank 25/26, vector 22/26, BM25/hybrid 20/26 evidence cases. All five
+pass leakage/foreign404 checks; only reranked methods pass the full frozen retrieval gate.
+Default remains vector-rerank: hybrid loses a conflicting policy in Japanese case ja02 before
+reranking. Warm p95:2.516s default and2.437s hybrid-rerank. No generation quality is claimed.
+Post-run independent-review repair strengthens trace shape validation; 12 metric/freeze tests
+and all 160 saved case/probe traces pass strict revalidation without replacing measured results.
+Next: separate 50k-chunk SQL performance and safety evidence, then remaining RAG/release gates.
+
 Current slice: five explicit retrieval strategies and bounded candidate traces are implemented.
 Knowledge search and Workflow → Retrieve evidence expose actual vector/BM25/fusion/reranker/final
 ranks and exact source links. BM25-only invokes no model; the message/default path remains
-vector-rerank. Hybrid superiority and50k-chunk performance are not yet established.
+vector-rerank. Hybrid superiority and50k-chunk performance are not established.
 
 Verification: initial29 focused PostgreSQL checks passed at
 `.artifacts/m0/hybrid-strategies-20260909T080916720578Z`. Full suite ran130 passing and one failed
@@ -28,8 +39,8 @@ Chrome also inspected the Japanese ERROR-8422 hybrid result and exact source off
 Foundation checkpoint `b904b90` is pushed; GitHub CI `34326510482` passed. Migration0010 backfilled
 1284 retained chunks; migration0011 adds stage records without reconstructing old history.
 Runtime guards stop old writers before migrations; all four rebuild services are healthy after
-startup. The retained pre-migration dump is not restoration proof. Next: same frozen-corpus
-comparison and separately measured50k-chunk retrieval; retain the current default until evidence.
+startup. The retained pre-migration dump is not restoration proof. The subsequent comparison
+and next capacity step are recorded above.
 
 Latest repair: **repetitive-source provenance and context retention verified**. The position-carrying
 LangChain adapter fixes ambiguous occurrences; packing retains later fitting top-five evidence.

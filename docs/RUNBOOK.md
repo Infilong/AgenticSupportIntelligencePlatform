@@ -399,3 +399,8 @@ temporary directories avoid shared Windows temp ownership failures. Browser logs
 waiting, and a real child-process timeout regression checks cleanup and retained diagnostics.
 Normal completion and inner browser-timeout cleanup own the process trees. Forced external
 termination of the entire verification wrapper is not covered by that cleanup test.
+
+For an explicit five-strategy comparison, run `uv run --project backend --frozen python
+evals/compare_retrieval.py` from the repository root. Keep source files unchanged while it runs.
+Exit0 means the experiment completed consistently; inspect individual retrieval gates and paired
+regressions. It never changes the default. See [evaluation](../evals/README.md) for the protocol.

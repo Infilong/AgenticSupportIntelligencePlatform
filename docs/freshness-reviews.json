@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "cd483d3b9f0e474dbcfd13a9d77b578e089ec6c42fab92d82edca926090d2113",
+    "fingerprint": "4355d5c275d377b79c4dfb44db25d2e4d2e6e28df4cd1395884c89547594351b",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent entrypoints/STATUS/activehybridplan review with exact gardenhashes. Corrected releaseplan note labels2379915 historical and links currently selectableBM25/hybrid. Final2browser18.0s report checked;130PGpass1fail→15focused and prior42unit/27frontend evidence scoped honestly. Current fullgoal/window remains active;quality/defaultswitch/capacity next."
+    "rationale": "Independent STATUS/releaseplan/entrypoint review against savedreport:default26/26,hybridrerank25,vector22,BM25hybrid20;zeroobservedleaks/foreign404,onlyreranked fullgates. Defaultretained despiteaggregate hybridpass duepairedja02 regression. Post-run12metric/freeze and160tracechecks distinguished from originalquality measurement;fullgoal/capacity/generation gaps explicit."
   },
   "frontend": {
-    "fingerprint": "3177acf3232c347baa9b4ee7466794ef3be9b7d5bdd1cd0ba1501294b9ad32cd",
+    "fingerprint": "7f2a9c8b6be27cbb9bd3207a986a57fc242492fecb8f39428bc4b195e0b82045",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent search method/trace inspector/workflow integration and final fivecandidatepreview review against architecture. Scores distinguished from confidence,live vs failed/legacy trace wording explicit,fullcandidate data available. Final retainedbrowser report2pass18.0s verifies preview/expansion/source/workflow journeys;27component evidence and unchanged default do not establish hybridquality or50kchunks."
+    "rationale": "Independent unchanged frontend boundary review against architecture: advanced strategy selector and candidate inspector remain available; comparison supports retaining message default,not newUI behavior. No fresh browser/quality/capacity claims inferred from offline metric-validator tests."
   },
   "tooling": {
-    "fingerprint": "54f6e11e0fee15fd01152f98ed2123132197f6c22ee08da18ec762212fae16a8",
+    "fingerprint": "251b911575534007a7b2bfac77a2e49a18e9724b2a5ab2c4add57f6768edb6b6",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent owningRUNBOOK and generatedinventory review:POSTstrategies and GETtrace paths match route/schema,legacy stages empty,trace limit40 and BM25nomodel accurate. Harness source unchanged except recovery injector relocated to extracted collect function preserving assertions. Retained130pass1fail then15focused evidence distinguished;no fullsuitegreen claimed."
+    "rationale": "Independent metric regression and RUNBOOK command review: comparison rotates strategies ononefreshcorpus,timesPOSTonly,savespartialfailures,exits0forcompleteconsistent experiment not allbaselinegates. Strictbranch/contiguousrank and frozen-input tests support structural revalidation;no command default or production verification altered."
   },
   "evaluation": {
-    "fingerprint": "753ca8c28e9b1299fe56bdc5f99093e2d0feeaed44c3b05ac1c40d1eab3e3c76",
+    "fingerprint": "9a3148ad2916c877f31a40de4e03713161e0a1512549fda7e9418e26359394eb",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged evaluation-boundary review against RAG contract: strategy correctness and boundedtrace browser evidence do not constitute identical-corpus quality comparison or four answerbaselines. Default switch/50kchunk measurements remain pending; rawbranch ranks and finalselection distinguished from passage/answerquality. No strengthened quality claim inferred."
+    "rationale": "Independent compare_retrieval/comparison_metrics/tests and evalREADME review. Verified rawreport source/runtime stability,allfive counts/gates/p95,safety404 and ja02union-selection regression. Strict160trace revalidation report and validator SHA256 match current bytes;post-run structural repair explicitly not newlatency/qualityrun. Developmentsubstring/group discovery limits and fourunverifiedoutcomes preserved."
   },
   "backend": {
-    "fingerprint": "233634b133851050ef59b6b6494f66f143270b55b862d956cfe24dfcd98ad429",
+    "fingerprint": "01c0a0db7032f7531868330dd3108a58fc1b4b14caa735f4b359af0e28a6f292",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent strategy/trace review: inspected selection/retrieve/trace schemas and scopedread API,migration0011 against architecture/RAG/runbook. Five branches preserve vector-rerank default,lexical preflight beforeembedding,BM25no model,union<=40/rerank<=20,nullable absent scores,entireunion revalidation and persisted pre-rerank discovery.130PGpass1obsoletehook failure followed15focused passes retained;not full131green."
+    "rationale": "Independent unchanged product-source review against updated RAG/architecture comparison claims. Five implemented strategies and unchanged vector-rerank default remain accurate. Inspected saved ja02 discovery:23candidate union contains2required groups,selected20contains1; supports measured regression without alleging model/generation defect. No product/API/migration change in this slice."
   },
   "infrastructure": {
-    "fingerprint": "b3067dec46773e31ae2b6e37c558ee5bbc5a302ee7b838275320cd8334b8b880",
+    "fingerprint": "96550c1bc081163041d467c36190ac423c96ac2d22ea98e850162ce79b192d88",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged runtime boundary with additive0011 stage column and shared architecture/runbook: oldtraces keep emptyhistory rather than reconstructed data,guarded migration flow unchanged,no newservices or providerintegration. Trace contracts/UI present;no50kchunk load,productionquality or restoration claim."
+    "rationale": "Independent unchanged runtime/configuration review against sharedarchitecture/RUNBOOK. Comparison usesexistinglocalstack,newisolatedcorpus and source/runtimefingerprints;no newservice,migration,defaultmodel,paidAPI or50kchunkperformance claim. Historicalrestore and productionlimits unaffected."
   }
 }

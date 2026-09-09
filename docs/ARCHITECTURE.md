@@ -104,7 +104,8 @@ belongs to that stack; it is not part of the rebuild. New volumes must carry the
 The default retrieval path still uses vector candidates plus neural reranking.
 [SQL BM25](../backend/app/modules/knowledge/bm25.py) and [RRF](../backend/app/modules/knowledge/fusion.py)
 are available through five explicit search strategies. Knowledge search exposes an advanced method
-selector; message workflows retain the vector-rerank default until measured comparison.
+selector; message workflows retain vector-rerank after the shared-corpus comparison found
+a hybrid conflict-source regression (see evaluation evidence in STATUS).
 Candidate history is available in knowledge results and the workflow retrieval inspector,
 with a five-record preview and explicit full-list expansion (maximum40).
 Both candidate implementations use the same active workspace/version/embedding-space population;
