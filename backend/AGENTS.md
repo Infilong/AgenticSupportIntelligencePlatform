@@ -34,6 +34,9 @@ for implemented modules. This guide owns backend rules, not a duplicate mileston
 
 ## Verification
 
+- Before checkpointing backend edits, run both `uv run --frozen ruff check .` and
+  `uv run --frozen ruff format --check .` from backend; lint alone does not cover the CI format gate.
+
 - Select relevant gates in [acceptance](../docs/ACCEPTANCE.md); cover successful, failing
   and permission-denied paths. Use real PostgreSQL for vector, isolation and concurrency tests.
 - Fake only external AI providers in offline application journeys. Follow

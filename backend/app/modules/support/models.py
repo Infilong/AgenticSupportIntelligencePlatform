@@ -101,9 +101,7 @@ class Handoff(Base):
         ForeignKeyConstraint(["workspace_id", "run_id"], ["support_runs.workspace_id", "support_runs.id"]),
         UniqueConstraint("workspace_id", "run_id", name="uq_handoff_run"),
         UniqueConstraint("workspace_id", "id", name="uq_handoff_workspace"),
-        CheckConstraint(
-            "(generation_request IS NULL) = (request_hash IS NULL)", name="handoff_request_pair"
-        ),
+        CheckConstraint("(generation_request IS NULL) = (request_hash IS NULL)", name="handoff_request_pair"),
     )
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID]

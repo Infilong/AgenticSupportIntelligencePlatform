@@ -640,3 +640,10 @@ inference weights or calls generation providers. Failed runs print bounded servi
 cleanup. Job cancellation or timeout can interrupt cleanup; browser files currently remain on the
 ephemeral runner rather than being uploaded. This is a packaged no-API smoke, not the real-model
 five-session or full release matrix.
+
+
+Command evidence uses file-backed stdout/stderr capture and bounded process waits. On timeout,
+the wrapper terminates the launched Windows process tree or POSIX process group before reporting
+exit124 and retained partial output. It does not target unrelated services. Cleanup uncertainty is
+explicit in command.log; deliberately detached processes are outside the tree guarantee. Timeout
+is a failed command, never a passing test result. Runtime commands keep their existing budgets.

@@ -14,7 +14,8 @@ def upgrade():
     op.add_column("development_handoffs", sa.Column("generation_request", postgresql.JSONB()))
     op.add_column("development_handoffs", sa.Column("request_hash", sa.String(64)))
     op.create_check_constraint(
-        "handoff_request_pair", "development_handoffs",
+        "handoff_request_pair",
+        "development_handoffs",
         "(generation_request IS NULL) = (request_hash IS NULL)",
     )
 

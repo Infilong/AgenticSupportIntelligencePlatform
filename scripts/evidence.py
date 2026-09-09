@@ -7,6 +7,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from command_process import capture
+
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / ".artifacts" / "m0"
 
@@ -37,11 +39,7 @@ def run_checked(name, command, cwd, env=None, timeout=180):
     started = datetime.now(timezone.utc)
     environment = {**os.environ, **(env or {}), "ASI_EVIDENCE_DIR": str(directory)}
     try:
-        result = subprocess.run(command, cwd=cwd, env=environment, capture_output=True,
-                                timeout=timeout)
-    except subprocess.TimeoutExpired as error:
-        result = subprocess.CompletedProcess(command, 124, error.stdout or b"",
-            (error.stderr or b"") + f"Command timed out after {timeout} seconds.\n".encode())
+        result = capture(command, cwd, environment, timeout)
     except OSError:
         result = subprocess.CompletedProcess(command, 127, b"", b"Command could not be launched.\n")
     output = result.stdout + result.stderr

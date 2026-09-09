@@ -120,14 +120,16 @@ def test_existing_handoff_survives_migration_without_invented_request(system, su
         config = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
         config.attributes["connection"] = connection
         command.downgrade(config, "0014_evaluation_records")
-        before = connection.execute(text(
-            "SELECT context, context_hash, response, response_hash FROM development_handoffs"
-        )).one()
+        before = connection.execute(
+            text("SELECT context, context_hash, response, response_hash FROM development_handoffs")
+        ).one()
         command.upgrade(config, "head")
-        after = connection.execute(text(
-            "SELECT context, context_hash, response, response_hash, generation_request, request_hash "
-            "FROM development_handoffs"
-        )).one()
+        after = connection.execute(
+            text(
+                "SELECT context, context_hash, response, response_hash, generation_request, request_hash "
+                "FROM development_handoffs"
+            )
+        ).one()
         assert tuple(after[:4]) == tuple(before) and after[4:] == (None, None)
     if not submitted:
         exported = system["client"].get(path + "/development-handoff").json()
