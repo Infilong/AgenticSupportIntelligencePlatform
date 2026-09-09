@@ -2,13 +2,14 @@ from app.jobs.contracts import Publication
 from app.modules.reviews.processing import process
 from app.worker import run_once
 from tests.integration.conftest import login
+from tests.integration.job_readiness import wait_initial
 from tests.integration.support_helpers import base, create, draft_payload, prepare, run_support
 
 
 def ready_draft(system, category="ordinary"):
     prepare(system)
     run = create(system)
-    assert run_support(system)
+    assert run_support(system), system.get("claim_diagnostic")
     client, path = system["client"], base(system, run)
     auth = login(client)
     handoff = client.get(path + "/development-handoff").json()
@@ -24,7 +25,7 @@ def ready_draft(system, category="ordinary"):
 
 
 def decision_payload(run, action="approve"):
-    return {
+    payload = {
         "action": action,
         "reason": "Checked the cited policy and requested outcome.",
         "expected_revision": run["review_version"],
@@ -35,6 +36,9 @@ def decision_payload(run, action="approve"):
             else {}
         ),
     }
+    if action == "clarify":
+        payload["response"] = "Was this the initial purchase or a renewal?"
+    return payload
 
 
 def run_review(system):
@@ -56,5 +60,6 @@ def run_review(system):
 
         return Publication(publish)
 
+    wait_initial(system, "support_review")
     worked = run_once(system["engine"], handlers={"support_review": handler})
     return worked, errors

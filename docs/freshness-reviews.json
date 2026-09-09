@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "3cabf3178a985387a8a263c705e57403f9326cff841d74a7bcd41e97d7354262",
+    "fingerprint": "03fe5f12640be6e36d0fc1cba4aaee0cf9f29e3218c11a88cdffea30120d7e11",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed STATUS and recovery record against stored 100-test and eight-browser passes; intermittent cancellation setup root cause remains explicitly unknown despite successful diagnostic rerun."
+    "rationale": "Compared current STATUS and plan with110-test and nine-browser evidence; new clock observations and bounded readiness wait are distinguished from unresolved host-clock causes and broader release gaps."
   },
   "frontend": {
-    "fingerprint": "6aa585f6b7868344b7347a28ed6f36ffc1c1e1d7bd240aed42d9c2dd71ac4ff6",
+    "fingerprint": "27c8b57cb201959fbae9f227c4c82ede95fc35eb8b37d38567ec835f1130a0ee",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed shared architecture changes against unchanged workbench source and retained eight-pass browser report; no new UI recovery controls or generation-quality claims introduced."
+    "rationale": "Reviewed RunResult publication gating, immutable question history and internal-only copy; retained nine-browser report passes. Failed or cancelled questions cannot become active next steps; preserved draft remains separate."
   },
   "tooling": {
-    "fingerprint": "00fad0360c6c7f3142b0c39c60614ba99931568393728141a0a309056e1485e3",
+    "fingerprint": "07dd026994b5fde35bfd4d0baf5f7f650f7d8b98bb1609aceebd8eeb6bdd334c",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Verified integration wrapper alone raises timeout to300 seconds for expanded suite; runbook separates command allowance from latency gates and explicitly stops old producers before ownership transition."
+    "rationale": "Verified runbook includes clarify action and required response question<=1000 plus successful publication semantics. Test readiness helper matches documented five-second bounded closed-transaction observation, not blind worker retry."
   },
   "evaluation": {
-    "fingerprint": "51314b552381ad6d27f380773ef9b5cec85e0de75350f5be40a12cdb662f0112",
+    "fingerprint": "ef721946fd774075e27ef6e294bbd50c2ff0a419b8da41a67fcd5da1595f50b5",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed recovery evidence update without changing latency or semantic acceptance thresholds; focused process-kill/session-loss plus 100-test regression do not claim full crash matrix."
+    "rationale": "Reviewed partial human clarification evidence without weakening generation/routing/recovery acceptance; published question and fresh reply workflow do not prove semantic policy or language quality."
   },
   "backend": {
-    "fingerprint": "197d55834a98a4ef80787c4a58f251ad299ced8902de846bed56904975e153d4",
+    "fingerprint": "692d3e06a5e0cab5b9dda13aa920e93a4bde52dd7eb7931d64120425366b5030",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared retrieval ownership, guarded provider writes and bounded worker reconciliation with architecture/acceptance; retained final 100 PostgreSQL log confirms pass. Lost ownership is not proof CPU work stopped; broader recovery remains open."
+    "rationale": "Reviewed explicit clarify action, question validation, authority and publication separation against owning docs. Retained110 PostgreSQL log passes; test-only readiness waits inspect future initial availability without production scheduling changes."
   },
   "infrastructure": {
-    "fingerprint": "ffad015d8d5424dbb4cce46a8161c8cb4af7579d963e886de983177f4f57edc1",
+    "fingerprint": "5e218aa694d4ffa79c19277593a2f78c5a8b5da6f6ac13b3aebf72525e14c0e6",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed corrected stop-api-worker then up transition recipe preserving volumes and avoiding old inference/new sweep overlap; observed one rollout order is not generalized as a guarantee."
+    "rationale": "Reviewed shared architecture source-revalidation qualifier: approve/edit require current evidence while reject/clarify approve no answer. Runtime topology unchanged; no external send or deployment claim."
   }
 }

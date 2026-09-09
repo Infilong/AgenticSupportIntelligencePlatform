@@ -123,10 +123,12 @@ def test_changed_authority_or_source_after_decision_prevents_publication(system,
     assert final["review"]["action"] == "approve"  # Decision history survives failed publication.
 
 
-def test_review_checkpoint_replay_after_lost_publication_lease(system):
+@pytest.mark.parametrize("action", ["approve", "clarify"])
+def test_review_checkpoint_replay_after_lost_publication_lease(system, action):
     path, draft = ready_draft(system)
     client, auth = system["client"], login(system["client"], "operator")
-    assert client.post(path + "/review", headers=auth, json=decision_payload(draft)).status_code == 202
+    payload = decision_payload(draft, action)
+    assert client.post(path + "/review", headers=auth, json=payload).status_code == 202
     with Session(system["engine"], expire_on_commit=False) as db, db.begin():
         job = claim(db)
     publication = process(system["engine"], job)
@@ -138,6 +140,9 @@ def test_review_checkpoint_replay_after_lost_publication_lease(system):
     worked, errors = run_review(system)
     assert worked and not errors, errors
     final = client.get(path).json()
-    assert final["outcome"] == "approved_response" and final["review_version"] == 1
+    expected = "approved_response" if action == "approve" else "clarification_needed"
+    assert final["outcome"] == expected and final["review_version"] == 1
+    if action == "clarify":
+        assert final["review"]["response"] == payload["response"] and final["reviewed_response"] is None
     with Session(system["engine"]) as db:
         assert db.scalar(select(func.count()).select_from(SupportRun)) == 1

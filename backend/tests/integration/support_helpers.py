@@ -7,6 +7,7 @@ from app.modules.support.processing import process
 from app.worker import run_once
 from app.workflows.checkpoints import setup
 from tests.integration.conftest import login
+from tests.integration.job_readiness import wait_initial
 from tests.integration.test_knowledge import TestEmbeddings, add_version, ingest
 from tests.integration.test_retrieval import TestReranker
 
@@ -52,6 +53,7 @@ def run_support(system, expect_failure=False):
             errors.append(error)
             raise
 
+    wait_initial(system, "support_run")
     worked = run_once(system["engine"], handlers={"support_run": handler})
     if errors and not expect_failure:
         raise errors[0]

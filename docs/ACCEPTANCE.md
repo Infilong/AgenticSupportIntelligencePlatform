@@ -63,6 +63,10 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   identity, duration, tokens and external charge. Retrieval ownership/reconciliation has focused
   process-kill, session-loss and late-write tests within the passing 100-case PostgreSQL suite.
   Complete generation accounting and the broader crash matrix remain incomplete.
+- REVIEW/ROUTE: operator/admin clarification preserves the unapproved draft and immutable
+  question; customer replies start fresh linked retrieval. The 110-case PostgreSQL regression,
+  nine browser journeys and four publication-state component cases pass. This proves the
+  clarification software flow, not automatic semantic routing or the full release gates.
 - UX: connected draft/source/cancellation and approve/edit/reject journeys pass, including 360/768/1440px, keyboard
   source focus and doubled content size. Browser-native zoom and full release journeys remain open.
 - Linked attempts: PostgreSQL tests cover history, fresh retrieval, atomic competing submissions,

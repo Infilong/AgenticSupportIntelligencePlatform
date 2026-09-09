@@ -219,11 +219,19 @@ Operators/admins review ordinary drafts. Approval/edit of policy exceptions or u
 drafts requires admin; rejection remains available to operators. Development routing annotations
 are attributed inputs, not proof of semantic policy detection.
 
+Operators/admins can also request clarification, including for policy exceptions or stale evidence,
+without approving a response. The required question lives in the immutable review decision.
+Fenced continuation publishes `clarification_needed` with no approved response and preserves the
+original draft/citations. A queued, failed or cancelled decision remains history; its question is
+not shown as an active next step. Customer replies use a fresh linked attempt and never inherit
+the administrator's question as customer input. The question is recorded internally, not sent.
+
 A separate `review-v1:{workspace}:{run}` LangGraph thread preserves completed generation history.
 New drafts initialize a durable interrupt; migrated drafts initialize it when reviewed. The decision
 and resume job commit atomically. Final publication rechecks the live lease, cancellation, original
-requester, contributor, reviewer, exact decision and all contextual sources. Rejection publishes no
-answer and can reject withdrawn evidence. Concurrency permits only one decision and continuation.
+requester, contributor, reviewer and exact decision; approve/edit also recheck all contextual sources.
+Reject/clarify publish no approved answer and can address withdrawn evidence. Concurrency permits
+only one decision and continuation.
 Pending task errors/interrupts are checked even when LangGraph reports an empty `next` list.
 
 Handoff timestamps remain raw evidence. Reversed timestamps produce `clock_anomaly` and no elapsed

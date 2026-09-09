@@ -1,0 +1,22 @@
+import type { ReactNode } from 'react';
+import { outcomeLabel, type Run } from './types';
+
+export function RunResult({ run, children }: { run: Run; children?: ReactNode }) {
+  const question = run.state === 'completed' && run.outcome === 'clarification_needed' && run.review?.action === 'clarify' ? run.review.response : null;
+  const primary = question ?? run.reviewed_response ?? run.draft;
+  const historical = question ? 'Original unapproved draft' : run.reviewed_response ? 'Original development draft' : null;
+  const pending = {
+    waiting_for_input: 'Retrieval is complete. An administrator can supply a development response using the supporting evidence.',
+    cancelled: 'This processing attempt was cancelled. The original message and processing history are preserved.',
+    failed: 'Processing stopped before a response was ready. Inspect the details below, then retry or add customer details.',
+  }[run.state] ?? 'Your message is saved. Processing will continue in the background.';
+  return <section className="run-result">
+    <h2>{question ? 'Clarification requested' : outcomeLabel(run.outcome)}</h2>
+    {primary ? <p className="response-text" lang={run.language}>{primary}</p> : <p className="muted">{pending}</p>}
+    {question && <p className="muted">Recorded here, not sent to the customer. Add their reply below to start a new attempt. Sources below belong to the original draft.</p>}
+    {historical && <details><summary>{historical}</summary><p className="response-text" lang={run.language}>{run.draft}</p></details>}
+    {!historical && run.draft && !!run.citations.length && <p className="muted">{run.state === 'rejected' ? 'Rejected development draft · Not approved for sending' : 'Development draft · Not approved for sending'}</p>}
+    {run.error_code && <details><summary>Failure information</summary><p className="error">{run.error_code}</p></details>}
+    {children}
+  </section>;
+}

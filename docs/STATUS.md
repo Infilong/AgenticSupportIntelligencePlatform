@@ -1,7 +1,7 @@
 # Current status
 
 Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
-Current implementation slice: M3 abandoned retrieval accounting; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
+Current implementation slice: M3 human clarification requests; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -12,7 +12,8 @@ provider and documentation-workflow clarifications; it is now covered by project
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M3 recovery plan](plans/active/m3-retrieval-recovery.md) owns current implementation;
+[M3 clarification plan](plans/active/m3-review-clarification.md) owns current implementation;
+[M3 recovery plan](plans/completed/m3-retrieval-recovery.md) retains the preceding checkpoint;
 [M3 linked-attempt record](plans/completed/m3-linked-attempts.md) retains the preceding slice;
 [M3 review record](plans/completed/m3-human-review.md) retains review decisions/evidence;
 [M2 execution plan](plans/active/m2-real-retrieval.md) retains retrieval decisions and evidence;
@@ -203,11 +204,20 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
 
 Human-review checkpoint `497b160` is committed/pushed; CI run `34304500162` passed, confirmed
 through the OpenAI GitHub connector. The preceding workbench CI `34301042398` passed.
-Linked-attempt checkpoint `2e2054f` is pushed; CI `34306686806` passed. Preparation passed
-35 checks after staging the intended completed-plan move. Finish recovery documentation receipts
-and checkpoint; then implement the remaining human request-for-clarification outcome with a
-preserved draft and linked follow-up. The final recovery suite passed 100/100; earlier failure
-causes remain explicitly unresolved in the execution record.
+Linked-attempt checkpoint `2e2054f` and recovery checkpoint `13322ca` are pushed; their CI runs
+`34306686806` and `34308144856` passed. Human clarification now passes 110 PostgreSQL tests
+in 203.86s (`.artifacts/m0/integration-20260909T040250637259Z`), all nine browser journeys
+(`.artifacts/m3/clarification-workbench-ui`), nine component tests and the TypeScript/Vite build.
+Actual Chrome and stored records confirm a published question followed by fresh child retrieval
+(`.artifacts/m3/clarification-live-result.json`). Final documentation review and commit/push are
+the immediate next action. The next product slice is the planned workbench attention/outcome
+filters; imports, lexical/fusion retrieval and other release gates remain open.
+
+The preceding full run had 105 passes and two setup failures. Database observations showed a
+queued initial job 1.613051s ahead of a later clock reading. Tests now wait only for observed
+initial-job availability, with a five-second bound and one worker execution. Production scheduling
+and timestamps are unchanged. The passing final suite recorded only the synthetic 188ms wait;
+the host/VM clock mechanism and causes of older intermittent failures remain unresolved.
 Human-review concurrency and a real
 worker restart at its durable wait have passed; broader routing/recovery gates remain open.
 Never import evaluation answers as runtime responses, invent API usage or equate exact citations

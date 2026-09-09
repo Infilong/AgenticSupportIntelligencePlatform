@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.jobs.contracts import Publication
-from app.modules.reviews.service import draft_identity
+from app.modules.reviews.service import decision_response, draft_identity
 from app.workflows.review_graph import checked_decision, execute
 from app.workflows.support_graph import guard
 
@@ -20,18 +20,14 @@ def process(engine, job):
         run, decision = checked_decision(db, current, run_id, identity)
         if result.get("decision_id") != str(decision.id) or result.get("action") != decision.action:
             raise ValueError("Completed review checkpoint does not match the stored decision")
-        expected = (
-            None
-            if decision.action == "reject"
-            else decision.response
-            if decision.action == "edit"
-            else run.draft
-        )
+        expected = decision_response(run, decision)
         if result.get("response") != expected:
             raise ValueError("Reviewed response differs from the attributed decision")
-        run.reviewed_response = result["response"]
+        run.reviewed_response = result["response"] if decision.action in {"approve", "edit"} else None
         run.state = "rejected" if decision.action == "reject" else "completed"
-        run.outcome = "rejected_response" if decision.action == "reject" else "approved_response"
+        run.outcome = {"reject": "rejected_response", "clarify": "clarification_needed"}.get(
+            decision.action, "approved_response"
+        )
         run.finished_at = db.scalar(select(func.clock_timestamp()))
         return {"run_id": str(run.id), "state": run.state, "outcome": run.outcome}
 

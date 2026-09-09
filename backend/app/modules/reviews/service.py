@@ -25,7 +25,7 @@ def decision_for(db, run):
 def reviewer_authority(db, run, actor_id, action):
     roles = (
         {"admin"}
-        if run.review_kind in {"policy_exception", "unclassified"} and action != "reject"
+        if run.review_kind in {"policy_exception", "unclassified"} and action in {"approve", "edit"}
         else {"operator", "admin"}
     )
     membership(db, run.workspace_id, actor_id, roles)
@@ -36,6 +36,16 @@ def validate_approval(db, run):
     if handoff is None or handoff.response is None:
         raise HTTPException(409, "This run has no attributable development draft")
     validate_sources(db, run.workspace_id, handoff.context)
+
+
+def decision_response(run, decision):
+    if decision.action == "reject":
+        return None
+    if decision.action == "approve":
+        return run.draft
+    if decision.action in {"edit", "clarify"} and decision.response and decision.response.strip():
+        return decision.response
+    raise ValueError("Stored review decision has no valid response")
 
 
 def submit(db, workspace_id, actor_id, run_id, data):
@@ -55,7 +65,7 @@ def submit(db, workspace_id, actor_id, run_id, data):
         run.draft, run.citations
     ):
         raise HTTPException(409, "The draft changed; reload before reviewing")
-    if data.action != "reject":
+    if data.action in {"approve", "edit"}:
         validate_approval(db, run)
     decision = ReviewDecision(
         workspace_id=workspace_id,
@@ -66,7 +76,7 @@ def submit(db, workspace_id, actor_id, run_id, data):
         payload_hash=payload_hash,
         action=data.action,
         reason=data.reason,
-        response=data.response if data.action == "edit" else None,
+        response=data.response if data.action in {"edit", "clarify"} else None,
     )
     db.add(decision)
     job = enqueue(

@@ -7,7 +7,7 @@ process crash. Current synchronous retrieval traces and their embedding/rerankin
 remain `started` forever; job reclaim only repairs calls directly linked to jobs. This is a
 deep concurrency/recovery slice under the active M1–M6 goal, owned by root. Read root/backend,
 docs and tooling guides; preserve existing authorization and the 04:44:58 UTC work cutoff.
-Baseline linked-attempt checkpoint: `2e2054f`; its CI is running.
+Baseline linked-attempt checkpoint: `2e2054f`; its CI passed.
 
 ## Approach and constraints
 
@@ -80,5 +80,6 @@ No assertion or documentation check was weakened. All six independent freshness 
 - Observed Compose output replaced the old API and worker before starting the new worker in
   this run. The durable runbook now explicitly stops old producers first for the initial
   protocol transition rather than assuming replacement order for every deployment.
-- Final independent documentation receipts and checkpoint pending. The next connected M3 gap
-  is a human request-for-clarification decision preserving the draft and enabling a linked follow-up.
+- Completed checkpoint `13322cae7ac4c745d81844f72f584ed869903801` is pushed; CI `34308144856`
+  passed. Six independent documentation receipts and 35 preparation checks passed in
+  `.artifacts/m0/prep-20260909T034154254646Z`. Broader M3 recovery remains a separate release gap.

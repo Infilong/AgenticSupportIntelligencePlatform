@@ -16,6 +16,7 @@ from app.modules.workspaces.service import change_member
 from app.providers.local_embeddings import EmbeddingBatch
 from app.worker import run_once
 from tests.integration.conftest import login
+from tests.integration.job_readiness import wait_initial
 
 
 class TestEmbeddings:
@@ -35,6 +36,7 @@ class TestEmbeddings:
 
 
 def ingest(system, provider=None):
+    wait_initial(system, "index_document")
     return run_once(
         system["engine"],
         handlers={

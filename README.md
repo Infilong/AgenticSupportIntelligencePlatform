@@ -2,7 +2,8 @@
 
 Fresh rebuild on `codex/fresh-start`. Foundation and knowledge ingestion/search UI exist.
 The connected workbench processes messages into cited development drafts, exposes sources and
-processing records, and supports cancellation and attributable approve/edit/reject decisions.
+processing records, and supports cancellation and attributable approve/edit/reject/clarify decisions.
+Administrators can record a clarification question without approving or sending the draft.
 Linked retries and customer clarifications preserve original messages and attempt history.
 Linked-attempt database/browser checks pass; the full release gates remain unfinished.
 See [current status](docs/STATUS.md)

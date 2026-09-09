@@ -785,7 +785,7 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "approve" | "edit" | "reject";
+            action: "approve" | "edit" | "reject" | "clarify";
             /** Reason */
             reason: string;
             /** Expected Revision */

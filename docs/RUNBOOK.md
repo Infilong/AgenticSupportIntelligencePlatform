@@ -280,8 +280,10 @@ OpenAI API calls or inference latency. Exact citations prove source provenance, 
 support. Drafts remain unverified until an authorized review; exact citations alone do not prove
 semantic support. Reversed raw timestamps show `timing_status: clock_anomaly` and null elapsed.
 
-POST `/runs/{run_id}/review` with `action` (`approve`, `edit`, `reject`), a nonempty `reason`,
-the current `expected_revision` and `draft_hash`. Edit also requires `response`. Operators/admins
+POST `/runs/{run_id}/review` with `action` (`approve`, `edit`, `reject`, `clarify`), a nonempty `reason`,
+the current `expected_revision` and `draft_hash`. Edit requires replacement `response`; clarify
+requires a question in `response` (maximum 1,000 characters). Approve/reject omit response.
+Published clarification has outcome `clarification_needed` and no approved response. Operators/admins
 may review ordinary drafts; approving/editing policy exceptions or unclassified drafts requires
 admin. Submission returns 202 and schedules continuation. Poll state/outcome until completed,
 rejected or failed; approval records a response internally and does not send it to a customer.
@@ -297,6 +299,10 @@ controls**, choose a retrieved passage, supply an exact quote and a response gro
 evidence, then **Submit development draft**. The worker resumes and persists the draft.
 In **Review response**, choose approve/edit/reject and give a reason. After completion, the
 approved response is primary; expand the preserved original draft and review decision as needed.
+To ask for missing information, choose **Request clarification**, enter **Question for the
+customer** and a reason, then **Record clarification request**. After processing, the question
+is primary and the unapproved draft stays collapsed. Record the customer's reply through
+**Add customer details**; it starts fresh retrieval. This action does not send a customer message.
 Select a numbered citation to inspect its saved excerpt, then open the exact document version.
 Expand **Processing details** for graph steps, model identity, timings, tokens and external charges.
 Use **Cancel processing** while a run is queued, processing or waiting; cancellation is a server
@@ -321,6 +327,12 @@ also exercises a persisted clarification flow without prepared models, including
 `python scripts/manage.py verify-integration` allows a bounded 300 seconds for the expanded
 PostgreSQL suite, including actual child-process termination and database-session loss. This
 command timeout is separate from application latency acceptance gates.
+
+The integration helpers wait only when a fresh, unattempted job of the intended workspace/kind
+has an observed future availability time. Waiting is bounded by five monotonic seconds, closes
+each observation transaction and never changes timestamps or retries worker execution. Local
+evidence records these waits in `job-readiness.jsonl`. This handles observed database-clock
+regression in synchronous test setup; it does not fix the host clock or bypass retry backoff.
 
 For the initial ownership-protocol transition, stop old producers from the repository root:
 `docker compose --env-file .env -f compose.yaml -p asi-rebuild-v1 stop api worker`, then run

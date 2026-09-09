@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 class ReviewInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    action: Literal["approve", "edit", "reject"]
+    action: Literal["approve", "edit", "reject", "clarify"]
     reason: str = Field(min_length=1, max_length=1000)
     expected_revision: int = Field(ge=0)
     draft_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -17,11 +17,15 @@ class ReviewInput(BaseModel):
     def valid_text(self):
         if not self.reason.strip() or "\x00" in self.reason:
             raise ValueError("Provide a review reason without NUL characters")
-        if self.action == "edit":
+        if self.action in {"edit", "clarify"}:
             if not self.response or not self.response.strip() or "\x00" in self.response:
-                raise ValueError("An edited response must contain text without NUL characters")
+                raise ValueError(
+                    "Edited wording or a clarification question must contain text without NUL characters"
+                )
+            if self.action == "clarify" and len(self.response) > 1000:
+                raise ValueError("A clarification question must fit 1,000 characters")
         elif self.response is not None:
-            raise ValueError("Only an edit decision supplies replacement text")
+            raise ValueError("Only edit or clarify decisions supply response text")
         return self
 
 

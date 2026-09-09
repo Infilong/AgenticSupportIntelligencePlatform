@@ -9,7 +9,13 @@ from langgraph.types import Command, interrupt
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from app.modules.reviews.service import decision_for, draft_identity, reviewer_authority, validate_approval
+from app.modules.reviews.service import (
+    decision_for,
+    decision_response,
+    draft_identity,
+    reviewer_authority,
+    validate_approval,
+)
 from app.modules.support.models import RunStep
 from app.workflows.checkpoints import locked_graph
 from app.workflows.support_graph import guard
@@ -30,7 +36,7 @@ def checked_decision(db, job, run_id, identity):
     if draft_identity(run.draft, run.citations) != identity:
         raise ValueError("The reviewed draft identity changed")
     reviewer_authority(db, run, decision.actor_id, decision.action)
-    if decision.action != "reject":
+    if decision.action in {"approve", "edit"}:
         validate_approval(db, run)
     return run, decision
 
@@ -44,13 +50,7 @@ def execute(engine, job, identity, resume=False):
         interrupt({"reason": "human_review", "draft_hash": state["draft_hash"]})
         with Session(engine) as db, db.begin():
             run, decision = checked_decision(db, job, run_id, state["draft_hash"])
-            response = (
-                None
-                if decision.action == "reject"
-                else decision.response
-                if decision.action == "edit"
-                else run.draft
-            )
+            response = decision_response(run, decision)
             return {"action": decision.action, "response": response, "decision_id": str(decision.id)}
 
     builder = StateGraph(ReviewState)
