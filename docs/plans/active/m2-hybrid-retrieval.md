@@ -4,7 +4,8 @@
 
 User outcome: actual independent lexical/vector retrieval with inspectable ranking stages,
 within the small local stack (RAG, TRACE, TENANT, UX). Continue the full M1–M6 goal and existing
-September 9 06:04:24–10:04:24 UTC window. Base `ffc730a`; no paid API, merge, deployment or
+historical September 9 06:04:24–10:04:24 UTC window (superseded by the user removing
+execution time limits on September 10, Tokyo). Base `ffc730a`; no paid API, merge, deployment or
 archived-data changes. Root owns implementation; independent agents review bounded source,
 security/query behavior and evidence. Deep work: additive schema, permissions and API contracts.
 

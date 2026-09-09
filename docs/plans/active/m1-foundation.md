@@ -1,7 +1,8 @@
 # M1 — runnable isolated foundation
 
 Status: active. Entire M1–M6 goal authorized on 2026-09-08, starting at `2c292d0`.
-Session work began 13:34 UTC; save a resumption checkpoint by 17:34 UTC if unattended.
+Historical session: work began 13:34 UTC with a 17:34 UTC checkpoint deadline. The user
+removed execution time limits on 2026-09-10 (Tokyo); that deadline is no longer active.
 Root/local guides and REBUILD_PLAN own constraints. One implementation owner.
 
 ## Execution brief

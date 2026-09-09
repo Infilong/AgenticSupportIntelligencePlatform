@@ -3,7 +3,8 @@
 Status: activated by the user on 2026-09-08; synchronized with approved clarifications on
 2026-09-09. [STATUS](STATUS.md) records current execution and constraints. This reusable goal
 incorporates later user instructions; the original attached goal remains a historical record.
-Updating this document does not resume a paused implementation window.
+The user removed the execution time limit on 2026-09-10 (Tokyo). Continue within the
+authorized scope without a fixed unattended deadline; retain other authority constraints.
 
 Rebuild AgenticSupportIntelligencePlatform in this repository through M1–M6, following
 [REBUILD_PLAN.md](../REBUILD_PLAN.md), the [acceptance matrix](ACCEPTANCE.md) and applicable
@@ -56,8 +57,8 @@ independent review where useful. Diagnose recurring failure causes and improve t
 never lower acceptance criteria to make the implementation pass.
 
 Report meaningful progress and evidence while continuing. Stop only when the authorized goal
-is complete, the user pauses, required authority/a material decision blocks progress, or the
-documented unattended limit is reached. Preserve an exact resumption checkpoint when stopped.
+is complete, the user pauses, or required authority/a material decision blocks progress.
+Preserve an exact resumption checkpoint when stopped; no fixed execution deadline applies.
 
 Finish with the revision, remote branch, acceptance evidence, operator demo, live verification
 and spending, and honest remaining limitations. Do not call the release complete with missing

@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "95c13313aec3314ce455c76e3da9bffd908a10f69601dcfd7c078286f9423993",
+    "fingerprint": "b61dd4539c45ea126923d9910bacf662071cb4a515d5e69f923be7e40f0beb14",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed final documentation-only window handoff: parent-verified GitHub jobs result34365353115 is attributed to source checkpoint fd18e50; previous locally reviewed aggregate browser and preparation evidence remains distinct. Optional ignored checkpoint is not required on fresh checkout. Deadline14:58, no automatic extension, unfinished full goal and fresh-window M5 implementation boundary remain explicit. No runtime/test or acceptance change."
+    "rationale": "Independently reviewed current authority and active-plan deadline references. Found and corrected remaining four-hour rule in REBUILD_PLAN, unattended-limit stop in reusable goal and M1 deadline; M2 historical window references now explicitly defer to STATUS. M5 remains unimplemented assessment, RAG tuning deferred, native-browser restriction separate, prior archived history intact. Removal of time limit does not expand M1-M6 scope or paid/deployment authority."
   },
   "frontend": {
     "fingerprint": "21150a7ccddd4c62ddde77cc5f009be1922ec70cef643da9d7a1587e3c53d2a7",
@@ -12,10 +12,10 @@
     "rationale": "Independently reviewed final saveDefaults helper at all three settings save sites: response and click receive immediate allSettled handlers and bounded ten-second waits, both failures retained; same-workspace original-language cleanup unchanged. Parsed final browser report confirms two passes in7506.448ms. Earlier eight unaffected journeys remain aggregate evidence, not a final full-suite claim."
   },
   "tooling": {
-    "fingerprint": "0befbd163ac5fac25e2c6bdec5dec712271737e8cf9bdd36e2774451e34653c6",
+    "fingerprint": "4f020a0f841e9ba78c4f3d2e220d51abf7219e6b147fb94dd32fdcd2e022e7ae",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK against admin/session/import/inbox harnesses and cleanup boundary. Release environment overrides are consistent; synthetic isolated workspace and no concurrent human-default editing limits are explicit. Arbitrary unavailable UUID and injected faults are correctly separated from actual tenant/expiry proof; no command or runtime change."
+    "rationale": "Independent review of user-authorized removal of fixed unattended deadline: DEVELOPMENT now treats slice times as planning targets, continues within existing goal and retains user pause, blockers, milestone boundaries and separate deployment/spending authority. No scheduler, runtime or test behavior change; historical checkpoints remain preserved."
   },
   "evaluation": {
     "fingerprint": "150ba1194216e5ef9cfaeea224cf144eef963733fc74ed73e747f56d9195fd77",

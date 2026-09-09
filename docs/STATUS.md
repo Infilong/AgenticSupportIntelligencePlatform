@@ -3,18 +3,18 @@
 ## Authority and next action
 
 M1–M6 remain authorized and incomplete. Latest direction: prioritize a working demo and defer
-RAG tuning/perfection. The current unattended window is **2026-09-09 10:58–14:58 UTC**
-(**23:58 Tokyo** stop). Do not reset this boundary on an automatic continuation.
+RAG tuning/perfection. On 2026-09-10 (Tokyo), the user removed the execution time limit.
+There is no fixed unattended deadline; continue the authorized goal until verified completion,
+a genuine blocker or a new user instruction. Earlier execution windows are historical.
 Preserve the archive, all existing databases, unrelated edits and secrets. Small verified commits
 and pushes to `codex/fresh-start` are authorized; merging, public deployment and paid calls are not.
 
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
 The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
 The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
-Current: finish the window handoff and stop at14:58 UTC; no additional implementation is started
-near the deadline. Next authorized window: narrow and implement the connected recorded-generation
-path in the M5 assessment, then verify it before adding the four-way runner. Keep RAG tuning
-deferred. Do not treat this checkpoint or an automatic continuation as a new execution window.
+Next: narrow and implement the connected recorded-generation path in the M5 assessment,
+then verify it before adding the four-way runner. Keep RAG tuning deferred. The previous
+window checkpoint records the earlier stop; it does not impose a current deadline.
 
 [REBUILD_GOAL](REBUILD_GOAL.md) and [release plan](../REBUILD_PLAN.md) own the goal and scope;
 [ACCEPTANCE](ACCEPTANCE.md) owns gates. This file routes current work, not historical execution.

@@ -43,11 +43,12 @@ quality and preserve missing live results.
 Verification must include authorization before dispatch and publication, cancellation/lease loss,
 timeout and uncertain outcomes, idempotent resume, genuine per-pipeline routing and accounting,
 and UI projections of real records. Review the plan before the source edit; narrow this first
-vertical slice based on the current code. No unreviewed generation refactor near an execution
-deadline. Current window prioritizes the remaining packaged admin demo checks; this record is
-the exact follow-up assessment and does not change the goal or authorize external spending.
+vertical slice based on the current code. Packaged admin demo checks are now recorded in
+STATUS. The user removed the execution deadline on 2026-09-10 (Tokyo); this remains the next
+implementation assessment and does not change the goal or authorize external spending.
 
 Independent design review agrees with this connected first path and the separate evaluation-only
 direct baseline. All three clarifications above (core/workspace Settings, external cancellation
 limits and disabled paid mode) are incorporated. No generation source implementation began in
-this window; the first source slice must be narrowed and verified under a fresh execution window.
+the prior window; the first source slice must now be narrowed and verified within the
+continuing authorized goal.

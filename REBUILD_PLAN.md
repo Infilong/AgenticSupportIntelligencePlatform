@@ -523,7 +523,8 @@ For each slice: identify acceptance IDs → implement → verify the actual flow
 defects → checkpoint → update status. Do not manufacture new tasks after the contract is met.
 
 Target 30–60-minute slices. Reassess at 90 minutes; diagnose afresh after three failed repairs.
-Stop unattended execution after four hours with exact resume instructions. A missing parser,
+The user removed the fixed execution time limit on 2026-09-10 (Tokyo). Continue within the
+authorized goal and preserve exact resume instructions at checkpoints. A missing parser,
 browser or provider check stays visibly blocked/unverified rather than becoming a pass.
 
 Resolve routine choices without repeated confirmation. Ask for credentials/access, explicit

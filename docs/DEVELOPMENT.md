@@ -24,7 +24,7 @@ Codex supplies the technical execution prompt and carries it through verificatio
 7. **Advance:** compare remaining acceptance gaps with the authorized goal. Select the next
    dependency-ready slice that closes a meaningful gap, write its brief and continue without
    waiting for “continue.” Stop when the goal is verified, the authorized boundary is reached,
-   a real blocker requires input, the user pauses work, or the unattended limit is reached.
+   a real blocker requires input, or the user pauses work.
 
 An authorized multi-milestone goal may proceed across its included milestones. M0-only authority
 does not authorize M1. This workflow does not schedule background execution after a turn ends.
@@ -107,8 +107,9 @@ This organization follows [OpenAI's nested instruction guidance](https://develop
 - Routine dependencies, local commits and normal pushes to the working branch are authorized.
   Merges, deployment and paid model use need separate authority; a key alone is not a spending grant.
 - Ask only for missing authority or material product/security decisions. Target 30–60-minute
-  slices; reassess by 90 minutes and diagnose after three failed repairs. Stop unattended work
-  after four hours with saved state and exact resume instructions.
+  slices; reassess by 90 minutes and diagnose after three failed repairs. These are planning
+  targets, not execution deadlines. The user removed the fixed unattended time limit; save
+  verified checkpoints and continue within the authorized goal.
 - Stop at the authorized milestone boundary. Only the complete release matrix supports a
   release-completion claim; report verified, failed, skipped and unverified separately.
 

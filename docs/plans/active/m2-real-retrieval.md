@@ -1,7 +1,11 @@
 # M2 — real document retrieval, simulated generation transport
 
 Status: active after the M1 foundation slices. Full M1–M6 authority remains in effect.
-Unattended checkpoint deadline remains 2026-09-08 17:34 UTC; this is not a new time allowance.
+Historical checkpoint deadline: 2026-09-08 17:34 UTC. The user removed execution time limits
+on 2026-09-10 (Tokyo); this prior deadline no longer constrains continuation.
+
+All deadline/window references below describe historical execution; current authority is in
+[STATUS](../../STATUS.md), which records removal of the fixed execution limit.
 
 ## Execution brief
 

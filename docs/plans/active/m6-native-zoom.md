@@ -15,7 +15,8 @@ standard unattended CI must skip it. Preserve records/screenshots and any failur
 demonstrated UI problems. Independently review claims, update owning docs and checkpoint.
 At this slice's start, the release CI job was reviewed/pushed asf1a64dc with hosted execution
 pending. It subsequently passed34355803730; see the [completed CI record](../completed/m6-release-ci.md).
-Continue only within the existing14:58 UTC boundary.
+Historical constraint: this attempt used the14:58 UTC boundary. The user removed execution
+time limits on 2026-09-10 (Tokyo); the recorded browser-tool limitation remains separate.
 
 ## Evidence
 
