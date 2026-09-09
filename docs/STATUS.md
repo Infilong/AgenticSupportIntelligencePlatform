@@ -1,7 +1,7 @@
 # Current status
 
 Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
-Current implementation slice: M4 focused inbox views; M2/M3 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
+Current checkpoint: M4 focused inbox views verified; this execution window closes at 04:44:58 UTC. M1–M6 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -12,7 +12,7 @@ provider and documentation-workflow clarifications; it is now covered by project
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M4 inbox plan](plans/active/m4-inbox-views.md) owns current implementation;
+[M4 inbox record](plans/completed/m4-inbox-views.md) owns the latest verified slice;
 [M3 clarification plan](plans/completed/m3-review-clarification.md) retains the preceding checkpoint;
 [M3 recovery plan](plans/completed/m3-retrieval-recovery.md) retains the preceding checkpoint;
 [M3 linked-attempt record](plans/completed/m3-linked-attempts.md) retains the preceding slice;
@@ -220,8 +220,17 @@ The real inbox browser journey passes at 360/768/1440px
 overflow; independent review exposed and repaired pagination when filtered results shrink.
 All nine existing workbench journeys also pass in 2.1 minutes
 (`.artifacts/m4/inbox-workbench-regression`). Independent source and documentation reviews found
-no remaining blocking issue after repairs. Final receipts, preparation and commit/push are the
-immediate next action; close this checkpoint before the 04:44:58 UTC unattended boundary.
+no remaining blocking issue after repairs. Checkpoint `8d7dd13` is pushed; CI `34311767057`
+passed. Six independent receipts and 35 preparation checks passed
+(`.artifacts/m0/prep-20260909T043813532131Z`). A final text-only repair removes misleading reply
+guidance on historical clarification attempts; ten component tests and build pass afterward.
+Full database/browser regression predates only that sentence removal and checkpoint docs.
+
+This four-hour window ends at 04:44:58 UTC (13:44:58 Tokyo). Do not start a new implementation
+slice beyond that boundary without renewed execution-window authority. On resume, first inspect
+the current branch/CI, local processes and this record. The local ignored artifact
+`.artifacts/m4/window-checkpoint.json` records final revision/CI observations when available;
+absence on another checkout is not a failure. The app goal remains active and incomplete.
 Next product slice: bounded JSONL conversation imports with labels and an explicit selected-item
 processing action, following REBUILD_PLAN. Imports, lexical/fusion retrieval and other release
 gates remain open; the current inbox query assumes each message already has a run, so imports

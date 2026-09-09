@@ -13,7 +13,7 @@ export function RunResult({ run, children }: { run: Run; children?: ReactNode })
   return <section className="run-result">
     <h2>{question ? 'Clarification requested' : outcomeLabel(run.outcome)}</h2>
     {primary ? <p className="response-text" lang={run.language}>{primary}</p> : <p className="muted">{pending}</p>}
-    {question && <p className="muted">Recorded here, not sent to the customer. Add their reply below to start a new attempt. Sources below belong to the original draft.</p>}
+    {question && <p className="muted">Recorded here, not sent to the customer. Sources below belong to the original draft.</p>}
     {historical && <details><summary>{historical}</summary><p className="response-text" lang={run.language}>{run.draft}</p></details>}
     {!historical && run.draft && !!run.citations.length && <p className="muted">{run.state === 'rejected' ? 'Rejected development draft · Not approved for sending' : 'Development draft · Not approved for sending'}</p>}
     {run.error_code && <details><summary>Failure information</summary><p className="error">{run.error_code}</p></details>}

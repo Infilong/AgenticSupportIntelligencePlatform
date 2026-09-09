@@ -79,3 +79,18 @@ through shared support processing. Cover workspace/role denial, whole-upload rol
 idempotency races, concurrent starts, original/label preservation and real retrieval in the browser.
 Size/record/label bounds still need to be selected and documented before implementation; do not
 silently truncate conversations or duplicate a processing path. No import implementation started.
+
+## Closing checkpoint
+
+Implementation checkpoint `8d7dd130ee6a1c171f41239276dd4afa62e1b966` is pushed; CI `34311767057`
+passed. Six independent documentation receipts and 35 preparation checks passed in
+`.artifacts/m0/prep-20260909T043813532131Z`. Four isolated services were healthy; all 199 jobs
+were succeeded at the observation (development/review waits are separate persisted run states).
+
+Final Chrome inspection of historical clarification `7aee3f1a-94e2-4a18-bd71-505f8b1c53e4`
+found misleading generic copy directing a reply below even after a child exists. Removed only
+that sentence; existing latest-attempt navigation remains. Ten component tests and the build
+pass after this text-only correction. The full database/browser evidence above predates this
+sentence removal, not a processing change. Final checkpoint CI may still be pending at cutoff.
+The four-hour window ends 04:44:58 UTC; preserve this record and request resumed authority before
+another implementation window. The full M1–M6 goal remains incomplete, not narrowed to this slice.
