@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.modules.identity.dependencies import CurrentUser
+from app.modules.knowledge.recovery import RetrievalOwnershipLost
 from app.modules.knowledge.schemas import RetrievedPassage
 from app.providers.local_reranker import InvalidRerankResult
 
@@ -28,6 +29,8 @@ def search(workspace_id: UUID, payload: QueryInput, user: CurrentUser, request: 
 
     try:
         return retrieve(request.app.state.engine, workspace_id, user.id, payload.query, payload.limit)
+    except RetrievalOwnershipLost as error:
+        raise HTTPException(503, "Search was interrupted. Please retry.") from error
     except ValueError as error:
         raise HTTPException(422, "Query cannot be embedded; shorten it and retry") from error
     except OSError as error:

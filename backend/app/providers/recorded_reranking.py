@@ -24,7 +24,7 @@ def start_reranking(db, workspace_id, actor_id, retrieval_id):
     return call.id
 
 
-def score_recorded(engine, provider, call_id, query, passages):
+def score_recorded(engine, provider, call_id, query, passages, accounting_guard=None):
     started = time.monotonic()
     try:
         batch = provider.score(query, passages)
@@ -32,6 +32,8 @@ def score_recorded(engine, provider, call_id, query, passages):
             raise InvalidRerankResult("Reranker returned malformed scores")
     except Exception as error:
         with Session(engine) as db, db.begin():
+            if accounting_guard:
+                accounting_guard(db)
             call = db.get(ModelCall, call_id)
             call.status = "failed"
             call.error_code = type(error).__name__[:64]
@@ -39,6 +41,8 @@ def score_recorded(engine, provider, call_id, query, passages):
             call.api_cost_usd = 0
         raise
     with Session(engine) as db, db.begin():
+        if accounting_guard:
+            accounting_guard(db)
         call = db.get(ModelCall, call_id)
         call.status = "succeeded"
         call.input_tokens = batch.input_tokens

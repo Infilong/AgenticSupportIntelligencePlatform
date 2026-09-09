@@ -32,7 +32,7 @@ def main():
     env = {**os.environ, "ASI_TEST_DATABASE_URL":
            f"postgresql+psycopg://asi_rebuild:{password}@127.0.0.1:{port}/asi_rebuild_test"}
     return run_checked("integration", [uv, "run", "--frozen", "pytest", "tests/integration", "-q", "--tb=short"],
-                       ROOT / "backend", env)
+                       ROOT / "backend", env, timeout=300)
 
 
 if __name__ == "__main__":

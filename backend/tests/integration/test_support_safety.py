@@ -34,10 +34,15 @@ from tests.integration.test_knowledge import add_version, ingest
 def waiting(system):
     prepare(system)
     run = create(system)
-    run_support(system)
+    assert run_support(system), system.get("claim_diagnostic")
     auth = login(system["client"])
     path = base(system, run)
-    handoff = system["client"].get(path + "/development-handoff").json()
+    response = system["client"].get(path + "/development-handoff")
+    assert response.status_code == 200, {
+        "handoff": response.json(),
+        "run": system["client"].get(path).json(),
+    }
+    handoff = response.json()
     return run, path, handoff, auth
 
 

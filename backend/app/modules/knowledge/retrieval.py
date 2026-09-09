@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.knowledge.ingestion import SPACE, embeddings
 from app.modules.knowledge.models import Chunk, Document, DocumentVersion
+from app.modules.knowledge.recovery import RetrievalOwner, RetrievalOwnershipLost
 from app.modules.knowledge.retrieval_models import RetrievalTrace
 from app.modules.workspaces.models import Workspace
 from app.modules.workspaces.service import membership
@@ -78,6 +79,24 @@ def retrieve(
     query = query.strip()
     if not query or len(query) > 1000 or not 1 <= limit <= 10:
         raise HTTPException(422, "Use a query of 1–1000 characters and a limit of 1–10")
+    with RetrievalOwner(engine) as owner:
+        return _retrieve(
+            engine,
+            workspace_id,
+            actor_id,
+            query,
+            limit,
+            provider,
+            ranking_provider,
+            on_trace,
+            execution_guard,
+            owner,
+        )
+
+
+def _retrieve(
+    engine, workspace_id, actor_id, query, limit, provider, ranking_provider, on_trace, execution_guard, owner
+):
     started = time.monotonic()
 
     def check_access(db):
@@ -87,7 +106,7 @@ def retrieve(
 
     with Session(engine, expire_on_commit=False) as db, db.begin():
         check_access(db)
-        trace = RetrievalTrace(workspace_id=workspace_id, actor_id=actor_id, query=query)
+        trace = RetrievalTrace(id=owner.trace_id, workspace_id=workspace_id, actor_id=actor_id, query=query)
         db.add(trace)
         db.flush()
         trace_id = trace.id
@@ -103,19 +122,27 @@ def retrieve(
             "query",
             authorize=check_access,
             retrieval_id=trace_id,
+            accounting_guard=owner.check,
         )
         with Session(engine) as db, db.begin():
             check_access(db)
+            owner.check(db)
             snapshots = candidates(db, workspace_id, batch.vectors[0])
             call_id = start_reranking(db, workspace_id, actor_id, trace_id) if snapshots else None
         if snapshots:
             scores = score_recorded(
-                engine, ranking_provider or reranker(), call_id, query, [row["text"] for row in snapshots]
+                engine,
+                ranking_provider or reranker(),
+                call_id,
+                query,
+                [row["text"] for row in snapshots],
+                accounting_guard=owner.check,
             )
             for row, score in zip(snapshots, scores, strict=True):
                 row["rank_score"] = score
         with Session(engine) as db, db.begin():
             check_access(db)
+            owner.check(db)
             # Withdrawal/replacement may have completed while the local model was scoring.
             active = {
                 str(value)
@@ -145,9 +172,11 @@ def retrieve(
                 "status": "candidates" if results else ("sources_changed" if snapshots else "no_sources"),
                 "results": results,
             }
+    except RetrievalOwnershipLost:
+        raise  # The sweep owns abandoned records; never overwrite uncertainty with a late exception.
     except Exception as error:
         with Session(engine) as db, db.begin():
-            trace = db.get(RetrievalTrace, trace_id)
+            trace = owner.check(db)
             trace.status = "failed"
             trace.error_code = type(error).__name__[:64]
             trace.duration_ms = round((time.monotonic() - started) * 1000, 2)

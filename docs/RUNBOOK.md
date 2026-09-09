@@ -315,3 +315,18 @@ sources, approve/edit/reject, cancellation, viewer access, 360/768/1440px, keybo
 The linked-attempt journey also checks clarification, cancellation/retry and preserved history.
 This is not a browser-native zoom or live generation-quality measurement. Baseline `test:app`
 also exercises a persisted clarification flow without prepared models, including in CI.
+
+## Retrieval recovery checks
+
+`python scripts/manage.py verify-integration` allows a bounded 300 seconds for the expanded
+PostgreSQL suite, including actual child-process termination and database-session loss. This
+command timeout is separate from application latency acceptance gates.
+
+For the initial ownership-protocol transition, stop old producers from the repository root:
+`docker compose --env-file .env -f compose.yaml -p asi-rebuild-v1 stop api worker`, then run
+`python scripts/manage.py up`. This keeps existing volumes and prevents old inference from
+overlapping the new sweep. Do not run an older API or worker alongside this version: old
+inference lacks the lock protocol. The worker automatically reconciles bounded batches; `retrieval_ownership_recovered`
+logs only a repaired count. Inspect protected run/model details for `uncertain` and
+`retrieval_ownership_lost`; unknown usage/cost remains unknown. Retry processing creates a fresh
+attempt. Never clear these records or fabricate finished accounting to make the display green.

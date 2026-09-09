@@ -152,9 +152,15 @@ def main():
     stop = threading.Event()
     for name in (signal.SIGTERM, signal.SIGINT):
         signal.signal(name, lambda *_: stop.set())
+    from app.modules.knowledge.recovery import reconcile
+
+    recovery_cursor = None
     try:
         while not stop.is_set():
             try:
+                recovery_cursor, repaired = reconcile(engine, recovery_cursor)
+                if repaired:
+                    LOG.info(json.dumps({"event": "retrieval_ownership_recovered", "count": repaired}))
                 worked = run_once(engine, health_callback=HEALTH.touch)
             except SQLAlchemyError:
                 LOG.error(json.dumps({"event": "worker_database_unavailable"}))

@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "612444d8fc463aeca5deb30c338ffe444667f1df13b28f94007270c481047b32",
+    "fingerprint": "3cabf3178a985387a8a263c705e57403f9326cff841d74a7bcd41e97d7354262",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared current STATUS and README with linked-attempt implementation and stored reports; retained initial viewer failure, repaired two-case run, whole-repository fingerprint change and open M3 gaps are explicit."
+    "rationale": "Reviewed STATUS and recovery record against stored 100-test and eight-browser passes; intermittent cancellation setup root cause remains explicitly unknown despite successful diagnostic rerun."
   },
   "frontend": {
-    "fingerprint": "811f8632c620b997a185e2ebbbf4a5a2339be85bdb1cde75b905aa4381b38d95",
+    "fingerprint": "6aa585f6b7868344b7347a28ed6f36ffc1c1e1d7bd240aed42d9c2dd71ac4ff6",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed retry/clarify eligibility, immutable input/history links and repaired code-point overflow handling. Viewer fixture now creates its own actual draft; seven initial passes plus two repaired passes are correctly distinguished from one green suite."
+    "rationale": "Reviewed shared architecture changes against unchanged workbench source and retained eight-pass browser report; no new UI recovery controls or generation-quality claims introduced."
   },
   "tooling": {
-    "fingerprint": "6fb4e8843fd91204dad2653d80f9bbb81f058f0f84cedba3553c85c8170e2ec0",
+    "fingerprint": "00fad0360c6c7f3142b0c39c60614ba99931568393728141a0a309056e1485e3",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared linked attempt demo instructions and limits against UI labels and backend behavior; deterministic fixture repair retains source/focus/width assertions. No new runtime verification by reviewer."
+    "rationale": "Verified integration wrapper alone raises timeout to300 seconds for expanded suite; runbook separates command allowance from latency gates and explicitly stops old producers before ownership transition."
   },
   "evaluation": {
-    "fingerprint": "f51619812193cb3a0234a9a001d43bf22c123a6e1cd1161880ab14135fb7ef43",
+    "fingerprint": "51314b552381ad6d27f380773ef9b5cec85e0de75350f5be40a12cdb662f0112",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed added partial linked-attempt evidence without changing release thresholds or claiming completed imports, semantic routing or recovery."
+    "rationale": "Reviewed recovery evidence update without changing latency or semantic acceptance thresholds; focused process-kill/session-loss plus 100-test regression do not claim full crash matrix."
   },
   "backend": {
-    "fingerprint": "f0c8ecaae927201020ed78c19706bef1eb3cc96a3cb95b3115a48d3906a1ea9f",
+    "fingerprint": "197d55834a98a4ef80787c4a58f251ad299ced8902de846bed56904975e153d4",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared linked admission and input-lineage rules with current architecture and acceptance; retained 91 PostgreSQL log passes. Original requester/creator checks, scoped history, ten-attempt and input limits are documented without full recovery claims."
+    "rationale": "Compared retrieval ownership, guarded provider writes and bounded worker reconciliation with architecture/acceptance; retained final 100 PostgreSQL log confirms pass. Lost ownership is not proof CPU work stopped; broader recovery remains open."
   },
   "infrastructure": {
-    "fingerprint": "1767670c1a7d7cdc78e8d6a3b31b522ad53a307cbfb41ebe4e63540164bc43c2",
+    "fingerprint": "ffad015d8d5424dbb4cce46a8161c8cb4af7579d963e886de983177f4f57edc1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed shared architecture/runbook linked-attempt update; original records and new attempt identities match source, runtime topology unchanged and no deployment readiness claim."
+    "rationale": "Reviewed corrected stop-api-worker then up transition recipe preserving volumes and avoiding old inference/new sweep overlap; observed one rollout order is not generalized as a guarantee."
   }
 }

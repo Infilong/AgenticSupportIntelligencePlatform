@@ -1,7 +1,7 @@
 # Current status
 
 Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
-Current implementation slice: M3 linked attempts; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
+Current implementation slice: M3 abandoned retrieval accounting; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -12,7 +12,8 @@ provider and documentation-workflow clarifications; it is now covered by project
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M3 linked-attempt plan](plans/active/m3-linked-attempts.md) owns current implementation;
+[M3 recovery plan](plans/active/m3-retrieval-recovery.md) owns current implementation;
+[M3 linked-attempt record](plans/completed/m3-linked-attempts.md) retains the preceding slice;
 [M3 review record](plans/completed/m3-human-review.md) retains review decisions/evidence;
 [M2 execution plan](plans/active/m2-real-retrieval.md) retains retrieval decisions and evidence;
 [M1 history](plans/active/m1-foundation.md) retains foundation work.
@@ -66,6 +67,24 @@ Built on `497b160`; migration `0009_attempts` ran in the isolated four-service r
 
 The whole-repository database evidence fingerprint predates the subsequent frontend/test/docs
 repairs; backend sources did not change afterward. The plan retains failed evidence and limits.
+
+## September 9 retrieval-recovery evidence
+
+- 100 PostgreSQL tests passed in 186.85s against an unchanged snapshot:
+  `.artifacts/m0/integration-20260909T033616695185Z`. Includes real process termination, database
+  session loss, late embedding/reranking results, cleanup fencing and concurrent/fair recovery.
+- All eight browser journeys passed: `.artifacts/m3/recovery-workbench-ui` (1.8 minutes).
+- 16 unit tests passed: `.artifacts/m0/backend-20260909T033312194706Z`; Ruff and formatting pass.
+- Chrome run `7aee3f1a-94e2-4a18-bd71-505f8b1c53e4` reached development wait with actual local
+  retrieval. UI accounting matched `.artifacts/m3/recovery-live-result.json`; the corresponding
+  worker completion log was inspected. The replacement API/worker/frontend/database are healthy.
+- Independent recovery review found no blocking issue. Query/TCP settings improve detection;
+  they do not guarantee a platform-independent network timeout or prove CPU inference stopped.
+
+The first expanded suite passed 99/100; cancellation setup did not obtain a usable handoff.
+Stronger claim/HTTP preconditions now retain the diagnostic cause instead of a missing-key error.
+The case and final suite pass, but the original intermittent cause remains unresolved. The
+execution record retains that failure and an earlier child-fixture model-registration failure.
 
 ## September 9 human-review evidence
 
@@ -173,7 +192,8 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
 - Earlier Chrome screenshot attempts timed out; connected workbench interaction/capture now
   works. This does not establish completed release/demo coverage.
 - Upstream AnyIO and model cache-argument deprecation warnings remain visible.
-- Synchronous model/retrieval records abandoned by a process crash need reconciliation.
+- Synchronous retrieval ownership/reconciliation passes focused crash/late-write and full-suite
+  checks. Wider recovery gates and the earlier intermittent setup failures remain incomplete.
 - The release plan's lexical/fusion requirement differs from the implemented vector-plus-reranker
   path; comparative evidence or an explicit scope decision remains outstanding.
 - The connected development draft and human-review paths are implemented; imports, complete
@@ -183,8 +203,12 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
 
 Human-review checkpoint `497b160` is committed/pushed; CI run `34304500162` passed, confirmed
 through the OpenAI GitHub connector. The preceding workbench CI `34301042398` passed.
-Finish independent documentation receipts and checkpoint linked retry/clarification attempts.
-Then continue the remaining routing/recovery gates. Human-review concurrency and a real
+Linked-attempt checkpoint `2e2054f` is pushed; CI `34306686806` passed. Preparation passed
+35 checks after staging the intended completed-plan move. Finish recovery documentation receipts
+and checkpoint; then implement the remaining human request-for-clarification outcome with a
+preserved draft and linked follow-up. The final recovery suite passed 100/100; earlier failure
+causes remain explicitly unresolved in the execution record.
+Human-review concurrency and a real
 worker restart at its durable wait have passed; broader routing/recovery gates remain open.
 Never import evaluation answers as runtime responses, invent API usage or equate exact citations
 with semantic support. Continue into the planned human-review/recovery gates after this slice.

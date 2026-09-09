@@ -60,8 +60,9 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
 - LANG: cross-language retrieval is measured; EN/JA/ZH Codex-assisted response smokes pass.
   These manually authored development drafts do not establish a generation-language quality gate.
 - TRACE: the workbench exposes graph steps and local embedding/reranking records, including
-  identity, duration, tokens and external charge. Complete generation accounting and abandoned
-  synchronous-call reconciliation remain incomplete.
+  identity, duration, tokens and external charge. Retrieval ownership/reconciliation has focused
+  process-kill, session-loss and late-write tests within the passing 100-case PostgreSQL suite.
+  Complete generation accounting and the broader crash matrix remain incomplete.
 - UX: connected draft/source/cancellation and approve/edit/reject journeys pass, including 360/768/1440px, keyboard
   source focus and doubled content size. Browser-native zoom and full release journeys remain open.
 - Linked attempts: PostgreSQL tests cover history, fresh retrieval, atomic competing submissions,

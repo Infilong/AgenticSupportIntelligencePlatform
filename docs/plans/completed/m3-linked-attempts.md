@@ -1,5 +1,7 @@
 # M3 — linked retries and clarification
 
+Completed slice: committed/pushed `2e2054f`; CI `34306686806` passed. Full release remains open.
+
 ## Execution brief
 
 Outcome / gates: an operator/admin can retry a failed/cancelled attempt or add customer details
@@ -69,5 +71,6 @@ Stop at the documented work-window boundary if unfinished and preserve an exact 
   not one fresh all-green eight-case run. Narrow viewer/source and history screenshots inspected;
   actual Chrome showed all three attempts with the original preserved. Backend sources did not
   change after the 91-test run; subsequent UI/test/docs edits change the whole-repo fingerprint.
-- Final documentation receipts and checkpoint are pending. The earlier intermittent timestamp/
-  claim causes remain open. Remaining routing/recovery requirements are not completed by this slice.
+- All six independent documentation receipts and 35 preparation checks passed before commit.
+  The preceding unstaged-plan-move inventory failure and repair are retained in the next recovery
+  record. Earlier intermittent timestamp/claim causes remain open. This slice does not complete M3.

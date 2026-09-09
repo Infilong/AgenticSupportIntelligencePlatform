@@ -228,3 +228,21 @@ Pending task errors/interrupts are checked even when LangGraph reports an empty 
 
 Handoff timestamps remain raw evidence. Reversed timestamps produce `clock_anomaly` and no elapsed
 value, never a fabricated zero. This flags inconsistent timing; it does not diagnose or fix clocks.
+
+## Retrieval ownership and recovery
+
+Each retrieval owns a dedicated PostgreSQL session advisory lock before its trace is inserted.
+Inference runs without an open database transaction. Model accounting and result publication
+check that session and lock the still-started trace before writing; lost ownership cannot be
+reacquired by an old execution. Accounting checks are separate from user permission checks.
+
+The worker scans bounded batches with a rotating UUID cursor. It uses nonblocking advisory and
+row locks to mark abandoned started traces and their still-started calls `uncertain`, preserving
+completed accounting and unknown tokens/duration/cost. No age threshold or wall-clock inference
+decides abandonment. A lost database session does not prove CPU work stopped; write fencing
+prevents late success/failure from replacing uncertainty. API search returns a safe retryable 503.
+
+Deployment must replace all older API/worker instances before enabling the sweep because they
+do not participate in ownership. Connection/statement/TCP settings aid detection; they do not
+establish a platform-independent network deadline. Ingestion retains job-lease accounting;
+this recovery boundary covers synchronous retrieval and its embedding/reranking records.

@@ -19,10 +19,13 @@ def encode_recorded(
     job_attempt=None,
     authorize=None,
     retrieval_id=None,
+    accounting_guard=None,
 ):
     with Session(engine, expire_on_commit=False) as db, db.begin():
         if authorize:
             authorize(db)
+        if accounting_guard:
+            accounting_guard(db)
         call = ModelCall(
             workspace_id=workspace_id,
             actor_id=actor_id,
@@ -42,6 +45,8 @@ def encode_recorded(
         batch = provider.encode_batch(texts, kind)
     except Exception as error:
         with Session(engine) as db, db.begin():
+            if accounting_guard:
+                accounting_guard(db)
             row = db.get(ModelCall, call_id)
             row.status = "failed"
             row.error_code = type(error).__name__[:64]
@@ -49,6 +54,8 @@ def encode_recorded(
             row.api_cost_usd = 0.0  # Local compute; no external API dispatch.
         raise
     with Session(engine) as db, db.begin():
+        if accounting_guard:
+            accounting_guard(db)
         row = db.get(ModelCall, call_id)
         row.status = "succeeded"
         row.input_tokens = batch.input_tokens
