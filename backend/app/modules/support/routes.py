@@ -52,9 +52,10 @@ def list_messages(
     search: str = Query("", max_length=200),
     offset: int = Query(0, ge=0),
     limit: int = Query(30, ge=1, le=50),
-    view: Literal["all", "attention", "ready", "processing", "failed"] = "all",
+    view: Literal["all", "unprocessed", "attention", "ready", "processing", "failed"] = "all",
+    label: str = Query("", max_length=32),
 ):
-    return reading.messages(db, workspace_id, user.id, search, offset, limit, view)
+    return reading.messages(db, workspace_id, user.id, search, offset, limit, view, label)
 
 
 @router.get("/runs/{run_id}", response_model=RunDetail)

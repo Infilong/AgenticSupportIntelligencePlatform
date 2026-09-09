@@ -75,6 +75,13 @@ def create_message(db, workspace_id, actor_id, data, key):
     )
     db.add(message)
     db.flush()
+    run = initial_run(db, message, actor_id)
+    return {"message_id": message.id, "run_id": run.id, "job_id": run.job_id}
+
+
+def initial_run(db, message, actor_id):
+    # Caller holds the workspace admission lock and has checked current authority.
+    workspace_id = message.workspace_id
     run_id = uuid.uuid4()
     job = enqueue(
         db, workspace_id, actor_id, "support_run", f"support:{run_id}", {"run_id": str(run_id)}, priority=0
@@ -89,7 +96,7 @@ def create_message(db, workspace_id, actor_id, data, key):
     )
     db.add(run)
     db.flush()
-    return {"message_id": message.id, "run_id": run.id, "job_id": job.id}
+    return run
 
 
 def submit_response(db, workspace_id, actor_id, run_id, handoff_id, data):

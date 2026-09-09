@@ -102,7 +102,7 @@ def test_new_attempt_moves_message_between_views_without_counting_old_outcome(sy
     assert client.get(path).json()["total"] == len(expected["all"])
 
 
-def test_all_count_and_page_consistently_exclude_a_message_without_a_run(system):
+def test_all_count_and_page_include_saved_messages_without_inventing_runs(system):
     path, expected = populate(system)
     with Session(system["engine"]) as db, db.begin():
         db.add(
@@ -116,5 +116,12 @@ def test_all_count_and_page_consistently_exclude_a_message_without_a_run(system)
             )
         )
     page = system["client"].get(path, params={"limit": 50}).json()
-    assert page["total"] == len(page["items"]) == len(expected["all"])
-    assert system["client"].get(path, params={"search": "Unprocessed"}).json() == {"items": [], "total": 0}
+    assert page["total"] == len(page["items"]) == len(expected["all"]) + 1
+    saved = system["client"].get(path, params={"search": "Unprocessed"}).json()
+    assert saved["total"] == 1 and len(saved["items"]) == 1
+    assert saved["items"][0]["run_id"] is None
+    assert saved["items"][0]["state"] == "not_processed"
+    assert system["client"].get(path, params={"search": "Unprocessed", "view": "processing"}).json() == {
+        "items": [],
+        "total": 0,
+    }

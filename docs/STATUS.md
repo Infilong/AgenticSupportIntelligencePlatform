@@ -1,11 +1,27 @@
 # Current status
 
-Goal resumed by the user on 2026-09-09: **M1–M6 active and incomplete**.
-Current window: **06:04:24–10:04:24 UTC** (stop 19:04:24 Tokyo).
-[Measured hybrid retrieval](plans/active/m2-hybrid-retrieval.md) owns the current slice, following
-the completed [RAG span/context repair](plans/completed/rag-span-context.md) and
-the completed [workflow and inbox scale plan](plans/completed/m4-workflow-inbox-scale.md).
-The latest user approval renews full-goal execution, not just the audit.
+Latest user direction on2026-09-09: **continue M1–M6, prioritize a working demo; defer RAG tuning**.
+Current unattended window:06:04:24–10:04:24 UTC (stop19:04:24 Tokyo). Full goal remains incomplete.
+
+Current slice: [customer imports](plans/active/m4-message-import.md). JSONL → saved originals/labels
+→ selected processing → existing retrieval/graph/review is connected. Migration0012 is applied;
+all four rebuild services are healthy.25 focused checks,46 backend units,31 frontend tests and
+TypeScript/Vite pass. Full PostgreSQL:141 passed in305.18s at
+`.artifacts/m0/integration-20260909T091937948269Z`; units at
+`.artifacts/m0/backend-20260909T092238369772Z`; focused at
+`.artifacts/m0/message-import-fixed-20260909T091649244898Z`. Two real browser journeys passed
+in30s at `.artifacts/m4/message-import-browser-20260909` (360/768/1440 layouts). Chrome also
+completed Japanese import→real retrieval→attributed draft→internal approval, with persisted
+records at `.artifacts/m4/message-import-chrome-demo.json`. External generation remains simulated.
+Independent Unicode/empty-state findings are fixed. Final labels-input styling and the connected browser flow pass in7.5s at
+`.artifacts/m4/message-import-browser-final-20260909`. Next: compact settings/usage.
+
+Prior comparison checkpoint f0b9f79 is pushed; GitHub CI34330562643 passed. Capacity tuning is
+paused. Its five working files are preserved under
+`.artifacts/rag-hardening/deferred-capacity-20260909`; runtime/tooling were restored to f0b9f79
+before imports. The stress timeout and improved short-query timings belong only to that parked
+experiment, not current production SQL. No50k-chunk capacity pass is claimed.
+Dated sections below preserve prior checkpoints; current scope and next action above supersede them.
 
 Latest checkpoint `3403d82` is pushed; GitHub CI `34329277751` passed. Preparation 40 passed at
 `.artifacts/m0/prep-20260909T082745432597Z`. One shared frozen-corpus comparison completed at
@@ -16,7 +32,7 @@ Default remains vector-rerank: hybrid loses a conflicting policy in Japanese cas
 reranking. Warm p95:2.516s default and2.437s hybrid-rerank. No generation quality is claimed.
 Post-run independent-review repair strengthens trace shape validation; 12 metric/freeze tests
 and all 160 saved case/probe traces pass strict revalidation without replacing measured results.
-Next: separate 50k-chunk SQL performance and safety evidence, then remaining RAG/release gates.
+At that checkpoint the next task was demo verification. Current work is listed above.
 
 Current slice: five explicit retrieval strategies and bounded candidate traces are implemented.
 Knowledge search and Workflow → Retrieve evidence expose actual vector/BM25/fusion/reranker/final

@@ -66,3 +66,16 @@ test('viewer compose deep links show the read-only inbox', () => {
   expect(screen.getByRole('table')).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Start processing' })).not.toBeInTheDocument();
 });
+
+
+test('a label-only empty result explains how to clear the filter', () => {
+  fixture.total = 0;
+  render(ui('/w/ws?label=missing'));
+  expect(screen.getByRole('heading', { name: 'No matching messages' })).toBeVisible();
+});
+
+test('viewer import deep links remain read-only', () => {
+  render(ui('/w/ws?import=1'));
+  expect(screen.getByRole('table')).toBeVisible();
+  expect(screen.queryByLabelText('JSONL file')).not.toBeInTheDocument();
+});

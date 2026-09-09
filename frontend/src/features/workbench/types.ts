@@ -7,7 +7,7 @@ export type Handoff = components['schemas']['HandoffExport'];
 export type Citation = components['schemas']['CitedPassage'];
 
 export const stateLabel = (state: string) => ({
-  queued: 'Queued', running: 'Processing', waiting_for_input: 'Waiting for development response',
+  not_processed: 'Not processed', queued: 'Queued', running: 'Processing', waiting_for_input: 'Waiting for development response',
   awaiting_review: 'Needs review', completed: 'Completed', rejected: 'Rejected',
   failed: 'Processing failed', cancelled: 'Cancelled',
 }[state] ?? state);

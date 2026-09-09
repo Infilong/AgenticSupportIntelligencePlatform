@@ -49,6 +49,7 @@ export function Shell({ user, workspaces, logout, refreshWorkspaces }: { user: U
       <main id="main-content" className="page-content">
         {actionError && <p role="alert" className="error">{actionError}</p>}
         <Routes><Route index element={<Workbench key={workspace.id} workspace={workspace} />} />
+          <Route path="messages/:messageId" element={<Workbench key={workspace.id} workspace={workspace} />} />
           <Route path="runs/:runId" element={<Workbench key={workspace.id} workspace={workspace} />} />
           <Route path="knowledge" element={<Knowledge key={workspace.id} workspace={workspace} />} />
           <Route path="knowledge/search" element={<SearchKnowledge key={workspace.id} workspace={workspace} />} />

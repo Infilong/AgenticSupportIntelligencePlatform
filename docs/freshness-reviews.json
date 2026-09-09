@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "4355d5c275d377b79c4dfb44db25d2e4d2e6e28df4cd1395884c89547594351b",
+    "fingerprint": "c70aed303815aed7a0965077f483fe434650b37e8b60fa72f4b68d1eb5860446",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/releaseplan/entrypoint review against savedreport:default26/26,hybridrerank25,vector22,BM25hybrid20;zeroobservedleaks/foreign404,onlyreranked fullgates. Defaultretained despiteaggregate hybridpass duepairedja02 regression. Post-run12metric/freeze and160tracechecks distinguished from originalquality measurement;fullgoal/capacity/generation gaps explicit."
+    "rationale": "Independent STATUS/entrypoints/activeimportplan review against saved141PG305.18s,46unit,25focused,31frontend,2initial+1finalbrowser andChromeapprovedJA report. Currentdemo priority andparkedcapacity clearlydistinguished;previousrunless/importspending claims corrected,fullgoal remainsincomplete. Internalapproval isnotcustomersend orpaidAPIproof."
   },
   "frontend": {
-    "fingerprint": "7f2a9c8b6be27cbb9bd3207a986a57fc242492fecb8f39428bc4b195e0b82045",
+    "fingerprint": "38d37a15432aa5c3468f19141fcb651bdbf0abf3aba9b490031e48ddfc583af4",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged frontend boundary review against architecture: advanced strategy selector and candidate inspector remain available; comparison supports retaining message default,not newUI behavior. No fresh browser/quality/capacity claims inferred from offline metric-validator tests."
+    "rationale": "Independent ImportMessages/SavedMessage/inbox navigation and nullable generatedcontract review against architecture. Sameform retrykey/abortguard,explicitselectedprocessing,labels andnotprocessedfilter match source. Inspected2initialbrowser30s and1final7.5s JSONresults;31component/build evidence scoped;no bulkAI or externalgeneration claim."
   },
   "tooling": {
-    "fingerprint": "251b911575534007a7b2bfac77a2e49a18e9724b2a5ab2c4add57f6768edb6b6",
+    "fingerprint": "c58c13a3a4f7f1db567ae45a395e0b295b386054bb56f296bfb8f949dc51fa44",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent metric regression and RUNBOOK command review: comparison rotates strategies ononefreshcorpus,timesPOSTonly,savespartialfailures,exits0forcompleteconsistent experiment not allbaselinegates. Strictbranch/contiguousrank and frozen-input tests support structural revalidation;no command default or production verification altered."
+    "rationale": "Independent RUNBOOK API/JSONLformat/limits/idempotency review against parser/routes/frontend. Corrected invalidUTF8 file error versus per-rowline numbers;1MiB/100rows/10labels/32chars andworkspacequota accurate. Runtime/toolingsource restored beforeimports,commandsunchanged;no claimofcontentdedup orrequestabortrollback."
   },
   "evaluation": {
-    "fingerprint": "9a3148ad2916c877f31a40de4e03713161e0a1512549fda7e9418e26359394eb",
+    "fingerprint": "010c71d274fe02c2a2c8cecb9b4601fd9c72386533a2d1182531e80eae65c358",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent compare_retrieval/comparison_metrics/tests and evalREADME review. Verified rawreport source/runtime stability,allfive counts/gates/p95,safety404 and ja02union-selection regression. Strict160trace revalidation report and validator SHA256 match current bytes;post-run structural repair explicitly not newlatency/qualityrun. Developmentsubstring/group discovery limits and fourunverifiedoutcomes preserved."
+    "rationale": "Independent sharedACCEPTANCE review: scopedDATAimport-label-filter-select-process gate now supported by realPG/browser and persistedJapaneseapprovedimport evidence. RemainingROUTE/REVIEW/EVAL/RESTORE/fullUX gates explicit;unchanged RAGcomparison and deferred50kchunk experiment not misrepresented ascurrentSQL orsemanticproof."
   },
   "backend": {
-    "fingerprint": "01c0a0db7032f7531868330dd3108a58fc1b4b14caa735f4b359af0e28a6f292",
+    "fingerprint": "71fc6115c73a24f94917ea632c8c1cf241bcb71801e710e78d3a888859db7df9",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged product-source review against updated RAG/architecture comparison claims. Five implemented strategies and unchanged vector-rerank default remain accurate. Inspected saved ja02 discovery:23candidate union contains2required groups,selected20contains1; supports measured regression without alleging model/generation defect. No product/API/migration change in this slice."
+    "rationale": "Independent import semantic review:conversations format/service/routes,migration0012,support initial-run extraction and saved-row projections align with architecture/acceptance. Wholebatch atomicity,actor-boundreplay,workspace50kquota,concurrentfirststart,labels and importer authority covered by inspected tests;141PG and46unit unchanged-source logs retained. Importsqueue nojobs untilselectedstart;not trustedknowledge."
   },
   "infrastructure": {
-    "fingerprint": "96550c1bc081163041d467c36190ac423c96ac2d22ea98e850162ce79b192d88",
+    "fingerprint": "48e5d5adab88745cbb5c343ca6e22c8ac08b7a834ebe01218560897d85ed63a0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged runtime/configuration review against sharedarchitecture/RUNBOOK. Comparison usesexistinglocalstack,newisolatedcorpus and source/runtimefingerprints;no newservice,migration,defaultmodel,paidAPI or50kchunkperformance claim. Historicalrestore and productionlimits unaffected."
+    "rationale": "Independent migration0012/sharedarchitecture/runbook review: additivebatchtable plusworkspaceboundoptionalimportref/labels preserveexistingoriginals. Existingguardedlocalruntime andnamespaceunchanged;no newservice,externaldeployment orRAGcapacitypatch included. Runtimehealthy claim remains scoped startup,notrestore orproductionreadiness."
   }
 }

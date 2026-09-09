@@ -22,6 +22,10 @@ class MessageInput(BaseModel):
     @field_validator("original")
     @classmethod
     def nonempty(cls, value):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError("Enter valid Unicode text") from None
         if not value.strip() or "\x00" in value:
             raise ValueError("Enter a nonempty message without NUL characters")
         return value  # Preserve the exact original; normalization is a processing concern.
@@ -59,7 +63,8 @@ class MessageSummary(BaseModel):
     original: str
     language: str
     created_at: datetime
-    run_id: UUID
+    run_id: UUID | None
+    labels: list[str]
     state: str
     outcome: str | None
     error_code: str | None

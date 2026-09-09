@@ -153,3 +153,44 @@ new validator. Two failing regressions retained in
 contiguous-rank checks repair the evaluator.12 metric/freeze tests pass. All 160 original saved
 case/probe traces pass `strict-trace-validation.json` bound to original report and validator hashes.
 This revalidates trace structure only; measured latency/quality was not rerun or overwritten.
+
+
+## 50k-chunk candidate capacity brief
+
+**Paused by user direction, 2026-09-09:** a working demo is sufficient for RAG at this stage.
+Do not continue capacity optimization merely to perfect benchmarks. Preserve failures and the
+current uncommitted work; do not describe the incomplete stress gate as passed.
+The second run `.artifacts/m0/retrieval-capacity-20260909T085348658780Z` still times out at
+128-term BM25. The first SQL optimization passes14 focused PostgreSQL checks at
+`.artifacts/m0/bm25-query-repair-20260909T085235337601Z`, but is not deployed to the demo.
+
+Comparison checkpoint f0b9f79 pushed; preparation45 passed at
+`.artifacts/m0/prep-20260909T084141882694Z`. Root owns a separate opt-in isolated PostgreSQL
+benchmark: 50000 active stored chunks across 250 documents, plus foreign/withdrawn/stale/incompatible
+negative populations. Preserve consistent source text/offsets and lexical metadata. Synthetic
+vectors/stored chunks prove query behavior only, not ingestion throughput or semantic quality.
+Measure authorized collect transactions for vector, BM25 and hybrid with selective identifier,
+common term, CJK and128-distinct-term queries; branch20/union40/snapshot20 limits remain fixed.
+Freeze local candidate-transaction target p95<=1000ms before measurement, leaving room inside
+existing3s end-to-end retrieval target; five warm samples plus separately labelled first sample.
+Use runtime-equivalent5s statement timeout, exact source checks and EXPLAIN ANALYZE/BUFFERS.
+No concurrent evaluation workload. Capture failed measurements before optimization. The50k result
+is not a production percentile, concurrency or reranking proof. Do not add a search service/index
+without evidence; keep normal CI correctness separate from host-specific latency enforcement.
+
+Before measurement, fixture design uses250 documents with200 chunks each so excluded-source
+fixtures also remain inside the500 active-document application limit. No result or target changed.
+
+
+First capacity failure preserved at `.artifacts/m0/retrieval-capacity-20260909T084638525188Z`:
+vector warm max188ms, BM25 identifier1162ms/common725ms/CJK1375ms;128-term query hit5s timeout.
+Plans show materialized wide-JSON population spills and repeated key tests. First optimization
+only inlines the scoped population, removes redundant has-any filtering and uses floating-point
+average length (same BM25 formula). No new index/service or criterion change.
+[PostgreSQL CTE guidance](https://www.postgresql.org/docs/current/queries-with.html) explains the
+materialization choice; use actual plans to judge benefit. Benchmark observations/plans now save
+incrementally after independent review. Fixture intentionally has50300 primary retained chunks
+(50000eligible plus300excluded) and100foreign, above the normal retained cap; this remains an
+oversized stress test. Timings are whole authorized candidate-collection transactions, not pureSQL.
+
+The five experimental working files were subsequently parked at `.artifacts/rag-hardening/deferred-capacity-20260909`; tracked application/tooling were restored to f0b9f79. Continue user-facing work through the import plan, not further tuning.

@@ -365,6 +365,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspace_id}/message-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Messages */
+        post: operations["import_messages_api_workspaces__workspace_id__message_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/messages/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail */
+        get: operations["detail_api_workspaces__workspace_id__messages__message_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/messages/{message_id}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Labels */
+        put: operations["labels_api_workspaces__workspace_id__messages__message_id__labels_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/messages/{message_id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_workspaces__workspace_id__messages__message_id__process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspace_id}/runs/{run_id}/review": {
         parameters: {
             query?: never;
@@ -416,6 +484,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** Body_import_messages_api_workspaces__workspace_id__message_imports_post */
+        Body_import_messages_api_workspaces__workspace_id__message_imports_post: {
+            /** File */
+            file: string;
         };
         /** Body_upload_document_api_workspaces__workspace_id__documents_post */
         Body_upload_document_api_workspaces__workspace_id__documents_post: {
@@ -646,6 +719,23 @@ export interface components {
              */
             timing_status: "pending" | "recorded" | "clock_anomaly";
         };
+        /** ImportResult */
+        ImportResult: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Message Count */
+            message_count: number;
+        };
+        /** Labels */
+        Labels: {
+            /** Labels */
+            labels?: string[];
+        };
         /** MemberResponse */
         MemberResponse: {
             /**
@@ -714,11 +804,10 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
-            /**
-             * Run Id
-             * Format: uuid
-             */
-            run_id: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Labels */
+            labels: string[];
             /** State */
             state: string;
             /** Outcome */
@@ -898,6 +987,29 @@ export interface components {
              * @default not_verified
              */
             support_status: string;
+        };
+        /** SavedMessage */
+        SavedMessage: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Original */
+            original: string;
+            /** Language */
+            language: string;
+            /** Labels */
+            labels: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Import Filename */
+            import_filename: string | null;
+            /** Latest Run Id */
+            latest_run_id: string | null;
         };
         /** SessionResponse */
         SessionResponse: {
@@ -1681,7 +1793,8 @@ export interface operations {
                 search?: string;
                 offset?: number;
                 limit?: number;
-                view?: "all" | "attention" | "ready" | "processing" | "failed";
+                view?: "all" | "unprocessed" | "attention" | "ready" | "processing" | "failed";
+                label?: string;
             };
             header?: never;
             path: {
@@ -1868,6 +1981,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_messages_api_workspaces__workspace_id__message_imports_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_messages_api_workspaces__workspace_id__message_imports_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detail_api_workspaces__workspace_id__messages__message_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedMessage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    labels_api_workspaces__workspace_id__messages__message_id__labels_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Labels"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedMessage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_workspaces__workspace_id__messages__message_id__process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageCreated"];
                 };
             };
             /** @description Validation Error */

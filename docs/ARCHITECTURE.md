@@ -1,6 +1,6 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for retrieval strategies and candidate inspection following `b904b90`.
+Updated 2026-09-09 for saved customer imports, labels and explicit selected-message processing.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
@@ -23,6 +23,7 @@ AgenticSupportIntelligencePlatform/
 │   │   │   ├── identity/      # Sessions, authentication and CSRF
 │   │   │   ├── workspaces/    # Membership and roles
 │   │   │   ├── knowledge/     # Documents, ingestion, retrieval and sources
+│   │   │   ├── conversations/ # JSONL imports, labels and saved-message admission
 │   │   │   ├── support/       # Original messages, runs, handoffs and cited drafts
 │   │   │   ├── reviews/       # Attributable decisions and fenced final responses
 │   │   │   └── usage/         # Model-call records
@@ -46,8 +47,7 @@ AgenticSupportIntelligencePlatform/
 
 Each substantive area has a local `AGENTS.md`, linked from the root director. These paths
 exist now. The [target topology](../REBUILD_PLAN.md#target-project-topology) includes future
-modules: separate retrieval, conversations and quality features are not
-implemented. Support currently owns original messages and their processing runs; retrieval
+modules: separate retrieval and quality features are not yet implemented. Support currently owns original messages and their processing runs; retrieval
 remains in knowledge. Do not create empty target directories.
 
 ## Implemented knowledge data flow
@@ -198,14 +198,14 @@ attempt. Counts and rows share server-side search/workspace/view semantics. Atte
 development handoffs, human review and completed clarification/missing-evidence outcomes; Ready
 contains only completed approved responses. Cancelled/rejected attempts remain in All. Pagination
 supports first/previous/next/last, direct page entry and 20/50-row sizes. Shrinking results clamp
-to a valid page. These views do not implement imports or labels. An isolated 50,000-message
+to a valid page. Labels are searchable operator metadata. An isolated 50,000-message
 stored-state fixture now verifies exact counts, latest attempts, stable ordering, scoped reads,
 concurrent admission and real browser navigation; it is not AI-processing throughput proof.
 Admission is limited to 50,000 messages per workspace, independently of the knowledge-chunk quota.
 Workspace locking prevents concurrent requests from exceeding the cap; valid idempotent replays
 reuse the original run/job even at the cap. All-view queries page message IDs before resolving
 latest runs; filtered views exclude superseded runs with a scoped anti-join. Counts and rows
-consistently exclude runless messages pending the separate import design.
+include saved messages without runs; the Not processed view selects only those messages.
 At narrow widths only the table scrolls horizontally; the page remains within the viewport.
 
 The Workflow tab renders the four recorded LangGraph stages: input check, retrieval/context,
@@ -227,7 +227,7 @@ Resource reads are keyed to route/workspace and aborted on navigation. Transient
 preserve an unfinished answer; authorization failures clear protected data. Late message POST
 responses cannot navigate back after leaving the screen. Aborting a request does not undo its
 server write; retries of unchanged input reuse the same idempotency key within the form.
-Run-state changes refresh the inbox. Imports and labels remain unfinished.
+Run-state changes refresh the inbox; saved imports and labels are described below.
 
 ## Linked processing attempts
 
@@ -290,3 +290,20 @@ Deployment must replace all older API/worker instances before enabling the sweep
 do not participate in ownership. Connection/statement/TCP settings aid detection; they do not
 establish a platform-independent network deadline. Ingestion retains job-lease accounting;
 this recovery boundary covers synchronous retrieval and its embedding/reranking records.
+
+
+## Saved customer imports
+
+[Conversations](../backend/app/modules/conversations/AGENTS.md) owns UTF-8 JSONL import admission,
+batch provenance and labels; support retains Message and initial-run ownership. Migration0012
+adds import batches and workspace-bound optional references/labels without rewriting originals.
+Import validates the entire bounded file before atomic admission under the existing workspace
+lock. Batch keys bind actor, filename and bytes; exact replay returns the original batch even
+at capacity. Shared quota counts all saved and processed messages. Labels never enter retrieval
+queries or model context. Customer imports never become trusted knowledge.
+
+Operator/admin may import, relabel and explicitly start a selected saved message; viewers read.
+The importer and processing actor must retain authority. Concurrent initial starts converge on
+one run/job; subsequent retries use the existing attempt flow. A saved-message detail exposes
+original, language, filename and labels, with Start processing or Open processing as appropriate.
+The run remains linked through response, sources, workflow and history. See RUNBOOK for limits.

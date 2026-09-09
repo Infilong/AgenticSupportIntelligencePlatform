@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.modules.conversations.models import MessageImport  # noqa: F401
 
 
 class Message(Base):
@@ -22,6 +23,9 @@ class Message(Base):
     __table_args__ = (
         UniqueConstraint("workspace_id", "id", name="uq_message_workspace"),
         UniqueConstraint("workspace_id", "submission_key", name="uq_message_submission"),
+        ForeignKeyConstraint(
+            ["workspace_id", "import_id"], ["message_imports.workspace_id", "message_imports.id"]
+        ),
     )
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workspaces.id"))
@@ -30,6 +34,8 @@ class Message(Base):
     language: Mapped[str] = mapped_column(String(2))
     submission_key: Mapped[str] = mapped_column(String(100))
     input_hash: Mapped[str] = mapped_column(String(64))
+    labels: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
+    import_id: Mapped[uuid.UUID | None]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

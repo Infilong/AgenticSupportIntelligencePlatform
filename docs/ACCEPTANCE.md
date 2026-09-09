@@ -82,7 +82,13 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   creator revocation, scoped lineage and limits. The browser clarification/cancel/retry/history
   journey and repaired viewer fixture pass. This advances DATA/ROUTE/JOB/UX
   without completing imports, semantic routing or the complete recovery matrix.
-- ROUTE/REVIEW/DATA/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
+- DATA: bounded UTF-8 JSONL import, labels, no-run inbox rows and explicit selected-message
+  processing are implemented. Real PostgreSQL tests cover replay/rollback, viewer/foreign denial,
+  revocation, concurrent first-start and competing imports at50000 messages. A browser journey
+  imports EN/JA/ZH, edits labels, starts one and returns to two unprocessed rows; Chrome also
+  completes a Japanese imported message through an attributed draft and internal approval.
+  This proves the scoped DATA flow, not bulk processing or semantic generation quality.
+- ROUTE/REVIEW/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
 
 ## Evaluation expansion gate before M2 tuning
 

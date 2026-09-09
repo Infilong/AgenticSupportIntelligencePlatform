@@ -29,9 +29,11 @@ def handoff_timing(handoff):
     return {"handoff_elapsed_ms": elapsed, "timing_status": "recorded"}
 
 
-def messages(db, workspace_id, actor_id, search, offset, limit, view="all"):
+def messages(db, workspace_id, actor_id, search, offset, limit, view="all", label=""):
     membership(db, workspace_id, actor_id)
     filters = [Message.workspace_id == workspace_id, Message.original.icontains(search, autoescape=True)]
+    if label.strip():
+        filters.append(Message.labels.contains([label.strip().casefold()]))
     latest = (
         select(SupportRun.id)
         .where(SupportRun.workspace_id == Message.workspace_id, SupportRun.message_id == Message.id)
@@ -52,9 +54,10 @@ def messages(db, workspace_id, actor_id, search, offset, limit, view="all"):
         "ready": and_(state == "completed", SupportRun.outcome == "approved_response"),
         "processing": state.in_(["queued", "running"]),
         "failed": state == "failed",
+        "unprocessed": SupportRun.id.is_(None),
     }
     latest_join = SupportRun.id == latest
-    if view != "all":
+    if view not in {"all", "unprocessed"}:
         filters.append(views[view])
         newer = aliased(SupportRun)
         # Let PostgreSQL filter candidate states before excluding superseded runs.
@@ -74,28 +77,23 @@ def messages(db, workspace_id, actor_id, search, offset, limit, view="all"):
     query = (
         select(Message, SupportRun, Job)
         .select_from(Message)
-        .join(
+        .outerjoin(
             SupportRun,
             latest_join,
         )
-        .join(Job, Job.id == SupportRun.job_id)
+        .outerjoin(Job, Job.id == SupportRun.job_id)
         .where(*filters)
     )
     order = (Message.created_at.desc(), Message.id)
     if view == "all":
-        # Only resolve the latest run for the requested page. Existence preserves the
-        # existing projection semantics even if an imported message has no run yet.
-        has_run = (
-            select(SupportRun.id)
-            .where(SupportRun.workspace_id == Message.workspace_id, SupportRun.message_id == Message.id)
-            .correlate(Message)
-            .exists()
-        )
-        matching = select(Message.id).where(*filters, has_run)
+        # Resolve latest runs only for the bounded page, including saved messages.
+        matching = select(Message.id).where(*filters)
         total = db.scalar(select(func.count()).select_from(matching.subquery()))
         page = matching.order_by(*order).offset(offset).limit(limit)
         rows = db.execute(query.where(Message.id.in_(page)).order_by(*order))
     else:
+        if view == "unprocessed":
+            query = query.where(views[view])
         total = db.scalar(select(func.count()).select_from(query.subquery()))
         rows = db.execute(query.order_by(*order).offset(offset).limit(limit))
     return {
@@ -105,10 +103,11 @@ def messages(db, workspace_id, actor_id, search, offset, limit, view="all"):
                 "original": m.original,
                 "language": m.language,
                 "created_at": m.created_at,
-                "run_id": r.id,
-                "state": visible_state(r, j),
-                "outcome": r.outcome,
-                "error_code": j.error_code,
+                "run_id": r.id if r else None,
+                "labels": m.labels,
+                "state": visible_state(r, j) if r else "not_processed",
+                "outcome": r.outcome if r else None,
+                "error_code": j.error_code if j else None,
             }
             for m, r, j in rows
         ],

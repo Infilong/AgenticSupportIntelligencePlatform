@@ -404,3 +404,32 @@ For an explicit five-strategy comparison, run `uv run --project backend --frozen
 evals/compare_retrieval.py` from the repository root. Keep source files unchanged while it runs.
 Exit0 means the experiment completed consistently; inspect individual retrieval gates and paired
 regressions. It never changes the default. See [evaluation](../evals/README.md) for the protocol.
+
+
+## Import customer messages
+
+Workbench → Import accepts a UTF-8 `.jsonl` file (optional UTF-8 BOM), at most1 MiB and100
+nonblank newline-delimited records. Each original is1–1000 characters; language is en/ja/zh.
+Example (one JSON object per line):
+
+```jsonl
+{"original":"What is the refund deadline?","language":"en","labels":["billing"]}
+{"original":"返金期限はいつですか？","language":"ja","labels":["返金"]}
+```
+
+Labels are optional: at most10, each1–32 characters after trimming/casefolding; letters, numbers,
+spaces, hyphens and underscores only. Duplicates are removed. Invalid UTF-8 rejects the file with an encoding error.
+Unknown/duplicate JSON fields and invalid rows reject the entire batch with a line number,
+without echoing customer text. One invalid row or insufficient quota creates no messages/jobs.
+
+Operators/admins import, edit labels and start processing; viewers inspect. Import saves customer
+data only: it queues no AI jobs and adds no trusted knowledge. Open Not processed, filter by
+label/text, inspect a message, then Start processing. Existing labels/originals remain available
+through the inbox's Labels & original link after processing. Only the selected message starts.
+
+API: multipart `POST /api/workspaces/{id}/message-imports` with file and Idempotency-Key; replay
+of identical actor/filename/bytes returns the same batch. `GET /messages/{message_id}`,
+`PUT /messages/{message_id}/labels`, and `POST /messages/{message_id}/process` share that workspace
+prefix. Concurrent process calls converge on the same initial run. The existing50000-message
+workspace quota counts unprocessed rows too. The UI preserves the import key for retries while
+the same form/file remains open; selecting a file again is a new import, not content deduplication.
