@@ -15,6 +15,7 @@ from app.modules.knowledge.retrieval import retrieve
 from app.modules.support.context import digest, pack, validate_sources
 from app.modules.support.models import RunStep, SupportRun
 from app.modules.support.service import eligible, get_run, handoff_for
+from app.providers.development_generation import replay, snapshot
 from app.workflows.checkpoints import locked_graph
 
 
@@ -133,7 +134,9 @@ def execute(engine, job, retrieval=retrieve):
             if handoff is None or handoff.response is None or handoff.context_hash != state["context_hash"]:
                 raise ValueError("A matching stored development response is required")
             validate_sources(db, job.workspace_id, handoff.context)
-            return {"response": handoff.response, "outcome": "draft"}
+            record = snapshot(handoff)
+        response = replay.invoke(record)
+        return {"response": response, "outcome": "draft"}
 
     builder = StateGraph(State)
     builder.add_node("validate_input", traced("validate_input", validate))

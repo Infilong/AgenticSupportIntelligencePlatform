@@ -12,8 +12,9 @@ and pushes to `codex/fresh-start` are authorized; merging, public deployment and
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
 The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
 The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
-Next: narrow and implement the connected recorded-generation path in the M5 assessment,
-then verify it before adding the four-way runner. Keep RAG tuning deferred. The previous
+Current: checkpoint the verified recorded-development request contract in the M5 assessment.
+Next: repair the observed command-timeout descendant cleanup, then continue provider dispatch
+and the four-way runner. Keep RAG tuning deferred. The previous
 window checkpoint records the earlier stop; it does not impose a current deadline.
 
 [REBUILD_GOAL](REBUILD_GOAL.md) and [release plan](../REBUILD_PLAN.md) own the goal and scope;
@@ -21,9 +22,15 @@ window checkpoint records the earlier stop; it does not impose a current deadlin
 
 ## Latest verified checkpoint
 
+- M5 request contract:25 initial focused PostgreSQL checks,9 final contract/recovery checks,
+  frontend build/42 tests and one real development browser approval journey pass. Exact evidence
+  and preserved failures are in the [M5 record](plans/active/m5-generation-pipelines.md).
+  Full local regression timed out at420s with a cold child-startup failure; it is not a pass.
+  New schema0015 is running in development; packaged release remains at its prior checkpoint.
+
 - Latest verified source checkpoint: **fd18e50**, packaged admin journeys and test cleanup,
   committed/pushed. Hosted CI34365353115 passed all five jobs, including real PostgreSQL,
-  frontend browser checks and packaged-release smoke. This final handoff changes documentation only.
+  frontend browser checks and packaged-release smoke. The earlier window handoff changed documentation only.
 - Recovery checkpointfb29b6f CI34362786364 passed; original backups/databases remain preserved.
 - Status-navigation checkpointf1cb7ad is committed/pushed;53 preparation checks passed at
   `.artifacts/m0/prep-20260909T142552861669Z`.
@@ -45,7 +52,7 @@ window checkpoint records the earlier stop; it does not impose a current deadlin
 - Previous backup checkpoint338a88c CI34360979852 passed; packaged-workbench checkpointfb2db23
   CI34360000750 passed. [Saved-backup record](plans/completed/m6-saved-backup-restore.md).
 
-The latest explicitly recorded local full PostgreSQL wrapper result is155 passes from the
+The latest passing explicitly recorded local full PostgreSQL wrapper result is155 passes from the
 Quality slice: `.artifacts/m0/integration-20260909T122535921561Z`. Later hosted CI also runs its
 configured integration suite; its count is not restated here. Backup tests and restore runs
 verify their changed boundary, rather than providing a new local full application regression.

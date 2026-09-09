@@ -21,7 +21,7 @@ export function DevelopmentResponse({ path, onSubmitted }: { path: string; onSub
     event.preventDefault(); if (!handoff || pending || !source || !quote.trim() || !answer.trim()) return;
     setPending(true); setError('');
     try {
-      await api(`${path}/development-handoff/${handoff.id}`, { method: 'POST', body: JSON.stringify({ context_hash: handoff.context_hash, answer, review_category: category, citations: [{ chunk_id: sourceId, quote }] }) });
+      await api(`${path}/development-handoff/${handoff.id}`, { method: 'POST', body: JSON.stringify({ context_hash: handoff.context_hash, request_hash: handoff.request_hash, answer, review_category: category, citations: [{ chunk_id: sourceId, quote }] }) });
       onSubmitted();
     } catch (err) { setError((err as Error).message); }
     finally { setPending(false); }

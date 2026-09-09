@@ -101,12 +101,17 @@ class Handoff(Base):
         ForeignKeyConstraint(["workspace_id", "run_id"], ["support_runs.workspace_id", "support_runs.id"]),
         UniqueConstraint("workspace_id", "run_id", name="uq_handoff_run"),
         UniqueConstraint("workspace_id", "id", name="uq_handoff_workspace"),
+        CheckConstraint(
+            "(generation_request IS NULL) = (request_hash IS NULL)", name="handoff_request_pair"
+        ),
     )
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID]
     run_id: Mapped[uuid.UUID]
     context: Mapped[dict] = mapped_column(JSONB)
     context_hash: Mapped[str] = mapped_column(String(64))
+    generation_request: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    request_hash: Mapped[str | None] = mapped_column(String(64))
     prompt_version: Mapped[str] = mapped_column(String(64), default="support-development-v1")
     provider: Mapped[str] = mapped_column(String(40), default="codex_assisted_development")
     response: Mapped[dict | None] = mapped_column(JSONB)

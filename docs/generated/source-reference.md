@@ -13,7 +13,7 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |
 | `backend/app/modules/` | 53 |
-| `backend/app/providers/` | 5 |
+| `backend/app/providers/` | 6 |
 | `backend/app/workflows/` | 3 |
 | `frontend/src/` | 2 |
 | `frontend/src/api/` | 2 |

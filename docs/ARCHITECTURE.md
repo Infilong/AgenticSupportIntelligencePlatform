@@ -353,3 +353,16 @@ Completed approved results expose an explicit clipboard action using the exact s
 reviewed_response. Drafts, rejected responses and clarification requests do not expose this
 approved-copy action. Clipboard success/failure is announced; failure leaves manual selection
 available. This copies locally and does not send a response to a customer.
+
+
+### Recorded development generation contract
+
+Migration0015 adds nullable exact rendered request/hash fields to development handoffs. New
+handoffs record `development-request-v1` system/user messages bound to the existing context and
+prompt version. Pre-migration rows retain null fields; admin exports explicitly label their
+request as reconstructed. Updated clients submit request_hash; older clients retain context_hash
+binding. Server checks stored context, rendered request, response hash and contributor before
+LangChain replay and fenced domain publication, including completed-checkpoint recovery.
+The replay runs outside the database snapshot transaction. It consumes only the authenticated
+stored contribution; it is not inference and creates no ModelCall. External generation dispatch,
+usage accounting and four distinct generation pipelines remain unimplemented.

@@ -40,6 +40,7 @@ class CitationInput(BaseModel):
 class DevelopmentResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     context_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
+    request_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     answer: str = Field(min_length=1, max_length=8000)
     citations: list[CitationInput] = Field(min_length=1, max_length=5)
     review_category: Literal["ordinary", "policy_exception", "conflicting_evidence"] = "ordinary"

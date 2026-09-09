@@ -692,6 +692,8 @@ export interface components {
         DevelopmentResponse: {
             /** Context Hash */
             context_hash: string;
+            /** Request Hash */
+            request_hash?: string | null;
             /** Answer */
             answer: string;
             /** Citations */
@@ -876,6 +878,17 @@ export interface components {
             /** Prompt Version */
             prompt_version: string;
             context: components["schemas"]["DevelopmentContext"];
+            /** Generation Request */
+            generation_request: {
+                [key: string]: unknown;
+            };
+            /** Request Hash */
+            request_hash: string;
+            /**
+             * Request Storage
+             * @enum {string}
+             */
+            request_storage: "recorded" | "reconstructed";
         };
         /** HandoffSummary */
         HandoffSummary: {

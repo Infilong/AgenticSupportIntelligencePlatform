@@ -1,21 +1,21 @@
 {
   "project": {
-    "fingerprint": "b61dd4539c45ea126923d9910bacf662071cb4a515d5e69f923be7e40f0beb14",
+    "fingerprint": "fc713f2c3643cfdc672319fae244254b4cb3eab8cb70ad2a697154d0afd864df",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independently reviewed current authority and active-plan deadline references. Found and corrected remaining four-hour rule in REBUILD_PLAN, unattended-limit stop in reusable goal and M1 deadline; M2 historical window references now explicitly defer to STATUS. M5 remains unimplemented assessment, RAG tuning deferred, native-browser restriction separate, prior archived history intact. Removal of time limit does not expand M1-M6 scope or paid/deployment authority."
+    "rationale": "Independent STATUS/M5 plan and entry-point semantics review: pre-slice provider assessment labeled historical, current development-only request contract partially verified through25+9 separate PG runs and one real browser journey. Full regression exit124 with launcher-only child phases stays unresolved; latest passing local155 record and earlier documentation-only handoff now correctly historical. External dispatch/accounting/four pipelines remain incomplete."
   },
   "frontend": {
-    "fingerprint": "21150a7ccddd4c62ddde77cc5f009be1922ec70cef643da9d7a1587e3c53d2a7",
+    "fingerprint": "0021c0ae3a484db5ae20dc0b72c19450144a4a76f5afba3480b1f0fbf8101b27",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independently reviewed final saveDefaults helper at all three settings save sites: response and click receive immediate allSettled handlers and bounded ten-second waits, both failures retained; same-workspace original-language cleanup unchanged. Parsed final browser report confirms two passes in7506.448ms. Earlier eight unaffected journeys remain aggregate evidence, not a final full-suite claim."
+    "rationale": "Independent generated handoff projection and DevelopmentResponse binding review: updated submission carries exported request_hash while legacy omission remains accepted under server context checks. Saved real browser report1pass43.0s and trace proof confirm hash-bearing POST202 followed by existing approval flow.42 component/build evidence retained; no inference or new generation UI claim."
   },
   "tooling": {
-    "fingerprint": "4f020a0f841e9ba78c4f3d2e220d51abf7219e6b147fb94dd32fdcd2e022e7ae",
+    "fingerprint": "1a45b0b8636bbeb1ade91e3cd432febf768de94220331a367307378ab27cf43b",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of user-authorized removal of fixed unattended deadline: DEVELOPMENT now treats slice times as planning targets, continues within existing goal and retains user pause, blockers, milestone boundaries and separate deployment/spending authority. No scheduler, runtime or test behavior change; historical checkpoints remain preserved."
+    "rationale": "Independent RUNBOOK export/submission recipe against request_for/render and optional schema field. Recorded versus reconstructed storage correctly distinguished; server validates both paths. Saved test/browser evidence retains failed fixture setup, no-test filter and full timeout rather than treating focused checks as full regression. Existing tooling unchanged; descendant cleanup identified as separate next work."
   },
   "evaluation": {
     "fingerprint": "150ba1194216e5ef9cfaeea224cf144eef963733fc74ed73e747f56d9195fd77",
@@ -24,15 +24,15 @@
     "rationale": "Independent shared ACCEPTANCE updates against prior ten-distinct packaged workbench reports and new saved-restore evidence. Historical evaluation data is included in table parity but no new evaluation was run. Native zoom, semantic generation, network restoration and full release coverage remain unverified; existing corpus/scorer unchanged."
   },
   "backend": {
-    "fingerprint": "98e0a35ee3c4f8d20da2d56517ccbb0930d447e1c38e2bfc9d508d07b2b78bf6",
+    "fingerprint": "de24297632b09d9144b47cffc70d72d4ec43f9cefcece495f58d851ba9b88441",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent saved-backup boundary test and shared ACCEPTANCE review: saved mode skips source connection/export, corrupt archive fails before DB creation, default mode remains intact. Actual older archive yields 23-table parity and new clone clarification with three checkpoints/zero calls. No product schema or API change; synthetic tests supplement real evidence."
+    "rationale": "Independent migration0015/provider/support/graph review: new nullable recorded request/hash pair, legacy reconstruction explicitly labeled, optional client hash checked alongside context; attributed response identity revalidated before replay and completed-checkpoint publication. LangChain replay outside transaction consumes stored contribution without ModelCall. Inspected25 initial/9 final PG logs; full420s regression remains failed/unresolved."
   },
   "infrastructure": {
-    "fingerprint": "4a933b513b977a9095261084ac54f629c5883234fcc90c45626ad0ae4d1810b5",
+    "fingerprint": "de482419b894c7c049bfce8dae987a9a9fcf873686a855f80ba6ed0c600913b3",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared RUNBOOK packaged admin recipe review: existing isolated release assets, credentials and local retrieval reused via test-only overrides. No infra product or deployment changes. Browser injection/unavailable workspace and bounded clean logs are not generalized security, expiry, native zoom or production guarantees."
+    "rationale": "Independent shared ARCHITECTURE/RUNBOOK boundary review: additive0015 only changes handoff identity storage; no external model service or paid calls, development migrated while packaged release remains prior checkpoint. Snapshot transaction excludes replay; local browser evidence is not live generation or complete deployment proof. Timeout descendants and databases preserved as recorded."
   }
 }

@@ -72,3 +72,6 @@ class HandoffExport(BaseModel):
     provider: str
     prompt_version: str
     context: DevelopmentContext
+    generation_request: dict
+    request_hash: str
+    request_storage: Literal["recorded", "reconstructed"]

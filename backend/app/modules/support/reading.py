@@ -12,6 +12,7 @@ from app.modules.support.models import Message, RunStep, SupportRun
 from app.modules.support.service import eligible, get_run, handoff_for
 from app.modules.usage.models import ModelCall
 from app.modules.workspaces.service import membership
+from app.providers.development_generation import request_for
 
 
 def visible_state(run, job):
@@ -247,10 +248,14 @@ def export_handoff(db, workspace_id, actor_id, run_id):
     if handoff is None:
         raise HTTPException(404, "Development handoff not found")
     validate_sources(db, workspace_id, handoff.context)
+    request, request_hash, storage = request_for(handoff)
     return {
         "id": str(handoff.id),
         "context_hash": handoff.context_hash,
         "context": handoff.context,
         "provider": handoff.provider,
         "prompt_version": handoff.prompt_version,
+        "generation_request": request,
+        "request_hash": request_hash,
+        "request_storage": storage,
     }

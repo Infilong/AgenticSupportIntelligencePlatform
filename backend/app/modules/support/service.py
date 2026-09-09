@@ -9,6 +9,7 @@ from app.jobs.queue import JobCancelled, authorize, enqueue, owned, request_canc
 from app.modules.support.context import citations, digest, validate_sources
 from app.modules.support.models import Handoff, Message, SupportRun
 from app.modules.workspaces.service import membership
+from app.providers.development_generation import request_for
 
 
 def get_run(db, workspace_id, run_id):
@@ -111,7 +112,10 @@ def submit_response(db, workspace_id, actor_id, run_id, handoff_id, data):
         raise HTTPException(404, "Development handoff not found")
     if data.context_hash != handoff.context_hash:
         raise HTTPException(409, "The response does not match this evidence context")
-    response = data.model_dump(mode="json")
+    _, request_hash, _ = request_for(handoff)
+    if data.request_hash is not None and data.request_hash != request_hash:
+        raise HTTPException(409, "The response does not match this generation request")
+    response = data.model_dump(mode="json", exclude_none=True)
     response_hash = digest({"contributor": str(actor_id), "response": response})
     if handoff.response is not None:
         if handoff.response_hash != response_hash:

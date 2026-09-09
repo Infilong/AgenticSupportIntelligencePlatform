@@ -289,7 +289,10 @@ All members can read paginated `/messages` and `/runs/{run_id}`. Poll the latter
 original input, draft, exact citations, graph steps and model records.
 
 When state is `waiting_for_input`, an admin exports `/runs/{run_id}/development-handoff`.
-Read its actual bounded context and author an answer from those sources. Submit to
+The export includes generation_request, request_hash and request_storage (`recorded` for new
+handoffs, `reconstructed` for older rows). Read its actual bounded context and author an answer
+from those sources. Updated clients include request_hash; legacy clients may omit it and retain
+the existing context_hash binding. The server verifies stored request identity in either case. Submit to
 `/runs/{run_id}/development-handoff/{handoff_id}` with its `context_hash`, `answer` and
 `citations: [{chunk_id, quote}]`, using exact nonempty source quotes. Normal session, CSRF and
 Origin requirements apply. Include `review_category` (`ordinary`, `policy_exception` or

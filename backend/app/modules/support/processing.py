@@ -6,9 +6,10 @@ from sqlalchemy import func, select
 
 from app.jobs.contracts import Publication
 from app.modules.reviews.service import draft_identity
-from app.modules.support.context import citations, validate_sources
+from app.modules.support.context import citations, digest, validate_sources
 from app.modules.support.models import Handoff
 from app.modules.support.service import handoff_for
+from app.providers.development_generation import render, snapshot
 from app.workflows.review_graph import execute as wait_for_review
 from app.workflows.support_graph import CLARIFICATION, execute, guard
 
@@ -37,15 +38,19 @@ def process(engine, job, retrieval=None):
             validate_sources(db, run.workspace_id, result["context"])
             handoff = handoff_for(db, run)
             if handoff is None:
+                request = render(result["context"])
                 handoff = Handoff(
                     workspace_id=run.workspace_id,
                     run_id=run.id,
                     context=result["context"],
                     context_hash=result["context_hash"],
                     prompt_version=result["context"]["prompt_version"],
+                    generation_request=request,
+                    request_hash=digest(request),
                 )
                 db.add(handoff)
             if outcome == "draft":
+                snapshot(handoff)  # Revalidate identities even after a completed-checkpoint replay.
                 if handoff.response != result["response"]:
                     raise ValueError("Completed graph response differs from stored contribution")
                 run.citations = citations(handoff.context, handoff.response)
