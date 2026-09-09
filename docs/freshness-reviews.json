@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "03fe5f12640be6e36d0fc1cba4aaee0cf9f29e3218c11a88cdffea30120d7e11",
+    "fingerprint": "18d3ff059eab4664b6975992eac65a917768a315a170bb37046c3866e871cb22",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared current STATUS and plan with110-test and nine-browser evidence; new clock observations and bounded readiness wait are distinguished from unresolved host-clock causes and broader release gaps."
+    "rationale": "Compared final STATUS and README with inbox implementation and retained reports; exact view scope, corrected failures and next-window import planning remain separate from implemented work."
   },
   "frontend": {
-    "fingerprint": "27c8b57cb201959fbae9f227c4c82ede95fc35eb8b37d38567ec835f1130a0ee",
+    "fingerprint": "3cf80491fe4707d35b5009a1681fb0ec317b3f792b31b57f80673bac356028e4",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed RunResult publication gating, immutable question history and internal-only copy; retained nine-browser report passes. Failed or cancelled questions cannot become active next steps; preserved draft remains separate."
+    "rationale": "Reviewed filtered inbox, valid-page clamp and wrapping mobile navigation against owning docs and component/browser coverage. New inbox journey and separate nine-journey regression are distinguished; selection remains open across filtering."
   },
   "tooling": {
-    "fingerprint": "07dd026994b5fde35bfd4d0baf5f7f650f7d8b98bb1609aceebd8eeb6bdd334c",
+    "fingerprint": "8c2675f0b6b7e9bbfa996aeb8669253f3933e2670136ccdf12ec8fc537d19a9d",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Verified runbook includes clarify action and required response question<=1000 plus successful publication semantics. Test readiness helper matches documented five-second bounded closed-transaction observation, not blind worker retry."
+    "rationale": "Reviewed Message view/Clear filters runbook recipe and API query names against implementation; final new inbox plus nine existing journeys support documented behavior without claiming imports."
   },
   "evaluation": {
-    "fingerprint": "ef721946fd774075e27ef6e294bbd50c2ff0a419b8da41a67fcd5da1595f50b5",
+    "fingerprint": "1058175378e90d5694d1c01fc4b3359deef4644de155e13be65ee8f8bceaaa00",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed partial human clarification evidence without weakening generation/routing/recovery acceptance; published question and fresh reply workflow do not prove semantic policy or language quality."
+    "rationale": "Reviewed partial inbox evidence against113-test regression and browser reports without weakening full UX/DATA thresholds; imported or labelled message processing remains unfinished."
   },
   "backend": {
-    "fingerprint": "692d3e06a5e0cab5b9dda13aa920e93a4bde52dd7eb7931d64120425366b5030",
+    "fingerprint": "41029ac9368cb04df53433200cfe36285fcb108a472cb075ab19c771174a4fb1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed explicit clarify action, question validation, authority and publication separation against owning docs. Retained110 PostgreSQL log passes; test-only readiness waits inspect future initial availability without production scheduling changes."
+    "rationale": "Compared latest-attempt view predicates, shared count/row query and validated workspace endpoint with architecture; retained113 PostgreSQL log passes. No model or permission behavior added."
   },
   "infrastructure": {
-    "fingerprint": "5e218aa694d4ffa79c19277593a2f78c5a8b5da6f6ac13b3aebf72525e14c0e6",
+    "fingerprint": "0526598c5f683243630af06b639340c20ccaae85e9782c6724a62e14c1f55299",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed shared architecture source-revalidation qualifier: approve/edit require current evidence while reject/clarify approve no answer. Runtime topology unchanged; no external send or deployment claim."
+    "rationale": "Reviewed shared current architecture and runbook following mobile navigation repair; runtime topology unchanged and no new deployment or model claim."
   }
 }

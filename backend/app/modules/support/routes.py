@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Header, Query
@@ -52,8 +52,9 @@ def list_messages(
     search: str = Query("", max_length=200),
     offset: int = Query(0, ge=0),
     limit: int = Query(30, ge=1, le=50),
+    view: Literal["all", "attention", "ready", "processing", "failed"] = "all",
 ):
-    return reading.messages(db, workspace_id, user.id, search, offset, limit)
+    return reading.messages(db, workspace_id, user.id, search, offset, limit, view)
 
 
 @router.get("/runs/{run_id}", response_model=RunDetail)

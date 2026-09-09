@@ -69,6 +69,10 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   clarification software flow, not automatic semantic routing or the full release gates.
 - UX: connected draft/source/cancellation and approve/edit/reject journeys pass, including 360/768/1440px, keyboard
   source focus and doubled content size. Browser-native zoom and full release journeys remain open.
+- Inbox views: latest-attempt filtering, matching counts, workspace denial and pagination pass
+  within the 113-case PostgreSQL regression. The real filtered inbox journey passes at all three
+  widths; a shrinking-page component regression and mobile navigation overflow repair are verified.
+  These views do not complete the imported/labelled-message DATA gate.
 - Linked attempts: PostgreSQL tests cover history, fresh retrieval, atomic competing submissions,
   creator revocation, scoped lineage and limits. The browser clarification/cancel/retry/history
   journey and repaired viewer fixture pass. This advances DATA/ROUTE/JOB/UX

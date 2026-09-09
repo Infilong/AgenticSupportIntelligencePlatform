@@ -1,7 +1,7 @@
 """Workspace-authorized read projections; raw graph state is never exposed."""
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, or_, select
 
 from app.jobs.models import Job
 from app.jobs.queue import authorize
@@ -28,10 +28,9 @@ def handoff_timing(handoff):
     return {"handoff_elapsed_ms": elapsed, "timing_status": "recorded"}
 
 
-def messages(db, workspace_id, actor_id, search, offset, limit):
+def messages(db, workspace_id, actor_id, search, offset, limit, view="all"):
     membership(db, workspace_id, actor_id)
     filters = [Message.workspace_id == workspace_id, Message.original.icontains(search, autoescape=True)]
-    total = db.scalar(select(func.count()).select_from(Message).where(*filters))
     latest = (
         select(SupportRun.id)
         .where(SupportRun.workspace_id == Message.workspace_id, SupportRun.message_id == Message.id)
@@ -40,7 +39,22 @@ def messages(db, workspace_id, actor_id, search, offset, limit):
         .correlate(Message)
         .scalar_subquery()
     )
-    rows = db.execute(
+    state = case((SupportRun.state == "queued", Job.state), else_=SupportRun.state)
+    views = {
+        "attention": or_(
+            state.in_(["waiting_for_input", "awaiting_review"]),
+            and_(
+                state == "completed",
+                SupportRun.outcome.in_(["clarification_needed", "insufficient_evidence"]),
+            ),
+        ),
+        "ready": and_(state == "completed", SupportRun.outcome == "approved_response"),
+        "processing": state.in_(["queued", "running"]),
+        "failed": state == "failed",
+    }
+    if view != "all":
+        filters.append(views[view])
+    query = (
         select(Message, SupportRun, Job)
         .select_from(Message)
         .join(
@@ -49,10 +63,9 @@ def messages(db, workspace_id, actor_id, search, offset, limit):
         )
         .join(Job, Job.id == SupportRun.job_id)
         .where(*filters)
-        .order_by(Message.created_at.desc(), Message.id)
-        .offset(offset)
-        .limit(limit)
     )
+    total = db.scalar(select(func.count()).select_from(query.subquery()))
+    rows = db.execute(query.order_by(Message.created_at.desc(), Message.id).offset(offset).limit(limit))
     return {
         "items": [
             {

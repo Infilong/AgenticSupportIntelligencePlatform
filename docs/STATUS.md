@@ -1,7 +1,7 @@
 # Current status
 
 Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
-Current implementation slice: M3 human clarification requests; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
+Current implementation slice: M4 focused inbox views; M2/M3 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -12,7 +12,8 @@ provider and documentation-workflow clarifications; it is now covered by project
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M3 clarification plan](plans/active/m3-review-clarification.md) owns current implementation;
+[M4 inbox plan](plans/active/m4-inbox-views.md) owns current implementation;
+[M3 clarification plan](plans/completed/m3-review-clarification.md) retains the preceding checkpoint;
 [M3 recovery plan](plans/completed/m3-retrieval-recovery.md) retains the preceding checkpoint;
 [M3 linked-attempt record](plans/completed/m3-linked-attempts.md) retains the preceding slice;
 [M3 review record](plans/completed/m3-human-review.md) retains review decisions/evidence;
@@ -209,9 +210,22 @@ Linked-attempt checkpoint `2e2054f` and recovery checkpoint `13322ca` are pushed
 in 203.86s (`.artifacts/m0/integration-20260909T040250637259Z`), all nine browser journeys
 (`.artifacts/m3/clarification-workbench-ui`), nine component tests and the TypeScript/Vite build.
 Actual Chrome and stored records confirm a published question followed by fresh child retrieval
-(`.artifacts/m3/clarification-live-result.json`). Final documentation review and commit/push are
-the immediate next action. The next product slice is the planned workbench attention/outcome
-filters; imports, lexical/fusion retrieval and other release gates remain open.
+(`.artifacts/m3/clarification-live-result.json`). Clarification is pushed as `7c7abf3`; CI
+`34310112516` passed, with 35 preparation checks and six independent documentation receipts.
+
+M4 inbox views now pass 113 PostgreSQL tests in 217.67s
+(`.artifacts/m0/integration-20260909T042732512966Z`), ten component tests and TypeScript/Vite.
+The real inbox browser journey passes at 360/768/1440px
+(`.artifacts/m4/inbox-views-ui-final`). The browser exposed and repaired mobile admin-navigation
+overflow; independent review exposed and repaired pagination when filtered results shrink.
+All nine existing workbench journeys also pass in 2.1 minutes
+(`.artifacts/m4/inbox-workbench-regression`). Independent source and documentation reviews found
+no remaining blocking issue after repairs. Final receipts, preparation and commit/push are the
+immediate next action; close this checkpoint before the 04:44:58 UTC unattended boundary.
+Next product slice: bounded JSONL conversation imports with labels and an explicit selected-item
+processing action, following REBUILD_PLAN. Imports, lexical/fusion retrieval and other release
+gates remain open; the current inbox query assumes each message already has a run, so imports
+require a cohesive persistence/read-model change rather than bypassing the normal workflow.
 
 The preceding full run had 105 passes and two setup failures. Database observations showed a
 queued initial job 1.613051s ahead of a later clock reading. Tests now wait only for observed

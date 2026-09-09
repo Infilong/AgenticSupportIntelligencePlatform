@@ -1545,6 +1545,7 @@ export interface operations {
                 search?: string;
                 offset?: number;
                 limit?: number;
+                view?: "all" | "attention" | "ready" | "processing" | "failed";
             };
             header?: never;
             path: {

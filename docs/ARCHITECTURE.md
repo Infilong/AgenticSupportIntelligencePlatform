@@ -1,6 +1,6 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for the human-review slice built on `281b169`.
+Updated 2026-09-09 for the focused inbox views built on `7c7abf3`.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
@@ -178,7 +178,13 @@ external API generation, semantic answer-quality or human-review evidence.
 
 Workspace inbox → original message and outcome → numbered source excerpt → expandable timeline
 and model records. A paginated search list stays beside the selected run on larger screens;
-below 800px, list and detail become separate views with back navigation. Sources retain exact
+its All/Needs attention/Ready responses/Processing/Failed views apply to each message's latest
+attempt. Counts and rows share the same server-side search/workspace/view query. Attention includes
+development handoffs, human review and completed clarification/missing-evidence outcomes; Ready
+contains only completed approved responses. Cancelled/rejected attempts remain in All. Rows have
+a bounded keyboard-focusable scroll region, and shrinking results return to a valid page without
+closing the selected detail. These views do not implement imports or labels.
+Below 800px, list and detail become separate views with back navigation. Sources retain exact
 saved quotes and link to the original document version; current source activity is checked in
 the document view. Technical IDs remain in optional details.
 
@@ -191,7 +197,7 @@ Resource reads are keyed to route/workspace and aborted on navigation. Transient
 preserve an unfinished answer; authorization failures clear protected data. Late message POST
 responses cannot navigate back after leaving the screen. Aborting a request does not undo its
 server write; retries of unchanged input reuse the same idempotency key within the form.
-Run-state changes refresh the inbox. Review filters remain unfinished.
+Run-state changes refresh the inbox. Imports and labels remain unfinished.
 
 ## Linked processing attempts
 

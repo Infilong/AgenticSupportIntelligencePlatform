@@ -292,6 +292,12 @@ citations and decision history survive cancellation/publication failure.
 
 ## Workbench demo and verification
 
+Use **Message view** to focus on Needs attention, Ready responses, Processing or Failed.
+Search combines with the selected view; **Clear filters** restores all messages. Results reflect
+the latest attempt, and the selected detail stays open even when it leaves that view. The
+server accepts the corresponding `view=all|attention|ready|processing|failed` query on the
+workspace messages endpoint. Unknown views return 422; membership remains server-enforced.
+
 After runtime/model preparation, open `http://127.0.0.1:5180` and sign in with the seeded admin.
 Select **New message**, enter a customer question and response language, then **Start processing**.
 The selected message shows progress. For an evidence-backed question, open **Development response

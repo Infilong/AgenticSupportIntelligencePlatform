@@ -3,6 +3,10 @@
 .workbench-heading p { font-size: 13px; }
 .workbench-grid { display: grid; grid-template-columns: minmax(240px, .85fr) minmax(0, 1.5fr); border: 1px solid #dfe5da; background: white; border-radius: 12px; overflow: hidden; min-height: 540px; }
 .message-list { min-width: 0; border-right: 1px solid #e3e8df; }
+.message-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 16px 12px; font-size: 12px; }
+.message-filters select { min-width: 0; max-width: 100%; padding: 8px; border: 1px solid #dce2d8; border-radius: 7px; background: white; }
+.message-rows { max-height: 65vh; overflow-y: auto; overscroll-behavior: contain; }
+.message-rows:focus-visible { outline: 2px solid #376e4f; outline-offset: -2px; }
 .message-search { display: flex; gap: 8px; padding: 16px; }
 .message-search input { width: 100%; min-width: 0; padding: 10px; border: 1px solid #dce2d8; border-radius: 7px; }
 .message-count { padding: 0 16px 12px; color: #657261; font-size: 12px; overflow-wrap: anywhere; }
