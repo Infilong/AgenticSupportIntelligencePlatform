@@ -58,6 +58,8 @@ jobs:
           python-version: '3.12'
       - name: Preparation and documentation regressions
         run: python scripts/manage.py verify-prep
+      - name: Generated documentation and reviewed source fingerprints
+        run: python scripts/docs_freshness.py check
   backend:
     runs-on: ubuntu-latest
     timeout-minutes: 10

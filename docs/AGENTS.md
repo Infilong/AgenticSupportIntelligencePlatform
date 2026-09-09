@@ -23,3 +23,6 @@ Scope: this directory; also read for root Markdown changes. Read the [root direc
 - Record scope deviations as explicit gaps or decisions. Do not silently rewrite acceptance
   requirements to match the implementation. Older conversation paths may belong to the archive;
   resolve against this branch rather than recreating obsolete documents.
+- Follow [documentation freshness](DOC_FRESHNESS.md): inspect the affected area report,
+  regenerate source facts and obtain independent semantic review before recording its fingerprint.
+  Touching documents or updating dates does not renew review; never auto-acknowledge to clear CI.

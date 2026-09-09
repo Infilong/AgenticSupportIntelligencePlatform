@@ -1,8 +1,12 @@
 # Current status
 
 Goal: **M1–M6 scope authorized; implementation paused at the unattended cutoff; not complete**.
-Current milestone: M2. On 2026-09-09 the user authorized an independent documentation audit
-and corrections only; this does not resume the remaining application implementation.
+Current milestone: M2. On 2026-09-09 the user authorized an independent documentation audit,
+corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
+This bounded tooling task does not resume the remaining application implementation.
+The harness now provides generated source references, six source/document review mappings and
+CI freshness checks. [The protocol](DOC_FRESHNESS.md) distinguishes review attestations from
+semantic proof; a weekly Codex gardening task is configured separately from application work.
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.

@@ -21,3 +21,5 @@ Scope: this directory and its descendants. Read the [root director](../AGENTS.md
 - `python scripts/manage.py evidence` reports current versus stale evidence; neither an
   environment probe nor fixture integrity test proves product functionality.
 - Register new commands only when executable and update the runbook in the same change.
+- Run `python scripts/docs_freshness.py check` before checkpointing; follow the
+  [freshness protocol](../docs/DOC_FRESHNESS.md) for stale references or review receipts.

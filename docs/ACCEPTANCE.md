@@ -17,7 +17,7 @@ embedding/retrieval quality has separate evidence and does not require an extern
 
 ## Product gates
 
-| ID | Pass/fail contract | Planned check, not yet executable |
+| ID | Pass/fail contract | Release verification method (coverage below) |
 | --- | --- | --- |
 | BOOT | Fresh isolated install migrates and becomes healthy with built assets | Fresh Compose/application E2E |
 | AUTH | Login/logout/expiry, role denial and last-admin protection hold | API + browser auth tests |

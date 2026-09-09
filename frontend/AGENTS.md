@@ -1,8 +1,7 @@
 # Frontend guidance
 
 Scope: this directory and its descendants. Read the [root director](../AGENTS.md).
-Login, workspace navigation, members and M2 knowledge upload/search/source views are implemented.
-The inbox remains a foundation shell; generation/agent workflow UI is not implemented yet.
+See [status](../docs/STATUS.md) for current implementation and verification progress.
 
 ## Ownership and design
 

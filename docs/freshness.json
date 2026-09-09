@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "areas": {
+    "backend": {
+      "sources": ["backend/"],
+      "docs": ["backend/AGENTS.md", "docs/ARCHITECTURE.md"]
+    },
+    "frontend": {
+      "sources": ["frontend/"],
+      "docs": ["frontend/AGENTS.md", "docs/ARCHITECTURE.md"]
+    },
+    "evaluation": {
+      "sources": ["evals/"],
+      "docs": ["evals/AGENTS.md", "evals/README.md", "docs/ACCEPTANCE.md"]
+    },
+    "tooling": {
+      "sources": ["scripts/"],
+      "docs": ["scripts/AGENTS.md", "docs/AGENTS.md", "docs/DOC_FRESHNESS.md", "docs/DEVELOPMENT.md", "docs/RUNBOOK.md"]
+    },
+    "project": {
+      "sources": ["AGENTS.md", "README.md", "REBUILD_PLAN.md", "docs/STATUS.md"],
+      "docs": ["AGENTS.md", "README.md", "REBUILD_PLAN.md", "docs/STATUS.md"]
+    },
+    "infrastructure": {
+      "sources": ["infra/", ".github/", "compose.yaml", ".env.example", ".gitignore", ".dockerignore"],
+      "docs": ["infra/AGENTS.md", "docs/ARCHITECTURE.md", "docs/RUNBOOK.md"]
+    }
+  }
+}

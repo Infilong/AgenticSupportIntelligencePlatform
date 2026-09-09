@@ -7,7 +7,8 @@ The English incident policy deliberately supports Japanese and Chinese questions
 
 These are source-supported expected facts and outcomes, not model answers. Application code
 must never read this case file to generate a response. A test runner will consume it in M2/M5.
-No retrieval or model-quality evaluation has run yet. M0 checks only fixture consistency.
+M0 checks prove fixture consistency only. Real retrieval measurements are now recorded in
+[current status](../docs/STATUS.md); generation quality remains a separate acceptance gate.
 
 The source list identifies required evidence, not an exhaustive ban on equivalent translated
 policy citations. Final scoring must recognize equivalent active translations while requiring
@@ -27,4 +28,5 @@ and an active policy conflict. It totals 81,502 bytes and 38.2 page equivalents 
 recorded convention. Thirty fixed cases and factual spans are independent evaluator inputs.
 Run `python evals/freeze_retrieval.py` to check its frozen hashes. Initial review snapshots are
 retained separately; all strengthening occurred before the first retrieval measurement.
-Actual application retrieval measurement is pending; corpus size is not a quality result.
+See [current status](../docs/STATUS.md) for actual retrieval evidence and its limitations;
+corpus size alone is not a quality result.

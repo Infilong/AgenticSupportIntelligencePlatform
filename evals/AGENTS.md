@@ -11,7 +11,7 @@ The [fixture contract](README.md) owns corpus/case details; do not duplicate the
 - Freeze corpus, source equivalence, scoring and thresholds before tuning; never weaken
   assertions or silently change acceptance criteria to make a model pass.
 - Distinguish fixture integrity, retrieval correctness and live semantic quality. M0 seeds
-  are not the complete release corpus and no live quality evaluation has passed.
+  are not the complete release corpus and no external generation quality gate has passed.
 - Compare the same cases and compatible settings across the required baselines. Model
   grading supplements source checks and human review; it does not replace them.
 - Use [acceptance](../docs/ACCEPTANCE.md) for gates and [runbook](../docs/RUNBOOK.md)
