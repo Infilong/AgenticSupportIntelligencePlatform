@@ -8,7 +8,7 @@ export function RunResult({ run, children }: { run: Run; children?: ReactNode })
   const pending = {
     waiting_for_input: 'Retrieval is complete. An administrator can supply a development response using the supporting evidence.',
     cancelled: 'This processing attempt was cancelled. The original message and processing history are preserved.',
-    failed: 'Processing stopped before a response was ready. Inspect the details below, then retry or add customer details.',
+    failed: 'Processing stopped before a response was ready. Inspect the Workflow tab, then retry or add customer details.',
   }[run.state] ?? 'Your message is saved. Processing will continue in the background.';
   return <section className="run-result">
     <h2>{question ? 'Clarification requested' : outcomeLabel(run.outcome)}</h2>

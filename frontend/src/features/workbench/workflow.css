@@ -1,0 +1,21 @@
+.workflow-view { border: 1px solid #dfe7da; border-radius: 10px; background: #fafcf8; padding: 18px; margin: 22px 0; }
+.workflow-heading { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.workflow-heading h2 { display: flex; gap: 8px; align-items: center; margin: 0; }
+.workflow-heading > span { font-size: 11px; color: #63735d; }
+.workflow-path { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; padding: 0; margin: 18px 0; list-style: none; }
+.workflow-path li { position: relative; min-width: 0; }
+.workflow-node { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; height: 100%; width: 100%; padding: 12px; text-align: left; background: white; border: 1px solid #dfe7da; }
+.workflow-node strong { font-size: 12px; overflow-wrap: anywhere; }
+.workflow-node > span:not(.workflow-number),.workflow-node small { font-size: 11px; color: #64745f; }
+.workflow-node.succeeded { border-color: #a4c2a2; }.workflow-node.failed { border-color: #d59b8b; }
+.workflow-node.waiting,.workflow-node.uncertain { border-color: #d9bd76; }.workflow-node.running { border-color: #76a2bf; }
+.workflow-node[aria-expanded="true"] { outline: 2px solid #376e4f; outline-offset: 1px; }
+.workflow-number { border-radius: 50%; background: #ecf2e7; width: 23px; height: 23px; display: grid; place-items: center; font-size: 11px; }
+.workflow-arrow { position: absolute; right: -17px; top: 45%; color: #899880; }
+.workflow-outcome { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.workflow-outcome code { overflow-wrap: anywhere; }
+.workflow-inspector { margin-top: 18px; border-top: 1px solid #dfe7da; padding-top: 10px; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.workflow-inspector blockquote { margin: 12px 0; border-left: 3px solid #b2c8a7; padding-left: 12px; white-space: pre-wrap; }
+.workflow-call { display: flex; flex-direction: column; border-bottom: 1px solid #e5ebdf; padding: 12px 0; }
+.workflow-records { padding-left: 18px; }.workflow-records li { padding: 4px 0; }.workflow-records code { display: block; }
+@media (max-width: 600px) { .workflow-path { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }.workflow-arrow { display: none; }.workflow-view { padding: 14px; } }

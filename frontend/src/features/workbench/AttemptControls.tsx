@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { api, type Workspace } from '../../api/client';
-import { outcomeLabel, stateLabel, type Created, type Run } from './types';
+import { type Created, type Run } from './types';
+import { AttemptHistory } from './RunHistory';
 
-export function AttemptControls({ run, workspace, onCreated }: { run: Run; workspace: Workspace; onCreated: (id: string) => void }) {
+export function AttemptControls({ run, workspace, onCreated, showHistory = true, search = '' }: { showHistory?: boolean; search?: string; run: Run; workspace: Workspace; onCreated: (id: string) => void }) {
   const [details, setDetails] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -32,11 +33,8 @@ export function AttemptControls({ run, workspace, onCreated }: { run: Run; works
   }
   function clarify(event: FormEvent) { event.preventDefault(); void submit('clarify'); }
   return <section className="attempt-controls" aria-label="Processing attempts">
-    {!latest && <p><Link to={`/w/${workspace.id}/runs/${run.latest_run_id}`}>Open latest attempt</Link></p>}
-    {run.attempts.length > 1 && <details><summary>Attempt history · {run.attempts.length}</summary><ol className="attempt-history">{run.attempts.map(item => <li key={item.id}>
-      <Link to={`/w/${workspace.id}/runs/${item.id}`} aria-current={item.id === run.id ? 'page' : undefined}>Attempt {item.number} · {item.kind === 'clarify' ? 'Added details' : item.kind === 'retry' ? 'Retry' : 'Original'}</Link>
-      <span className="muted">{stateLabel(item.state)}{item.outcome ? ` · ${outcomeLabel(item.outcome)}` : ''}</span>
-    </li>)}</ol></details>}
+    {!latest && <p><Link to={`/w/${workspace.id}/runs/${run.latest_run_id}${search}`}>Open latest attempt</Link></p>}
+    {showHistory && run.attempts.length > 1 && <AttemptHistory run={run} workspaceId={workspace.id} search={search} />}
     {canAct && <>{canRetry && <button className="primary" disabled={pending} onClick={() => void submit('retry')}>{pending ? 'Starting…' : 'Retry processing'}</button>}
       <details className="clarification-controls"><summary>Add customer details</summary><form onSubmit={clarify}>
         <p className="muted">Starts a new attempt with fresh evidence. The original message and previous results stay in history. An unreviewed waiting draft will be cancelled.</p>

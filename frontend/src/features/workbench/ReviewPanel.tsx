@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, type Workspace } from '../../api/client';
 import type { Run } from './types';
+import { ReviewHistory } from './RunHistory';
 
 export function ReviewPanel({ run, workspace, path, onSubmitted }: { run: Run; workspace: Workspace; path: string; onSubmitted: () => void }) {
   const [action, setAction] = useState('approve');
@@ -26,11 +27,7 @@ export function ReviewPanel({ run, workspace, path, onSubmitted }: { run: Run; w
     } catch (err) { if (alive.current) setError((err as Error).message); }
     finally { if (alive.current) setPending(false); }
   }
-  if (run.review) return <details className="review-history"><summary>Review decision · {run.review.action}</summary>
-    {run.review.action === 'clarify' && <><h3>Recorded question</h3><p className="response-text" lang={run.language}>{run.review.response}</p></>}
-    <p className="response-text">{run.review.reason}</p><p className="metadata">Reviewed by {run.review.actor_id} · {new Date(run.review.created_at).toLocaleString()}</p>
-    <p className="muted">The recorded decision is preserved even if subsequent processing is cancelled or fails.</p>
-  </details>;
+  if (run.review) return <ReviewHistory run={run} />;
   if (run.state !== 'awaiting_review') return null;
   if (workspace.role === 'viewer') return <p className="muted">An operator or administrator must review this draft before it becomes an approved response.</p>;
   return <section className="review-panel"><h2>Review response</h2>

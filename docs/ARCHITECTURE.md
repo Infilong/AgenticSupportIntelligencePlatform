@@ -1,6 +1,6 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for the focused inbox views built on `7c7abf3`.
+Updated 2026-09-09 for workflow inspection and full-width inbox navigation built on `00bfe7e`.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
@@ -105,23 +105,21 @@ Application messages/runs, graph integration and human-review records now exist.
 
 Refer to REBUILD_PLAN for the target repository topology; create files only when needed.
 
-## Initial workbench design direction
+## Workbench navigation
 
 ```text
-Workspace / provider mode                  New message   Import
-Navigation     Inbox and filters           Selected message
-Workbench      Needs attention / All       Original customer message
-Knowledge      Search                     Response / next required action
-Quality        Message + status           [1] [2] supporting sources
-Settings       Message + status           Edit / approve / clarify / retry
-                                          Processing details (expand)
-                                          Attempt history (expand)
+Workbench: searchable full-width message table → selected message
+                                            ├── Response: result and permitted actions
+                                            ├── Workflow: recorded stages and model evidence
+                                            ├── Sources: exact cited passages and document versions
+                                            └── History: decisions and linked processing attempts
 ```
 
-Citation selection opens a source drawer beside the response with exact version and section.
-No separate response editor on a review page. On small screens, navigate list → detail → source,
-with clear back navigation and focus restoration. Use a restrained neutral palette and one
-accent color; status must also be expressed in text. This is a direction, not a reviewed UI.
+Search, latest-attempt view, page and page size survive detail/back navigation in the URL.
+The table requests 20 or 50 rows and unmounts while a message is open, avoiding hidden polling.
+Tabs preserve mounted response controls while inspecting evidence. Source close restores the
+originating tab and opener focus. Cancellation remains available above every tab when permitted.
+Use a restrained palette and text status; the workflow is an inspector, not a graph editor.
 
 ## Foundation decisions and remaining workflow
 
@@ -176,17 +174,24 @@ external API generation, semantic answer-quality or human-review evidence.
 
 ## Connected workbench
 
-Workspace inbox → original message and outcome → numbered source excerpt → expandable timeline
-and model records. A paginated search list stays beside the selected run on larger screens;
-its All/Needs attention/Ready responses/Processing/Failed views apply to each message's latest
-attempt. Counts and rows share the same server-side search/workspace/view query. Attention includes
+The full-width table lists message previews, latest state/outcome, language and received time.
+All/Needs attention/Ready responses/Processing/Failed filters apply to each message's latest
+attempt. Counts and rows share server-side search/workspace/view semantics. Attention includes
 development handoffs, human review and completed clarification/missing-evidence outcomes; Ready
-contains only completed approved responses. Cancelled/rejected attempts remain in All. Rows have
-a bounded keyboard-focusable scroll region, and shrinking results return to a valid page without
-closing the selected detail. These views do not implement imports or labels.
-Below 800px, list and detail become separate views with back navigation. Sources retain exact
-saved quotes and link to the original document version; current source activity is checked in
-the document view. Technical IDs remain in optional details.
+contains only completed approved responses. Cancelled/rejected attempts remain in All. Pagination
+supports first/previous/next/last, direct page entry and 20/50-row sizes. Shrinking results clamp
+to a valid page. These views do not implement imports, labels or prove 50,000-message capacity.
+At narrow widths only the table scrolls horizontally; the page remains within the viewport.
+
+The Workflow tab renders the four recorded LangGraph stages: input check, retrieval/context,
+development handoff and human review. Human review is a separate durable continuation. Missing
+records are pending/not reached, with skipped labels only for known terminal branches. Terminal
+orphaned starts and waiting records remain explicit instead of looking actively running. Node
+completion is separate from final publication. LangChain embedding and local reranking calls are
+nested within retrieval; their time must not be added again to retrieval duration. Handoff
+turnaround includes waiting and is not model inference latency. Raw checkpoints stay private.
+Sources retain exact saved quotes and link to the original document version; current source
+activity is checked in the document view. Technical IDs remain in optional details.
 
 Operators/admins enter messages and cancel active runs; viewers inspect records. The admin-only
 development section loads authorized handoff evidence and submits a draft with an exact quote.

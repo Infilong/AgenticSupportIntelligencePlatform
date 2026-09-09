@@ -1,15 +1,15 @@
 {
   "project": {
-    "fingerprint": "b743f22fbb8120450bf50c4de96a9b1b40502a213857412497ea7aba0e412fcc",
+    "fingerprint": "65804ed5b65f85f2cdfd622d90f40777e62e8485baf7b59d8c172414028dcc5b",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent entry-point review of README, release plan, STATUS and completed RAG record against source and retained evidence. Four baseline target aligned; BM25 attributed to earlier topology. Completed targeted repairs separated from incomplete semantic hardening and preceding M4 window; latest-slice and repaired-priority contradictions corrected."
+    "rationale": "Independent entry-point and active-plan review: resumed06:04:24–10:04:24 window and visible workflow/inbox priority explicit; older04:44 cutoff and imports-next directives corrected to historical/deferred. STATUS distinguishes9of10 initial browser results from2focused repaired passes,23frontend tests and remaining50k/RAG/release gates. README and release scope remain accurate."
   },
   "frontend": {
-    "fingerprint": "febd73ea8fd6468bb6bd1673df0f75a49c5dbaff36e794d3851e81d06812b6b2",
+    "fingerprint": "488e09cda0787090d270cd5bd70b6c0d762602df1335266d0e9cee288ced25c8",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of unchanged frontend boundary and updated architecture: no frontend or API contract change in RAG repair. Two retained knowledge browser cases pass; documentation scopes this to knowledge journeys and does not claim renewed full-app UX verification."
+    "rationale": "Independent review of WorkflowView/nodeState, MessageInbox, RunTabs/RunView, history and state/focus tests against architecture. Response controls stay mounted; URL query/page retained;20/50-row list unmounts in detail; chronology and terminal uncertainty explicit. Inspected360workflow screenshot and retained browser reports:9pass1overflow failure, then2focused passes. No full release or50k proof inferred."
   },
   "tooling": {
     "fingerprint": "c5357abd0b992c5367cf0d02166b2098c479f6c756dbafe766e4e51b696310b0",
@@ -24,15 +24,15 @@
     "rationale": "Independent review of active-required-sections-v2 scorer, runner safety gate and adversarial tests against eval README/RAG/acceptance. Retained fresh report confirms 26/26 cases,27/27 groups,p95 2.406,zero leakage,404 and unchanged runtime/source. Section substring checks remain not source-bound entailment; four outcomes and four baselines unverified."
   },
   "backend": {
-    "fingerprint": "c270151352616618f4cf898d0e9dfa4d07881be93691b789cf682f5f78767df2",
+    "fingerprint": "bd12b3cc20faf53524b9aef7568e59183f56e50dd3d8ea82665580bbe9ea76c7",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RAG repair review: inspected splitting continuity, real-heading reset, end separators and boundary regressions against architecture/RAG/runbook. Retained 23-unit and 113-PG logs and fresh boundary report support bounded repairs; re-ingestion required. No semantic grounding, BM25, generation or production completion inferred."
+    "rationale": "Independent workflow UI documentation review: backend source/schema unchanged. Compared four inspector stages, separate review continuation and publication, bounded inbox queries with current API projections and frontend records. Architecture preserves real vector/reranker and simulated generation limits; no 50k capacity or new backend capability claimed."
   },
   "infrastructure": {
-    "fingerprint": "5e8072e2fd03b12374f12670498f38f42ba55ce7f88c6a01f3ff00704155410f",
+    "fingerprint": "b7c6a39a48adc1941b8bfc7cc4809abdbf532e9d28a644ff366cf36851137484",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of unchanged infrastructure/configuration boundary against architecture and runbook. No added search service, migration, provider integration or deployment claimed. Retained runtime fingerprints are stable across fresh retrieval measurement; existing stored chunks require normal versioned re-ingestion, not automatic migration."
+    "rationale": "Independent review of shared architecture changes with unchanged infrastructure source: full-width navigation and stage inspection add no runtime service, database migration or provider integration. Retained local app/worker/PostgreSQL boundaries remain valid;50k capacity is explicitly unverified and deferred to measured work."
   }
 }

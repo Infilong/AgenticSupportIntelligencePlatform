@@ -56,11 +56,13 @@ for (const [language, question, answer] of [
     }
     await page.getByRole('button', { name: '1 REFUND-STANDARD', exact: true }).click();
     await expect(page.getByRole('complementary', { name: 'Source excerpt' })).toContainText(quote);
+    await page.getByRole('tab', { name: 'Workflow', exact: true }).click();
     await page.getByText('Processing details', { exact: true }).click();
     await expect(page.getByText('intfloat/multilingual-e5-small', { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`draft-${language}.png`), fullPage: true });
     const runUrl = page.url();
+    await page.getByRole('tab', { name: 'Sources', exact: true }).click();
     await page.getByRole('link', { name: 'Open exact document version' }).click();
     await expect(page.locator('.source-text')).toContainText('14 calendar days');
     await page.goto(runUrl);
@@ -80,6 +82,7 @@ for (const [language, question, answer] of [
       await page.getByText('Original development draft', { exact: true }).click();
       await expect(page.locator('.run-result details .response-text')).toHaveText(answer);
     }
+    await page.getByRole('tab', { name: 'History', exact: true }).click();
     await page.getByText(`Review decision · ${action}`, { exact: true }).click();
     await expect(page.locator('.review-history')).toContainText('Checked the policy source');
     await page.screenshot({ path: test.info().outputPath(`review-${language}.png`), fullPage: true });
@@ -205,6 +208,7 @@ test('clarification, cancellation and retry preserve the original and linked att
   await expect(page).not.toHaveURL(secondUrl);
   await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Waiting for development response', { timeout: 90000 });
   const latestUrl = page.url();
+  await page.getByRole('tab', { name: 'History', exact: true }).click();
   await page.getByText('Attempt history · 3', { exact: true }).click();
   await expect(page.getByRole('link', { name: 'Attempt 2 · Added details', exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Attempt 1 · Original', exact: true }).click();
@@ -213,11 +217,13 @@ test('clarification, cancellation and retry preserve the original and linked att
   await page.getByRole('link', { name: 'Open latest attempt', exact: true }).click();
   await expect(page).toHaveURL(latestUrl);
   await page.setViewportSize({ width: 360, height: 900 });
+  await page.getByRole('tab', { name: 'History', exact: true }).click();
   await page.getByText('Attempt history · 3', { exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: test.info().outputPath('linked-attempt-history-360.png'), fullPage: true });
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await login(page, 'viewer'); await page.goto(latestUrl);
+  await page.getByRole('tab', { name: 'History', exact: true }).click();
   await expect(page.getByText('Attempt history · 3', { exact: true })).toBeVisible();
   await expect(page.getByText('Add customer details', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Retry processing', exact: true })).toHaveCount(0);
@@ -265,6 +271,7 @@ test('operator requests clarification in Japanese and processes customer details
   await page.getByText('Processing input · attempt 2', { exact: true }).click();
   await expect(page.locator('.original-message').nth(1)).toContainText(reply);
   await expect(page.locator('.original-message').nth(1)).not.toContainText(question);
+  await page.getByRole('tab', { name: 'History', exact: true }).click();
   await page.getByText('Attempt history · 2', { exact: true }).click();
   await page.getByRole('link', { name: 'Attempt 1 · Original', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Clarification requested', exact: true })).toBeVisible();

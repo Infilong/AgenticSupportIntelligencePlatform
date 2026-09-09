@@ -1,10 +1,29 @@
 # Current status
 
-Latest checkpoint: **RAG design audit and targeted repairs verified**; full hardening is incomplete.
+Goal resumed by the user on 2026-09-09: **M1–M6 active and incomplete**.
+Current window: **06:04:24–10:04:24 UTC** (stop 19:04:24 Tokyo).
+[Workflow and inbox scale plan](plans/active/m4-workflow-inbox-scale.md) owns the current
+priority: visible recorded workflow, full-width inbox/detail navigation and real 50,000-message
+capacity verification. The latest user approval renews full-goal execution, not just the audit.
+
+Latest application slice: **recorded workflow inspector and full-width inbox verified**.
+Response/Workflow/Sources/History tabs preserve editing state; URL filters/page survive detail
+navigation. Cancellation remains available from every tab. The table loads 20/50 rows, with
+page jump and first/last controls; 50,000-message backend capacity is the next slice, not yet proven.
+TypeScript/Vite build and 23 frontend tests pass. Nine existing workbench browser journeys pass
+in `.artifacts/m4/workflow-inbox-ui-20260909`; that run also preserved a failed mobile inbox
+screenshot. The grid-child minimum-width repair passes the two focused inbox/workflow journeys
+in `.artifacts/m4/workflow-inbox-ui-fixed-20260909` at 360/768/1440px. Chrome inspection confirmed
+actual stages and nested model records on the earlier approved Japanese run. Independent review
+found two P2 issues (source opener focus and viewer compose URL); both were fixed with tests.
+The test include pattern now covers `.test.ts` as well as `.test.tsx`, preventing silent omission
+of workflow-state tests. These UI checks do not establish full release or RAG quality completion.
+
+Preceding checkpoint: **RAG design audit and targeted repairs verified**; full hardening is incomplete.
 [The execution record](plans/completed/rag-design-hardening.md) owns findings, repairs and verification.
 This task started at 04:48:37 UTC with an 08:48:37 UTC stop limit. The preceding M1–M6 window
-ended at 04:44:58 UTC; its full release goal remains incomplete and is not resumed by this audit.
-Current application checkpoint: M4 focused inbox views verified. On 2026-09-09 the user authorized an independent documentation audit,
+ended at 04:44:58 UTC; the audit itself did not resume the full release goal.
+Preceding application checkpoint: M4 focused inbox views verified. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -211,7 +230,7 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
 - The connected development draft and human-review paths are implemented; imports, complete
   observability, comparative evaluation and restoration remain incomplete.
 
-## Next connected slice
+## Historical application checkpoint before the RAG audit
 
 Human-review checkpoint `497b160` is committed/pushed; CI run `34304500162` passed, confirmed
 through the OpenAI GitHub connector. The preceding workbench CI `34301042398` passed.
@@ -236,14 +255,15 @@ passed. Six independent receipts and 35 preparation checks passed
 guidance on historical clarification attempts; ten component tests and build pass afterward.
 Full database/browser regression predates only that sentence removal and checkpoint docs.
 
-This four-hour window ends at 04:44:58 UTC (13:44:58 Tokyo). Do not start a new implementation
-slice beyond that boundary without renewed execution-window authority. On resume, first inspect
-the current branch/CI, local processes and this record. The local ignored artifact
+That preceding four-hour window ended at 04:44:58 UTC (13:44:58 Tokyo). It is historical;
+the resumed window and current next action at the top of this document supersede its stop limit.
+On future resumes, inspect the current branch/CI, local processes and active record. The local ignored artifact
 `.artifacts/m4/window-checkpoint.json` records final revision/CI observations when available;
 absence on another checkout is not a failure. The full app goal remains incomplete.
-After the separately authorized RAG audit, the previously planned product slice is bounded
+The previously planned product slice was bounded
 JSONL conversation imports with labels and an explicit selected-item
-processing action, following REBUILD_PLAN. Imports, lexical/fusion retrieval and other release
+processing action, following REBUILD_PLAN. It remains deferred behind the current workflow/inbox
+capacity priority linked at the top. Imports, lexical/fusion retrieval and other release
 gates remain open; the current inbox query assumes each message already has a run, so imports
 require a cohesive persistence/read-model change rather than bypassing the normal workflow.
 
