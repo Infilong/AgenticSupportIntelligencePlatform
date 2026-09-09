@@ -11,6 +11,7 @@ from app.core.health import router as health_router
 from app.core.request_logging import RequestLogging
 from app.core.settings import Settings
 from app.db.engine import make_engine
+from app.modules.comparisons.routes import router as comparison_router
 from app.modules.conversations.routes import router as conversation_router
 from app.modules.evaluations.routes import router as evaluation_router
 from app.modules.identity.routes import router as identity_router
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(support_router)
     app.include_router(conversation_router)
     app.include_router(evaluation_router)
+    app.include_router(comparison_router)
     app.include_router(settings_router)
     app.include_router(usage_router)
     app.include_router(review_router)

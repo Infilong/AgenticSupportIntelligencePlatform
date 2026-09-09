@@ -103,6 +103,10 @@ def execute(engine, job, retrieval=retrieve):
         with Session(engine) as db, db.begin():
             run, _ = guard(db, job, run_id)
             actor_id = run.creator_id
+            from app.modules.comparisons.access import linked
+
+            comparison = linked(db, run.workspace_id, run.id)
+            settings = {"strategy": comparison.configuration["strategy"]} if comparison else {}
 
         def associate(db, trace_id):
             run, _ = guard(db, job, run_id)
@@ -116,6 +120,7 @@ def execute(engine, job, retrieval=retrieve):
             limit=5,
             on_trace=associate,
             execution_guard=lambda db: guard(db, job, run_id),
+            **settings,
         )
         context = pack(state["original"], state["language"], result["results"])
         return {

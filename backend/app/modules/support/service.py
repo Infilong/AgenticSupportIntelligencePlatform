@@ -30,6 +30,9 @@ def handoff_for(db, run):
 
 
 def eligible(db, run, job=None):
+    from app.modules.comparisons.access import support_guard
+
+    support_guard(db, run)
     message = db.scalar(
         select(Message).where(Message.workspace_id == run.workspace_id, Message.id == run.message_id)
     )

@@ -12,10 +12,12 @@ and pushes to `codex/fresh-start` are authorized; merging, public deployment and
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
 The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
 The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
-Current: request contractdfbcac5, timeout/format repaird92068e and startup repaire42f898 are pushed.
-Finish the timeout helper's package-import compatibility checkpoint and inspect startup CI.
-Next: implement the independently reviewed single-case four-pipeline comparison in the M5 record,
-then expand the frozen corpus runner. External provider dispatch/accounting remains required work.
+Current: import checkpointcf59fd7 and startup repaire42f898 passed hosted CI. Four-pipeline
+single-case execution is implemented locally;17 focused database tests and4 helper tests pass.
+The four-pipeline CLI demo and linked system browser edit/approval pass. Finish cold-worker
+verification, independent documentation review and the verified comparison commit.
+Next: expand the frozen corpus runner and comparison presentation. External provider
+dispatch/accounting remains required work.
 [Timeout cleanup](plans/completed/m6-command-timeout.md) retains Windows evidence and hosted
 run34373738322 passed all five jobs, including POSIX cleanup; evidence is revision-specific. Keep RAG tuning deferred. The previous
 window checkpoint records the earlier stop; it does not impose a current deadline.
@@ -33,9 +35,10 @@ window checkpoint records the earlier stop; it does not impose a current deadlin
   frontend build/42 tests and one real development browser approval journey pass. Exact evidence
   and preserved failures are in the [M5 record](plans/active/m5-generation-pipelines.md).
   Full local regression timed out at420s with a cold child-startup failure; it is not a pass.
-  New schema0015 is running in development; packaged release remains at its prior checkpoint.
+  That checkpoint introduced schema0015; development now runs0016 for comparisons.
+  Packaged release remains at its prior checkpoint.
 
-- Latest verified source checkpoint: **fd18e50**, packaged admin journeys and test cleanup,
+- Earlier packaged-admin checkpoint: **fd18e50**, packaged admin journeys and test cleanup,
   committed/pushed. Hosted CI34365353115 passed all five jobs, including real PostgreSQL,
   frontend browser checks and packaged-release smoke. The earlier window handoff changed documentation only.
 - Recovery checkpointfb29b6f CI34362786364 passed; original backups/databases remain preserved.
@@ -96,8 +99,9 @@ latency, exact quote matching as semantic entailment, or mock output as model qu
 
 ## Open gates and retained uncertainty
 
-- M5: the four generation pipelines (`direct_llm`, `vector_rag`, `hybrid_rag`, `system_v1`)
-  are not implemented. Five retrieval strategies and the Quality history UI do not satisfy EVAL.
+- M5: four single-case attributed development pipelines are implemented; full-corpus execution,
+  semantic scoring and comparison UI remain incomplete. Quality still shows historical retrieval
+  reports. `comparable` only means unchanged corpus/not cancelled, not complete or correct outputs.
 - External generation-provider integration, generation accounting and semantic support/language/
   routing quality remain incomplete. No API access/spending authority is available; continue
   independent offline work without calling LIVE gates passed.

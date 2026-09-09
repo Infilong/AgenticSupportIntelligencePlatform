@@ -27,6 +27,7 @@ AgenticSupportIntelligencePlatform/
 │   │   │   ├── support/       # Original messages, runs, handoffs and cited drafts
 │   │   │   ├── reviews/       # Attributable decisions and fenced final responses
 │   │   │   ├── evaluations/   # Workspace-scoped historical report registration and reads
+│   │   │   ├── comparisons/   # Four-pipeline generation execution and attributed results
 │   │   │   └── usage/         # Model-call records
 │   │   ├── providers/         # Local embeddings/reranker and recorded calls
 │   │   └── workflows/         # LangGraph orchestration and PostgreSQL checkpoints
@@ -49,7 +50,7 @@ AgenticSupportIntelligencePlatform/
 
 Each substantive area has a local `AGENTS.md`, linked from the root director. These paths
 exist now. The [target topology](../REBUILD_PLAN.md#target-project-topology) includes future
-modules: a separate retrieval module and generation-pipeline evaluation execution are not yet implemented. Support currently owns original messages and their processing runs; retrieval
+modules: a separate retrieval module is not implemented. Support owns original messages and their processing runs; retrieval
 remains in knowledge. Do not create empty target directories.
 
 ## Historical evaluation records
@@ -365,10 +366,27 @@ binding. Server checks stored context, rendered request, response hash and contr
 LangChain replay and fenced domain publication, including completed-checkpoint recovery.
 The replay runs outside the database snapshot transaction. It consumes only the authenticated
 stored contribution; it is not inference and creates no ModelCall. External generation dispatch,
-usage accounting and four distinct generation pipelines remain unimplemented.
+usage accounting remain unimplemented. Four-pipeline development execution is described below.
 
 
 Shared local embedding configuration lives in providers/local_models.py. Ingestion and retrieval
 share its first-call cached factory and unchanged embedding-space identity; population selection
 does not import ingestion merely to read that identity. Importing retrieval therefore does not
 initialize document splitting or Torch; actual model execution still loads the pinned local model.
+
+### Generation comparison execution
+
+`modules/comparisons` owns administrator-only admission, baseline preparation, blind request
+export, attributed contributions and inspection. Migration0016 stores comparison input/corpus
+identity and four pipeline records. Three baseline jobs and the linked support job are admitted
+atomically. `direct_llm` does not retrieve; `vector_rag` uses vector; `hybrid_rag` and `system_v1`
+use hybrid with five-result/24KB context limits. The system pipeline executes the real support
+LangGraph and human review; ordinary support keeps vector-rerank. Frozen comparison runs cannot
+spawn changed-input attempts; create a new comparison instead.
+Active corpus changes invalidate comparability and fence request export and publication.
+The comparable flag only reports unchanged corpus/not cancelled; pipeline states separately
+show whether execution finished. It is not a correctness or generation-quality score.
+Cancellation fences pending work while retaining completed history. Exports include only one
+rendered request; admin inspection separates initial contributions from reviewed responses.
+These manual development outputs do not establish inference latency, billing or semantic quality.
+The frozen full-corpus runner and comparison UI remain follow-up work.

@@ -150,3 +150,62 @@ Independent design-review guardrails for that next slice:
   and submission regardless of matching hashes.
 - Each generation export contains only that pipeline's rendered request, never other pipeline
   answers, review edits or scoring fixtures. Full admin comparison inspection is a separate read.
+
+### Single-case implementation checkpoint
+
+Migration0016 and modules/comparisons connect atomic four-way admission, three baseline worker
+jobs and a real linked hybrid support graph. CLI generation_cli.py uses authenticated local
+API create/list/read/export/submit/cancel commands, without loading scoring fixtures. Frozen
+system runs reject new attempts; users create a new comparison to alter input or retry.
+Independent security review found empty system citations could raise an internal validation
+error; fixed with explicit422 before conversion and covered in the success regression.
+Second review found no further actionable source issues.
+First focused run:5 passed/2 failed, retained at
+`.artifacts/m0/generation-comparisons-20260909T162858038856Z`. Test setup reused a pre-login
+CSRF token and expected403 for a foreign workspace's deliberately concealed404. Fixed tests
+without changing server authentication behavior. Final17 comparison/contract checks passed
+83.71s at `.artifacts/m0/generation-comparisons-fixed-20260909T163215511915Z`.
+Ruff lint and169-file format check passed; OpenAPI regenerated. At that point, real CLI
+demonstration and preparation/documentation review were pending. This did not complete M5.
+
+Live demo surfaced a fresh-worker registration defect: direct/vector first attempts retried,
+then succeeded after a support job registered support_runs. A standalone import reproduced
+NoReferencedTableError for Pipeline.run_id. Explicitly register SupportRun from comparison models;
+the new subprocess unit test passes2.67s. Retain the first demo's retry evidence rather than
+claim first-attempt success. The new CLI's per-command logins also reached the existing10-login
+throttle; direct/vector contributions were accepted, hybrid/system still pending. Preserve the
+security throttle. At that point, reusable local session support was needed to complete the demo.
+
+Session support is now implemented with an explicit ignored .artifacts path, server identity/CSRF
+validation and renewed authentication only after expiry. Four session/cold-import tests pass
+2.75s using a fresh workspace-owned basetemp. Initial session tests hit the known shared Windows
+pytest temporary-directory permission error before test bodies; preserved in tool output.
+The full local PostgreSQL wrapper reached126 displayed passing cases, then its420s command
+timeout: `.artifacts/m0/integration-20260909T164323903597Z`. No failing assertion was displayed,
+but this is incomplete verification, not a full-suite pass. Frontend production build passes.
+`comparable` denotes corpus identity and cancellation only; incomplete/failed pipelines remain
+visible and must be retained in evaluation denominators. Semantic quality remains not_verified.
+
+Actual development demo d2d7f2e6-087e-4699-9dcd-e30b6080687c completed all four pipelines.
+Evidence: `.artifacts/m5/four-pipeline-demo-20260910/` retains CLI requests/responses/final.json,
+three distinct real local-CPU E5 ledgers and retrieval records, plus browser-trace.zip.
+The real Playwright browser edited and approved linked support run
+8e8287ef-8cb0-4153-9da2-48ba1fd6efa4; system-reviewed.png was visually inspected with no overlap,
+no page errors, and original contribution visibly separated from approved wording.
+Session reuse completed remaining submissions without modifying the existing login throttle.
+This is a manually authored plumbing demo, not blind semantic evaluation or a live provider call.
+The screenshot still offers generic added-details controls on this frozen comparison run;
+the API correctly rejects attempts. Hide those controls when connecting the comparison UI.
+
+Cold-worker follow-up: restarted only the verified idle development worker, admitted a new
+comparison and read all four waiting_for_input records with attempts=1 in cold-read.json.
+This verifies first-attempt preparation after the FK registration fix; no contributions were
+invented for that second comparison. The original completed demo and its retry evidence remain.
+
+Final checkpoint gates:56 preparation tests passed19.524s at
+`.artifacts/m0/prep-20260909T165747962573Z`;77 backend units passed43.11s at
+`.artifacts/m0/backend-20260909T165808685680Z`. All six documentation areas independently
+reviewed; final security review found no blocking issue. Source and mapped documentation stayed
+unchanged during these checks; this appended historical evidence note follows them.
+Next: frozen-corpus runner and comparison UI, including hiding frozen-run attempt controls;
+external generation provider/accounting and full release verification remain required.

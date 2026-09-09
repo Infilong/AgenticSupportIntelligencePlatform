@@ -12,7 +12,7 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 | `backend/app/core/` | 5 |
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |
-| `backend/app/modules/` | 53 |
+| `backend/app/modules/` | 59 |
 | `backend/app/providers/` | 7 |
 | `backend/app/workflows/` | 3 |
 | `frontend/src/` | 2 |
@@ -23,6 +23,7 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 
 ## Backend module directories
 
+- `backend/app/modules/comparisons/`
 - `backend/app/modules/conversations/`
 - `backend/app/modules/evaluations/`
 - `backend/app/modules/identity/`

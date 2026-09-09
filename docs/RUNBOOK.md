@@ -170,6 +170,25 @@ from `backend`, redirect UTF-8 output to `.artifacts/openapi.json`, then run
 `npm run generate:api` from `frontend`. This does not connect to a database.
 The generated declaration is a size exception; API owners change response schemas and regenerate.
 
+### Development generation comparison CLI
+
+From `backend`, run `uv run --frozen python ../evals/generation_cli.py ACTION
+--credentials ../.artifacts/m1/demo-credentials.json --workspace UUID --output NEW_JSON_PATH`.
+The CLI targets local development8010/Origin5180 and authenticates as the seeded administrator.
+Use `--session ../.artifacts/m5/generation-session.json` across commands to reuse a server-validated
+session and avoid repeated logins. This file contains a session credential: keep it local and
+ignored like demo-credentials.json; the CLI rejects paths outside repository .artifacts.
+`create` additionally needs `--input QUESTION_JSON --key STABLE_KEY`; the JSON contains only
+`original` and `language` (en/ja/zh). Save the returned comparison ID. `read` and `cancel` need
+`--comparison UUID`. `export` and `submit` also require `--pipeline NAME`; submit reads
+`--input RESPONSE_JSON` containing the exported context_hash/request_hash, answer and citations.
+Use direct_llm/vector_rag/hybrid_rag/system_v1. Only direct permits empty citations. Export
+returns one pipeline's rendered request; do not include rubrics or other answers in generation.
+Poll `read` using new output filenames while workers prepare requests. System responses resume
+the actual support run and need the ordinary Workbench review. `list` returns a bounded page.
+Existing output files are never overwritten. Corpus changes require a new comparison; completed
+history remains inspectable. This is attributed development work, not a live model quality test.
+
 Development uses Vite's same-origin API proxy; frontend container file ownership permits
 temporary config/cache writes by its non-root user. No external font service is required.
 Built release serving has separate setup and evidence below; remaining release gates are incomplete.

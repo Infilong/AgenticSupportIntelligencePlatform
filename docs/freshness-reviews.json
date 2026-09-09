@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "ba256ddf9bf53bd1bf5c37b993640656852ddaec760239fd9b697ae1a53ab321",
+    "fingerprint": "6aef9559ca4fd5512f32a180961f6410f762bf415dfb17ec4de78eb18a1ddc62",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed STATUS and completed timeout follow-up against reproduced package import failure and final3-test log. Reviewed next four-pipeline brief as prospective only: direct has no retrieval, system links real governed support, baseline configurations/comparability and per-pipeline prompt isolation specified, original versus reviewed outputs separated. External provider/accounting/full corpus remain required; no implementation or semantic-quality completion claim."
+    "rationale": "Independent STATUS/M5 record and entry-point review against final fourcompleted demo, separated system original/reviewed text,17 focused tests and126-displayed-pass420s full timeout. Historical0015/fd18/pending-session wording corrected; current0016 and incomplete corpus/UI/provider gates explicit. Cold-worker second demonstration not included in this receipt and no full-quality claim."
   },
   "frontend": {
-    "fingerprint": "7738549aae917cc8550397ea274828f1a30fa49b5c9e9bc96b85409b818a098e",
+    "fingerprint": "f73ff93512b801e9c22a1a464485ab98199049074d635b19d9671edd999b4602",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ARCHITECTURE claim review for backend-only import extraction. No frontend/API shape or submission behavior changed; retrieval starts without document-splitting/Torch imports, with actual model loading still deferred. Existing UI evidence is not represented as a newly run browser suite."
+    "rationale": "Independent generated comparison API surface and shared architecture review: no comparison UI yet; existing Workbench edits/approves linked system run. Final demo preserves original contribution distinct from reviewed response. Generic Add-details control still visible on frozen runs but server rejects it, explicitly deferred UI repair. No false new frontend comparison feature or semantic quality claim."
   },
   "tooling": {
-    "fingerprint": "740b7c6c751fdfb41ac43be5c820a903f6a1a6ae889040b415866ddf5a892d37",
+    "fingerprint": "ef9b2204a9691958b88067a2e25959e4971c2adae3683bbc2dec76f77c056dc9",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent import compatibility review: evidence chooses relative command_process only in package mode, preserves direct-module mode; new subprocess regression exercises both without invoking commands. Retained log confirms all3 focused tests7.834s including timeout/sibling and denied-termination cases. Prior hosted CI and pending new verification remain revision-specific; no capture/runtime semantic change."
+    "rationale": "Independent RUNBOOK against CLI actions, stable admission keys, exclusive output files and optional local session helper. Saved server-validated session avoids repeated login without throttle changes; credentials confined to ignored artifact session path. Four helper tests and demo completion retained alongside earlier429 and failed setup. No live API generation or blanket full-suite verification."
   },
   "evaluation": {
-    "fingerprint": "150ba1194216e5ef9cfaeea224cf144eef963733fc74ed73e747f56d9195fd77",
+    "fingerprint": "71ec7eed6fbc916627be2fa7fc821464ebb03347d339d921564d07312ff3b73f",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ACCEPTANCE updates against prior ten-distinct packaged workbench reports and new saved-restore evidence. Historical evaluation data is included in table parity but no new evaluation was run. Native zoom, semantic generation, network restoration and full release coverage remain unverified; existing corpus/scorer unchanged."
+    "rationale": "Independent generation CLI/session and evals README/M5 guardrail review: consumes whitelisted input/attributed responses, no evaluator fixtures, per-pipeline exports separate from admin inspection. Parsed final demo fourcompleted, direct no trace and three distinct local embedding ledgers; manual nonblind plumbing only. Full frozen corpus, semantic scoring and external provider remain incomplete; comparable is identity/cancellation only."
   },
   "backend": {
-    "fingerprint": "8ea2b4394eea710f19bd03e2e810b54c863b6a0f9ed7d0c2295b0a2733d75dd9",
+    "fingerprint": "21ac4c37e15dd8533aa57aa7750664cb90fd52bf941b358eea73a0d6bf600d6c",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent lazy-model extraction and explicit Job FK registration review against prior factory: same first-call Settings, cached callable and embedding SPACE, no ranking/model change. Fresh-process test checks forbidden heavy imports and actual FK resolution. Saved final7 tests9.84s and phases1.328s imports/1.422s dispatch verify targeted ownership recovery; initial missing-Job failure and old full timeout remain retained."
+    "rationale": "Independent comparison admission/access/preparation/submission/reading and migration review: admin workspace guards, corpus/cancellation fences, direct no retrieval, declared vector/hybrid strategies and linked real system graph, separate original/reviewed output. Focused17 checks and actual completed CLI demo support connected development execution; fresh-worker registration fix tested narrowly, second cold demo excluded. Full126-displayed-pass timeout remains incomplete."
   },
   "infrastructure": {
-    "fingerprint": "470b2c7d045f5640bec3b0b9e949857c08d9dd9ba8831ad91201d412a9764b29",
+    "fingerprint": "8e623315859466283674be715e53ff8a0ac1c42ab4fbe7c7984cd5f110095dc8",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ARCHITECTURE runtime boundary review: provider configuration extraction removes ingestion import dependency, keeps pinned models and same cache/space, no service/deployment change. Targeted startup evidence is distinguished from OS-level DLL diagnosis and full regression; hosted verification for current change remains pending."
+    "rationale": "Independent shared architecture/runtime scope review: additive0016 comparison records and worker branch reuse local DB/jobs/support graph; ordinary default unchanged, no external services/paid dispatch. Development migrated; prior packaged release history distinct. Session throttle preserved and full timeout acknowledged; no deployment or all-production-ready claim."
   }
 }

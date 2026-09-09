@@ -74,3 +74,10 @@ This is post-run structural revalidation, not a new latency/quality experiment. 
 corpus, scorer and thresholds remain unchanged. Candidate traces are API-filtered; separate real
 PostgreSQL tests prove persisted candidate workspace isolation. These tuned development cases,
 small latency samples and substring facts do not establish held-out or generation quality.
+
+`generation_cli.py` now drives one persisted four-pipeline development comparison through the
+authenticated API; see the [runbook](../docs/RUNBOOK.md#development-generation-comparison-cli).
+It does not load the evaluator corpus, expected facts or scoring fixtures. Direct has no
+retrieval; vector/hybrid baselines and the actual hybrid support graph retain distinct traces.
+Manual contributions and reviewed system responses remain separate. The full frozen-case
+generation runner, per-language semantic scoring and external-provider verification remain open.

@@ -39,6 +39,10 @@ class AttemptInput(BaseModel):
 def create(db, workspace_id, actor_id, parent_id, key, data):
     authorize(db, workspace_id, actor_id)
     parent = get_run(db, workspace_id, parent_id)
+    from app.modules.comparisons.access import linked
+
+    if linked(db, workspace_id, parent.id) is not None:
+        raise HTTPException(409, "Create a new comparison to change or retry its frozen input")
     message = db.scalar(
         select(Message)
         .where(Message.id == parent.message_id, Message.workspace_id == workspace_id)

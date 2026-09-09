@@ -49,7 +49,14 @@ def support_review(engine, job):
     return process(engine, job)
 
 
+def comparison_prepare(engine, job):
+    from app.modules.comparisons.processing import process
+
+    return process(engine, job)
+
+
 HANDLERS = {
+    "comparison_prepare": comparison_prepare,
     "database_check": diagnostic,
     "index_document": index_document,
     "support_run": support_run,
