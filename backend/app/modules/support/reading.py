@@ -32,11 +32,20 @@ def messages(db, workspace_id, actor_id, search, offset, limit):
     membership(db, workspace_id, actor_id)
     filters = [Message.workspace_id == workspace_id, Message.original.icontains(search, autoescape=True)]
     total = db.scalar(select(func.count()).select_from(Message).where(*filters))
+    latest = (
+        select(SupportRun.id)
+        .where(SupportRun.workspace_id == Message.workspace_id, SupportRun.message_id == Message.id)
+        .order_by(SupportRun.attempt_number.desc())
+        .limit(1)
+        .correlate(Message)
+        .scalar_subquery()
+    )
     rows = db.execute(
         select(Message, SupportRun, Job)
+        .select_from(Message)
         .join(
             SupportRun,
-            (SupportRun.message_id == Message.id) & (SupportRun.workspace_id == Message.workspace_id),
+            SupportRun.id == latest,
         )
         .join(Job, Job.id == SupportRun.job_id)
         .where(*filters)
@@ -73,6 +82,15 @@ def detail(db, workspace_id, actor_id, run_id):
     job = db.get(Job, run.job_id)
     handoff = handoff_for(db, run)
     decision = decision_for(db, run)
+    history = list(
+        db.execute(
+            select(SupportRun, Job)
+            .join(Job, Job.id == SupportRun.job_id)
+            .where(SupportRun.workspace_id == workspace_id, SupportRun.message_id == message.id)
+            .order_by(SupportRun.attempt_number)
+            .limit(10)
+        )
+    )
     steps = db.scalars(
         select(RunStep)
         .where(RunStep.workspace_id == workspace_id, RunStep.run_id == run_id)
@@ -92,6 +110,23 @@ def detail(db, workspace_id, actor_id, run_id):
     return {
         "id": run.id,
         "message_id": message.id,
+        "parent_run_id": run.parent_run_id,
+        "creator_id": run.creator_id,
+        "attempt_number": run.attempt_number,
+        "input_text": run.input_text,
+        "clarification": run.clarification,
+        "latest_run_id": history[-1][0].id,
+        "attempts": [
+            {
+                "id": item.id,
+                "number": item.attempt_number,
+                "kind": item.attempt_kind,
+                "state": visible_state(item, item_job),
+                "outcome": item.outcome,
+                "created_at": item.created_at,
+            }
+            for item, item_job in history
+        ],
         "original": message.original,
         "language": message.language,
         "state": visible_state(run, job),

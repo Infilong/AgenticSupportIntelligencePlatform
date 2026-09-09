@@ -1,5 +1,8 @@
 # M3 — governed human review
 
+Slice completed in `497b16023997367657d631fdd6105623ad3c9f55`; pushed and CI `34304500162` passed.
+The remaining M3 work continues in the linked-attempt plan and broader release gates.
+
 ## Execution brief
 
 Outcome / gates: complete the connected REVIEW path after a cited development draft, advancing

@@ -37,6 +37,21 @@ class SupportRun(Base):
     __tablename__ = "support_runs"
     __table_args__ = (
         UniqueConstraint("workspace_id", "id", name="uq_support_run_workspace"),
+        UniqueConstraint("workspace_id", "message_id", "id", name="uq_run_message"),
+        UniqueConstraint("workspace_id", "message_id", "attempt_number", name="uq_run_attempt"),
+        UniqueConstraint("workspace_id", "submission_key", name="uq_run_submission"),
+        CheckConstraint("attempt_number BETWEEN 1 AND 10", name="run_attempt_number"),
+        CheckConstraint("char_length(input_text) BETWEEN 1 AND 1000", name="run_input_size"),
+        CheckConstraint(
+            "(attempt_kind='initial' AND parent_run_id IS NULL AND attempt_number=1) OR "
+            "(attempt_kind IN ('retry','clarify') AND parent_run_id IS NOT NULL AND attempt_number>1)",
+            name="run_attempt_kind",
+        ),
+        ForeignKeyConstraint(
+            ["workspace_id", "message_id", "parent_run_id"],
+            ["support_runs.workspace_id", "support_runs.message_id", "support_runs.id"],
+            name="fk_run_parent",
+        ),
         ForeignKeyConstraint(
             ["workspace_id", "message_id"], ["support_messages.workspace_id", "support_messages.id"]
         ),
@@ -52,6 +67,14 @@ class SupportRun(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID]
     message_id: Mapped[uuid.UUID]
+    parent_run_id: Mapped[uuid.UUID | None]
+    creator_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    attempt_number: Mapped[int] = mapped_column(default=1)
+    attempt_kind: Mapped[str] = mapped_column(String(16), default="initial")
+    input_text: Mapped[str] = mapped_column(Text)
+    clarification: Mapped[str | None] = mapped_column(Text)
+    submission_key: Mapped[str | None] = mapped_column(String(100))
+    submission_hash: Mapped[str | None] = mapped_column(String(64))
     job_id: Mapped[uuid.UUID]
     retrieval_id: Mapped[uuid.UUID | None]
     state: Mapped[str] = mapped_column(String(24), default="queued")

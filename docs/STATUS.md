@@ -1,7 +1,7 @@
 # Current status
 
 Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
-Current implementation slice: M3 human review; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
+Current implementation slice: M3 linked attempts; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -12,7 +12,8 @@ provider and documentation-workflow clarifications; it is now covered by project
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M3 execution plan](plans/active/m3-human-review.md) owns current review implementation;
+[M3 linked-attempt plan](plans/active/m3-linked-attempts.md) owns current implementation;
+[M3 review record](plans/completed/m3-human-review.md) retains review decisions/evidence;
 [M2 execution plan](plans/active/m2-real-retrieval.md) retains retrieval decisions and evidence;
 [M1 history](plans/active/m1-foundation.md) retains foundation work.
 Normal verified commits/pushes to this branch are authorized. No merge/deploy/paid API authority.
@@ -23,7 +24,8 @@ The new work window starts **2026-09-09 00:44:58 UTC** and ends **04:44:58 UTC**
 
 The human-review slice has verified distinct execution/outcome fields, immutable review decisions,
 operator/admin enforcement, durable review continuation and connected approve/edit/reject controls.
-M3 remains incomplete: linked attempts, remaining routing and broader recovery are still required.
+Linked attempts have database and browser evidence. M3 remains incomplete: remaining routing
+and broader recovery are required.
 The detailed failure and repair record belongs to the M3 plan.
 
 - Real login, sessions, workspace roles and server-enforced permissions.
@@ -42,6 +44,28 @@ The detailed failure and repair record belongs to the M3 plan.
   expandable graph/model records, cancellation and admin development-response controls.
 - Review preserves original drafts/citations and stores a separate final response; policy exceptions
   and unclassified legacy drafts require admin approval. Viewer inspection is read-only.
+- Linked clarification/retry creates fresh processing under current authority; original messages,
+  earlier inputs/results and decisions stay available in bounded history.
+
+## September 9 linked-attempt evidence
+
+Built on `497b160`; migration `0009_attempts` ran in the isolated four-service runtime.
+- 91 PostgreSQL tests passed in 161.33s against an unchanged snapshot:
+  `.artifacts/m0/integration-20260909T031006335983Z`.
+- `.artifacts/m3/linked-attempt-ui`: seven browser cases passed; the viewer case failed because
+  it assumed an old unreviewed draft was on the first page. The test now creates its own draft.
+- `.artifacts/m3/linked-attempt-ui-repaired`: both affected viewer and linked-attempt cases passed.
+  Together these cover all eight journeys, not one fresh eight-case green run. The repaired
+  viewer 360px source screenshot and linked history screenshot were inspected without overlap.
+- Actual Chrome inspection confirmed the original `w`, cancelled clarification and current retry
+  remain distinct in three-attempt history. Retrieval remains real; responses remain simulated.
+- TypeScript/Vite build, five component tests and Ruff pass. The additional component case checks
+  emoji/supplementary Chinese counting and prevents oversized clarification submission.
+- Independent backend/UI review found and repaired application labels affecting input validation
+  and a UTF-16/code-point limit mismatch. No remaining blocking findings in these bounded reviews.
+
+The whole-repository database evidence fingerprint predates the subsequent frontend/test/docs
+repairs; backend sources did not change afterward. The plan retains failed evidence and limits.
 
 ## September 9 human-review evidence
 
@@ -152,16 +176,16 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
 - Synchronous model/retrieval records abandoned by a process crash need reconciliation.
 - The release plan's lexical/fusion requirement differs from the implemented vector-plus-reranker
   path; comparative evidence or an explicit scope decision remains outstanding.
-- The connected development draft path is implemented; human review, imports, complete
+- The connected development draft and human-review paths are implemented; imports, complete
   observability, comparative evaluation and restoration remain incomplete.
 
 ## Next connected slice
 
-The workbench checkpoint `281b169` is pushed and CI `34301042398` passed. Finish verification
-of the governed human-review slice, then implement linked
-retry/clarification attempts with distinct execution/outcome fields. Preserve original drafts,
-exact sources and attributable decisions; enforce operator/admin versus policy-exception roles.
-Prove conflicting decisions cannot double-finalize and real worker restart resumes correctly.
+Human-review checkpoint `497b160` is committed/pushed; CI run `34304500162` passed, confirmed
+through the OpenAI GitHub connector. The preceding workbench CI `34301042398` passed.
+Finish independent documentation receipts and checkpoint linked retry/clarification attempts.
+Then continue the remaining routing/recovery gates. Human-review concurrency and a real
+worker restart at its durable wait have passed; broader routing/recovery gates remain open.
 Never import evaluation answers as runtime responses, invent API usage or equate exact citations
 with semantic support. Continue into the planned human-review/recovery gates after this slice.
 The user resumed this implementation window; missing APIs do not block real local search.

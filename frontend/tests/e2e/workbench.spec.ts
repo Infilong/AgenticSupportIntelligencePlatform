@@ -100,11 +100,25 @@ test('short input requests clarification and waiting run can be cancelled', asyn
 });
 
 test('viewer inspection stays usable at 360, 768, 1440 and doubled content size', async ({ page }) => {
+  test.setTimeout(120000);
+  await login(page); await create(page, 'What is the standard refund request deadline?');
+  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Waiting for development response', { timeout: 90000 });
+  await page.getByText('Development response controls', { exact: true }).click();
+  const source = page.getByLabel('Supporting passage', { exact: true });
+  const option = source.locator('option').filter({ hasText: 'REFUND-STANDARD' }).first();
+  await expect(option).toBeAttached();
+  await source.selectOption((await option.getAttribute('value'))!);
+  await page.getByLabel('Exact supporting quote').fill(await page.locator('.development-form .source-excerpt').innerText());
+  await page.getByLabel('Development answer', { exact: true }).fill('The standard refund request window is 14 calendar days.');
+  await page.getByRole('button', { name: 'Submit development draft', exact: true }).click();
+  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Needs review', { timeout: 20000 });
+  const runUrl = page.url();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await login(page, 'viewer');
   await expect(page.getByRole('button', { name: 'New message', exact: true })).toHaveCount(0);
   for (const width of [360, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.locator('.message-row').filter({ hasText: 'Needs review' }).first().click();
+    await page.goto(runUrl);
     await expect(page.getByRole('heading', { name: 'Original message', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cancel processing', exact: true })).toHaveCount(0);
     const citation = page.getByRole('button', { name: '1 REFUND-STANDARD', exact: true });
@@ -169,4 +183,42 @@ test('policy exception approval is restricted to administrators in the review UI
   await page.getByRole('button', { name: 'Approve response', exact: true }).click();
   await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Completed', { timeout: 20000 });
   await expect(page.getByRole('heading', { name: 'Approved response', exact: true })).toBeVisible();
+});
+
+test('clarification, cancellation and retry preserve the original and linked attempt history', async ({ page }) => {
+  test.setTimeout(120000);
+  await login(page, 'operator'); await create(page, 'w');
+  await expect(page.getByRole('heading', { name: 'Clarification needed', exact: true })).toBeVisible({ timeout: 15000 });
+  const originalUrl = page.url();
+  await page.getByText('Add customer details', { exact: true }).click();
+  await page.getByLabel('Additional customer details').fill('What is the standard refund request deadline?');
+  await page.getByRole('button', { name: 'Process with added details', exact: true }).click();
+  await expect(page).not.toHaveURL(originalUrl);
+  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Waiting for development response', { timeout: 90000 });
+  await expect(page.locator('.original-message').first()).toHaveText('w');
+  await page.getByText('Processing input · attempt 2', { exact: true }).click();
+  await expect(page.locator('.original-message').nth(1)).toContainText('What is the standard refund request deadline?');
+  const secondUrl = page.url();
+  await page.getByRole('button', { name: 'Cancel processing', exact: true }).click();
+  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Cancelled');
+  await page.getByRole('button', { name: 'Retry processing', exact: true }).click();
+  await expect(page).not.toHaveURL(secondUrl);
+  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Waiting for development response', { timeout: 90000 });
+  const latestUrl = page.url();
+  await page.getByText('Attempt history · 3', { exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Attempt 2 · Added details', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Attempt 1 · Original', exact: true }).click();
+  await expect(page).toHaveURL(originalUrl);
+  await expect(page.getByRole('heading', { name: 'Clarification needed', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Open latest attempt', exact: true }).click();
+  await expect(page).toHaveURL(latestUrl);
+  await page.setViewportSize({ width: 360, height: 900 });
+  await page.getByText('Attempt history · 3', { exact: true }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('linked-attempt-history-360.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await login(page, 'viewer'); await page.goto(latestUrl);
+  await expect(page.getByText('Attempt history · 3', { exact: true })).toBeVisible();
+  await expect(page.getByText('Add customer details', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Retry processing', exact: true })).toHaveCount(0);
 });

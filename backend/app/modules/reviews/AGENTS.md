@@ -1,6 +1,6 @@
 # Human review
 
-Read the backend guide and the active M3 review plan.
+Read the backend guide and the [review record](../../../../docs/plans/completed/m3-human-review.md).
 - Preserve original drafts, citations and immutable decisions; final responses are separate.
 - Bind decisions to workspace, run, draft identity and revision before scheduling continuation.
 - Ordinary review is operator/admin; persisted policy-exception classification requires admin approval.

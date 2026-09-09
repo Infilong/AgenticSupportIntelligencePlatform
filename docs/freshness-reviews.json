@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "a9207a62d40d23d25369414597b281d48649669348466a947ce93c04be868e6d",
+    "fingerprint": "612444d8fc463aeca5deb30c338ffe444667f1df13b28f94007270c481047b32",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared README and STATUS with implemented review source and retained test/restart evidence; human review slice is verified while full M3, semantic quality and unknown timing/indexing causes remain incomplete."
+    "rationale": "Compared current STATUS and README with linked-attempt implementation and stored reports; retained initial viewer failure, repaired two-case run, whole-repository fingerprint change and open M3 gaps are explicit."
   },
   "frontend": {
-    "fingerprint": "d0d8f47dc2e188231231266a3e635e4dbf733fbd38cd6e5a531e243a942db080",
+    "fingerprint": "811f8632c620b997a185e2ebbbf4a5a2339be85bdb1cde75b905aa4381b38d95",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Verified draft-identity keyed review editor fixes initial empty editing state; reviewed role controls and separate draft/final/history. Retained final seven-browser report passes; timing anomaly is visible, not clamped."
+    "rationale": "Reviewed retry/clarify eligibility, immutable input/history links and repaired code-point overflow handling. Viewer fixture now creates its own actual draft; seven initial passes plus two repaired passes are correctly distinguished from one green suite."
   },
   "tooling": {
-    "fingerprint": "9f7d99c98459c0a2f0b2a77b72a9cfb4397d027b1851e5f79576ddbc082101fe",
+    "fingerprint": "6fb4e8843fd91204dad2653d80f9bbb81f058f0f84cedba3553c85c8170e2ec0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared updated runbook review API and UI recipe against source states, review payload and controls; retained final six-case baseline and seven-case review reports agree, no new test run by reviewer."
+    "rationale": "Compared linked attempt demo instructions and limits against UI labels and backend behavior; deterministic fixture repair retains source/focus/width assertions. No new runtime verification by reviewer."
   },
   "evaluation": {
-    "fingerprint": "752468512dcb314a20248c58170ebd42624b8d20d77bb7dc758910b38c81eef1",
+    "fingerprint": "f51619812193cb3a0234a9a001d43bf22c123a6e1cd1161880ab14135fb7ef43",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed partial review/recovery/UX evidence without changing generation or release thresholds; real restart result has one decision/job and preserved draft, not proof of full recovery matrix."
+    "rationale": "Reviewed added partial linked-attempt evidence without changing release thresholds or claiming completed imports, semantic routing or recovery."
   },
   "backend": {
-    "fingerprint": "414529781f8b5e9a43e8bbb592f9b100859b108fac6975bfabebebab3e76e306",
+    "fingerprint": "f0c8ecaae927201020ed78c19706bef1eb3cc96a3cb95b3115a48d3906a1ea9f",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed review authorization, immutable decision and fenced response publication against architecture/acceptance; retained 79 PostgreSQL and 16 unit logs pass. Recovery and timing-anomaly limitations remain explicit."
+    "rationale": "Compared linked admission and input-lineage rules with current architecture and acceptance; retained 91 PostgreSQL log passes. Original requester/creator checks, scoped history, ten-attempt and input limits are documented without full recovery claims."
   },
   "infrastructure": {
-    "fingerprint": "1ae634a54b42a1e48438c430ea2bed3c1d457e29d0ee4378f1d05fa9981dda4f",
+    "fingerprint": "1767670c1a7d7cdc78e8d6a3b31b522ad53a307cbfb41ebe4e63540164bc43c2",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed shared architecture/runtime claims for separate durable review continuation and migration; topology and isolation unchanged. Restart artifact supports bounded wait recovery, not deployment readiness."
+    "rationale": "Reviewed shared architecture/runbook linked-attempt update; original records and new attempt identities match source, runtime topology unchanged and no deployment readiness claim."
   }
 }

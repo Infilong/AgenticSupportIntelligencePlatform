@@ -64,6 +64,10 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   synchronous-call reconciliation remain incomplete.
 - UX: connected draft/source/cancellation and approve/edit/reject journeys pass, including 360/768/1440px, keyboard
   source focus and doubled content size. Browser-native zoom and full release journeys remain open.
+- Linked attempts: PostgreSQL tests cover history, fresh retrieval, atomic competing submissions,
+  creator revocation, scoped lineage and limits. The browser clarification/cancel/retry/history
+  journey and repaired viewer fixture pass. This advances DATA/ROUTE/JOB/UX
+  without completing imports, semantic routing or the complete recovery matrix.
 - ROUTE/REVIEW/DATA/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
 
 ## Evaluation expansion gate before M2 tuning

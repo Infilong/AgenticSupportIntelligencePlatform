@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Header, Query
 
 from app.modules.identity.dependencies import CurrentUser, Database
-from app.modules.support import reading, service
+from app.modules.support import attempts, reading, service
 from app.modules.support.projections import HandoffExport
 from app.modules.support.schemas import (
     DevelopmentResponse,
@@ -15,6 +15,20 @@ from app.modules.support.schemas import (
 )
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}", tags=["support"])
+
+
+@router.post("/runs/{run_id}/attempts", status_code=202, response_model=MessageCreated)
+def create_attempt(
+    workspace_id: UUID,
+    run_id: UUID,
+    data: attempts.AttemptInput,
+    user: CurrentUser,
+    db: Database,
+    key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=100)],
+):
+    result = attempts.create(db, workspace_id, user.id, run_id, key, data)
+    db.commit()
+    return result
 
 
 @router.post("/messages", status_code=202, response_model=MessageCreated)

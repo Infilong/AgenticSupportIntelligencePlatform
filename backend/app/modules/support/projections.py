@@ -15,6 +15,15 @@ class CitedPassage(RetrievedPassage):
     quote_end: int
 
 
+class AttemptSummary(BaseModel):
+    id: UUID
+    number: int
+    kind: str
+    state: str
+    outcome: str | None
+    created_at: datetime
+
+
 class HandoffSummary(BaseModel):
     id: UUID
     context_hash: str

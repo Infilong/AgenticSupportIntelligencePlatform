@@ -191,7 +191,24 @@ Resource reads are keyed to route/workspace and aborted on navigation. Transient
 preserve an unfinished answer; authorization failures clear protected data. Late message POST
 responses cannot navigate back after leaving the screen. Aborting a request does not undo its
 server write; retries of unchanged input reuse the same idempotency key within the form.
-Run-state changes refresh the inbox. Review filters and linked retries remain unfinished.
+Run-state changes refresh the inbox. Review filters remain unfinished.
+
+## Linked processing attempts
+
+One message retains its original text and a maximum of ten sequenced attempts. Operator/admin
+retry or added details creates a new run, job, graph, retrieval and review identity. Retry keeps
+the previous input; clarification appends details within the combined 1,000-character boundary.
+Overflow is rejected without truncation. Validation uses the latest actual customer input at or
+before that attempt, excluding application labels and later details. Local model token limits apply.
+
+Only the latest non-running attempt can create a child. Retry requires failure, cancellation,
+rejection or insufficient evidence; added details can supersede a paused unreviewed draft by
+cancelling it atomically. Original drafts, sources and decisions remain in history. Actor-bound
+idempotency and locked creation prevent duplicate children; database constraints enforce scoped
+lineage and sequence uniqueness. Processing checks both original requester and child creator.
+
+The inbox shows one latest attempt per message. Optional history links expose earlier attempts;
+viewers can inspect them but cannot start processing. A new child never inherits prior approval.
 
 ## Governed human review
 

@@ -5,7 +5,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.modules.reviews.schemas import DecisionSummary
-from app.modules.support.projections import CallSummary, CitedPassage, HandoffSummary, StepSummary
+from app.modules.support.projections import (
+    AttemptSummary,
+    CallSummary,
+    CitedPassage,
+    HandoffSummary,
+    StepSummary,
+)
 
 
 class MessageInput(BaseModel):
@@ -67,6 +73,13 @@ class MessagePage(BaseModel):
 class RunDetail(BaseModel):
     id: UUID
     message_id: UUID
+    parent_run_id: UUID | None
+    creator_id: UUID
+    attempt_number: int
+    input_text: str
+    clarification: str | None
+    attempts: list[AttemptSummary]
+    latest_run_id: UUID
     original: str
     language: str
     state: str

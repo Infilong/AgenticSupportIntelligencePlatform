@@ -33,6 +33,7 @@ def eligible(db, run, job=None):
         select(Message).where(Message.workspace_id == run.workspace_id, Message.id == run.message_id)
     )
     membership(db, run.workspace_id, message.actor_id, {"operator", "admin"})
+    membership(db, run.workspace_id, run.creator_id, {"operator", "admin"})
     if run.state == "cancelled":
         raise JobCancelled()
     if job is not None:
@@ -57,7 +58,7 @@ def create_message(db, workspace_id, actor_id, data, key):
         run = db.scalar(
             select(SupportRun)
             .where(SupportRun.workspace_id == workspace_id, SupportRun.message_id == previous.id)
-            .order_by(SupportRun.created_at)
+            .order_by(SupportRun.attempt_number)
         )
         return {"message_id": previous.id, "run_id": run.id, "job_id": run.job_id}
     count = db.scalar(select(func.count()).select_from(Message).where(Message.workspace_id == workspace_id))
@@ -78,7 +79,14 @@ def create_message(db, workspace_id, actor_id, data, key):
     job = enqueue(
         db, workspace_id, actor_id, "support_run", f"support:{run_id}", {"run_id": str(run_id)}, priority=0
     )
-    run = SupportRun(id=run_id, workspace_id=workspace_id, message_id=message.id, job_id=job.id)
+    run = SupportRun(
+        id=run_id,
+        workspace_id=workspace_id,
+        message_id=message.id,
+        job_id=job.id,
+        creator_id=actor_id,
+        input_text=message.original,
+    )
     db.add(run)
     db.flush()
     return {"message_id": message.id, "run_id": run.id, "job_id": job.id}

@@ -245,6 +245,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspace_id}/runs/{run_id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Attempt */
+        post: operations["create_attempt_api_workspaces__workspace_id__runs__run_id__attempts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspace_id}/messages": {
         parameters: {
             query?: never;
@@ -352,6 +369,37 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AttemptInput */
+        AttemptInput: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "retry" | "clarify";
+            /** Clarification */
+            clarification?: string | null;
+        };
+        /** AttemptSummary */
+        AttemptSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Number */
+            number: number;
+            /** Kind */
+            kind: string;
+            /** State */
+            state: string;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** Body_upload_document_api_workspaces__workspace_id__documents_post */
         Body_upload_document_api_workspaces__workspace_id__documents_post: {
             /** File */
@@ -767,6 +815,26 @@ export interface components {
              * Format: uuid
              */
             message_id: string;
+            /** Parent Run Id */
+            parent_run_id: string | null;
+            /**
+             * Creator Id
+             * Format: uuid
+             */
+            creator_id: string;
+            /** Attempt Number */
+            attempt_number: number;
+            /** Input Text */
+            input_text: string;
+            /** Clarification */
+            clarification: string | null;
+            /** Attempts */
+            attempts: components["schemas"]["AttemptSummary"][];
+            /**
+             * Latest Run Id
+             * Format: uuid
+             */
+            latest_run_id: string;
             /** Original */
             original: string;
             /** Language */
@@ -1420,6 +1488,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetrievalResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_attempt_api_workspaces__workspace_id__runs__run_id__attempts_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                workspace_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttemptInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageCreated"];
                 };
             };
             /** @description Validation Error */

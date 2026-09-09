@@ -7,19 +7,20 @@ from typing import TypedDict
 from langgraph.errors import GraphInterrupt
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.jobs.queue import authorize
 from app.modules.knowledge.retrieval import retrieve
 from app.modules.support.context import digest, pack, validate_sources
-from app.modules.support.models import RunStep
+from app.modules.support.models import RunStep, SupportRun
 from app.modules.support.service import eligible, get_run, handoff_for
 from app.workflows.checkpoints import locked_graph
 
 
 class State(TypedDict, total=False):
     original: str
+    latest_input: str
     language: str
     outcome: str
     retrieval_id: str
@@ -94,13 +95,13 @@ def execute(engine, job, retrieval=retrieve):
         return node
 
     def validate(state):
-        meaningful = sum(c.isalnum() for c in state["original"]) >= 2
+        meaningful = sum(c.isalnum() for c in state.get("latest_input", state["original"])) >= 2
         return {"outcome": "retrieve" if meaningful else "clarification"}
 
     def search(state):
         with Session(engine) as db, db.begin():
-            _, message = guard(db, job, run_id)
-            actor_id = message.actor_id
+            run, _ = guard(db, job, run_id)
+            actor_id = run.creator_id
 
         def associate(db, trace_id):
             run, _ = guard(db, job, run_id)
@@ -158,7 +159,22 @@ def execute(engine, job, retrieval=retrieve):
             run, message = guard(db, job, run_id)
             handoff = handoff_for(db, run)
             submitted = handoff is not None and handoff.response is not None
-            initial = {"original": message.original, "language": message.language}
+            latest_details = db.scalar(
+                select(SupportRun.clarification)
+                .where(
+                    SupportRun.workspace_id == run.workspace_id,
+                    SupportRun.message_id == run.message_id,
+                    SupportRun.attempt_number <= run.attempt_number,
+                    SupportRun.clarification.is_not(None),
+                )
+                .order_by(SupportRun.attempt_number.desc())
+                .limit(1)
+            )
+            initial = {
+                "original": run.input_text,
+                "language": message.language,
+                "latest_input": latest_details if latest_details is not None else message.original,
+            }
         failed_task = any(task.error is not None for task in saved.tasks)
         if saved.values and not (saved.next or saved.interrupts or failed_task):
             return saved.values  # Completed checkpoint, domain publication may still need replay.

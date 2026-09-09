@@ -301,11 +301,17 @@ Select a numbered citation to inspect its saved excerpt, then open the exact doc
 Expand **Processing details** for graph steps, model identity, timings, tokens and external charges.
 Use **Cancel processing** while a run is queued, processing or waiting; cancellation is a server
 operation, not browser navigation. A single `w` asks for clarification without invoking a model.
+Open **Add customer details** to provide meaningful input and start a linked attempt with fresh
+retrieval. Failed/cancelled/rejected attempts and insufficient-evidence outcomes offer **Retry
+processing**. Expand **Attempt history** to inspect earlier inputs/results, or use **Open latest
+attempt** to return. The original message stays unchanged; inputs are capped at 1,000 combined
+characters and messages at ten attempts. Active processing must be cancelled before retrying.
 
 With indexed synthetic refund-policy smoke knowledge present, run
 `npx playwright test tests/e2e/workbench.spec.ts` from `frontend` using the browser/evidence
 environment variables described above. The suite uses actual local retrieval and deterministic
 development contributions, plus explicit network-failure injection. It covers EN/JA/ZH drafts,
 sources, approve/edit/reject, cancellation, viewer access, 360/768/1440px, keyboard focus and doubled content size.
+The linked-attempt journey also checks clarification, cancellation/retry and preserved history.
 This is not a browser-native zoom or live generation-quality measurement. Baseline `test:app`
 also exercises a persisted clarification flow without prepared models, including in CI.
