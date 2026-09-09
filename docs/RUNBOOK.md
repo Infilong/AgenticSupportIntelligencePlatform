@@ -467,3 +467,11 @@ checking job success and persisted checkpoints without model calls. It retains t
 and disposable database for review. Dumps contain application data and stay local/ignored.
 This is a fresh-backup/API-worker proof, not an old-backup recovery point, network-server/browser
 restore check, safe replay of inherited jobs or restored RAG/generation quality claim.
+
+## Copy an approved response
+
+Open a completed approved result and select **Copy approved response**. It copies the final
+approved wording, including edits and line breaks, without adding the original draft or citations.
+The success message confirms the browser clipboard operation, not delivery to a customer.
+If clipboard access fails, select the visible response text manually or retry. All workspace
+members who can inspect an approved response can copy it; the action does not modify data.

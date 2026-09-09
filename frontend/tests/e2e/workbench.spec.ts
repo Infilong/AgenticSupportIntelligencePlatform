@@ -79,8 +79,22 @@ for (const [language, question, answer] of [
     await expect(page.locator('.run-heading').getByRole('status')).toHaveText(action === 'reject' ? 'Rejected' : 'Completed', { timeout: 20000 });
     if (action !== 'reject') {
       await expect(page.locator('.run-result > .response-text')).toHaveText(action === 'edit' ? revised : answer);
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      const copy = page.getByRole('button', { name: 'Copy approved response', exact: true });
+      await copy.focus();
+      await page.keyboard.press('Enter');
+      await expect(page.getByText('Approved response copied.', { exact: true })).toBeVisible();
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(action === 'edit' ? revised : answer);
+      if (action === 'edit') for (const width of [360, 768, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await expect(copy).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        await page.screenshot({ path: test.info().outputPath(`approved-copy-${width}.png`), fullPage: true });
+      }
       await page.getByText('Original development draft', { exact: true }).click();
       await expect(page.locator('.run-result details .response-text')).toHaveText(answer);
+    } else {
+      await expect(page.getByRole('button', { name: 'Copy approved response', exact: true })).toHaveCount(0);
     }
     await page.getByRole('tab', { name: 'History', exact: true }).click();
     await page.getByText(`Review decision · ${action}`, { exact: true }).click();

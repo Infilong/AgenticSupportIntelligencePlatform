@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { CopyResponse } from './CopyResponse';
 import { outcomeLabel, type Run } from './types';
 
 export function RunResult({ run, children }: { run: Run; children?: ReactNode }) {
@@ -13,6 +14,8 @@ export function RunResult({ run, children }: { run: Run; children?: ReactNode })
   return <section className="run-result">
     <h2>{question ? 'Clarification requested' : outcomeLabel(run.outcome)}</h2>
     {primary ? <p className="response-text" lang={run.language}>{primary}</p> : <p className="muted">{pending}</p>}
+    {run.state === 'completed' && run.outcome === 'approved_response' && run.reviewed_response &&
+      <CopyResponse key={`${run.id}:${run.reviewed_response}`} response={run.reviewed_response} />}
     {question && <p className="muted">Recorded here, not sent to the customer. Sources below belong to the original draft.</p>}
     {historical && <details><summary>{historical}</summary><p className="response-text" lang={run.language}>{run.draft}</p></details>}
     {!historical && run.draft && !!run.citations.length && <p className="muted">{run.state === 'rejected' ? 'Rejected development draft · Not approved for sending' : 'Development draft · Not approved for sending'}</p>}

@@ -325,3 +325,8 @@ most-used model/operation/revision groups the same snapshot; totals include omit
 Known token/cost/duration sums retain separate missing-value counts and call status counts.
 Durations are summed call time, not workflow wall time; handoff waits are not automatic model
 calls. No customer text appears in aggregates. See [usage guide](../backend/app/modules/usage/AGENTS.md).
+
+Completed approved results expose an explicit clipboard action using the exact stored
+reviewed_response. Drafts, rejected responses and clarification requests do not expose this
+approved-copy action. Clipboard success/failure is announced; failure leaves manual selection
+available. This copies locally and does not send a response to a customer.

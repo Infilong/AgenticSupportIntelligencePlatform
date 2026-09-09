@@ -1,9 +1,10 @@
 # Current status
 
 Latest user direction on2026-09-09: **continue M1–M6, prioritize a working demo; defer RAG tuning**.
-Current unattended window:06:04:24–10:04:24 UTC (stop19:04:24 Tokyo). Full goal remains incomplete.
+User resumed on 2026-09-09 at 10:58 UTC. This unattended window ends at 14:58 UTC
+(23:58 Tokyo); the earlier 06:04:24–10:04:24 window is historical. Full goal remains incomplete.
 
-Latest completed slice: [isolated restoration drill](plans/completed/m6-restore-drill.md),
+Previous completed slice: [isolated restoration drill](plans/completed/m6-restore-drill.md),
 committed/pushed as ece351d. Independent safety and documentation reviews passed; all 45 prep
 checks passed at `.artifacts/m0/prep-20260909T095644938452Z`.
 Evidence: `.artifacts/m6/restore-20260909T095111Z/report.json`, wrapper
@@ -12,11 +13,11 @@ the same exported backup snapshot; the schema has no public sequences. The dispo
 database processed a fresh `w` through authenticated ASGI requests and the real worker/LangGraph:
 clarification_needed, succeeded job, three checkpoints, zero model calls. Original runtime was
 not redirected. This is not restored network/browser operation, inherited-job replay or RAG quality.
-Next implementation slice: add a labelled copy action for the final approved response, with
-exact-text, clipboard-denial and real browser verification. Independent release-gap review
-confirmed this is required by the product plan but absent from RunResult. Follow with built-asset
-serving from FastAPI (BOOT) and permission-scoped evaluation results in Quality; neither is
-implemented yet. Keep RAG tuning deferred. Do not start another slice beyond this window.
+Approved-response copying is implemented and verified: [record](plans/completed/m4-approved-copy.md).
+39 component tests/build pass; three real multilingual review journeys pass, plus a final
+360/768/1440 Japanese layout journey. Independent frontend review found no actionable issue.
+Next slice: built-asset serving from FastAPI (BOOT), then permission-scoped evaluation results
+in Quality. Neither is implemented yet. Keep RAG tuning deferred.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped

@@ -18,7 +18,7 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 | `frontend/src/` | 2 |
 | `frontend/src/api/` | 2 |
 | `frontend/src/app/` | 2 |
-| `frontend/src/features/` | 44 |
+| `frontend/src/features/` | 46 |
 | `frontend/src/test/` | 1 |
 
 ## Backend module directories
