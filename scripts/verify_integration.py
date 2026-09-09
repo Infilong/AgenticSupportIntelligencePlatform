@@ -2,12 +2,13 @@
 import os
 import shutil
 import subprocess
+import uuid
 
 from evidence import run_checked
 from runtime import ROOT
 
 
-def main():
+def main(capacity=False):
     uv = shutil.which("uv")
     if not uv or not (ROOT / ".env").is_file():
         print("Run init-env/up and install uv before integration checks.")
@@ -31,8 +32,16 @@ def main():
     port = int(values.get("ASI_DATABASE_PORT", "5440"))
     env = {**os.environ, "ASI_TEST_DATABASE_URL":
            f"postgresql+psycopg://asi_rebuild:{password}@127.0.0.1:{port}/asi_rebuild_test"}
-    return run_checked("integration", [uv, "run", "--frozen", "pytest", "tests/integration", "-q", "--tb=short"],
-                       ROOT / "backend", env, timeout=300)
+    targets = ["tests/integration"]
+    if capacity:
+        targets = ["tests/integration/test_inbox_capacity.py", "tests/integration/test_message_capacity.py",
+                   "tests/integration/test_inbox_views.py"]
+        env.update({"ASI_CAPACITY_BROWSER": "1", "ASI_CAPACITY_BUDGET_MS": "1000"})
+    # A fresh workspace-owned directory avoids shared Windows pytest temp ownership conflicts.
+    temporary = ROOT / ".artifacts" / "m0" / f"pytest-integration-{uuid.uuid4().hex}"
+    return run_checked("inbox-capacity" if capacity else "integration",
+                       [uv, "run", "--frozen", "pytest", *targets, "-q", "--tb=short",
+                        "--basetemp", str(temporary)], ROOT / "backend", env, timeout=420)
 
 
 if __name__ == "__main__":

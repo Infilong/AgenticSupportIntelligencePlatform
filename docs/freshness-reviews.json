@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "65804ed5b65f85f2cdfd622d90f40777e62e8485baf7b59d8c172414028dcc5b",
+    "fingerprint": "f6c7b5788007dbb9cb0ebd2a313c7ec24c61737fded42d7f62e228f71df9a1c1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent entry-point and active-plan review: resumed06:04:24–10:04:24 window and visible workflow/inbox priority explicit; older04:44 cutoff and imports-next directives corrected to historical/deferred. STATUS distinguishes9of10 initial browser results from2focused repaired passes,23frontend tests and remaining50k/RAG/release gates. README and release scope remain accurate."
+    "rationale": "Independent STATUS/plan/entry-point review with inspected reports: capacity6checks+1nested browser,116PG291.36s,24units,65.7–234.1ms per-case warm maxima confirmed. Original1007.056ms failed benchmark retained; threshold unchanged. Current window, next bounded RAG task and incomplete full-release limits remain explicit."
   },
   "frontend": {
-    "fingerprint": "488e09cda0787090d270cd5bd70b6c0d762602df1335266d0e9cee288ced25c8",
+    "fingerprint": "d816d19dc44e069b07e2df93885f76c44bd3445a4c410f51459b21f4b1341588",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of WorkflowView/nodeState, MessageInbox, RunTabs/RunView, history and state/focus tests against architecture. Response controls stay mounted; URL query/page retained;20/50-row list unmounts in detail; chronology and terminal uncertainty explicit. Inspected360workflow screenshot and retained browser reports:9pass1overflow failure, then2focused passes. No full release or50k proof inferred."
+    "rationale": "Independent review of new opt-in real inbox-capacity browser against current table/navigation and architecture. Retained browser JSON has1pass6.6s on50k fixture; script checks bounded20/50rows,deep-page/detail return,Japanese filter,viewer/foreign denial and360/768/1440overflow. Production frontend unchanged; broad semantic/throughput gates remain unverified."
   },
   "tooling": {
-    "fingerprint": "c5357abd0b992c5367cf0d02166b2098c479f6c756dbafe766e4e51b696310b0",
+    "fingerprint": "f1bbc6f146a12f9b44a54daff1908956e2e3691955c9069c75d6be68b9435371",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of scorer regression changes and owning runbook against splitter: negative probe limit and unrelated-section fact regressions preserve reproduced failures; commands unchanged. Runbook accurately requires versioned re-ingestion; freshness maps new RAG contract to backend/evaluation. Retained evidence distinguishes wrapper time from test duration."
+    "rationale": "Independent review of verify-inbox-capacity dispatcher/integration wrapper and capacity launcher/tests against RUNBOOK.420s wrapper bound distinct from1000ms opt-in local target; regular suite omits timing/browser gate. Real child timeout test retains output and stops owned tree; forced external wrapper termination explicitly not covered. Generated command reference updated."
   },
   "evaluation": {
-    "fingerprint": "6eb4512912cc25bb63a3a81c0e33999421ad42574e4edb2eb82baeb73ba9db63",
+    "fingerprint": "a1981a724cb5d46a9e50dcd41bacef45950d82a0760c3633eae557d46b2ee843",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of active-required-sections-v2 scorer, runner safety gate and adversarial tests against eval README/RAG/acceptance. Retained fresh report confirms 26/26 cases,27/27 groups,p95 2.406,zero leakage,404 and unchanged runtime/source. Section substring checks remain not source-bound entailment; four outcomes and four baselines unverified."
+    "rationale": "Independent review of shared ACCEPTANCE capacity wording against new fixture/test and saved reports.50k stored-state rows,100foreign,concurrent cap and116PG evidence do not complete DATA imports or RAG evaluation. Five warm samples are explicitly not stable percentile/throughput; unchanged evaluation corpus and semantic gates preserved."
   },
   "backend": {
-    "fingerprint": "bd12b3cc20faf53524b9aef7568e59183f56e50dd3d8ea82665580bbe9ea76c7",
+    "fingerprint": "c5a97c51f0e414e00eccadc254be95502a068645401d59b4a3d933cb312afaf9",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent workflow UI documentation review: backend source/schema unchanged. Compared four inspector stages, separate review continuation and publication, bounded inbox queries with current API projections and frontend records. Architecture preserves real vector/reranker and simulated generation limits; no 50k capacity or new backend capability claimed."
+    "rationale": "Independent capacity review: compared page-first All query, scoped filtered NOT EXISTS newer attempts,50k admission with idempotency-before-count and tests against architecture/acceptance. Inspected stored-state fixtures, race/latest/order/ACL assertions and116-passPG/24-unit retained logs with unchanged-source reports. No migration, provider processing or production-throughput claim."
   },
   "infrastructure": {
-    "fingerprint": "b7c6a39a48adc1941b8bfc7cc4809abdbf532e9d28a644ff366cf36851137484",
+    "fingerprint": "d9d586e9c53bfff13100c3ba49a13e2859c2cbe66cfc296dcad9a1e89c6a6d31",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of shared architecture changes with unchanged infrastructure source: full-width navigation and stage inspection add no runtime service, database migration or provider integration. Retained local app/worker/PostgreSQL boundaries remain valid;50k capacity is explicitly unverified and deferred to measured work."
+    "rationale": "Independent shared-doc review of unchanged deployment/configuration boundary and new test runtime harness. RUNBOOK limits fixtures to disposable migrated test schemas,temporary loopbackAPI/Vite,synthetic credentials and no providers/workers. Cleanup scope and external termination limitation explicit;50k reads do not establish deployment or processing capacity."
   }
 }

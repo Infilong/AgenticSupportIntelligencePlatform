@@ -2,6 +2,7 @@
 
 from fastapi import HTTPException
 from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy.orm import aliased
 
 from app.jobs.models import Job
 from app.jobs.queue import authorize
@@ -52,20 +53,51 @@ def messages(db, workspace_id, actor_id, search, offset, limit, view="all"):
         "processing": state.in_(["queued", "running"]),
         "failed": state == "failed",
     }
+    latest_join = SupportRun.id == latest
     if view != "all":
         filters.append(views[view])
+        newer = aliased(SupportRun)
+        # Let PostgreSQL filter candidate states before excluding superseded runs.
+        # The correlated latest-ID lookup otherwise repeats for every counted message.
+        latest_join = and_(
+            SupportRun.workspace_id == Message.workspace_id,
+            SupportRun.message_id == Message.id,
+            ~select(newer.id)
+            .where(
+                newer.workspace_id == SupportRun.workspace_id,
+                newer.message_id == SupportRun.message_id,
+                newer.attempt_number > SupportRun.attempt_number,
+            )
+            .correlate(SupportRun)
+            .exists(),
+        )
     query = (
         select(Message, SupportRun, Job)
         .select_from(Message)
         .join(
             SupportRun,
-            SupportRun.id == latest,
+            latest_join,
         )
         .join(Job, Job.id == SupportRun.job_id)
         .where(*filters)
     )
-    total = db.scalar(select(func.count()).select_from(query.subquery()))
-    rows = db.execute(query.order_by(Message.created_at.desc(), Message.id).offset(offset).limit(limit))
+    order = (Message.created_at.desc(), Message.id)
+    if view == "all":
+        # Only resolve the latest run for the requested page. Existence preserves the
+        # existing projection semantics even if an imported message has no run yet.
+        has_run = (
+            select(SupportRun.id)
+            .where(SupportRun.workspace_id == Message.workspace_id, SupportRun.message_id == Message.id)
+            .correlate(Message)
+            .exists()
+        )
+        matching = select(Message.id).where(*filters, has_run)
+        total = db.scalar(select(func.count()).select_from(matching.subquery()))
+        page = matching.order_by(*order).offset(offset).limit(limit)
+        rows = db.execute(query.where(Message.id.in_(page)).order_by(*order))
+    else:
+        total = db.scalar(select(func.count()).select_from(query.subquery()))
+        rows = db.execute(query.order_by(*order).offset(offset).limit(limit))
     return {
         "items": [
             {

@@ -72,7 +72,12 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
 - Inbox views: latest-attempt filtering, matching counts, workspace denial and pagination pass
   within the 113-case PostgreSQL regression. The real filtered inbox journey passes at all three
   widths; a shrinking-page component regression and mobile navigation overflow repair are verified.
-  These views do not complete the imported/labelled-message DATA gate.
+  The later capacity check verifies 50,000 primary stored-state messages, 100 foreign messages,
+  exact latest-attempt ordering/counts, concurrent admission and a real browser on an isolated
+  API/database. Full PostgreSQL regression has 116 passing cases. Five warm samples per query
+  stayed below the unchanged 1,000ms local target after measured repairs; this is not production
+  throughput, a stable latency percentile or proof of 50k AI executions. These views do not
+  complete the imported/labelled-message DATA gate.
 - Linked attempts: PostgreSQL tests cover history, fresh retrieval, atomic competing submissions,
   creator revocation, scoped lineage and limits. The browser clarification/cancel/retry/history
   journey and repaired viewer fixture pass. This advances DATA/ROUTE/JOB/UX

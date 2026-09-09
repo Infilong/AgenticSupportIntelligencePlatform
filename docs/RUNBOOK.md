@@ -333,7 +333,7 @@ also exercises a persisted clarification flow without prepared models, including
 
 ## Retrieval recovery checks
 
-`python scripts/manage.py verify-integration` allows a bounded 300 seconds for the expanded
+`python scripts/manage.py verify-integration` allows a bounded 420 seconds for the expanded
 PostgreSQL suite, including actual child-process termination and database-session loss. This
 command timeout is separate from application latency acceptance gates.
 
@@ -351,3 +351,29 @@ inference lacks the lock protocol. The worker automatically reconciles bounded b
 logs only a repaired count. Inspect protected run/model details for `uncertain` and
 `retrieval_ownership_lost`; unknown usage/cost remains unknown. Retry processing creates a fresh
 attempt. Never clear these records or fabricate finished accounting to make the display green.
+
+## Inbox capacity verification
+
+Run `python scripts/manage.py verify-inbox-capacity` after the local rebuild database is running,
+backend dependencies are synced, frontend dependencies are installed and the project-local
+Playwright browser is available. Node.js is required. The command creates disposable migrated
+schemas only in `asi_rebuild_test`; it never loads the application or archived data with fixtures.
+
+It inserts 50,000 synthetic primary messages plus 100 foreign messages and newer attempts,
+checks actual API counts/order/ACL/page limits, and starts temporary loopback Uvicorn/Vite
+processes for a real browser journey. No route responses or database queries are mocked; no
+provider calls or worker processing occur. A separate fixture verifies concurrent 49,999→50,000
+admission and idempotent replay. All temporary process trees are stopped before schema teardown.
+
+Evidence under `.artifacts/m0/inbox-capacity-<timestamp>/` includes command/source fingerprint,
+`inbox-capacity.json` (measurements and EXPLAIN ANALYZE/BUFFERS), browser JSON/screenshots/traces
+and server/launcher logs. Saved credentials are fixed synthetic test accounts. The local benchmark
+requires per-case warm p95 <=1,000ms: six observations, first excluded, five warm samples, so
+that percentile is effectively the observed maximum. This is a small local sample, not an SLO.
+The ordinary integration suite checks capacity correctness without a hardware-sensitive timing
+assertion or browser startup. Both wrappers have a 420-second process timeout for the enlarged
+fixtures; that timeout is distinct from the 1,000ms request budget. Fresh workspace-owned pytest
+temporary directories avoid shared Windows temp ownership failures. Browser logs stream before
+waiting, and a real child-process timeout regression checks cleanup and retained diagnostics.
+Normal completion and inner browser-timeout cleanup own the process trees. Forced external
+termination of the entire verification wrapper is not covered by that cleanup test.

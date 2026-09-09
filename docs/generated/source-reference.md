@@ -43,6 +43,7 @@ python scripts/manage.py seed-demo
 python scripts/manage.py up
 python scripts/manage.py verify-backend
 python scripts/manage.py verify-browser
+python scripts/manage.py verify-inbox-capacity
 python scripts/manage.py verify-ingestion
 python scripts/manage.py verify-integration
 python scripts/manage.py verify-prep

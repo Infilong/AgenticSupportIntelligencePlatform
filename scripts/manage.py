@@ -12,7 +12,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["doctor", "verify-prep", "verify-browser", "evidence",
                                             "init-env", "up", "migrate", "down", "verify-backend",
-                                            "verify-integration", "seed-demo", "verify-worker", "prepare-model",
+                                            "verify-integration", "verify-inbox-capacity", "seed-demo", "verify-worker", "prepare-model",
                                             "verify-ingestion"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
     args = parser.parse_args()
@@ -38,9 +38,9 @@ def main():
                            "-p", "asi-rebuild-v1", "run", "--rm", "api", "uv", "run",
                            "--frozen", "python", "-m", module], ROOT,
                            timeout=600 if args.command == "prepare-model" else 180)
-    if args.command == "verify-integration":
+    if args.command in {"verify-integration", "verify-inbox-capacity"}:
         from verify_integration import main as integration
-        return integration()
+        return integration(capacity=args.command == "verify-inbox-capacity")
     if args.command == "verify-backend":
         uv = shutil.which("uv")
         if not uv:

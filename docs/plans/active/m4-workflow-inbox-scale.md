@@ -48,3 +48,39 @@ excluded by the `.test.tsx`-only test glob; the glob now includes both extension
 Independent reviewer: no P0/P1; fixed source focus and viewer compose deep-link P2s with tests.
 No backend semantics/schema changed in this slice. Next: real isolated 50,000-message query
 measurements and admission-limit decision, then remaining goal work within the current window.
+
+## Capacity measurement protocol
+
+Before tuning: 50,000 primary + 100 foreign synthetic stored-state messages, 500 newer
+attempts, real migrated PostgreSQL and actual HTTP route validation via TestClient. Check
+first/middle/last pages, each latest-attempt view, selective and Japanese searches, exact stable
+ordering/counts, viewer reads, cross-workspace denial and 50-row response limit. No provider
+jobs run in this fixture. Capture first observation plus five warm samples per case and
+EXPLAIN ANALYZE/BUFFERS. Local target is warm per-case p95 <= 1,000ms, set before measurement;
+CI retains deterministic correctness checks without a hardware-sensitive timing assertion.
+API admission at 50k and browser capacity remain separate required checks. Do not confuse
+bulk fixture insertion beyond the current 10k cap with supported message admission.
+
+## Capacity result
+
+Completed the planned stored-state capacity boundary. Baseline 50k first/deep warm maxima were
+403/960/737ms; plans exposed repeated latest-run resolution in counting/deep pagination.
+All-view message-ID paging/count reduced that work while preserving runless-row exclusion.
+A repeat failed the unchanged 1,000ms budget on Failed view at 1007.1ms; scoped NOT EXISTS newer
+attempts now allows filtered queries to prune candidates before latest-attempt exclusion.
+Independent SQL review found no ACL/latest-state/order regression. No migration/index was needed.
+
+Final command `verify-inbox-capacity`: six checks pass, actual isolated browser passes with
+50k data, admission races admit exactly the 50,000th message and replay adds no job. Evidence:
+`.artifacts/m0/inbox-capacity-20260909T065459385520Z`; five warm samples per case ranged 65.7–234.1ms
+at their maxima, not stable production percentiles or AI throughput. Full PostgreSQL regression
+116 passed in 291.36s at `.artifacts/m0/integration-20260909T065711706876Z`; 24 unit checks pass at
+`.artifacts/m0/backend-20260909T065810797302Z`; frontend build/Ruff pass. Original latency failure,
+Windows shared-temp failure and initial cleanup-test stdout fixture failure remain saved.
+
+Harness review fixed lost timeout output and direct-process-only cleanup. Browser output now
+streams to a file, process trees are owned/stopped, and a real timed-out child-process test passes.
+The integration wrapper uses unique workspace temporary directories and a 420s bound for the
+larger fixtures. The browser runs real Vite→FastAPI→PostgreSQL, with no response interception,
+provider execution or application-data seeding. This does not complete imports, labels or M1–M6.
+Next authorized slice: confirmed repetitive-text provenance and context-selection RAG defects.

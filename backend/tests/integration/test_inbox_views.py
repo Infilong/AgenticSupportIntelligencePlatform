@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from app.jobs.models import Job
-from app.modules.support.models import SupportRun
+from app.modules.support.models import Message, SupportRun
 from tests.integration.conftest import login
 
 
@@ -100,3 +100,21 @@ def test_new_attempt_moves_message_between_views_without_counting_old_outcome(sy
     assert current["run_id"] not in {row["run_id"] for row in attention["items"]}
     assert response.json()["run_id"] in {row["run_id"] for row in processing["items"]}
     assert client.get(path).json()["total"] == len(expected["all"])
+
+
+def test_all_count_and_page_consistently_exclude_a_message_without_a_run(system):
+    path, expected = populate(system)
+    with Session(system["engine"]) as db, db.begin():
+        db.add(
+            Message(
+                workspace_id=system["workspace"],
+                actor_id=system["users"]["operator"].id,
+                original="Unprocessed fixture",
+                language="en",
+                submission_key="unprocessed",
+                input_hash="0" * 64,
+            )
+        )
+    page = system["client"].get(path, params={"limit": 50}).json()
+    assert page["total"] == len(page["items"]) == len(expected["all"])
+    assert system["client"].get(path, params={"search": "Unprocessed"}).json() == {"items": [], "total": 0}

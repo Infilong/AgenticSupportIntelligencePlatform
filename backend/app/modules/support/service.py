@@ -62,7 +62,7 @@ def create_message(db, workspace_id, actor_id, data, key):
         )
         return {"message_id": previous.id, "run_id": run.id, "job_id": run.job_id}
     count = db.scalar(select(func.count()).select_from(Message).where(Message.workspace_id == workspace_id))
-    if count >= 10000:
+    if count >= 50000:
         raise HTTPException(409, "Workspace message limit reached")
     message = Message(
         id=uuid.uuid4(),

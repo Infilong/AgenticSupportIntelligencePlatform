@@ -6,18 +6,30 @@ Current window: **06:04:24–10:04:24 UTC** (stop 19:04:24 Tokyo).
 priority: visible recorded workflow, full-width inbox/detail navigation and real 50,000-message
 capacity verification. The latest user approval renews full-goal execution, not just the audit.
 
-Latest application slice: **recorded workflow inspector and full-width inbox verified**.
-Response/Workflow/Sources/History tabs preserve editing state; URL filters/page survive detail
-navigation. Cancellation remains available from every tab. The table loads 20/50 rows, with
-page jump and first/last controls; 50,000-message backend capacity is the next slice, not yet proven.
-TypeScript/Vite build and 23 frontend tests pass. Nine existing workbench browser journeys pass
-in `.artifacts/m4/workflow-inbox-ui-20260909`; that run also preserved a failed mobile inbox
-screenshot. The grid-child minimum-width repair passes the two focused inbox/workflow journeys
-in `.artifacts/m4/workflow-inbox-ui-fixed-20260909` at 360/768/1440px. Chrome inspection confirmed
-actual stages and nested model records on the earlier approved Japanese run. Independent review
-found two P2 issues (source opener focus and viewer compose URL); both were fixed with tests.
-The test include pattern now covers `.test.ts` as well as `.test.tsx`, preventing silent omission
-of workflow-state tests. These UI checks do not establish full release or RAG quality completion.
+Latest application slice: **workflow inspection and 50,000-message stored-state capacity verified**.
+UI checkpoint `bf983df` is pushed; GitHub CI `34319742288` passed. Response/Workflow/Sources/History
+tabs preserve editing state; URL filters/page survive detail navigation, and cancellation remains
+available from every tab. The table requests 20/50 rows and unmounts during detail inspection.
+
+Capacity evidence: `.artifacts/m0/inbox-capacity-20260909T065459385520Z` has six passing checks,
+including actual 50k-row browser navigation against a disposable API/Vite/database schema,
+foreign-data denial and concurrent admission at the 50,000-message cap. First/deep/view/search
+warm maxima were 65.7–234.1ms. Each case has only five warm samples (reported p95 equals maximum);
+this proves bounded stored-state reads, not provider throughput, stable production latency or
+50k successful AI runs. Initial latency failure 1007.1ms is retained at
+`.artifacts/m0/inbox-capacity-20260909T064816811978Z`; the 1,000ms criterion stayed unchanged.
+All-view paging/count and filtered latest-attempt anti-joins removed measured repeated work.
+
+Full PostgreSQL regression: 116 passed in 291.36s
+(`.artifacts/m0/integration-20260909T065711706876Z`). Backend unit checks: 24 passed
+(`.artifacts/m0/backend-20260909T065810797302Z`), including real timeout/child cleanup.
+Ruff and TypeScript/Vite build pass. The 37-check preparation pass at the UI checkpoint is
+`.artifacts/m0/prep-20260909T063415063136Z`; capacity checkpoint preparation follows doc review.
+The unchanged UI has 23 frontend tests, nine existing workbench journey passes in
+`.artifacts/m4/workflow-inbox-ui-20260909`, and repaired inbox/workflow browser passes at 360/768/1440
+in `.artifacts/m4/workflow-inbox-ui-fixed-20260909`. The initial mobile overflow failure remains
+saved; source focus and viewer compose deep-link review findings were fixed with tests.
+These checks do not establish full release or semantic RAG quality completion.
 
 Preceding checkpoint: **RAG design audit and targeted repairs verified**; full hardening is incomplete.
 [The execution record](plans/completed/rag-design-hardening.md) owns findings, repairs and verification.

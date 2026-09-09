@@ -1,6 +1,6 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for workflow inspection and full-width inbox navigation built on `00bfe7e`.
+Updated 2026-09-09 for workflow inspection and measured inbox capacity built on `bf983df`.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
@@ -180,7 +180,14 @@ attempt. Counts and rows share server-side search/workspace/view semantics. Atte
 development handoffs, human review and completed clarification/missing-evidence outcomes; Ready
 contains only completed approved responses. Cancelled/rejected attempts remain in All. Pagination
 supports first/previous/next/last, direct page entry and 20/50-row sizes. Shrinking results clamp
-to a valid page. These views do not implement imports, labels or prove 50,000-message capacity.
+to a valid page. These views do not implement imports or labels. An isolated 50,000-message
+stored-state fixture now verifies exact counts, latest attempts, stable ordering, scoped reads,
+concurrent admission and real browser navigation; it is not AI-processing throughput proof.
+Admission is limited to 50,000 messages per workspace, independently of the knowledge-chunk quota.
+Workspace locking prevents concurrent requests from exceeding the cap; valid idempotent replays
+reuse the original run/job even at the cap. All-view queries page message IDs before resolving
+latest runs; filtered views exclude superseded runs with a scoped anti-join. Counts and rows
+consistently exclude runless messages pending the separate import design.
 At narrow widths only the table scrolls horizontally; the page remains within the viewport.
 
 The Workflow tab renders the four recorded LangGraph stages: input check, retrieval/context,
