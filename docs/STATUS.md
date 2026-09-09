@@ -10,24 +10,31 @@ and pushes to `codex/fresh-start` are authorized; merging, public deployment and
 
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
 The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
-Current: close the [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) review
-and checkpoint. Next source slice is the connected recorded-generation path in that assessment;
-do not begin an unreviewed cross-boundary refactor near this window's deadline. Keep RAG tuning
-deferred. At the deadline, save the exact continuation point and stop.
+The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
+Current: finish the window handoff and stop at14:58 UTC; no additional implementation is started
+near the deadline. Next authorized window: narrow and implement the connected recorded-generation
+path in the M5 assessment, then verify it before adding the four-way runner. Keep RAG tuning
+deferred. Do not treat this checkpoint or an automatic continuation as a new execution window.
 
 [REBUILD_GOAL](REBUILD_GOAL.md) and [release plan](../REBUILD_PLAN.md) own the goal and scope;
 [ACCEPTANCE](ACCEPTANCE.md) owns gates. This file routes current work, not historical execution.
 
 ## Latest verified checkpoint
 
-- Application/tooling checkpoint: **fb29b6f**, trusted saved-backup restoration, committed/pushed.
-  Hosted CI34362786364 passed. Subsequent status navigation changes are documentation only.
+- Latest verified source checkpoint: **fd18e50**, packaged admin journeys and test cleanup,
+  committed/pushed. Hosted CI34365353115 passed all five jobs, including real PostgreSQL,
+  frontend browser checks and packaged-release smoke. This final handoff changes documentation only.
+- Recovery checkpointfb29b6f CI34362786364 passed; original backups/databases remain preserved.
 - Status-navigation checkpointf1cb7ad is committed/pushed;53 preparation checks passed at
   `.artifacts/m0/prep-20260909T142552861669Z`.
 - Packaged admin/session/import/inbox run:9 passes at `.artifacts/m6/release-admin-20260909`.
   After settings-test cleanup and promise-handling repairs, both settings cases pass at
   `.artifacts/m6/release-settings-final-20260909`. Other eight cases are unchanged; no full
-  security/expiry/nativezoom claim. Independent review and checkpoint closure follow.
+  security/expiry/nativezoom claim. Independent source and documentation reviews are closed.
+- Final administration preparation:53 passes at `.artifacts/m0/prep-20260909T144034446438Z`;
+  Chromium environment check passes at `.artifacts/m0/browser-20260909T144047776655Z`.
+  The ignored local `.artifacts/m6/window-checkpoint-20260909T1458.json` records final revision,
+  CI and stop observations when present; its absence on a new checkout is not an error.
 - Independent safety and documentation reviews closed with no actionable findings.
 - All71 backend units pass: `.artifacts/m0/backend-20260909T141032167323Z`.
 - All53 preparation checks pass: `.artifacts/m0/prep-20260909T141735149948Z`.

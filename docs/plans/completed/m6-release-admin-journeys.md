@@ -54,3 +54,12 @@ All53 prep checks pass at .artifacts/m0/prep-20260909T144034446438Z; Chromium en
 verification passes at .artifacts/m0/browser-20260909T144047776655Z. Root also inspected the
 final360px Settings screenshot with original English default. Navigation CI34363843198 passed.
 This completion note follows verification and changes no mapped source or documentation contract.
+
+Checkpointfd18e50 is pushed. GitHub CI34365353115 passed all five jobs: Windows/Linux
+preparation, backend PostgreSQL integration, frontend browser tests and packaged release smoke.
+M5 generation-path assessment remains unimplemented, with explicit live/no-spend limitations.
+Final window handoff updates STATUS only; no further application or harness edits follow.
+
+Final handoff wording is independently reviewed;53 preparation checks pass at
+.artifacts/m0/prep-20260909T144941203289Z. This note records that result without changing the
+reviewed current contract. The full goal remains active/incomplete at the window boundary.
