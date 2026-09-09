@@ -98,9 +98,9 @@ belongs to that stack; it is not part of the rebuild. New volumes must carry the
 - Maintain distinct original message, linked attempt, draft, reviewed final and decision history.
 - Use exact SQL vector search and a measured bounded lexical baseline; no broad new search stack.
 
-Current retrieval uses vector candidates plus neural reranking. The original lexical/fusion
-requirement remains an explicit discrepancy pending comparison or a release-plan decision;
-the measured reranker evidence does not prove that original requirement completed.
+Current retrieval uses vector candidates plus neural reranking. Independent BM25 and fusion
+remain unimplemented requirements; the measured reranker evidence does not prove their completion.
+[RAG design and audit](RAG.md) owns stage contracts, failure taxonomy and measured hardening gaps.
 Application messages/runs, graph integration and human-review records now exist.
 
 Refer to REBUILD_PLAN for the target repository topology; create files only when needed.

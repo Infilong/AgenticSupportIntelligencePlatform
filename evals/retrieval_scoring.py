@@ -1,5 +1,7 @@
 """Source discovery and passage sufficiency are distinct, frozen evaluation metrics."""
 
+SCORER_VERSION = "active-required-sections-v2"
+
 
 def normalized(text):
     return " ".join(text.split()).casefold()
@@ -9,7 +11,13 @@ def score_case(case, response, facts, versions):
     all_rows = response["results"]
     rows = all_rows[:5]
     sections = {row["section"] for row in rows}
-    passages = [normalized(row["text"]) for row in rows]
+    required_sections = {section for group in case["groups"] for section in group}
+    passages = [
+        normalized(row["text"])
+        for row in rows
+        if row["section"] in required_sections
+        and versions.get(row["version_id"], {}).get("state") == "active"
+    ]
     leakage = [
         row["version_id"]
         for row in all_rows
@@ -36,6 +44,13 @@ def score_case(case, response, facts, versions):
         "leakage": leakage,
         "result_bound_violated": len(all_rows) > 5,
     }
+
+
+def safety_passed(cases, probes):
+    return all(
+        not row["leakage"] and not row["result_bound_violated"]
+        for row in [*cases, *probes]
+    )
 
 
 def aggregate(cases):

@@ -32,7 +32,7 @@ Include:
 - Authentication, workspace membership and server-enforced permissions.
 - Manual customer-message entry and bounded JSONL conversation import with labels.
 - Text/Markdown knowledge uploads, originals, versions and background indexing.
-- Real embeddings and PostgreSQL vector retrieval; a small multilingual lexical path.
+- Real embeddings and PostgreSQL vector retrieval; a bounded multilingual BM25 path.
 - Same-language responses with citations to exact document versions and passages.
 - One configurable support workflow using LangChain and LangGraph.
 - Human clarification, approve/edit/reject, cancellation and linked retries.
@@ -212,13 +212,14 @@ Retrieval:
 Implementation note (2026-09-09, checkpoint `2379915`): current search selects 20 cosine
 candidates and uses a local multilingual neural reranker. The measured need and frozen-corpus
 results are recorded in [M2](docs/plans/active/m2-real-retrieval.md). Steps 3–4 below describe
-the original release requirement, not current code; lexical/fusion comparison or an explicit
-scope decision remains outstanding. Do not infer their completion from reranker test results.
+the release requirement, not current code. The user's earlier topology names BM25 candidates;
+the subsequent audit brief requires measured lexical/hybrid comparison. See [RAG design](docs/RAG.md).
+BM25/fusion parameters remain a measured design choice; reranker results do not complete this work.
 
 1. Apply workspace, active-version and allowed-knowledge filters before model context.
 2. Use database-side exact pgvector search, not application-side scanning of all vectors.
-3. Retrieve a bounded lexical candidate set with documented Unicode-aware EN/JA/ZH behavior.
-4. Combine vector and lexical rankings using a tested rank-fusion function.
+3. Retrieve independent BM25 candidates with documented Unicode-aware EN/JA/ZH behavior.
+4. Combine vector and BM25 rankings using measured rank fusion, retaining separate raw scores.
 5. Deduplicate and select evidence within a token budget, retaining citation provenance.
 
 Retrieve across permitted source languages; do not filter out English policies for Japanese
@@ -467,7 +468,7 @@ Make, WSL and a personal Chrome extension must not be required for verification.
 | JOB | Restart, expired lease, duplicate admission and cancellation preserve correct state |
 | DATA | Import, label, select and process customer messages form a connected workflow |
 | TRACE | Displayed model, evidence, timing and usage agree with persisted records |
-| EVAL | Three distinct pipelines run the same cases with comparable settings |
+| EVAL | Four distinct pipelines run the same cases with comparable settings |
 | UX | Core journeys, keyboard flow, narrow layouts, zoom and error states pass in browser |
 | RESTORE | Restored data matches backup and the restored app processes a new request |
 
@@ -480,8 +481,8 @@ Use at least ten fixed cases per language, including paraphrases, cross-language
 missing information, policy conflicts, prompt injection and required review. Keep expected
 facts/permitted sources separate from application code. Never add fixture-specific answer logic.
 
-Compare direct_llm (no retrieval), vector_rag (vector retrieval), and system_v1 (hybrid plus
-governed workflow). Keep generation settings comparable and record intentional differences.
+Compare direct_llm (no retrieval), vector_rag (vector retrieval), hybrid_rag (vector plus BM25),
+and system_v1 (hybrid plus governed workflow). Keep generation settings comparable and record differences.
 Freeze retrieval/answer/citation targets and latency budgets before tuning; do not force a
 baseline to lose. Report counts and denominators per language, with representative outputs.
 
@@ -506,7 +507,7 @@ tested local profile, not an enterprise scale claim. Bound payloads and paginate
 | M2 | TXT/Markdown → worker → real embeddings → ask → cited draft → source inspection |
 | M3 | Clarification, review, cancellation, retries, recovery and durable checkpoints |
 | M4 | Import/labels, version management, usable responsive workbench and minimal settings |
-| M5 | Three evaluation pipelines, per-language results and compact usage view |
+| M5 | Four evaluation pipelines, per-language results and compact usage view |
 | M6 | Fresh-install, full browser/security/live checks, restoration and release evidence |
 
 Observability and tests begin in M1. M2's live gate remains unverified without spending

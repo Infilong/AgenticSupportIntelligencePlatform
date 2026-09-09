@@ -30,7 +30,7 @@ embedding/retrieval quality has separate evidence and does not require an extern
 | JOB | Crash/lease expiry/replay/cancellation preserve correct state and uncertainty | Worker fault injection |
 | DATA | Imported/labelled messages can actually start processing | Real import→select→run journey |
 | TRACE | UI evidence, model, durations/tokens/cost agree with stored records | Ledger/trace integration and UI inspection |
-| EVAL | direct_llm/vector_rag/system_v1 execute distinct comparable pipelines | Baseline routing and live corpus report |
+| EVAL | direct_llm/vector_rag/hybrid_rag/system_v1 execute distinct comparable pipelines | Baseline routing and live corpus report |
 | UX | Main journeys and failure states work with keyboard, 360/768/1440px and 200% zoom | Actual app Playwright + visual inspection |
 | RESTORE | Backup fingerprints match restored data; restored app handles a new request | Isolated restoration drill |
 
@@ -94,9 +94,9 @@ Frozen retrieval thresholds are at least 90% overall and 80% per language for bo
 success@5 and required-section-group recall@5, zero forbidden leaks, and warm p95 <= 3 seconds.
 The fixed denominators are 26 cases/27 groups. These thresholds were set before measurement;
 selecting easier thresholds after seeing failures is not allowed. Generation thresholds and
-three-pipeline comparisons remain separate pending work.
+four-pipeline comparisons remain separate pending work; [RAG design](RAG.md) details the audit gaps.
 If an approved criterion must change, record the change and obtain product approval.
-Compare identical case sets and compatible generation settings across all three pipelines.
+Compare identical case sets and compatible generation settings across all four pipelines.
 
 Release output includes revision/source fingerprint, dependency/config/corpus hashes, commands,
 exit codes, passed/failed/skipped/blocked counts, screenshots/traces and live spend estimate.

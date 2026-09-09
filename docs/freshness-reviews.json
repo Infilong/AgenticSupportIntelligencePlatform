@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "b3bd03abb35a97c426a4f082aedbaa81a15bd887d2fb917a830dfaaf289b6587",
+    "fingerprint": "b743f22fbb8120450bf50c4de96a9b1b40502a213857412497ea7aba0e412fcc",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed closing STATUS and completed-plan link; identifies pushed8d7dd13 evidence, sentence-only follow-up verification boundary, incomplete release and explicit04:44:58 stop. Final revision or CI is not presumed successful."
+    "rationale": "Independent entry-point review of README, release plan, STATUS and completed RAG record against source and retained evidence. Four baseline target aligned; BM25 attributed to earlier topology. Completed targeted repairs separated from incomplete semantic hardening and preceding M4 window; latest-slice and repaired-priority contradictions corrected."
   },
   "frontend": {
-    "fingerprint": "e31ddac7e4433a839fab0cc75ffe4dc6d6214458037da4f8a3024ff82972cbd2",
+    "fingerprint": "febd73ea8fd6468bb6bd1673df0f75a49c5dbaff36e794d3851e81d06812b6b2",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed sentence-only removal from historical clarification copy against latest-attempt-only controls. Preserved question and source attribution remain; no workflow behavior changed. Broader prior browser evidence is not claimed rerun."
+    "rationale": "Independent review of unchanged frontend boundary and updated architecture: no frontend or API contract change in RAG repair. Two retained knowledge browser cases pass; documentation scopes this to knowledge journeys and does not claim renewed full-app UX verification."
   },
   "tooling": {
-    "fingerprint": "8c2675f0b6b7e9bbfa996aeb8669253f3933e2670136ccdf12ec8fc537d19a9d",
+    "fingerprint": "c5357abd0b992c5367cf0d02166b2098c479f6c756dbafe766e4e51b696310b0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed Message view/Clear filters runbook recipe and API query names against implementation; final new inbox plus nine existing journeys support documented behavior without claiming imports."
+    "rationale": "Independent review of scorer regression changes and owning runbook against splitter: negative probe limit and unrelated-section fact regressions preserve reproduced failures; commands unchanged. Runbook accurately requires versioned re-ingestion; freshness maps new RAG contract to backend/evaluation. Retained evidence distinguishes wrapper time from test duration."
   },
   "evaluation": {
-    "fingerprint": "1058175378e90d5694d1c01fc4b3359deef4644de155e13be65ee8f8bceaaa00",
+    "fingerprint": "6eb4512912cc25bb63a3a81c0e33999421ad42574e4edb2eb82baeb73ba9db63",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed partial inbox evidence against113-test regression and browser reports without weakening full UX/DATA thresholds; imported or labelled message processing remains unfinished."
+    "rationale": "Independent review of active-required-sections-v2 scorer, runner safety gate and adversarial tests against eval README/RAG/acceptance. Retained fresh report confirms 26/26 cases,27/27 groups,p95 2.406,zero leakage,404 and unchanged runtime/source. Section substring checks remain not source-bound entailment; four outcomes and four baselines unverified."
   },
   "backend": {
-    "fingerprint": "41029ac9368cb04df53433200cfe36285fcb108a472cb075ab19c771174a4fb1",
+    "fingerprint": "c270151352616618f4cf898d0e9dfa4d07881be93691b789cf682f5f78767df2",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared latest-attempt view predicates, shared count/row query and validated workspace endpoint with architecture; retained113 PostgreSQL log passes. No model or permission behavior added."
+    "rationale": "Independent RAG repair review: inspected splitting continuity, real-heading reset, end separators and boundary regressions against architecture/RAG/runbook. Retained 23-unit and 113-PG logs and fresh boundary report support bounded repairs; re-ingestion required. No semantic grounding, BM25, generation or production completion inferred."
   },
   "infrastructure": {
-    "fingerprint": "0526598c5f683243630af06b639340c20ccaae85e9782c6724a62e14c1f55299",
+    "fingerprint": "5e8072e2fd03b12374f12670498f38f42ba55ce7f88c6a01f3ff00704155410f",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed shared current architecture and runbook following mobile navigation repair; runtime topology unchanged and no new deployment or model claim."
+    "rationale": "Independent review of unchanged infrastructure/configuration boundary against architecture and runbook. No added search service, migration, provider integration or deployment claimed. Retained runtime fingerprints are stable across fresh retrieval measurement; existing stored chunks require normal versioned re-ingestion, not automatic migration."
   }
 }

@@ -31,6 +31,7 @@ def source_blocks(text):
         else:
             boundaries.append((heading.start(), heading.group(1)))
     for index, (start, section) in enumerate(boundaries):
+        section_start = start
         end = boundaries[index + 1][0] if index + 1 < len(boundaries) else len(text)
         while start < end:
             stop = min(start + 8000, end)
@@ -38,7 +39,7 @@ def source_blocks(text):
                 newline = text.rfind("\n", start + 4000, stop)
                 if newline >= 0:
                     stop = newline + 1
-            yield start, section, text[start:stop]
+            yield section_start, start, section, text[start:stop]
             start = stop
 
 
@@ -49,14 +50,26 @@ def split_document(text, provider, checkpoint=lambda: None):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=350,
         chunk_overlap=45,
+        keep_separator="end",
         length_function=provider.token_count,
         separators=["\n\n", "\n", "。", "！", "？", ". ", " ", "、", "，", ""],
     )
     result = []
-    for offset, section, block in source_blocks(text):
+    tail_start, prior_section = None, None
+    for section_start, offset, section, block in source_blocks(text):
         checkpoint()
+        if not block.strip():
+            tail_start = None
+            continue
+        if tail_start is not None and prior_section == section_start:
+            # Re-split the final bounded chunk across the artificial work boundary.
+            # A real heading (including repeated heading text) always resets continuity.
+            result.pop()
+            block = text[tail_start:offset] + block
+            offset = tail_start
         previous_start = -1
-        for content in splitter.split_text(block):
+        contents = splitter.split_text(block)
+        for content in contents:
             if len(result) >= 1000:
                 raise ValueError("Document exceeds 1000 chunks")
             start = block.find(content, previous_start + 1)
@@ -73,6 +86,10 @@ def split_document(text, provider, checkpoint=lambda: None):
                 )
             )
             previous_start = start
+        # Repeated text may have several exact occurrences. Carry the final occurrence,
+        # not the first matching offset, so repetitive documents cannot grow the work block.
+        tail_start = offset + block.rfind(contents[-1]) if contents else None
+        prior_section = section_start
     if not result:
         raise ValueError("Document must produce at least one chunk")
     return result

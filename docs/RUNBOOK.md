@@ -208,7 +208,10 @@ require an idempotency key. Replacements become active only after successful ind
 replacements preserve the old active version. Limits: 500 active documents, 20 versions per
 document, 500 MiB retained originals, 50,000 retained chunks per workspace, 1,000 per document.
 Splitting checks cancellation between bounded 8,000-character blocks and preserves section and
-normalized Unicode character offsets. Opaque ASCII tokens longer than 4,096 characters fail.
+normalized Unicode character offsets. The final chunk is re-split with the next work block;
+real headings reset overlap, and sentence separators remain with preceding text. Existing
+chunks require normal versioned re-ingestion to receive these repairs. Opaque ASCII tokens
+longer than 4,096 characters fail.
 Original bytes and checksum remain available separately from normalized text.
 
 ## Real retrieval smoke

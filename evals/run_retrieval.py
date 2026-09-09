@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 from freeze_retrieval import CASES, FACTS, LOCK, MANIFEST, ROOT, snapshot
-from retrieval_scoring import aggregate, score_case
+from retrieval_scoring import SCORER_VERSION, aggregate, safety_passed, score_case
 from runtime_fingerprint import verify_runtime
 
 sys.path.insert(0, str(ROOT.parent))
@@ -75,6 +75,7 @@ def main():
     artifact.mkdir(parents=True)
     report = {
         "frozen": frozen,
+        "scorer_version": SCORER_VERSION,
         "status": "started",
         "documents": [],
         "cases": [],
@@ -203,9 +204,7 @@ def main():
                 and all(scores[lang][metric] >= 0.8 for lang in ("en", "ja", "zh"))
                 for metric in ("case_success_at_5", "section_recall_at_5")
             )
-            and not any(case["leakage"] for case in report["cases"])
-            and not any(case["result_bound_violated"] for case in report["cases"])
-            and not any(probe["leakage"] for probe in probes)
+            and safety_passed(report["cases"], probes)
             and denied == 404
             and p95 <= 3
         )

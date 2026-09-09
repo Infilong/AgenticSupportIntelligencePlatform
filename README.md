@@ -17,6 +17,7 @@ PostgreSQL/pgvector, with one worker and no Redis or cloud platform.
 - [Current status and next step](docs/STATUS.md)
 - [Acceptance gates](docs/ACCEPTANCE.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [RAG design, audit and failure contract](docs/RAG.md)
 - [Preparation runbook](docs/RUNBOOK.md)
 
 ## Preparation checks

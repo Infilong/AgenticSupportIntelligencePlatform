@@ -3,7 +3,7 @@
   "areas": {
     "backend": {
       "sources": ["backend/"],
-      "docs": ["backend/AGENTS.md", "docs/ARCHITECTURE.md", "docs/ACCEPTANCE.md"]
+      "docs": ["backend/AGENTS.md", "docs/ARCHITECTURE.md", "docs/ACCEPTANCE.md", "docs/RAG.md"]
     },
     "frontend": {
       "sources": ["frontend/"],
@@ -11,7 +11,7 @@
     },
     "evaluation": {
       "sources": ["evals/"],
-      "docs": ["evals/AGENTS.md", "evals/README.md", "docs/ACCEPTANCE.md"]
+      "docs": ["evals/AGENTS.md", "evals/README.md", "docs/ACCEPTANCE.md", "docs/RAG.md"]
     },
     "tooling": {
       "sources": ["scripts/"],

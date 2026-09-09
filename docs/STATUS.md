@@ -1,7 +1,10 @@
 # Current status
 
-Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
-Current checkpoint: M4 focused inbox views verified; this execution window closes at 04:44:58 UTC. M1–M6 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
+Latest checkpoint: **RAG design audit and targeted repairs verified**; full hardening is incomplete.
+[The execution record](plans/completed/rag-design-hardening.md) owns findings, repairs and verification.
+This task started at 04:48:37 UTC with an 08:48:37 UTC stop limit. The preceding M1–M6 window
+ended at 04:44:58 UTC; its full release goal remains incomplete and is not resumed by this audit.
+Current application checkpoint: M4 focused inbox views verified. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -12,7 +15,7 @@ provider and documentation-workflow clarifications; it is now covered by project
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M4 inbox record](plans/completed/m4-inbox-views.md) owns the latest verified slice;
+[M4 inbox record](plans/completed/m4-inbox-views.md) owns the preceding app slice;
 [M3 clarification plan](plans/completed/m3-review-clarification.md) retains the preceding checkpoint;
 [M3 recovery plan](plans/completed/m3-retrieval-recovery.md) retains the preceding checkpoint;
 [M3 linked-attempt record](plans/completed/m3-linked-attempts.md) retains the preceding slice;
@@ -20,10 +23,17 @@ Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513f
 [M2 execution plan](plans/active/m2-real-retrieval.md) retains retrieval decisions and evidence;
 [M1 history](plans/active/m1-foundation.md) retains foundation work.
 Normal verified commits/pushes to this branch are authorized. No merge/deploy/paid API authority.
-The new work window starts **2026-09-09 00:44:58 UTC** and ends **04:44:58 UTC**
+The preceding app work window started **2026-09-09 00:44:58 UTC** and ended **04:44:58 UTC**
 (13:44:58 Tokyo time), retaining the four-hour limit. Previous cutoff/evidence remain historical.
 
 ## Verified current behavior
+
+The scoped [RAG audit](RAG.md) repaired artificial chunk-boundary evidence loss, sentence
+separator placement and evaluator false positives. Fresh checks: 23 unit tests, 113 PostgreSQL
+tests, three real EN/JA/ZH boundary probes, 26/26 frozen evidence cases (27/27 groups; warm p95
+2.406s), and two knowledge browser journeys. See the linked execution record for artifacts and
+remaining semantic/BM25/trace gates. Existing stored documents need versioned re-ingestion to
+receive the chunk repair; no existing corpus or answer-quality threshold was weakened.
 
 The human-review slice has verified distinct execution/outcome fields, immutable review decisions,
 operator/admin enforcement, durable review continuation and connected approve/edit/reject controls.
@@ -230,8 +240,9 @@ This four-hour window ends at 04:44:58 UTC (13:44:58 Tokyo). Do not start a new 
 slice beyond that boundary without renewed execution-window authority. On resume, first inspect
 the current branch/CI, local processes and this record. The local ignored artifact
 `.artifacts/m4/window-checkpoint.json` records final revision/CI observations when available;
-absence on another checkout is not a failure. The app goal remains active and incomplete.
-Next product slice: bounded JSONL conversation imports with labels and an explicit selected-item
+absence on another checkout is not a failure. The full app goal remains incomplete.
+After the separately authorized RAG audit, the previously planned product slice is bounded
+JSONL conversation imports with labels and an explicit selected-item
 processing action, following REBUILD_PLAN. Imports, lexical/fusion retrieval and other release
 gates remain open; the current inbox query assumes each message already has a run, so imports
 require a cohesive persistence/read-model change rather than bypassing the normal workflow.
@@ -244,8 +255,8 @@ the host/VM clock mechanism and causes of older intermittent failures remain unr
 Human-review concurrency and a real
 worker restart at its durable wait have passed; broader routing/recovery gates remain open.
 Never import evaluation answers as runtime responses, invent API usage or equate exact citations
-with semantic support. Continue into the planned human-review/recovery gates after this slice.
-The user resumed this implementation window; missing APIs do not block real local search.
+with semantic support. Remaining human-review/recovery gates are release work, not audit completion.
+Missing APIs do not block real local search.
 Current topology and implementation boundaries are in [architecture](ARCHITECTURE.md).
 
 ## Preserved history

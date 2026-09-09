@@ -30,3 +30,10 @@ Run `python evals/freeze_retrieval.py` to check its frozen hashes. Initial revie
 retained separately; all strengthening occurred before the first retrieval measurement.
 See [current status](../docs/STATUS.md) for actual retrieval evidence and its limitations;
 corpus size alone is not a quality result.
+
+The September 9 audit tightened the evaluator under scorer version
+`active-required-sections-v2`: factual spans count only in active top-five passages from
+required sections, and negative probes must respect result limits. Corpus v1 inputs and
+historical reports remain unchanged. This is still section-scoped substring evidence, not
+per-claim source entailment. Source/version-bound judgments and forced cross-language cases
+need a separately frozen corpus version; see [RAG design](../docs/RAG.md).
