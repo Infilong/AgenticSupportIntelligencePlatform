@@ -16,9 +16,12 @@ def main():
                                             "verify-integration", "verify-inbox-capacity", "seed-demo", "verify-worker", "prepare-model",
                                             "verify-ingestion", "backup", "verify-restore", "release-up", "release-seed", "release-prepare-model", "release-down"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
+    parser.add_argument("--backup-dir", type=Path, help="Trusted local backup directory for verify-restore")
     args = parser.parse_args()
     if args.offline and args.command != "doctor":
         parser.error("--offline applies only to doctor")
+    if args.backup_dir is not None and args.command != "verify-restore":
+        parser.error("--backup-dir applies only to verify-restore")
     if args.command == "doctor":
         from doctor import main as doctor
         return doctor(["--offline"] if args.offline else [])
@@ -37,6 +40,8 @@ def main():
                    str(ROOT / "scripts" / "restore_drill.py")]
         if args.command == "backup":
             command.append("--backup-only")
+        if args.backup_dir is not None:
+            command.extend(["--backup-dir", str((ROOT / args.backup_dir).resolve())])
         return run_checked("backup" if args.command == "backup" else "restore", command,
                            ROOT / "backend", timeout=240)
     if args.command == "verify-ingestion":

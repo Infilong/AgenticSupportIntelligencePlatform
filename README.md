@@ -45,6 +45,8 @@ volumes. [The runbook](docs/RUNBOOK.md#built-local-release) explains setup and v
 table fingerprints and exercises the restored API/worker. It preserves the source and existing
 databases. `backup` exports the isolated development database without creating a restore clone;
 see the [backup runbook](docs/RUNBOOK.md#standalone-development-database-backup) for scope and limits.
+`verify-restore --backup-dir .artifacts/m6/backup-<timestamp>` checks a trusted saved backup in a
+new disposable database without replacing current data.
 `verify-live` remains unimplemented; no external
 generation has been verified. Do not use the archived app as proof of this rebuild.
 API spending is zero until explicitly authorized.

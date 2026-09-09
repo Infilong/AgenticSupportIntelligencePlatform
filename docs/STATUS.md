@@ -65,9 +65,16 @@ Workbench GitHub CI34360000750 passed. The
 [standalone backup command](plans/completed/m6-standalone-backup.md) now exports the development
 database without database creation/restoration. Real4,093,256-byte backup, hash/archive inspection
 and unchanged database inventory pass; the default fresh-snapshot restore regression also passes
-23-table parity and a new ASGI/worker request.69 unit tests pass. Current: close backup independent
-review/preparation and checkpoint. Saved-archive restoration remains unverified; do not equate
-the separate fresh-snapshot drill with consuming this saved backup.
+23-table parity and a new ASGI/worker request.69 unit tests pass. Backup checkpoint338a88c is
+committed/pushed;46 preparation checks pass at `.artifacts/m0/prep-20260909T140141366470Z`.
+Backup GitHub CI34360979852 passed. The
+[saved-backup restoration](plans/completed/m6-saved-backup-restore.md) now passes after an actual
+source-data change:23 stored table fingerprints match, the newer source request stays absent
+from the clone and a new clone request leaves source untouched. Original backup hashes match.
+Evidence: `.artifacts/m6/restore-saved-20260909T141055Z` and
+`.artifacts/m6/saved-backup-proof-20260909`.71 unit tests and default fresh-snapshot regression pass.
+Current: close saved-backup reviews/preparation and checkpoint. Native zoom and generation gates
+remain open; all existing databases are preserved.
 Preserve all databases and the14:58 UTC boundary.
 Keep RAG tuning deferred; five retrieval strategies
 do not complete EVAL and the workload profile does not exercise generation.

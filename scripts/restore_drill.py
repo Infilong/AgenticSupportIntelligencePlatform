@@ -118,7 +118,9 @@ def exercise(url, report, engine):
             report["new_request"]["checkpoint_count"] = checkpoints
 
 
-def main(*, backup_only=False):
+def main(*, backup_only=False, backup_dir=None):
+    if backup_only and backup_dir is not None:
+        raise ValueError("Backup export cannot also restore a saved backup")
     identity = docker("inspect", CONTAINER, "--format",
         '{{index .Config.Labels "com.docker.compose.project"}} {{.State.Running}}', capture_output=True, text=True).stdout.strip()
     if identity != "asi-rebuild-v1 true":
@@ -126,7 +128,7 @@ def main(*, backup_only=False):
     target = "asi_restore_" + uuid.uuid4().hex[:12]
     if not re.fullmatch(r"asi_restore_[a-f0-9]{12}", target):
         raise ValueError("Refusing a non-disposable restoration target")
-    mode = "backup" if backup_only else "restore"
+    mode = "backup" if backup_only else "restore-saved" if backup_dir is not None else "restore"
     directory = ROOT / ".artifacts" / "m6" / (mode + "-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
     directory.mkdir(parents=True, exist_ok=False)
     dump = directory / "snapshot.dump"
@@ -136,26 +138,33 @@ def main(*, backup_only=False):
                       restoration_verified=False)
     else:
         report.update(target_database=target,
-                      scope="fresh snapshot parity and restored API/worker clarification; no generation/RAG quality claim")
+                      scope=("saved backup parity and restored API/worker clarification; no generation/RAG quality claim"
+                             if backup_dir is not None else
+                             "fresh snapshot parity and restored API/worker clarification; no generation/RAG quality claim"))
     values = dict(line.split("=", 1) for line in (ROOT / ".env").read_text(encoding="utf-8").splitlines()
                   if "=" in line and not line.startswith("#"))
     prefix = f"postgresql+psycopg://asi_rebuild:{quote(values['ASI_DATABASE_PASSWORD'], safe='')}@127.0.0.1:{int(values.get('ASI_DATABASE_PORT', '5440'))}/"
-    source = create_engine(prefix + "asi_rebuild", hide_parameters=True, connect_args=CONNECT)
+    source = None
     clone = None
     try:
-        with source.connect().execution_options(isolation_level="REPEATABLE READ") as connection, connection.begin():
-            connection.execute(text("SET TRANSACTION READ ONLY"))
-            connection.execute(text("SET TIME ZONE 'UTC'"))
-            snapshot = connection.scalar(text("SELECT pg_export_snapshot()"))
-            report["snapshot"] = snapshot
-            report["source_tables"] = fingerprints(connection)
-            report["source_metadata"] = metadata(connection)
-            with dump.open("wb") as output:
-                docker("exec", CONTAINER, "pg_dump", "-U", "asi_rebuild", "-d", "asi_rebuild",
-                       "-Fc", "--no-owner", "--snapshot", snapshot, stdout=output)
-        with dump.open("rb") as original:
-            report["dump_sha256"] = hashlib.file_digest(original, "sha256").hexdigest()
-        report["dump_bytes"] = dump.stat().st_size
+        if backup_dir is not None:
+            from backup_archive import copy_verified_backup
+            report.update(copy_verified_backup(ROOT, Path(backup_dir), dump, remaining))
+        else:
+            source = create_engine(prefix + "asi_rebuild", hide_parameters=True, connect_args=CONNECT)
+            with source.connect().execution_options(isolation_level="REPEATABLE READ") as connection, connection.begin():
+                connection.execute(text("SET TRANSACTION READ ONLY"))
+                connection.execute(text("SET TIME ZONE 'UTC'"))
+                snapshot = connection.scalar(text("SELECT pg_export_snapshot()"))
+                report["snapshot"] = snapshot
+                report["source_tables"] = fingerprints(connection)
+                report["source_metadata"] = metadata(connection)
+                with dump.open("wb") as output:
+                    docker("exec", CONTAINER, "pg_dump", "-U", "asi_rebuild", "-d", "asi_rebuild",
+                           "-Fc", "--no-owner", "--snapshot", snapshot, stdout=output)
+            with dump.open("rb") as original:
+                report["dump_sha256"] = hashlib.file_digest(original, "sha256").hexdigest()
+            report["dump_bytes"] = dump.stat().st_size
         if report["dump_bytes"] == 0:
             raise RuntimeError("Database export produced an empty archive")
         if backup_only:
@@ -182,7 +191,8 @@ def main(*, backup_only=False):
         report["error_type"] = type(error).__name__
         raise
     finally:
-        source.dispose()
+        if source is not None:
+            source.dispose()
         if clone is not None:
             clone.dispose()
         (directory / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -195,5 +205,8 @@ def main(*, backup_only=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--backup-only", action="store_true", help="Export without creating or exercising a restore database")
-    raise SystemExit(main(backup_only=parser.parse_args().backup_only))
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--backup-only", action="store_true", help="Export without creating or exercising a restore database")
+    mode.add_argument("--backup-dir", type=Path, help="Restore a trusted local standalone backup instead of a fresh export")
+    args = parser.parse_args()
+    raise SystemExit(main(backup_only=args.backup_only, backup_dir=args.backup_dir))

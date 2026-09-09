@@ -478,8 +478,27 @@ Sequence values are observational metadata, not transactionally frozen sequence 
 Backups contain application data, documents and authentication records. Keep them protected;
 they are ignored by Git. They exclude `.env`, model caches and machine configuration.
 This command does not implement encryption, off-device retention or a recovery-time objective.
-Use the separate drill below for a fresh-snapshot restoration check; it does not consume a
-previously saved backup file.
+Use the drill below for a fresh snapshot, or its saved-backup option to consume this archive.
+
+### Verify a trusted saved backup
+
+Run `python scripts/manage.py verify-restore --backup-dir .artifacts/m6/backup-<timestamp>`
+with an actual backup directory from the command above. Only direct `backup-YYYYMMDDTHHMMSSZ`
+directories under this checkout's `.artifacts/m6` are accepted. The directory, manifest and
+archive must resolve within that boundary. Manifests are bounded to2 MiB and archives to512 MiB.
+Only successful standalone development backup manifests are accepted.
+
+The command copies and verifies the archive into a new `restore-saved-<timestamp>` evidence
+directory before creating a random disposable database. It compares restored rows/metadata to
+the saved manifest, then exercises a new request in the clone. It does not dump or compare
+against today's source data. Original backups and existing databases remain unchanged; failures
+retain evidence and any newly created clone. It does not switch the app's connection or migrate
+an older schema to current code; incompatible archives fail rather than being silently upgraded.
+
+Use only trusted operator-created backups. A checksum detects corruption relative to its
+manifest, not malicious replacement of both. PostgreSQL restore executes the archive's SQL;
+see the [PostgreSQL restore guidance](https://www.postgresql.org/docs/current/app-pgrestore.html).
+This is a local operator command, not an archive-upload endpoint or general disaster-recovery SLA.
 
 ## Fresh snapshot restoration drill
 

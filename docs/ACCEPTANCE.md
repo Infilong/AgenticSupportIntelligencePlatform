@@ -68,7 +68,9 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   nine browser journeys and four publication-state component cases pass. This proves the
   clarification software flow, not automatic semantic routing or the full release gates.
 - UX: connected draft/source/cancellation and approve/edit/reject journeys pass, including 360/768/1440px, keyboard
-  source focus and doubled content size. Browser-native zoom and full release journeys remain open.
+  source focus and doubled content size. The packaged workbench now has ten distinct passing
+  cases across retained initial/focused runs; [record](plans/completed/m6-release-workbench.md).
+  Browser-native zoom and remaining full release coverage stay open.
 - Inbox views: latest-attempt filtering, matching counts, workspace denial and pagination pass
   within the 113-case PostgreSQL regression. The real filtered inbox journey passes at all three
   widths; a shrinking-page component regression and mobile navigation overflow repair are verified.
@@ -106,6 +108,12 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   trace reads preserve the five-strategy150-case projection and foreign denial; see the
   [current-schema record](plans/completed/m6-current-schema-restore.md). This adds current-schema
   recovery evidence without claiming restored network/browser deployment or new retrieval quality.
+- RESTORE from a saved standalone backup passes after a later source request: all23 saved table
+  fingerprints match; newer source data is absent from clone; a fresh clone request completes
+  without modifying source. Original archive and manifest hashes remain unchanged. The
+  [saved-backup record](plans/completed/m6-saved-backup-restore.md) retains failures, source/clone
+  separation checks and the default fresh-snapshot regression. This establishes trusted local
+  saved-archive API/worker recovery, not network/browser deployment, schema upgrades or an RTO.
 - BOOT local packaging: a fresh isolated release stack built assets, migrated, initialized
   checkpoints and became healthy at `.artifacts/m0/release-up-20260909T111652893904Z`.
   Final browser proof `.artifacts/m6/release-browser-final-20260909` covers same-origin login,
