@@ -516,3 +516,9 @@ Backend unit verification now allocates a unique ignored `.artifacts/pytest/<uui
 avoid shared Windows pytest-temp ownership failures. Process-kill retrieval tests retain phase,
 exit-status and scoped trace/ledger-state diagnostics, plus a bounded stack dump on slow startup.
 Their 20-second dispatch deadline and recovery assertions are unchanged.
+
+The OpenAPI generation tool currently needs a scoped npm override: @redocly/openapi-core pins
+an affected js-yaml version, so frontend/package.json selects js-yaml4.3.2 for that parent.
+This addresses GHSA-2883-xcg3-v3hh without a broad toolchain upgrade. Reassess the override when
+upgrading Redocly/openapi-typescript; require a clean audit and unchanged generated API types
+(or a separately explained schema change) before removing it.

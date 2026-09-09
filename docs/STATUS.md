@@ -23,8 +23,11 @@ pass; two real knowledge journeys pass. Evidence and failed checks are in the li
 52 backend unit tests pass. Full PostgreSQL run had143 passes and one pre-dispatch child timeout;
 instrumented focused recovery run passes9 checks with the unchanged20-second dispatch limit.
 Full rerun passes144 checks in360.11s at `.artifacts/m0/integration-20260909T113404211217Z`.
-Next: checkpoint release, patch the identified development-only
-js-yaml advisory, then permission-scoped historical evaluation results in Quality. Keep RAG tuning deferred.
+Release checkpoint49d2829 is pushed; GitHub CI34347103025 passed.46 prep checks passed at
+`.artifacts/m0/prep-20260909T114259823684Z`.
+The scoped js-yaml4.3.2 development dependency repair is verified: audit zero, generated API
+types unchanged,39 frontend tests/build pass. Next: checkpoint that repair and expose
+permission-scoped historical evaluation results in Quality. Keep RAG tuning deferred.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped
