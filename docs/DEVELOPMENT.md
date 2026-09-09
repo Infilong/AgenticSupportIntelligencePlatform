@@ -101,7 +101,9 @@ This organization follows [OpenAI's nested instruction guidance](https://develop
 - Never weaken assertions or silently change criteria. Retain failed evidence and explain fixes.
 - Record revision/source fingerprint, commands, results and artifact locations. Documentation
   changes can make the current whole-repository evidence fingerprint stale; report that honestly.
-- Do not commit artifacts, generated dependencies, credentials or real customer data.
+- Do not commit temporary/build/test artifacts, installed dependencies, credentials or real
+  customer data. Designated reproducible source references and API types belong in Git;
+  regenerate and review them using their owning guides.
 - Routine dependencies, local commits and normal pushes to the working branch are authorized.
   Merges, deployment and paid model use need separate authority; a key alone is not a spending grant.
 - Ask only for missing authority or material product/security decisions. Target 30–60-minute
@@ -114,7 +116,7 @@ This organization follows [OpenAI's nested instruction guidance](https://develop
 
 - Commit and push after each coherent verified slice, including documentation and harness
   improvements. Do not wait until milestone end or manufacture commits for individual keystrokes.
-- Review the exact staged diff, exclude secrets/generated artifacts, run affected checks and
+- Review the exact staged diff, exclude secrets and temporary/build/test artifacts, run affected checks and
   use a descriptive commit message. Push explicitly to the current rebuild branch and confirm
   the remote revision. Never force-push or update main/archive branches under this authority.
 - When CI exists, inspect its result after pushing; repair new failures promptly. Missing CI

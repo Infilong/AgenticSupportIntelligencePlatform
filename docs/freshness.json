@@ -18,8 +18,8 @@
       "docs": ["scripts/AGENTS.md", "docs/AGENTS.md", "docs/DOC_FRESHNESS.md", "docs/DEVELOPMENT.md", "docs/RUNBOOK.md"]
     },
     "project": {
-      "sources": ["AGENTS.md", "README.md", "REBUILD_PLAN.md", "docs/STATUS.md"],
-      "docs": ["AGENTS.md", "README.md", "REBUILD_PLAN.md", "docs/STATUS.md"]
+      "sources": ["AGENTS.md", "README.md", "REBUILD_PLAN.md", "docs/STATUS.md", "docs/REBUILD_GOAL.md"],
+      "docs": ["AGENTS.md", "README.md", "REBUILD_PLAN.md", "docs/STATUS.md", "docs/REBUILD_GOAL.md"]
     },
     "infrastructure": {
       "sources": ["infra/", ".github/", "compose.yaml", ".env.example", ".gitignore", ".dockerignore"],

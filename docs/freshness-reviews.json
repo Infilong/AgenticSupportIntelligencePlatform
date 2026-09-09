@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "d3b5500e66fe6d24acef6cad561843ab65375caf7a6d1b008065e18aa9665d98",
-    "reviewer": "docs_review and coordinating agent",
+    "fingerprint": "d442f02e3d2b5fa9a86a42a81e9e4c36f5f6fdf3ed8726dbe50593582a53441d",
+    "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review confirms current versus planned boundaries and historical evidence labels. Status records only authorized documentation tooling; product execution remains paused."
+    "rationale": "Compared reusable goal with original attachment and later development-provider and freshness instructions; scope, verification requirements and paused execution boundary remain explicit."
   },
   "frontend": {
     "fingerprint": "6a4311ea10c9ac16b4075125ec5f4dbfdb750a4cd93511096ef2f9cfd057784f",
@@ -12,10 +12,10 @@
     "rationale": "Independent review: guide now links STATUS instead of duplicating progress; current UI boundaries agree with prior source and browser evidence, no new browser run."
   },
   "tooling": {
-    "fingerprint": "d41f3f6777ee11fa543d9b31056f41a19944cf9bdceaeb4fe6a60d97c108749b",
-    "reviewer": "docs_review and coordinating agent",
+    "fingerprint": "a19a914ac433778627ef4a6b42a56b7e95546a98d446cfca4e45c4204039b47d",
+    "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent implementation review and mutation tests cover generation, mapping and review binding. Coordinator verified final directory-grouping fix; receipts attest to review, not semantic proof."
+    "rationale": "Reviewed generated-artifact clarification against existing generated references and API types; temporary artifacts, secrets and installed dependencies remain excluded."
   },
   "evaluation": {
     "fingerprint": "4e1a3b894f0842b21a08f4e23a9d1efe8da741bcb1d857e227ce69f6a69c1c83",

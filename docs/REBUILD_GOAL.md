@@ -1,12 +1,22 @@
 # Reusable full-rebuild goal
 
-Status: activated by the user on 2026-09-08. STATUS records current execution and constraints.
+Status: activated by the user on 2026-09-08; synchronized with approved clarifications on
+2026-09-09. [STATUS](STATUS.md) records current execution and constraints. This reusable goal
+incorporates later user instructions; the original attached goal remains a historical record.
+Updating this document does not resume a paused implementation window.
 
 Rebuild AgenticSupportIntelligencePlatform in this repository through M1–M6, following
-REBUILD_PLAN.md, the acceptance matrix and applicable root/local AGENTS.md instructions.
+[REBUILD_PLAN.md](../REBUILD_PLAN.md), the [acceptance matrix](ACCEPTANCE.md) and applicable
+root/local AGENTS.md instructions.
 Deliver the agreed modern EN/JA/ZH local support workbench: user data → database → real
 LangChain/LangGraph and tool processing → cited results and intermediate records → authorized
 administrator inspection, intervention and knowledge management. Preserve the agreed V1 scope.
+
+For development without an API key, use explicitly attributed Codex-assisted responses behind
+the planned provider contract. Parsing, chunking, local embeddings and PostgreSQL vector
+retrieval must be real. Preserve the external provider integration path; development responses
+do not establish external API connectivity, generation quality, billing or inference latency.
+This requirement describes the intended workflow, not an already implemented generation endpoint.
 
 Own the full loop: refine each nontrivial demand into a concise execution brief, inspect the
 current code and relevant primary documentation, choose a connected slice, implement, test,
@@ -19,8 +29,17 @@ constraints, agent-readable browser/log evidence, independent focused review, en
 and feedback turned into durable tests or guidance. Select tactics that fit this small application;
 do not copy unnecessary infrastructure or wait for the user to explain the articles.
 
+Follow the [documentation freshness protocol](DOC_FRESHNESS.md) for each affected area:
+inspect source-to-document mappings, regenerate factual references, independently review claims,
+record the exact reviewed fingerprint and pass freshness checks before checkpointing. A review
+receipt proves unchanged reviewed inputs, not semantic truth. Periodic gardening supplements
+this per-change loop; it does not authorize product work beyond the current goal boundary.
+
 Commit and push after every small coherent verified step, rather than waiting for a milestone.
-Review staged changes, run affected checks, exclude secrets/artifacts, push to the working
+Review staged changes, run affected checks, exclude secrets and temporary/build/test artifacts.
+Commit designated reproducible references and API types, including
+[source references](generated/source-reference.md) and `frontend/src/api/schema.d.ts`, after
+regeneration and diff review. Follow owning guides for other generated files. Push to the working
 rebuild branch, confirm the remote revision and inspect CI when available. Fix regressions
 promptly. No force-push, main/archive updates, merges or public deployment are authorized here.
 

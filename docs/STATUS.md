@@ -7,6 +7,8 @@ This bounded tooling task does not resume the remaining application implementati
 The harness now provides generated source references, six source/document review mappings and
 CI freshness checks. [The protocol](DOC_FRESHNESS.md) distinguishes review attestations from
 semantic proof; a weekly Codex gardening task is configured separately from application work.
+The user also approved synchronizing the [reusable goal](REBUILD_GOAL.md) with development
+provider and documentation-workflow clarifications; it is now covered by project freshness checks.
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
