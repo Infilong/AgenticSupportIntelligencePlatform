@@ -1,0 +1,56 @@
+"""Domain publication remains atomic and fenced after separate graph checkpoint commits."""
+
+import uuid
+
+from sqlalchemy import func, select
+
+from app.jobs.contracts import Publication
+from app.modules.support.context import citations, validate_sources
+from app.modules.support.models import Handoff
+from app.modules.support.service import handoff_for
+from app.workflows.support_graph import CLARIFICATION, execute, guard
+
+MISSING = {
+    "en": "No current knowledge sources were found. Add relevant documents or clarify the question.",
+    "ja": "現在のナレッジに該当する情報がありません。関連資料を追加するか、質問を具体的にしてください。",
+    "zh": "未找到当前有效的知识来源。请添加相关文档或进一步说明问题。",
+}
+
+
+def process(engine, job, retrieval=None):
+    result = execute(engine, job, **({"retrieval": retrieval} if retrieval else {}))
+    run_id = uuid.UUID(job.payload["run_id"])
+
+    def publish(db, current):
+        run, message = guard(db, current, run_id)  # Checks authority, lease and cancellation before writes.
+        if run.state in {"draft", "clarification", "insufficient_evidence"}:
+            return {"run_id": str(run.id), "state": run.state}
+        if result.get("retrieval_id"):
+            run.retrieval_id = uuid.UUID(result["retrieval_id"])
+        outcome = result["outcome"]
+        if outcome in {"generate", "draft"}:
+            validate_sources(db, run.workspace_id, result["context"])
+            handoff = handoff_for(db, run)
+            if handoff is None:
+                handoff = Handoff(
+                    workspace_id=run.workspace_id,
+                    run_id=run.id,
+                    context=result["context"],
+                    context_hash=result["context_hash"],
+                )
+                db.add(handoff)
+            if outcome == "draft":
+                if handoff.response != result["response"]:
+                    raise ValueError("Completed graph response differs from stored contribution")
+                run.citations = citations(handoff.context, handoff.response)
+                run.draft, run.state = handoff.response["answer"], "draft"
+                run.finished_at = db.scalar(select(func.clock_timestamp()))
+            else:
+                run.state = "waiting_development"
+        else:
+            run.state = outcome
+            run.draft = (CLARIFICATION if outcome == "clarification" else MISSING)[message.language]
+            run.finished_at = db.scalar(select(func.clock_timestamp()))
+        return {"run_id": str(run.id), "state": run.state}
+
+    return Publication(publish)

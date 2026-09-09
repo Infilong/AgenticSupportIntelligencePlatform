@@ -220,3 +220,47 @@ four-service health passed. Runtime package versions were inspected. Real retrie
 smoke passed after rebuilding: trace `7503fc4e-a562-4bcd-9b57-2b8dbbb26d80`, 5,814.04 ms cold;
 not a new warm latency or full-corpus quality measurement. No application checkpoint tables or
 message workflow were introduced; next connected slice remains defined above.
+
+### Resumed execution — 2026-09-09
+
+Window: 00:44:58–04:44:58 UTC. Branch clean at `c9e8fa1`; its CI passed and all four
+rebuild services were healthy on reinspection. Previous goal turn delivered verified tooling;
+this resumed turn advances the actual message-to-cited-draft slice above.
+
+Implementation decisions: message/run/handoff records with composite workspace references;
+run-level cancellation survives a succeeded initial job. A server-owned graph thread is serialized
+with a dedicated PostgreSQL advisory-lock connection, with lease/actor checks at boundaries.
+Checkpoint setup is explicit runtime preparation. Publication rechecks the lease before writes,
+both original requester and development contributor authority, and every packed source's current
+version/checksum/offset. Resume carries only a stored submission, not arbitrary client graph state.
+Graph and domain commits are separate: retries reuse saved output and idempotent domain records.
+Meaningless inputs request clarification directly, without automatic administrator review.
+
+Independent security review identified these replay/cancellation boundaries; test waiting-run
+cancellation, changed uncited evidence, actor demotion, duplicate/conflicting submissions and
+checkpoint-before-publication recovery. Keep generation provenance separate from API metrics.
+
+Backend result: 62 PostgreSQL tests passed in
+`.artifacts/m0/integration-20260909T010333128389Z` (the earlier 52-test pass remains in
+`.artifacts/m0/integration-20260909T005757436150Z`). Review prompted retry translation for raw
+checkpoint connection failures, early retrieval-to-run association, and uncertain status for
+interrupted graph steps. Final independent security review found no blocking backend issue.
+The lease-loss tests simulate checkpoint/publication interruption; actual process-kill proof
+remains a recovery gate. Unit tests: 16 passed in `.artifacts/m0/backend-20260909T011540019960Z`.
+
+Rebuilt runtime applied migration 0007 and explicit supported checkpointer setup. Actual local
+embedding/reranking, worker and persisted graph produced cited development drafts in EN/JA/ZH:
+run IDs `6cb45636-1d51-47e4-b736-290461fde4f2`, `959adc26-b638-4f64-9699-88a16ac697e6`,
+`13c0620c-1aec-4900-9a6a-be18b1dee5a3`. Exported contexts, exact citations and model/handoff
+records remain under `.artifacts/m2/support-runtime-{en,ja,zh}.json`. Codex authored each answer
+from those actual source passages; these smokes are not a generation-quality evaluation.
+The byte-bounded handoff is not a complete token-budget implementation. Human review and the
+workbench UI are still pending. The next slice connects the API to the planned progressive UI.
+
+Checkpoint checks: Ruff check/format passed (77 Python files), OpenAPI was regenerated and
+frontend TypeScript/Vite build passed. Preparation harness passed 35 tests in
+`.artifacts/m0/prep-20260909T011835601244Z`; subsequent documentation corrections require a
+final stable preparation run. Worker logs show all six initial/resume jobs succeeded with
+job IDs and timings, without message bodies. The known upstream deprecation warnings persist.
+Documentation review caught stale acceptance and historical STATUS wording; corrected those
+claims and added ACCEPTANCE to backend's owning-document map so backend changes trigger review.

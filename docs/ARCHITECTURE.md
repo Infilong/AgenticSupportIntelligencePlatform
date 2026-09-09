@@ -1,8 +1,8 @@
 # Architecture and current topology
 
-Inspected 2026-09-09 against application checkpoint `2379915` and retained evidence.
-Foundation, knowledge ingestion and real retrieval exist; application generation remains
-unfinished. [STATUS](STATUS.md) owns progress and verification, including execution boundaries.
+Updated 2026-09-09 for the support backend slice built on `c9e8fa1`.
+Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
+The workbench UI and human review remain unfinished. [STATUS](STATUS.md) owns verification.
 
 ## Current project topology
 
@@ -23,8 +23,10 @@ AgenticSupportIntelligencePlatform/
 │   │   │   ├── identity/      # Sessions, authentication and CSRF
 │   │   │   ├── workspaces/    # Membership and roles
 │   │   │   ├── knowledge/     # Documents, ingestion, retrieval and sources
+│   │   │   ├── support/       # Original messages, runs, handoffs and cited drafts
 │   │   │   └── usage/         # Model-call records
-│   │   └── providers/         # Local embeddings/reranker and recorded calls
+│   │   ├── providers/         # Local embeddings/reranker and recorded calls
+│   │   └── workflows/         # LangGraph orchestration and PostgreSQL checkpoints
 │   └── tests/                 # Unit and PostgreSQL integration tests
 ├── frontend/
 │   ├── src/app/               # Shell and routing
@@ -42,10 +44,11 @@ AgenticSupportIntelligencePlatform/
 
 Each substantive area has a local `AGENTS.md`, linked from the root director. These paths
 exist now. The [target topology](../REBUILD_PLAN.md#target-project-topology) includes future
-modules: separate retrieval, conversations/support/reviews, application workflows and
-workbench/quality features are not implemented. Do not create empty target directories.
+modules: separate retrieval, conversations/reviews and workbench/quality features are not
+implemented. Support currently owns original messages and their processing runs; retrieval
+remains in knowledge. Do not create empty target directories.
 
-## Implemented data flow
+## Implemented knowledge data flow
 
 ```mermaid
 flowchart LR
@@ -96,7 +99,7 @@ belongs to that stack; it is not part of the rebuild. New volumes must carry the
 Current retrieval uses vector candidates plus neural reranking. The original lexical/fusion
 requirement remains an explicit discrepancy pending comparison or a release-plan decision;
 the measured reranker evidence does not prove that original requirement completed.
-Application message/run/review records and graph integration remain planned.
+Application message/run records and graph integration now exist; human-review records remain planned.
 
 Refer to REBUILD_PLAN for the target repository topology; create files only when needed.
 
@@ -137,7 +140,7 @@ These choices cannot weaken the release contract; material changes need approval
 Expired jobs are reclaimed or terminated after three attempts. Retry backoff is bounded.
 Workspace authorization and publication use the same workspace-first lock order as membership
 changes. Handlers execute outside transactions and cannot publish after revocation/cancellation.
-The worker registers both database diagnostics and actual document indexing. Indexing checks
+The worker registers database diagnostics, document indexing and support processing. Indexing checks
 between bounded split/embedding operations and activates versions only after fenced publication.
 Failed replacements preserve the previous active version.
 
@@ -145,8 +148,26 @@ Cancellation and lease checks occur between bounded ingestion batches; Python th
 preempt an executing handler.
 LangGraph continuation and business-result publication remain distinct responsibilities.
 
-LangGraph/PostgreSQL interrupt and recovery compatibility is tested in isolated schemas with
-reconstructed connections/graphs. Application integration and process-kill recovery are not
-proved. The next planned flow is original message → persisted run/job → graph and retrieval →
-development-generation handoff → validated cited draft → administrator review/intervention.
-The existing response-mode badge does not establish a working generation endpoint or live API.
+## Implemented support backend
+
+Original message → atomic run/job → LangGraph input check → real retrieval → durable development
+handoff → authenticated response submission → validated cited draft. A one-character input such
+as `w` requests clarification; an empty retrieval produces insufficient evidence. Neither is
+automatically routed to administrator review. Development waiting releases the worker.
+
+The [support guide](../backend/app/modules/support/AGENTS.md) owns local invariants. The graph
+uses server-derived workspace/run threads and a dedicated PostgreSQL advisory lock. Every
+processing/publication boundary checks the live job lease and original requester's authority;
+resume also checks the contributor. Every packed source is revalidated before export, submission
+and publication, including uncited passages. Context is capped at five passages and 24,000 UTF-8
+JSON bytes. This byte bound does not establish the release's complete token-budget policy.
+
+Cancelled runs cannot resume. Duplicate submissions are idempotent; conflicting submissions fail.
+Checkpoint and domain commits remain separate: replay reuses saved output and one handoff.
+Graph steps expose elapsed time/errors and interrupted prior attempts; retrieval records attach
+before inference so failed runs retain model-call evidence. Raw checkpoints are never public.
+
+Real PostgreSQL tests cover authorization, cancellation, concurrent submissions and simulated
+lease loss between checkpoint and publication. EN/JA/ZH API/worker smokes use actual local
+models and explicitly attributed Codex-assisted drafts. These are not process-kill recovery,
+external API generation, semantic answer-quality or completed UI/review evidence.

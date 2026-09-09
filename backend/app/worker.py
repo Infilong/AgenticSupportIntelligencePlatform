@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.core.settings import Settings
 from app.db.engine import make_engine
-from app.jobs.contracts import Publication
+from app.jobs.contracts import Publication, RetryableJobError
 from app.jobs.queue import JobCancelled, LeaseLost, authorize, claim, finish, heartbeat, owned
 from app.modules.identity import models as identity_models  # noqa: F401
 
@@ -37,7 +37,13 @@ def index_document(engine, job):
     return execute(engine, job)
 
 
-HANDLERS = {"database_check": diagnostic, "index_document": index_document}
+def support_run(engine, job):
+    from app.modules.support.processing import process
+
+    return process(engine, job)
+
+
+HANDLERS = {"database_check": diagnostic, "index_document": index_document, "support_run": support_run}
 
 
 def run_once(engine, handlers=None, health_callback=lambda: None):
@@ -90,11 +96,21 @@ def run_once(engine, handlers=None, health_callback=lambda: None):
         outcome = "lease_lost"
     except Exception as error:
         # Worker boundary: persist explicit failure; never log payload, credentials or raw errors.
-        code = "actor_access_revoked" if isinstance(error, HTTPException) else type(error).__name__[:64]
+        code = type(error).__name__[:64]
+        if isinstance(error, HTTPException):
+            code = (
+                "actor_access_revoked"
+                if error.status_code in {401, 403, 404}
+                else f"request_rejected_{error.status_code}"
+            )
         try:
             with Session(engine) as db, db.begin():
                 outcome = finish(
-                    db, job.id, job.lease_token, error_code=code, retry=isinstance(error, SQLAlchemyError)
+                    db,
+                    job.id,
+                    job.lease_token,
+                    error_code=code,
+                    retry=isinstance(error, (SQLAlchemyError, RetryableJobError)),
                 ).state
         except (LeaseLost, SQLAlchemyError):
             outcome = "unconfirmed_failure"  # Lease recovery owns the next attempt.

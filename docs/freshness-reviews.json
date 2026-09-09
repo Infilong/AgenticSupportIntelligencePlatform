@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "d442f02e3d2b5fa9a86a42a81e9e4c36f5f6fdf3ed8726dbe50593582a53441d",
+    "fingerprint": "c596614376ba98212ab798206e358d34d34b5773578850ca345bc34cbe9a4a42",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared reusable goal with original attachment and later development-provider and freshness instructions; scope, verification requirements and paused execution boundary remain explicit."
+    "rationale": "Compared README and updated STATUS with support implementation, retained 62 PostgreSQL and 16 unit logs, and EN/JA/ZH draft artifacts. Historical September 8 evidence is explicitly dated; UI, human review and semantic quality remain incomplete. No new runtime verification by reviewer."
   },
   "frontend": {
-    "fingerprint": "6a4311ea10c9ac16b4075125ec5f4dbfdb750a4cd93511096ef2f9cfd057784f",
-    "reviewer": "docs_review and coordinating agent",
-    "outcome": "updated",
-    "rationale": "Independent review: guide now links STATUS instead of duplicating progress; current UI boundaries agree with prior source and browser evidence, no new browser run."
-  },
-  "tooling": {
-    "fingerprint": "a19a914ac433778627ef4a6b42a56b7e95546a98d446cfca4e45c4204039b47d",
+    "fingerprint": "473836ea0923db3df0f969e2714cd3705d42c009fc6efe2b343a9e6cb188aee1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed generated-artifact clarification against existing generated references and API types; temporary artifacts, secrets and installed dependencies remain excluded."
+    "rationale": "Reviewed generated support API schema against backend route and response declarations. Architecture accurately says workbench UI remains unfinished; no new browser verification by reviewer."
+  },
+  "tooling": {
+    "fingerprint": "b63313f396d359075a6d08922777018108fd2d725953b62b26e9d2132d846968",
+    "reviewer": "docs_review",
+    "outcome": "updated",
+    "rationale": "Compared runtime up checkpointer initialization and support API recipes against executable source. Owning runbook accurately limits recovery and generation claims; reviewer did not restart services."
   },
   "evaluation": {
-    "fingerprint": "4e1a3b894f0842b21a08f4e23a9d1efe8da741bcb1d857e227ce69f6a69c1c83",
-    "reviewer": "docs_review and coordinating agent",
+    "fingerprint": "fd150a079cd067ae88c9f61daa66cbbebe3a14e94d355bbacf83acea98bdc2c4",
+    "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review corrected stale measurement and external-generation wording; acceptance heading now acknowledges existing partial checks. No new model evaluation."
+    "rationale": "Reviewed corrected acceptance partial evidence against stored multilingual draft smokes and test logs. Corpus thresholds unchanged; development provenance is not semantic generation quality."
   },
   "backend": {
-    "fingerprint": "adb4c502e6c38b491ed0b431d761279132341091373394e625dcc8228df66ffc",
-    "reviewer": "docs_review and coordinating agent",
-    "outcome": "no-doc-impact",
-    "rationale": "Initial independent source and evidence review: architecture separates implemented ingestion and retrieval from planned graph; no backend code change or runtime revalidation."
+    "fingerprint": "222460229c006af5007d76b791ff730c651bddd4be52d0a9da8d19e0abe94bd9",
+    "reviewer": "docs_review",
+    "outcome": "updated",
+    "rationale": "Compared support routes, guards, graph, checkpoint setup, migration and tests with architecture and acceptance. Retained 62 PostgreSQL and 16 unit logs agree; provenance proof is separated from semantic quality and UI/recovery gaps."
   },
   "infrastructure": {
-    "fingerprint": "cbb1f753f3bd28e09cd9e149af555bb9dcffc7c9390a47d2eaebe70497c62dd9",
-    "reviewer": "docs_review and coordinating agent",
+    "fingerprint": "0c683d69e234fd436bc3016dc23fbc22d23ca42b546fd15703815267dbf2ae27",
+    "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review confirms read-only freshness checks in Windows/Linux CI and unchanged runtime ownership. Coordinator verified app-managed weekly gardening creation; no runtime verification."
+    "rationale": "Compared documented checkpointer preparation with runtime startup implementation; four-service namespace and isolation unchanged. No new infrastructure or live readiness claim from review."
   }
 }

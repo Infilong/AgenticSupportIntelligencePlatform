@@ -26,7 +26,8 @@ uv run --project backend ruff format --check backend
 
 `init-env` generates a database password in ignored `.env` without displaying it; existing
 files are preserved. `up` starts the fixed `asi-rebuild-v1` database, builds the API and frontend,
-applies migrations, then starts and waits for the API, frontend and worker as well.
+applies migrations and explicitly initializes the supported PostgreSQL LangGraph checkpointer,
+then starts and waits for the API, frontend and worker as well.
 The frontend image contains its source: host edits/builds alone do not update the served
 container. Run `up` to rebuild before collecting browser evidence for changed UI code.
 Health endpoints: `http://127.0.0.1:8010/api/health/live` and `/api/health/ready`.
@@ -137,8 +138,8 @@ disposable test data; never run `down -v` against the old project.
 ## Current limitations
 
 API/database, authentication, frontend and worker foundation now exist.
-TXT/Markdown ingestion and real retrieval exist; application generation/workflow remains unfinished.
-Development generation will use explicit mock/Codex-assisted
+TXT/Markdown ingestion, real retrieval and the message-to-cited-draft backend exist; its UI and
+human review remain unfinished. Development generation uses explicitly attributed Codex-assisted
 responses; the user requires real local embeddings and retrieval. Live provider access and paid
 spending remain unavailable; API connectivity/quality gates cannot be inferred from development data.
 
@@ -247,6 +248,31 @@ PostgreSQL, not live generation; it does not authorize or require a paid API.
 LangGraph persistence compatibility is included in `python scripts/manage.py verify-integration`.
 `test_graph_checkpoints.py` initializes the supported checkpointer only in disposable test
 schemas, closes/reopens connections and reconstructs graphs to verify interrupt and failure
-recovery. This is a prerequisite test, not the support application's graph or authorization
-implementation. Production checkpoint initialization and the message/handoff workflow remain
-the next slice; never expose raw checkpoint reads or arbitrary resume commands to clients.
+recovery. Support integration tests additionally exercise the application graph and authorization,
+including concurrent submissions and checkpoint-before-publication lease loss. This simulates
+the failure boundary; operating-system process-kill recovery is still unverified.
+
+## Development message-to-draft API
+
+`up` runs `python -m app.workflows.checkpoints` in the backend container after Alembic migrations.
+This explicitly creates/upgrades supported checkpointer tables; never expose raw checkpoint reads
+or arbitrary resume commands to clients.
+
+Under `/api/workspaces/{workspace_id}`, an operator/admin posts `/messages` with an
+`Idempotency-Key` and JSON `{original, language}` (`en`, `ja` or `zh`, up to 1,000 characters).
+All members can read paginated `/messages` and `/runs/{run_id}`. Poll the latter for state,
+original input, draft, exact citations, graph steps and model records.
+
+When state is `waiting_development`, an admin exports `/runs/{run_id}/development-handoff`.
+Read its actual bounded context and author an answer from those sources. Submit to
+`/runs/{run_id}/development-handoff/{handoff_id}` with its `context_hash`, `answer` and
+`citations: [{chunk_id, quote}]`, using exact nonempty source quotes. Normal session, CSRF and
+Origin requirements apply. Submission schedules continuation; poll until `draft` or failure.
+The original requester must retain operator/admin access. Source withdrawal/replacement,
+cancellation or revoked authority blocks publication. Identical submissions are safe to repeat;
+different submissions return conflict. Operator/admin cancellation uses `/runs/{run_id}/cancel`.
+
+These are development contributions with contributor identity and handoff elapsed time, not
+OpenAI API calls or inference latency. Exact citations prove source provenance, not semantic
+support. Drafts remain unverified and are not approved customer responses. Human-review actions
+and the workbench UI are the next application work, not part of this backend checkpoint.

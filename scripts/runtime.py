@@ -36,6 +36,7 @@ def execute(command):
         for args in [("up", "-d", "--wait", "postgres"),
                      ("build", "api", "frontend"),
                      ("run", "--rm", "api", "uv", "run", "--frozen", "alembic", "upgrade", "head"),
+                     ("run", "--rm", "api", "uv", "run", "--frozen", "python", "-m", "app.workflows.checkpoints"),
                      ("up", "-d", "--wait", "api", "frontend", "worker")]:
             code = compose(*args)
             if code:

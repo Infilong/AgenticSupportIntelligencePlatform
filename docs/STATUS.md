@@ -1,9 +1,9 @@
 # Current status
 
-Goal: **M1–M6 scope authorized; implementation paused at the unattended cutoff; not complete**.
+Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
 Current milestone: M2. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
-This bounded tooling task does not resume the remaining application implementation.
+Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
 CI freshness checks. [The protocol](DOC_FRESHNESS.md) distinguishes review attestations from
 semantic proof; a weekly Codex gardening task is configured separately from application work.
@@ -15,7 +15,8 @@ Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513f
 [M2 execution plan](plans/active/m2-real-retrieval.md) owns current decisions and evidence;
 [M1 history](plans/active/m1-foundation.md) retains foundation work.
 Normal verified commits/pushes to this branch are authorized. No merge/deploy/paid API authority.
-The existing unattended cutoff is **2026-09-08 17:34 UTC**; this checkpoint does not extend it.
+The new work window starts **2026-09-09 00:44:58 UTC** and ends **04:44:58 UTC**
+(13:44:58 Tokyo time), retaining the four-hour limit. Previous cutoff/evidence remain historical.
 
 ## Verified current behavior
 
@@ -27,8 +28,30 @@ The existing unattended cutoff is **2026-09-08 17:34 UTC**; this checkpoint does
 - Knowledge upload/search/source inspection UI, including exact cited versions and offsets.
 - Persisted model identity, status, locally counted tokens, duration and zero external charge.
 - The UI labels **responses** as simulated; retrieval is real.
+- Support API stores original messages and runs, executes a real persisted LangGraph, releases
+  the worker at a development handoff, and resumes into an exact-source cited draft.
+- Run-level cancellation, requester/contributor checks and current-source validation protect
+  resume/publication. Clarification and insufficient evidence are separate terminal outcomes.
 
-## Current verification
+## September 9 support backend evidence
+
+Built on `c9e8fa1` (its CI `34296092492` passed). Migration `0007_support` and explicit
+PostgreSQL checkpointer setup ran in the rebuilt four-service development stack.
+- 62 real PostgreSQL tests passed: `.artifacts/m0/integration-20260909T010333128389Z`.
+  Includes real graph replay, concurrency, cancellation, source changes and permission denial.
+- 16 unit tests passed: `.artifacts/m0/backend-20260909T011540019960Z`.
+- EN/JA/ZH actual API/worker/local-model runs reached cited drafts; retained artifacts are
+  `.artifacts/m2/support-runtime-en.json`, `support-runtime-ja.json` and `support-runtime-zh.json`.
+  Codex authored each development answer from its exported retrieval context; no expected
+  evaluation answers or external generation API were used. This is workflow smoke evidence.
+- Independent security review found checkpoint connection errors needed retry translation and
+  failed retrieval records needed early run association. Both were fixed; expanded tests passed.
+  Prior interrupted graph steps are now marked uncertain on a subsequent attempt.
+
+The workbench UI is not connected yet. Human review, full process-kill recovery and semantic
+generation-quality gates remain incomplete. The older table below is retained historical evidence.
+
+## September 8 historical verification
 
 | Boundary | Evidence |
 | --- | --- |
@@ -38,14 +61,14 @@ The existing unattended cutoff is **2026-09-08 17:34 UTC**; this checkpoint does
 | Knowledge UI | Two real desktop/mobile journeys pass; source/search screenshots inspected |
 | Frontend | TypeScript/build and two component tests pass; baseline browser suite also passed |
 | Models | Explicit preparation/inference passed for both pinned local models |
-| Graph prerequisite | Supported LangGraph/PostgreSQL interrupt and failed-node recovery pass after connection reconstruction; application workflow remains pending |
-| Git/CI | Last application checkpoint `2379915bcee9a14c64739e28b19b81c021d322d7`; CI `34257383552` recorded successful |
+| Graph prerequisite | Supported LangGraph/PostgreSQL interrupt and failed-node recovery passed after connection reconstruction; application workflow was pending then |
+| Git/CI | September 8 application checkpoint `2379915bcee9a14c64739e28b19b81c021d322d7`; CI `34257383552` recorded successful |
 
 Final stable retrieval evidence: `.artifacts/m2/retrieval-eval-20260908T170142Z`.
 Final label/browser evidence: `.artifacts/m2/provider-label-rebuilt-ui`.
 Detailed command artifacts and prior failures are retained in the M2 execution record.
 LangGraph `1.2.11` and PostgreSQL checkpointer `3.1.2` are installed in the rebuilt runtime.
-Latest PostgreSQL evidence: `.artifacts/m0/integration-20260908T172545791661Z`.
+September 8 PostgreSQL evidence: `.artifacts/m0/integration-20260908T172545791661Z`.
 The real retrieval smoke still passes after dependency installation; the full frozen quality
 measurement above belongs to the earlier retrieval snapshot and was not rerun for this lock change.
 No full production-readiness, generated-answer quality or completed release claim is supported.
@@ -66,18 +89,19 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
 - Synchronous model/retrieval records abandoned by a process crash need reconciliation.
 - The release plan's lexical/fusion requirement differs from the implemented vector-plus-reranker
   path; comparative evidence or an explicit scope decision remains outstanding.
-- Generated responses, message processing, application LangGraph integration, review, imports, complete
-  observability, comparative evaluation and restoration remain incomplete.
+- The backend development draft path is implemented; its user-facing workbench, human review,
+  imports, complete observability, comparative evaluation and restoration remain incomplete.
 
 ## Next connected slice
 
-Persist an original customer message and processing attempt, run real retrieval, pause for an
-explicit Codex-assisted development answer, then validate and persist a cited draft. Use the
-planned LangGraph/PostgreSQL checkpoint path; keep handoff waiting separate from human review.
-Recheck permissions and source validity on resume. Never import evaluation expected answers
-as runtime responses, invent API usage, or treat citation-ID validity as semantic support proof.
-Resume implementation only after renewed work-window authority; missing APIs do not block
-real local search. Current topology and implementation boundaries are in [architecture](ARCHITECTURE.md).
+Finish the reviewed backend checkpoint and connect its API to a simple workbench: submit/list
+original messages, inspect the selected draft and exact sources, expand processing details,
+and cancel an active run. Keep the admin-only development handoff separate from human review.
+Verify real desktop/mobile and permission-denied journeys before claiming the UI complete.
+Never import evaluation answers as runtime responses, invent API usage or equate exact citations
+with semantic support. Continue into the planned human-review/recovery gates after this slice.
+The user resumed this implementation window; missing APIs do not block real local search.
+Current topology and implementation boundaries are in [architecture](ARCHITECTURE.md).
 
 ## Preserved history
 

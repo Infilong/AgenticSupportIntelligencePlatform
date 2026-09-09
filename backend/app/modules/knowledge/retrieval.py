@@ -64,17 +64,35 @@ def candidates(db, workspace_id, vector):
     return results
 
 
-def retrieve(engine, workspace_id, actor_id, query, limit=5, provider=None, ranking_provider=None):
+def retrieve(
+    engine,
+    workspace_id,
+    actor_id,
+    query,
+    limit=5,
+    provider=None,
+    ranking_provider=None,
+    on_trace=None,
+    execution_guard=None,
+):
     query = query.strip()
     if not query or len(query) > 1000 or not 1 <= limit <= 10:
         raise HTTPException(422, "Use a query of 1–1000 characters and a limit of 1–10")
     started = time.monotonic()
-    with Session(engine, expire_on_commit=False) as db, db.begin():
+
+    def check_access(db):
         access(db, workspace_id, actor_id)
+        if execution_guard is not None:
+            execution_guard(db)
+
+    with Session(engine, expire_on_commit=False) as db, db.begin():
+        check_access(db)
         trace = RetrievalTrace(workspace_id=workspace_id, actor_id=actor_id, query=query)
         db.add(trace)
         db.flush()
         trace_id = trace.id
+        if on_trace is not None:
+            on_trace(db, trace_id)
     try:
         batch = encode_recorded(
             engine,
@@ -83,11 +101,11 @@ def retrieve(engine, workspace_id, actor_id, query, limit=5, provider=None, rank
             actor_id,
             [query],
             "query",
-            authorize=lambda db: access(db, workspace_id, actor_id),
+            authorize=check_access,
             retrieval_id=trace_id,
         )
         with Session(engine) as db, db.begin():
-            access(db, workspace_id, actor_id)
+            check_access(db)
             snapshots = candidates(db, workspace_id, batch.vectors[0])
             call_id = start_reranking(db, workspace_id, actor_id, trace_id) if snapshots else None
         if snapshots:
@@ -97,7 +115,7 @@ def retrieve(engine, workspace_id, actor_id, query, limit=5, provider=None, rank
             for row, score in zip(snapshots, scores, strict=True):
                 row["rank_score"] = score
         with Session(engine) as db, db.begin():
-            access(db, workspace_id, actor_id)
+            check_access(db)
             # Withdrawal/replacement may have completed while the local model was scoring.
             active = {
                 str(value)

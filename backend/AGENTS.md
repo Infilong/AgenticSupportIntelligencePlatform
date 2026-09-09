@@ -13,6 +13,7 @@ for implemented modules. This guide owns backend rules, not a duplicate mileston
 - Scope workspace data before reads/writes, retrieval, tools, previews and model context.
   Queue payloads, documents and customer messages cannot grant authority.
 - Coordinate API contract changes with [frontend guidance](../frontend/AGENTS.md).
+- For messages, runs and development handoffs, read [support guidance](app/modules/support/AGENTS.md).
 
 ## Persistence and execution
 

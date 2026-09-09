@@ -3,7 +3,7 @@
   "areas": {
     "backend": {
       "sources": ["backend/"],
-      "docs": ["backend/AGENTS.md", "docs/ARCHITECTURE.md"]
+      "docs": ["backend/AGENTS.md", "docs/ARCHITECTURE.md", "docs/ACCEPTANCE.md"]
     },
     "frontend": {
       "sources": ["frontend/"],

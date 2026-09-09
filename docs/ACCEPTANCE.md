@@ -47,15 +47,16 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
 
 - AUTH: implemented with API/database and browser tests. Full release-session/security matrix
   remains to be checked with the completed application.
-- TENANT/JOB: foundation and knowledge paths have real PostgreSQL coverage, including
-  concurrent claims, lease takeover, revocation and source withdrawal/replacement. Future
-  message/graph/review paths have no implementation or proof yet.
+- TENANT/JOB: foundation, knowledge and support message/graph paths have real PostgreSQL
+  coverage, including concurrent claims/submissions, lease takeover, revocation, cancellation
+  and source withdrawal/replacement. Human review and actual process-kill recovery remain pending.
 - KNOW: real TXT/Markdown upload, indexing, exact originals, versions, replacement failure,
   withdrawal/restore and desktop/mobile knowledge journeys pass.
 - RAG: frozen local retrieval gate passes (26/26 evidence cases, 27/27 source groups,
-  zero forbidden leaks, 2.5-second warm p95). Cited generation and semantic claim support
-  remain unverified; therefore the full RAG gate is not complete.
-- LANG: cross-language retrieval is measured; response-language behavior remains unverified.
+  zero forbidden leaks, 2.5-second warm p95). Development draft/citation provenance is tested;
+  semantic claim support remains unverified, so the full RAG gate is not complete.
+- LANG: cross-language retrieval is measured; EN/JA/ZH Codex-assisted response smokes pass.
+  These manually authored development drafts do not establish a generation-language quality gate.
 - TRACE: real local embedding/reranking ledger entries exist; the complete processing UI,
   generation accounting and abandoned synchronous-call reconciliation remain incomplete.
 - ROUTE/REVIEW/DATA/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
