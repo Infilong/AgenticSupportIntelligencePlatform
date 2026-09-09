@@ -1,15 +1,15 @@
 {
   "project": {
-    "fingerprint": "6aef9559ca4fd5512f32a180961f6410f762bf415dfb17ec4de78eb18a1ddc62",
+    "fingerprint": "133646d9e7ccfc9e4a963792b010e3b6843393c9f917cf9ec68f57174e6f93ee",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/M5 record and entry-point review against final fourcompleted demo, separated system original/reviewed text,17 focused tests and126-displayed-pass420s full timeout. Historical0015/fd18/pending-session wording corrected; current0016 and incomplete corpus/UI/provider gates explicit. Cold-worker second demonstration not included in this receipt and no full-quality claim."
+    "rationale": "Independent STATUS/M5 repair record against focused2PG log and UI/source changes. Prior81e68b0 hosted CI success remains separate from local126-pass420s incomplete suite; current frozen-control evidence narrowly scoped. Corpus runner, comparison presentation and external provider/accounting remain next work; no new full-suite or generation-quality claim."
   },
   "frontend": {
-    "fingerprint": "f73ff93512b801e9c22a1a464485ab98199049074d635b19d9671edd999b4602",
+    "fingerprint": "bdcefb47f0c335e532398c159df69b0557d57423a4e31cb19c898528f69ab8e0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent generated comparison API surface and shared architecture review: no comparison UI yet; existing Workbench edits/approves linked system run. Final demo preserves original contribution distinct from reviewed response. Generic Add-details control still visible on frozen runs but server rejects it, explicitly deferred UI repair. No false new frontend comparison feature or semantic quality claim."
+    "rationale": "Independent AttemptControls/generated API/component test review: input_frozen disables retry/add-details without removing history, approved results or review. Explanatory copy reflects immutable comparison input; ordinary controls unchanged. Two focused components/build and retained root-inspected frozen/ordinary browser screenshots support narrow UI repair, not a complete comparison UI."
   },
   "tooling": {
     "fingerprint": "ef9b2204a9691958b88067a2e25959e4971c2adae3683bbc2dec76f77c056dc9",
@@ -24,15 +24,15 @@
     "rationale": "Independent generation CLI/session and evals README/M5 guardrail review: consumes whitelisted input/attributed responses, no evaluator fixtures, per-pipeline exports separate from admin inspection. Parsed final demo fourcompleted, direct no trace and three distinct local embedding ledgers; manual nonblind plumbing only. Full frozen corpus, semantic scoring and external provider remain incomplete; comparable is identity/cancellation only."
   },
   "backend": {
-    "fingerprint": "21ac4c37e15dd8533aa57aa7750664cb90fd52bf941b358eea73a0d6bf600d6c",
+    "fingerprint": "1ec68740fae044790ea7641240eeebe6538cb06730448c8b7439d2c80652acde",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent comparison admission/access/preparation/submission/reading and migration review: admin workspace guards, corpus/cancellation fences, direct no retrieval, declared vector/hybrid strategies and linked real system graph, separate original/reviewed output. Focused17 checks and actual completed CLI demo support connected development execution; fresh-worker registration fix tested narrowly, second cold demo excluded. Full126-displayed-pass timeout remains incomplete."
+    "rationale": "Independent RunDetail input_frozen review: derived from authorized run and workspace-scoped comparison link; defaults false for ordinary runs, server attempt restrictions unchanged. Inspected two passing PostgreSQL cases36.47s asserting frozen and ordinary projections; no schema migration or authorization expansion."
   },
   "infrastructure": {
-    "fingerprint": "8e623315859466283674be715e53ff8a0ac1c42ab4fbe7c7984cd5f110095dc8",
+    "fingerprint": "660345525376d9d4e3165d04fbddd612c3d9c1e4c5862b496104b7c545b42d56",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared architecture/runtime scope review: additive0016 comparison records and worker branch reuse local DB/jobs/support graph; ordinary default unchanged, no external services/paid dispatch. Development migrated; prior packaged release history distinct. Session throttle preserved and full timeout acknowledged; no deployment or all-production-ready claim."
+    "rationale": "Independent shared ARCHITECTURE frozen-run behavior review: server-derived link flag and UI controls match existing domain restriction, no runtime/service/provider change. Ordinary support behavior and local deployment boundaries preserved; existing browser evidence is not new full release verification."
   }
 }

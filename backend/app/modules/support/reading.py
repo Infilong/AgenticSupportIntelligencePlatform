@@ -6,6 +6,7 @@ from sqlalchemy.orm import aliased
 
 from app.jobs.models import Job
 from app.jobs.queue import authorize
+from app.modules.comparisons.access import linked
 from app.modules.reviews.service import decision_for, draft_identity
 from app.modules.support.context import validate_sources
 from app.modules.support.models import Message, RunStep, SupportRun
@@ -159,6 +160,7 @@ def detail(db, workspace_id, actor_id, run_id):
         "creator_id": run.creator_id,
         "attempt_number": run.attempt_number,
         "input_text": run.input_text,
+        "input_frozen": linked(db, workspace_id, run.id) is not None,
         "clarification": run.clarification,
         "latest_run_id": history[-1][0].id,
         "attempts": [

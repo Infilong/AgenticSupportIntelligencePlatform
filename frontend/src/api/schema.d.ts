@@ -1283,6 +1283,11 @@ export interface components {
             attempt_number: number;
             /** Input Text */
             input_text: string;
+            /**
+             * Input Frozen
+             * @default false
+             */
+            input_frozen: boolean;
             /** Clarification */
             clarification: string | null;
             /** Attempts */

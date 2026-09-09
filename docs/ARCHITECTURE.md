@@ -383,6 +383,8 @@ atomically. `direct_llm` does not retrieve; `vector_rag` uses vector; `hybrid_ra
 use hybrid with five-result/24KB context limits. The system pipeline executes the real support
 LangGraph and human review; ordinary support keeps vector-rerank. Frozen comparison runs cannot
 spawn changed-input attempts; create a new comparison instead.
+Run details expose server-derived input_frozen; the Workbench explains the fixed question and
+hides retry/add-details controls for these runs. Ordinary attempt controls and review stay intact.
 Active corpus changes invalidate comparability and fence request export and publication.
 The comparable flag only reports unchanged corpus/not cancelled; pipeline states separately
 show whether execution finished. It is not a correctness or generation-quality score.

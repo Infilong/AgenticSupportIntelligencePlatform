@@ -13,7 +13,7 @@ export function AttemptControls({ run, workspace, onCreated, showHistory = true,
   useEffect(() => () => controller.current?.abort(), []);
   const latest = run.latest_run_id === run.id;
   const running = ['queued', 'running'].includes(run.state);
-  const canAct = latest && !running && workspace.role !== 'viewer' && run.attempt_number < 10;
+  const canAct = !run.input_frozen && latest && !running && workspace.role !== 'viewer' && run.attempt_number < 10;
   const canRetry = ['failed', 'cancelled', 'rejected'].includes(run.state) || run.outcome === 'insufficient_evidence';
   const remaining = Math.max(0, 1000 - Array.from(run.input_text).length - '\n\nCustomer clarification:\n'.length);
   const excess = Array.from(details).length - remaining;
@@ -33,6 +33,7 @@ export function AttemptControls({ run, workspace, onCreated, showHistory = true,
   }
   function clarify(event: FormEvent) { event.preventDefault(); void submit('clarify'); }
   return <section className="attempt-controls" aria-label="Processing attempts">
+    {run.input_frozen && <p className="muted">This comparison keeps its original question fixed. Its responses and review history remain available.</p>}
     {!latest && <p><Link to={`/w/${workspace.id}/runs/${run.latest_run_id}${search}`}>Open latest attempt</Link></p>}
     {showHistory && run.attempts.length > 1 && <AttemptHistory run={run} workspaceId={workspace.id} search={search} />}
     {canAct && <>{canRetry && <button className="primary" disabled={pending} onClick={() => void submit('retry')}>{pending ? 'Starting…' : 'Retry processing'}</button>}

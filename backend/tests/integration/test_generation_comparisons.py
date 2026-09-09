@@ -74,6 +74,8 @@ def test_four_distinct_pipelines_and_bound_contributions(system):
     result = client.get(path).json()
     items = {p["name"]: p for p in result["pipelines"]}
     assert len(items) == 4 and result["comparable"]
+    system_run = client.get(f"/api/workspaces/{system['workspace']}/runs/{items['system_v1']['run_id']}")
+    assert system_run.status_code == 200 and system_run.json()["input_frozen"] is True
     assert items["direct_llm"]["retrieval_id"] is None
     with Session(system["engine"]) as db:
         traces = list(db.scalars(select(RetrievalTrace)))

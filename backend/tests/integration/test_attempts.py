@@ -38,6 +38,7 @@ def test_clarification_preserves_original_and_history_with_one_latest_inbox_row(
     assert detail["original"] == "w" and detail["clarification"] == "What is the refund deadline?"
     assert detail["input_text"].startswith("w\n") and detail["state"] == "waiting_for_input"
     assert detail["retrieval_id"] and detail["handoff"]
+    assert detail["input_frozen"] is False
     assert detail["parent_run_id"] == first["run_id"] and detail["attempt_number"] == 2
     assert [row["number"] for row in detail["attempts"]] == [1, 2]
     inbox = system["client"].get(f"/api/workspaces/{system['workspace']}/messages?limit=1").json()

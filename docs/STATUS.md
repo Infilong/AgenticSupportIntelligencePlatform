@@ -12,10 +12,12 @@ and pushes to `codex/fresh-start` are authorized; merging, public deployment and
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
 The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
 The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
-Current: import checkpointcf59fd7 and startup repaire42f898 passed hosted CI. Four-pipeline
-single-case execution is implemented locally;17 focused database tests and4 helper tests pass.
-The four-pipeline CLI demo and linked system browser edit/approval pass. Finish cold-worker
-verification, independent documentation review and the verified comparison commit.
+Current: four-pipeline checkpoint81e68b0 is committed/pushed. Its real CLI/browser demo and
+cold-worker first-attempt preparation pass;17 focused database tests,77 units and56 prep checks
+pass. Full local regression timed out420s after126 displayed passes; hosted CI34380249837
+passed all five jobs, including real PostgreSQL regression. Frozen-run controls are repaired;
+2 focused database and2 component checks, frontend build and real frozen/ordinary browser views
+pass. Finish documentation review and commit this UI repair before the next comparison slice.
 Next: expand the frozen corpus runner and comparison presentation. External provider
 dispatch/accounting remains required work.
 [Timeout cleanup](plans/completed/m6-command-timeout.md) retains Windows evidence and hosted

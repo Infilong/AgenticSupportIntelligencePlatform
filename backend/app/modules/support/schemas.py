@@ -83,6 +83,7 @@ class RunDetail(BaseModel):
     creator_id: UUID
     attempt_number: int
     input_text: str
+    input_frozen: bool = False
     clarification: str | None
     attempts: list[AttemptSummary]
     latest_run_id: UUID

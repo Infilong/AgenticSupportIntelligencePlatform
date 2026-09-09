@@ -209,3 +209,30 @@ reviewed; final security review found no blocking issue. Source and mapped docum
 unchanged during these checks; this appended historical evidence note follows them.
 Next: frozen-corpus runner and comparison UI, including hiding frozen-run attempt controls;
 external generation provider/accounting and full release verification remain required.
+
+### Next connected UI repair: frozen comparison input
+
+Normal scoped change; root owns support read/schema, generated API type and AttemptControls.
+Expose a server-derived input_frozen flag from the workspace-scoped comparison link. Hide
+retry/add-details controls and explain that comparison input is fixed, while preserving result
+history and human review. The server attempt denial remains authoritative. Verify ordinary
+controls remain available, frozen controls are absent, and inspect the real completed demo in
+the browser. This repairs the observed misleading action before the larger comparison UI.
+
+Implementation: input_frozen comes from the authorized run's workspace-scoped comparison link;
+the component suppresses both actions and explains the fixed input. Independent source review
+found no issues. Two component cases and frontend build pass. Two real PostgreSQL comparison/
+ordinary-attempt cases pass36.47s at `.artifacts/m0/frozen-run-controls-20260909T170324133908Z`.
+Ruff lint passes; initial mixed-line-ending format failure was normalized, then171-file format
+check passed. Browser verification and final documentation review remain pending at this point.
+
+Real browser follow-up passed on the running development app: frozen-controls.png and
+ordinary-controls.png plus frozen-controls-trace.zip in the existing demo evidence directory.
+Frozen input explanation is visible, added-details action absent, approved-copy preserved;
+ordinary run still opens its details form. No page errors; frozen screenshot visually inspected.
+The preceding comparison commit81e68b0 also passed all five jobs in hosted run34380249837,
+including the configured real PostgreSQL suite. That does not turn the local420s timeout into a pass.
+
+UI repair final preparation:56 tests passed20.894s at
+`.artifacts/m0/prep-20260909T170807807961Z`. Independent source and documentation reviews closed.
+This appended historical evidence note changes no tested application or mapped documentation.
