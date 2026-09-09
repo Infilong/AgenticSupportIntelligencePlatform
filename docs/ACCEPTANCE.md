@@ -100,6 +100,12 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   ASGI requests and the real worker/LangGraph completed a new clarification with three persisted
   checkpoints and no model calls. This does not prove restored network/browser deployment,
   old-backup recovery objectives, inherited-job replay or restored RAG/generation quality.
+- RESTORE refreshed after schema0014: all23 tables, including the historical evaluation record,
+  match at `.artifacts/m6/restore-20260909T132319Z/report.json`. A new restored ASGI/worker
+  clarification passes with three checkpoints/zero calls. Authenticated restored history and
+  trace reads preserve the five-strategy150-case projection and foreign denial; see the
+  [current-schema record](plans/completed/m6-current-schema-restore.md). This adds current-schema
+  recovery evidence without claiming restored network/browser deployment or new retrieval quality.
 - BOOT local packaging: a fresh isolated release stack built assets, migrated, initialized
   checkpoints and became healthy at `.artifacts/m0/release-up-20260909T111652893904Z`.
   Final browser proof `.artifacts/m6/release-browser-final-20260909` covers same-origin login,

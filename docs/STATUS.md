@@ -41,9 +41,22 @@ handoff while real knowledge ingestion proceeds. Final browser evidence is
 `.artifacts/m6/small-team-final-20260909`; database intervals confirm admitted-work overlap.
 Five focused PostgreSQL measurement checks pass. Profile checkpoint48f9409 is pushed; independent
 code/documentation review closed and46 preparation checks passed at
-`.artifacts/m0/prep-20260909T130840658739Z`. Current: add the
-[packaged release CI smoke](plans/active/m6-release-ci.md), reusing the existing no-API journey;
-local baseline passes three checks in8.4s. Keep RAG tuning deferred; five retrieval strategies
+`.artifacts/m0/prep-20260909T130840658739Z`. The
+[packaged release CI smoke](plans/completed/m6-release-ci.md), reusing the existing no-API journey;
+local baseline passes three checks in8.4s. CI job checkpointf1a64dc is pushed; hosted result is
+successful: GitHub Verify34355803730 passed, including the new packaged-release job. The
+[native Chrome200% zoom](plans/active/m6-native-zoom.md) attempt stopped at13:18 UTC because
+Computer Use could not identify the browser URL confidently enough for policy enforcement.
+No desktop input or zoom verification occurred; the separate test runner was interrupted.
+Computer Use remains stopped for this turn. The opt-in zoom harness is preserved outside the
+passing suite under `.artifacts/m6/native-zoom-20260909/parked-native-zoom.spec.ts`; do not treat
+its interrupted run as UX evidence. Goal continuation is active. The
+[current-schema restoration](plans/completed/m6-current-schema-restore.md) passes all23-table
+snapshot fingerprints plus a new ASGI/worker request and authenticated restored evaluation/trace
+reads with foreign denial. Evidence: `.artifacts/m6/restore-20260909T132319Z`.
+Next: checkpoint the reviewed recovery/CI evidence, then verify the complete existing multilingual
+review journeys against packaged release assets. Preserve all databases and the14:58 UTC boundary.
+Keep RAG tuning deferred; five retrieval strategies
 do not complete EVAL and the workload profile does not exercise generation.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language

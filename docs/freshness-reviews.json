@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "7b1fa1500c4cc93053dfebac72d81c69e5ba2df6fa4b7071307170c9b140c510",
+    "fingerprint": "e30955895d98b31adab2fb1d899e39a2e995a720e6efa7f188502cc49399ad7b",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS and active CI plan review against retained browser report: three expected cases, zero failures, 8381.528ms local baseline. Prior five-session profile remains historical and scoped. Hosted CI explicitly awaits push; no production, real-model capacity or full release gate completion claim."
+    "rationale": "Independent README/STATUS/completed CI and restoration records plus interrupted zoom plan review. README now accurately describes existing release/restore commands while standalone backup/live verification remain absent. Saved hosted record confirms all five jobs including release cleanup; restore dump/hash and clone checks match claims. Native zoom remains interrupted and unverified; historical pending-CI wording corrected."
   },
   "frontend": {
     "fingerprint": "a1beb0838a5390cadf5a7b6dc999e77fbaaf1dbe2ad901421a414ae8d1f5113a",
@@ -18,16 +18,16 @@
     "rationale": "Independent RUNBOOK recipe review against release_runtime and release.spec.ts: repository command working directories, generated credentials and 8011 origin align; clarification asserts zero model calls. Cleanup wording now acknowledges cancellation/timeout interruption. Existing scripts unchanged; local baseline is not hosted verification."
   },
   "evaluation": {
-    "fingerprint": "f7eb08beb69fadfcaf9567b15674340d4296b82af9b3d948e25cb999eebad75e",
+    "fingerprint": "baffb1e4665fdbcc962f47d586c64c5a3b2be825a28b0340691e92b2bd34f7f0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent ACCEPTANCE and completed profile record review against actual browser and database evidence. Bounded pre-generation workload sample adds BOOT/TRACE/JOB/UX evidence only. Existing corpus/scoring and historical quality results unchanged; no SLO, simultaneous inference, generation approval throughput or completed EVAL claim."
+    "rationale": "Independent restored historical-evaluation evidence review: verifier compares clone API projection with clone stored snapshot, five strategies/150 cases and retained ja02 failure, with authenticated succeeded trace and foreign 404. Source-snapshot equivalence derives from earlier table parity. No rerun, changed quality score, generation or corpus-tuning claim."
   },
   "backend": {
-    "fingerprint": "17ddeab490bb3971f7edd01e709f4814a08dd146e7eb0e544e36e6543244e068",
+    "fingerprint": "85ad37c399d927e8ccffb7a8ffe2b179d9eb71b4db5b6ef48b8c27d6c3d693d4",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of profile_release and five SQL checks: read-only repeatable snapshot, exact workspace-bound sets, unknown/negative timing and persisted interval overlap agree with docs. Final stored report has five cancelled runs, seven succeeded jobs and collection-time corpus 5 documents/128 chunks. No runtime, API or schema change; prior full suite predates this helper."
+    "rationale": "Independent shared ACCEPTANCE restoration claim review against unchanged restore implementation and retained current-schema report: all 23 table fingerprints/metadata equal and dump SHA recomputed; new restored ASGI/worker clarification has three checkpoints and zero calls. Supplementary clone API checks match stored row and deny foreign trace access. No source API comparison, network deployment or new runtime claim."
   },
   "infrastructure": {
     "fingerprint": "cd396821935a25a635e57ed29e6ba3b40d2622c00dbe0a1fec97b2f7ad798c98",

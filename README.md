@@ -38,8 +38,14 @@ Evidence lives under `.artifacts/m0/` and is intentionally excluded from Git.
 For the isolated API/database, use `init-env`, then `up` from the [runbook](docs/RUNBOOK.md).
 `up` starts the API, frontend, worker and PostgreSQL. `seed-demo` creates synthetic sign-in
 accounts; follow the runbook for model preparation and actual knowledge journeys.
-`verify-live`, backup and restore remain to implement. Do not start the archived app as
-proof of this rebuild. API spending is zero until explicitly authorized.
+For the packaged local app, use `release-up`, `release-seed` and `release-prepare-model`;
+open `http://127.0.0.1:8011`. It serves built assets from FastAPI and has separate database/model
+volumes. [The runbook](docs/RUNBOOK.md#built-local-release) explains setup and verification.
+`verify-restore` creates a fresh backup snapshot, restores a new disposable database, checks
+table fingerprints and exercises the restored API/worker. It preserves the source and existing
+databases. A standalone backup command and `verify-live` remain unimplemented; no external
+generation has been verified. Do not use the archived app as proof of this rebuild.
+API spending is zero until explicitly authorized.
 
 The previous implementation and history remain on `archive/previous-platform-2026-09-08`.
 This branch will not import its database or reuse its dependencies automatically.
