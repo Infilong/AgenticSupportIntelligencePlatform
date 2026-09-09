@@ -202,13 +202,15 @@ It signs in with ignored synthetic credentials, submits a fresh policy through t
 for the real worker/CPU model, checks activation and downloads the exact original. It creates
 a new smoke document on each run; it is not the long-corpus quality gate.
 
-The current ingestion API accepts UTF-8 TXT/Markdown up to 5 MiB. PDF/DOC extraction is pending.
+The current ingestion API accepts UTF-8 TXT/Markdown up to 5 MiB. PDF/DOC extraction is deferred beyond V1.
 Admins upload/replace/withdraw; all workspace members may list and preview sources. Uploads
 require an idempotency key. Replacements become active only after successful indexing; failed
 replacements preserve the old active version. Limits: 500 active documents, 20 versions per
 document, 500 MiB retained originals, 50,000 retained chunks per workspace, 1,000 per document.
 Splitting checks cancellation between bounded 8,000-character blocks and preserves section and
-normalized Unicode character offsets. The final chunk is re-split with the next work block;
+normalized Unicode character offsets. A position-carrying adapter retains the actual occurrence
+in repetitive text while reusing LangChain merging; dependency upgrades require compatibility
+tests. The final recorded chunk is re-split with the next work block;
 real headings reset overlap, and sentence separators remain with preceding text. Existing
 chunks require normal versioned re-ingestion to receive these repairs. Opaque ASCII tokens
 longer than 4,096 characters fail.

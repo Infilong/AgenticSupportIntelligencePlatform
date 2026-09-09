@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "f6c7b5788007dbb9cb0ebd2a313c7ec24c61737fded42d7f62e228f71df9a1c1",
+    "fingerprint": "69c5d0e0f41afb5e70c529031d0f6f43a04f0e1eabbd322d4a6db18a92ef7876",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/plan/entry-point review with inspected reports: capacity6checks+1nested browser,116PG291.36s,24units,65.7–234.1ms per-case warm maxima confirmed. Original1007.056ms failed benchmark retained; threshold unchanged. Current window, next bounded RAG task and incomplete full-release limits remain explicit."
+    "rationale": "Independent STATUS/plan/entry-point review: resumed window preserved; capacity checkpoint15e3218 correctly historical,span/context latest bounded repair.39unit/116PG and26case27group2.672s evidence verified from logs/reports. Re-ingestion requirement and full-goal/semantic limits explicit; no invented source-UI verification inferred from Chrome workflow observation."
   },
   "frontend": {
-    "fingerprint": "d816d19dc44e069b07e2df93885f76c44bd3445a4c410f51459b21f4b1341588",
+    "fingerprint": "5496d9888acb4d5b4d6f59bcf75fb3775f3d05b14a9a73dd64db3e2db140fd6c",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of new opt-in real inbox-capacity browser against current table/navigation and architecture. Retained browser JSON has1pass6.6s on50k fixture; script checks bounded20/50rows,deep-page/detail return,Japanese filter,viewer/foreign denial and360/768/1440overflow. Production frontend unchanged; broad semantic/throughput gates remain unverified."
+    "rationale": "Independent unchanged frontend boundary review against shared architecture: source offsets originate in repaired backend spans; no new frontend/API contract claimed. Current documentation distinguishes source snapshots and context byte bounds. Existing browser history retained; final Chrome workflow observation is not treated as renewed source-navigation verification."
   },
   "tooling": {
-    "fingerprint": "f1bbc6f146a12f9b44a54daff1908956e2e3691955c9069c75d6be68b9435371",
+    "fingerprint": "8689fb02acd49f8f8cd934766aba098656d6f017a4628b7aa98bc46bda38c73e",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of verify-inbox-capacity dispatcher/integration wrapper and capacity launcher/tests against RUNBOOK.420s wrapper bound distinct from1000ms opt-in local target; regular suite omits timing/browser gate. Real child timeout test retains output and stops owned tree; forced external wrapper termination explicitly not covered. Generated command reference updated."
+    "rationale": "Independent owning-runbook review: splitting recipe now accurately names position-carrying LangChain adapter,private-hook compatibility tests and normal versioned re-ingestion. Commands/harness unchanged; generated inventory includes adapter/tests and plan move. Retained test failures and final source-bound logs support scoped verification only."
   },
   "evaluation": {
-    "fingerprint": "a1981a724cb5d46a9e50dcd41bacef45950d82a0760c3633eae557d46b2ee843",
+    "fingerprint": "2c3204e6b6c5d8362f78c793e21a48be610093a17e5a32b5bbc5fff6da6b3ade",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of shared ACCEPTANCE capacity wording against new fixture/test and saved reports.50k stored-state rows,100foreign,concurrent cap and116PG evidence do not complete DATA imports or RAG evaluation. Five warm samples are explicitly not stable percentile/throughput; unchanged evaluation corpus and semantic gates preserved."
+    "rationale": "Independent review of unchanged scorer/corpus and updated RAG contract against fresh report072217Z:26/26evidence cases,27/27groups,p952.672,runtime/source stable. Four generation outcomes remain unverified; adapter and context repairs do not establish source entailment,token budget,deduplication or held-out quality. PDF/DOC deferral matches release exclusions."
   },
   "backend": {
-    "fingerprint": "c5a97c51f0e414e00eccadc254be95502a068645401d59b4a3d933cb312afaf9",
+    "fingerprint": "b30117caee1bf7eeecfca8b6040a5f290cd14da96dc655a2dff63c5bd6417693",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent capacity review: compared page-first All query, scoped filtered NOT EXISTS newer attempts,50k admission with idempotency-before-count and tests against architecture/acceptance. Inspected stored-state fixtures, race/latest/order/ACL assertions and116-passPG/24-unit retained logs with unchanged-source reports. No migration, provider processing or production-throughput claim."
+    "rationale": "Independent span/context semantic review: inspected SourceSpan sequential partitions, LangChain merge/join reuse,actual-span carry and top-five continue-on-oversize packing against architecture/RAG/runbook. Known-position repetition,coverage,whitespace,token-overhead compatibility and exact-byte tests match bounded claims.39unit/116PG logs and fresh3boundary report verified; no schema/authority or semantic validation change."
   },
   "infrastructure": {
-    "fingerprint": "d9d586e9c53bfff13100c3ba49a13e2859c2cbe66cfc296dcad9a1e89c6a6d31",
+    "fingerprint": "4537c826b3bb5add44bb324a0982192de96825659d3a982ddb8d8b97893a9cc1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared-doc review of unchanged deployment/configuration boundary and new test runtime harness. RUNBOOK limits fixtures to disposable migrated test schemas,temporary loopbackAPI/Vite,synthetic credentials and no providers/workers. Cleanup scope and external termination limitation explicit;50k reads do not establish deployment or processing capacity."
+    "rationale": "Independent unchanged infrastructure boundary review against architecture/runbook: no migration,service,provider or deployment change. Existing documents remain immutable; fresh versioned ingestion gets position repair. Context24k-byte transport policy retained without claiming model-token capacity; test/runtime evidence does not establish new production guarantees."
   }
 }

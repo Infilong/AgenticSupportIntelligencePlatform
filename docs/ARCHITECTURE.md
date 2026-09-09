@@ -67,7 +67,10 @@ flowchart LR
     Rank --> Records
 ```
 
-LangChain splitting preserves sections and normalized offsets. Pinned local multilingual
+The [span adapter](../backend/app/modules/knowledge/span_splitter.py) carries actual positions
+through recursive partitions and LangChain merge/join hooks, including repetitive text.
+Compatibility tests guard those private hooks when upgrading LangChain. Splitting preserves
+sections and normalized offsets. Pinned local multilingual
 embeddings and a cross-encoder provide real retrieval without an external API. Returned
 passages are candidates, not generated answers. Model records include identity, local token
 counts, duration and zero external cost. Crash-abandoned synchronous records need reconciliation.
@@ -160,7 +163,9 @@ uses server-derived workspace/run threads and a dedicated PostgreSQL advisory lo
 processing/publication boundary checks the live job lease and original requester's authority;
 resume also checks the contributor. Every packed source is revalidated before export, submission
 and publication, including uncited passages. Context is capped at five passages and 24,000 UTF-8
-JSON bytes. This byte bound does not establish the release's complete token-budget policy.
+JSON bytes. Among the existing top-five candidates, an oversized complete snapshot is omitted
+and later candidates are considered. No source text is truncated. This byte bound does not
+establish the release's complete token-budget policy or evidence deduplication.
 
 Cancelled runs cannot resume. Duplicate submissions are idempotent; conflicting submissions fail.
 Checkpoint and domain commits remain separate: replay reuses saved output and one handoff.

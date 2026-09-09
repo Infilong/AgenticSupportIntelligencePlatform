@@ -2,11 +2,21 @@
 
 Goal resumed by the user on 2026-09-09: **M1–M6 active and incomplete**.
 Current window: **06:04:24–10:04:24 UTC** (stop 19:04:24 Tokyo).
-[Workflow and inbox scale plan](plans/active/m4-workflow-inbox-scale.md) owns the current
-priority: visible recorded workflow, full-width inbox/detail navigation and real 50,000-message
-capacity verification. The latest user approval renews full-goal execution, not just the audit.
+[RAG span/context repair](plans/active/rag-span-context.md) owns the current slice, following
+the completed [workflow and inbox scale plan](plans/completed/m4-workflow-inbox-scale.md).
+The latest user approval renews full-goal execution, not just the audit.
 
-Latest application slice: **workflow inspection and 50,000-message stored-state capacity verified**.
+Latest repair: **repetitive-source provenance and context retention verified**. The position-carrying
+LangChain adapter fixes ambiguous occurrences; packing retains later fitting top-five evidence.
+39 unit checks pass (`.artifacts/m0/backend-20260909T072159482639Z`) and 116 PostgreSQL checks pass
+(`.artifacts/m0/integration-20260909T071621876300Z`). Three real EN/JA/ZH boundary probes pass at
+`.artifacts/rag-hardening/boundary-20260909T071922Z`; the unchanged long-policy corpus passes
+26/26 evidence cases and 27/27 groups, warm p95 2.672s, at
+`.artifacts/m2/retrieval-eval-20260909T072217Z`. Development generation remains unverified.
+Independent code review found no blocker and its tokenizer-overhead coverage request was added.
+Existing documents need normal versioned re-ingestion; no historical chunks were rewritten.
+
+Preceding application slice: **workflow inspection and 50,000-message stored-state capacity verified**.
 UI checkpoint `bf983df` is pushed; GitHub CI `34319742288` passed. Response/Workflow/Sources/History
 tabs preserve editing state; URL filters/page survive detail navigation, and cancellation remains
 available from every tab. The table requests 20/50 rows and unmounts during detail inspection.
@@ -23,8 +33,9 @@ All-view paging/count and filtered latest-attempt anti-joins removed measured re
 Full PostgreSQL regression: 116 passed in 291.36s
 (`.artifacts/m0/integration-20260909T065711706876Z`). Backend unit checks: 24 passed
 (`.artifacts/m0/backend-20260909T065810797302Z`), including real timeout/child cleanup.
-Ruff and TypeScript/Vite build pass. The 37-check preparation pass at the UI checkpoint is
-`.artifacts/m0/prep-20260909T063415063136Z`; capacity checkpoint preparation follows doc review.
+Ruff and TypeScript/Vite build pass. The capacity checkpoint is pushed as `15e3218`; its
+37-check preparation pass is `.artifacts/m0/prep-20260909T071037790250Z` after independent review;
+GitHub CI `34322603929` passed.
 The unchanged UI has 23 frontend tests, nine existing workbench journey passes in
 `.artifacts/m4/workflow-inbox-ui-20260909`, and repaired inbox/workflow browser passes at 360/768/1440
 in `.artifacts/m4/workflow-inbox-ui-fixed-20260909`. The initial mobile overflow failure remains

@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from app.modules.knowledge.span_splitter import SpanSplitter
 
 
 @dataclass(frozen=True)
@@ -47,13 +47,7 @@ def split_document(text, provider, checkpoint=lambda: None):
     # Reject pathological opaque tokens before invoking the tokenizer. CJK is unaffected.
     if re.search(r"[A-Za-z0-9_]{4097}", text):
         raise ValueError("Document contains an overlong unbroken token")
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=350,
-        chunk_overlap=45,
-        keep_separator="end",
-        length_function=provider.token_count,
-        separators=["\n\n", "\n", "。", "！", "？", ". ", " ", "、", "，", ""],
-    )
+    splitter = SpanSplitter(provider.token_count)
     result = []
     tail_start, prior_section = None, None
     for section_start, offset, section, block in source_blocks(text):
@@ -67,28 +61,24 @@ def split_document(text, provider, checkpoint=lambda: None):
             result.pop()
             block = text[tail_start:offset] + block
             offset = tail_start
-        previous_start = -1
         contents = splitter.split_text(block)
         for content in contents:
             if len(result) >= 1000:
                 raise ValueError("Document exceeds 1000 chunks")
-            start = block.find(content, previous_start + 1)
-            end = start + len(content)
+            start, end = content.start, content.end
             if start < 0 or block[start:end] != content:
                 raise ValueError("Chunk does not resolve to an exact normalized source span")
             result.append(
                 Passage(
-                    content,
+                    str(content),
                     offset + start,
                     offset + end,
                     section[:200],
                     provider.token_count("passage: " + content),
                 )
             )
-            previous_start = start
-        # Repeated text may have several exact occurrences. Carry the final occurrence,
-        # not the first matching offset, so repetitive documents cannot grow the work block.
-        tail_start = offset + block.rfind(contents[-1]) if contents else None
+        # Carry exactly the recorded final span, never a separately guessed occurrence.
+        tail_start = result[-1].start if contents else None
         prior_section = section_start
     if not result:
         raise ValueError("Document must produce at least one chunk")

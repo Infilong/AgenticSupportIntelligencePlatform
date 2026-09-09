@@ -41,7 +41,7 @@ def pack(original, language, results):
         sources.append(row)
         if len(json.dumps(context, ensure_ascii=False).encode()) > 24000:
             sources.pop()
-            break
+            continue
     return context
 
 

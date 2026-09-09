@@ -66,9 +66,9 @@ The current middleware creates HTTP IDs, but does not persist this entire correl
 | Stage | Current implementation and evidence | Gap / required change |
 | --- | --- | --- |
 | 1. Architecture | Real PostgreSQL/local-model retrieval and durable LangGraph; [current topology](ARCHITECTURE.md), [workflow tests](../backend/tests/integration/test_support.py) | Keep the small local stack; generation remains a development handoff. |
-| 2. Ingestion | Admin-only UTF-8 TXT/Markdown, 5 MiB; original bytes retained. [service](../backend/app/modules/knowledge/service.py) | PDF/DOC support remains planned but unimplemented; OCR is outside this repair. Markdown ATX headings are recognized; tables/code fences/hierarchy need explicit supported semantics before expansion. |
+| 2. Ingestion | Admin-only UTF-8 TXT/Markdown, 5 MiB; original bytes retained. [service](../backend/app/modules/knowledge/service.py) | PDF/DOC/OCR are deferred beyond V1. Markdown ATX headings are recognized; tables/code fences/hierarchy need explicit supported semantics before expansion. |
 | 2. Ingestion: normalization | BOM/newline handling, exact normalized-text spans | Apply NFKC/case normalization to **derived search keys**, preserving original text and citation offsets. Do not silently rewrite quoted policy. |
-| 3. Chunking | LangChain recursive splitter; 350 tokenizer units, 45 overlap, punctuation/paragraph/CJK separators, 1,000-chunk limit. [splitting](../backend/app/modules/knowledge/splitting.py) | Confirmed P1: artificial 8,000-character boundaries could split identifiers. Repair and evidence belong to the execution record. Do not tune chunk sizes without comparison. |
+| 3. Chunking | Position-carrying [adapter](../backend/app/modules/knowledge/span_splitter.py) with LangChain merge/join hooks; 350 tokenizer units, 45 overlap, punctuation/paragraph/CJK separators, 1,000-chunk limit. [splitting](../backend/app/modules/knowledge/splitting.py) | Boundary identifier loss and repetitive-occurrence offsets repaired; compatibility tests guard private hooks on dependency upgrades. Do not tune chunk sizes without comparison. |
 | 4. Metadata/versioning | Workspace/version/chunk IDs, section, offsets, checksum, token count, embedding space; atomic active-version switch. [models](../backend/app/modules/knowledge/models.py), [ingestion](../backend/app/modules/knowledge/ingestion.py) | Persist source language and chunker/index recipe; page only for a supported parser, never invented for TXT. Document model-change/reindex lifecycle. |
 | 5. Embeddings | Real pinned multilingual E5-small, 384 dimensions, normalized query/passage vectors, 512-token rejection; no runtime fallback. [provider](../backend/app/providers/local_embeddings.py) | Validate returned batch identity/dimension against the configured space; test incompatible same-dimension models. Current production provider is fixed, so live mixing was not demonstrated. |
 | 6. Vector retrieval | Exact cosine SQL top 20; default final 5, API maximum 10. Workspace/current-version/model-space filters precede materialization. [retrieval](../backend/app/modules/knowledge/retrieval.py) | Compare candidate/final K explicitly; similarity is not calibrated relevance probability. |
@@ -76,7 +76,7 @@ The current middleware creates HTTP IDs, but does not persist this entire correl
 | 8. Hybrid retrieval | Not implemented | Independent candidate sets → reciprocal-rank fusion → optional existing reranker; retain raw scores and stage ranks separately. |
 | 9. ACL/security | Workspace membership before embedding/search; source/actor rechecks; foreign IDs denied. [retrieval tests](../backend/tests/integration/test_retrieval.py) | Retain the same restrictions in BM25, fusion, trace lookup and citation inspection. No leak was found in this bounded audit; this is not a completed security certification. |
 | 10. Reranking/dedup/context | Pinned multilingual cross-encoder scores up to 20 pairs, truncated to 512 pair tokens. No explicit overlap/diversity suppression. [reranker](../backend/app/providers/local_reranker.py) | Trace truncation and evidence lost from model input. Measure vector vs reranked quality/cost. Deduplicate by provenance/overlap; do not collapse genuine policy conflicts. |
-| 10. Context budget | Up to five complete snapshots within 24,000 UTF-8 bytes; context hash; no silent source-string truncation. [context](../backend/app/modules/support/context.py) | Full tokenizer-aware prompt+query+conversation+evidence+reserved-output budget; record excluded sources/reasons and token counts. Bytes are a transport bound, not a model budget. |
+| 10. Context budget | Consider the existing top five in rank order; omit oversized complete snapshots and try later candidates within 24,000 UTF-8 JSON bytes. Context hash, no source-string truncation. [context](../backend/app/modules/support/context.py) | Full tokenizer-aware prompt+query+conversation+evidence+reserved-output budget; record excluded sources/reasons and token counts. Bytes are a transport bound, not a model budget or deduplication. |
 | 11. Generation | Actual LangGraph pauses for an authenticated, attributed development contribution. [graph](../backend/app/workflows/support_graph.py) | No external LLM generation path/quality proof yet. Persist real input/output usage when added; development wait is not LLM latency. |
 | 12. Citations | Supplied chunk ID, exact quote, current source/version, offset and checksum checks | Claim entailment/completeness is separate. Valid ID + plausible quote cannot establish that the answer is supported. |
 | 13. No-source/review | Empty evidence routes to insufficient evidence; short input clarifies; drafts require human review | Nonempty nearest neighbours can still be irrelevant. No calibrated relevance/semantic abstention gate exists. Conflict/policy categories are development annotations, not automated detectors. |
@@ -213,6 +213,12 @@ long unseparated mixed-script spans can still split structurally. Measure eviden
 Existing stored chunks do not change automatically; replace/re-index affected documents through
 normal versioned ingestion. Preserve prior active versions until replacement indexing succeeds.
 
+The subsequent [span/context repair](plans/active/rag-span-context.md) resolves two reproduced
+P2 defects: repetitive text mapped to an earlier matching occurrence, and a large candidate
+preventing later fitting evidence from being packed. Positions now travel through partitions
+and LangChain merge/join hooks, including whitespace trimming; carry uses the same actual span.
+This does not rewrite existing chunks or establish semantic citation support.
+
 Scorer `active-required-sections-v2` counts facts only from active returned top-five passages in
 required sections and enforces negative-probe result limits. It still cannot bind each fact to
 its particular document/version or individual evidence group when headings repeat. Source-bound
@@ -240,3 +246,9 @@ judgments need a new frozen evaluation version. Historical scores retain their o
 - Full answer/citation support, live generation, four end-to-end baselines and complete failure
   taxonomy are **not verified**. No new frontend behavior, API contract or database migration was
   introduced by this repair. Existing browser evidence is scoped to knowledge workflows.
+
+Subsequent span/context evidence (September 9): 39 units and 116 PostgreSQL tests pass; three
+newly ingested real EN/JA/ZH boundary facts remain intact. The unchanged frozen corpus passes
+26/26 cases and 27/27 groups, warm p95 2.672s, with zero forbidden leakage. See
+`.artifacts/m2/retrieval-eval-20260909T072217Z/report.json` and the linked repair record.
+Generation remains unverified; these results do not add held-out semantic proof.
