@@ -28,4 +28,7 @@ services or a browser. The ordinary app remains connected to its original databa
 
 Independent safety review identified missing command/query deadlines and incomplete sequence
 metadata. Both were fixed before the successful drill; sequence checks now include is_called.
-Final evidence review and preparation verification precede the commit.
+Final independent evidence and documentation reviews passed. All 45 preparation checks passed
+at `.artifacts/m0/prep-20260909T095644938452Z`; implementation committed/pushed as ece351d.
+No inherited active jobs existed, so quarantine behavior was not exercised. Forced-timeout
+cleanup was not demonstrated by the successful drill. These remain limits, not passing claims.

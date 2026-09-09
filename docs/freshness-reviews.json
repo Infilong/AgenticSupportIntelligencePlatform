@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "86531d138ceb33de92833aaca8fab075a9346a051e9d0f54cf6b7703ab18a598",
+    "fingerprint": "3202db4addf8536876b7cc4e1a325ddbeee209e7a8f0309b6537804bf9dae8c0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/active-restorationplan/entrypoint review against actualreport andhash.22tables/extensions match;no sequences,noinheritedactivejobs,newclarification3checkpoints0calls. RESTORE explicitlyfreshsnapshotASGI/inprocess proof,fullrelease incomplete;priorsettings andothergates not silentlyupgraded."
+    "rationale": "Independent final docs-only checkpoint review: completed import/settings/restore plans moved undercompleted andSTATUS links updated;retained restorationproof andlimitations accurate. ece351d checkpoint and45prep evidence confirmed. Nextcopyaction/BOOTserving/Qualityevaluation explicitlyunimplemented releasework,notnewcompletedclaims;window remainsbounded andRAGtuningdeferred. No productsourcechange ornewruntimeproof inferred."
   },
   "frontend": {
     "fingerprint": "5f45d3b1a285073a41ec3f5c5e7138e8e88433aed2f8a43b1e9c607738fb9084",

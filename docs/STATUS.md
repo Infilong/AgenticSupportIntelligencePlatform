@@ -3,15 +3,21 @@
 Latest user direction on2026-09-09: **continue M1–M6, prioritize a working demo; defer RAG tuning**.
 Current unattended window:06:04:24–10:04:24 UTC (stop19:04:24 Tokyo). Full goal remains incomplete.
 
-Current slice: [isolated restoration drill](plans/active/m6-restore-drill.md), actual drill passed.
+Latest completed slice: [isolated restoration drill](plans/completed/m6-restore-drill.md),
+committed/pushed as ece351d. Independent safety and documentation reviews passed; all 45 prep
+checks passed at `.artifacts/m0/prep-20260909T095644938452Z`.
 Evidence: `.artifacts/m6/restore-20260909T095111Z/report.json`, wrapper
 `.artifacts/m0/restore-20260909T095110422764Z`. All 22 public tables and extension metadata match
 the same exported backup snapshot; the schema has no public sequences. The disposable restored
 database processed a fresh `w` through authenticated ASGI requests and the real worker/LangGraph:
 clarification_needed, succeeded job, three checkpoints, zero model calls. Original runtime was
 not redirected. This is not restored network/browser operation, inherited-job replay or RAG quality.
-Next: finish independent review and checkpoint this verification slice; full release gaps remain.
-The previous [settings and usage slice](plans/active/m4-settings-usage.md) is committed/pushed as
+Next implementation slice: add a labelled copy action for the final approved response, with
+exact-text, clipboard-denial and real browser verification. Independent release-gap review
+confirmed this is required by the product plan but absent from RunResult. Follow with built-asset
+serving from FastAPI (BOOT) and permission-scoped evaluation results in Quality; neither is
+implemented yet. Keep RAG tuning deferred. Do not start another slice beyond this window.
+The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped
 recorded model activity with unknown measurements retained. Migration0013 is applied and the
@@ -26,7 +32,7 @@ passes at `.artifacts/m0/integration-20260909T091937948269Z`,46 backend units,31
 and two initial browser journeys plus one final styling journey. Chrome completed an imported
 Japanese question through real retrieval, attributed draft and internal approval; records at
 `.artifacts/m4/message-import-chrome-demo.json`. Full regression predates settings/usage.
-The [import record](plans/active/m4-message-import.md) retains review findings and failed evidence.
+The [import record](plans/completed/m4-message-import.md) retains review findings and failed evidence.
 
 Prior comparison checkpoint f0b9f79 is pushed; GitHub CI34330562643 passed. Capacity tuning is
 paused. Its five working files are preserved under
