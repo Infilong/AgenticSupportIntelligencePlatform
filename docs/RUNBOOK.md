@@ -433,3 +433,19 @@ of identical actor/filename/bytes returns the same batch. `GET /messages/{messag
 prefix. Concurrent process calls converge on the same initial run. The existing50000-message
 workspace quota counts unprocessed rows too. The UI preserves the import key for retries while
 the same form/file remains open; selecting a file again is a new import, not content deduplication.
+
+
+## Settings and usage
+
+Settings → Processing defaults lets an admin preselect en/ja/zh for new manual messages.
+Existing messages and JSONL imports retain their own explicit language. Settings also links
+member management and shows configured local model identities/revisions, alongside the explicit
+absence of an automatic generation API. This display does not probe provider readiness.
+`GET/PUT /api/workspaces/{id}/settings` is admin-only; PUT accepts default_language only.
+
+Quality → Model usage shows the current workspace's last1,7,30 or90 days.
+`GET /api/workspaces/{id}/usage?days=7` accepts1–90 days for any workspace member. Known sums
+exclude missing measurements; missing counts remain visible. External charge is ledger-recorded,
+not verified billing or total operating cost. Started/uncertain records remain distinct from
+success/failure. At most20 groups are shown; aggregate totals include all groups. Quality does
+not yet expose evaluation reports or certify answer correctness.

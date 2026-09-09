@@ -1,0 +1,10 @@
+.usage-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.usage-toolbar h2 { margin: 0; font-size: 17px; }.usage-toolbar label { font-size: 13px; }
+.usage-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.usage-cards h3 { font-size: 12px; color: #61735f; font-weight: 500; }.usage-cards strong { font-size: 28px; overflow-wrap: anywhere; }
+.usage-cards p,.usage-note { font-size: 12px; line-height: 1.8; }.usage-note { margin: 20px 0; color: #69786a; }
+.usage-table-scroll { overflow-x: auto; }.usage-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 820px; }
+.usage-table th,.usage-table td { padding: 16px; border-bottom: 1px solid #e6ebe4; text-align: left; vertical-align: top; }
+.usage-table th { font-weight: 500; color: #62725c; background: #f7f9f5; }.usage-table td:first-child { max-width: 280px; overflow-wrap: anywhere; }
+.usage-table p,.usage-table small { display: block; color: #71806c; font-size: 11px; }.usage-table details { margin-top: 8px; }
+@media (max-width: 768px) { .usage-cards { grid-template-columns: 1fr; } }

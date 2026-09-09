@@ -4,7 +4,7 @@ import { api } from '../../api/client';
 import { ImportMessages } from './ImportMessages';
 
 vi.mock('../../api/client', () => ({ api: vi.fn() }));
-const workspace = { id: 'ws', name: 'Test', role: 'operator' } as const;
+const workspace = { id: 'ws', name: 'Test', default_language: 'en', role: 'operator' } as const;
 
 test('failed upload retains the file and idempotency key for a safe retry', async () => {
   vi.mocked(api).mockReset().mockRejectedValueOnce(new Error('Connection lost')).mockResolvedValueOnce({ id: 'batch', message_count: 1, filename: 'messages.jsonl' });

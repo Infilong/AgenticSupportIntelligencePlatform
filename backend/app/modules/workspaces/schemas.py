@@ -17,6 +17,7 @@ class WorkspaceResponse(BaseModel):
     id: UUID
     name: str
     role: Role
+    default_language: Literal["en", "ja", "zh"] = "en"
 
 
 class MemberResponse(PublicUser):

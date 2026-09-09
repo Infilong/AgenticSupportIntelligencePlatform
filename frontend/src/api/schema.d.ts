@@ -433,6 +433,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspace_id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Settings */
+        get: operations["settings_api_workspaces__workspace_id__settings_get"];
+        /** Change Defaults */
+        put: operations["change_defaults_api_workspaces__workspace_id__settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usage */
+        get: operations["usage_api_workspaces__workspace_id__usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspace_id}/runs/{run_id}/review": {
         parameters: {
             query?: never;
@@ -815,6 +850,47 @@ export interface components {
             /** Error Code */
             error_code: string | null;
         };
+        /** ModelUsage */
+        ModelUsage: {
+            /** Calls */
+            calls: number;
+            /** Succeeded */
+            succeeded: number;
+            /** Failed */
+            failed: number;
+            /** Uncertain */
+            uncertain: number;
+            /** Started */
+            started: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Missing Tokens */
+            missing_tokens: number;
+            /** Recorded Cost Usd */
+            recorded_cost_usd: number;
+            /** Missing Cost */
+            missing_cost: number;
+            /** Recorded Duration Ms */
+            recorded_duration_ms: number;
+            /** Missing Duration */
+            missing_duration: number;
+            /** Operation */
+            operation: string;
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /** Revision */
+            revision: string;
+        };
+        /** ProcessingDefaults */
+        ProcessingDefaults: {
+            /**
+             * Default Language
+             * @enum {string}
+             */
+            default_language: "en" | "ja" | "zh";
+        };
         /** PublicUser */
         PublicUser: {
             /**
@@ -1154,6 +1230,51 @@ export interface components {
              */
             job_id: string;
         };
+        /** UsageReport */
+        UsageReport: {
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date-time
+             */
+            until: string;
+            /** Days */
+            days: number;
+            totals: components["schemas"]["UsageTotals"];
+            /** Models */
+            models: components["schemas"]["ModelUsage"][];
+            /** More Models */
+            more_models: boolean;
+        };
+        /** UsageTotals */
+        UsageTotals: {
+            /** Calls */
+            calls: number;
+            /** Succeeded */
+            succeeded: number;
+            /** Failed */
+            failed: number;
+            /** Uncertain */
+            uncertain: number;
+            /** Started */
+            started: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Missing Tokens */
+            missing_tokens: number;
+            /** Recorded Cost Usd */
+            recorded_cost_usd: number;
+            /** Missing Cost */
+            missing_cost: number;
+            /** Recorded Duration Ms */
+            recorded_duration_ms: number;
+            /** Missing Duration */
+            missing_duration: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1206,6 +1327,34 @@ export interface components {
              * @enum {string}
              */
             role: "viewer" | "operator" | "admin";
+            /**
+             * Default Language
+             * @default en
+             * @enum {string}
+             */
+            default_language: "en" | "ja" | "zh";
+        };
+        /** WorkspaceSettings */
+        WorkspaceSettings: {
+            /**
+             * Default Language
+             * @enum {string}
+             */
+            default_language: "en" | "ja" | "zh";
+            /** Generation Mode */
+            generation_mode: string;
+            /** Automatic Generation Available */
+            automatic_generation_available: boolean;
+            /** Embedding Model */
+            embedding_model: string;
+            /** Embedding Revision */
+            embedding_revision: string;
+            /** Reranker Model */
+            reranker_model: string;
+            /** Reranker Revision */
+            reranker_revision: string;
+            /** Retrieval Strategy */
+            retrieval_strategy: string;
         };
     };
     responses: never;
@@ -2118,6 +2267,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessageCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settings_api_workspaces__workspace_id__settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_defaults_api_workspaces__workspace_id__settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProcessingDefaults"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceSettings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_api_workspaces__workspace_id__usage_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageReport"];
                 };
             };
             /** @description Validation Error */

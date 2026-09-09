@@ -8,8 +8,12 @@ from app.db.base import Base
 
 class Workspace(Base):
     __tablename__ = "workspaces"
+    __table_args__ = (
+        CheckConstraint("default_language IN ('en','ja','zh')", name="workspace_default_language"),
+    )
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100))
+    default_language: Mapped[str] = mapped_column(String(2), default="en", server_default="en")
 
 
 class Membership(Base):

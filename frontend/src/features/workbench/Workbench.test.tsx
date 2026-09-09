@@ -19,7 +19,7 @@ vi.mock('./useResource', () => ({ useResource: (path: string) => {
     })),
   } };
 } }));
-const workspace = { id: 'ws', name: 'Test', role: 'viewer' } as const;
+const workspace = { id: 'ws', name: 'Test', default_language: 'en', role: 'viewer' } as const;
 function ui(path: string) { return <MemoryRouter initialEntries={[path]}><Routes>
   <Route path="/w/:workspaceId" element={<Workbench workspace={workspace} />} />
   <Route path="/w/:workspaceId/runs/:runId" element={<Workbench workspace={workspace} />} />

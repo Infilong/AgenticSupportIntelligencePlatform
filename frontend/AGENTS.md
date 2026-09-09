@@ -7,6 +7,7 @@ See [status](../docs/STATUS.md) for current implementation and verification prog
 
 - Follow the workbench direction in [architecture](../docs/ARCHITECTURE.md) and the
   frontend topology in [release plan](../REBUILD_PLAN.md).
+- For quality/usage metrics, read [quality guidance](src/features/quality/AGENTS.md).
 - Render server decisions; never implement authorization or business rules only in the UI.
 - Separate rendering, state/hooks, API access and validation. Keep components cohesive.
 - Give each screen a clear primary action. Reveal processing detail progressively; avoid

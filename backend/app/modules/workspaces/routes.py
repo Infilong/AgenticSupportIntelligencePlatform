@@ -21,14 +21,27 @@ def list_workspaces(user: CurrentUser, db: Database):
         .order_by(Workspace.name)
         .limit(100)
     )
-    return [{"id": str(workspace.id), "name": workspace.name, "role": role} for workspace, role in rows]
+    return [
+        {
+            "id": str(workspace.id),
+            "name": workspace.name,
+            "role": role,
+            "default_language": workspace.default_language,
+        }
+        for workspace, role in rows
+    ]
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 def get_workspace(workspace_id: UUID, user: CurrentUser, db: Database):
     member = membership(db, workspace_id, user.id)
     workspace = db.get(Workspace, workspace_id)
-    return {"id": str(workspace.id), "name": workspace.name, "role": member.role}
+    return {
+        "id": str(workspace.id),
+        "name": workspace.name,
+        "role": member.role,
+        "default_language": workspace.default_language,
+    }
 
 
 @router.get("/{workspace_id}/members", response_model=list[MemberResponse])

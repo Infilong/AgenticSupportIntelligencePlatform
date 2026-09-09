@@ -3,18 +3,21 @@
 Latest user direction on2026-09-09: **continue M1–M6, prioritize a working demo; defer RAG tuning**.
 Current unattended window:06:04:24–10:04:24 UTC (stop19:04:24 Tokyo). Full goal remains incomplete.
 
-Current slice: [customer imports](plans/active/m4-message-import.md). JSONL → saved originals/labels
-→ selected processing → existing retrieval/graph/review is connected. Migration0012 is applied;
-all four rebuild services are healthy.25 focused checks,46 backend units,31 frontend tests and
-TypeScript/Vite pass. Full PostgreSQL:141 passed in305.18s at
-`.artifacts/m0/integration-20260909T091937948269Z`; units at
-`.artifacts/m0/backend-20260909T092238369772Z`; focused at
-`.artifacts/m0/message-import-fixed-20260909T091649244898Z`. Two real browser journeys passed
-in30s at `.artifacts/m4/message-import-browser-20260909` (360/768/1440 layouts). Chrome also
-completed Japanese import→real retrieval→attributed draft→internal approval, with persisted
-records at `.artifacts/m4/message-import-chrome-demo.json`. External generation remains simulated.
-Independent Unicode/empty-state findings are fixed. Final labels-input styling and the connected browser flow pass in7.5s at
-`.artifacts/m4/message-import-browser-final-20260909`. Next: compact settings/usage.
+Current slice: [settings and usage](plans/active/m4-settings-usage.md). Admin-only response-language
+defaults and explicit provider configuration are implemented; Quality displays member-scoped
+recorded model activity with unknown measurements retained. Migration0013 is applied and the
+rebuild stack is healthy.18 focused PostgreSQL checks pass at
+`.artifacts/m0/settings-usage-20260909T093847978612Z`;33 frontend tests and TypeScript/Vite pass.
+Seven real browser journeys pass in25.5s at `.artifacts/m4/settings-usage-browser-20260909`,
+including settings persistence, member access, session failures and360/768/1440 layouts. No external generation/API billing or evaluation-UI claim.
+
+Import checkpoint a095a08 is pushed; GitHub CI34335092882 passed.45 prep checks passed at
+`.artifacts/m0/prep-20260909T093003893465Z`. The completed import slice has141 full PostgreSQL
+passes at `.artifacts/m0/integration-20260909T091937948269Z`,46 backend units,31 frontend tests
+and two initial browser journeys plus one final styling journey. Chrome completed an imported
+Japanese question through real retrieval, attributed draft and internal approval; records at
+`.artifacts/m4/message-import-chrome-demo.json`. Full regression predates settings/usage.
+The [import record](plans/active/m4-message-import.md) retains review findings and failed evidence.
 
 Prior comparison checkpoint f0b9f79 is pushed; GitHub CI34330562643 passed. Capacity tuning is
 paused. Its five working files are preserved under

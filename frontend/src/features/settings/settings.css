@@ -1,0 +1,8 @@
+.settings-stack { display: grid; gap: 20px; max-width: 900px; }
+.settings-stack h2 { font-size: 17px; margin: 0 0 18px; }
+.settings-stack label { display: block; font-size: 13px; margin-bottom: 8px; }
+.settings-stack p { font-size: 13px; line-height: 1.8; }
+.configuration-list { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(0, 2fr); gap: 16px; font-size: 13px; }
+.configuration-list dt { color: #69786a; }.configuration-list dd { margin: 0; overflow-wrap: anywhere; }
+.model-revision { font-size: 11px; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .configuration-list { grid-template-columns: 1fr; gap: 8px; }.configuration-list dd { margin-bottom: 10px; } }

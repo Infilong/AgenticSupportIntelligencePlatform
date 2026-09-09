@@ -16,7 +16,9 @@ from app.modules.knowledge.retrieval_routes import router as retrieval_router
 from app.modules.knowledge.routes import router as knowledge_router
 from app.modules.reviews.routes import router as review_router
 from app.modules.support.routes import router as support_router
+from app.modules.usage.routes import router as usage_router
 from app.modules.workspaces.routes import router as workspace_router
+from app.modules.workspaces.settings import router as settings_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -42,6 +44,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(retrieval_router)
     app.include_router(support_router)
     app.include_router(conversation_router)
+    app.include_router(settings_router)
+    app.include_router(usage_router)
     app.include_router(review_router)
 
     @app.exception_handler(RequestValidationError)

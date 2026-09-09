@@ -4,8 +4,18 @@ import { api, type Workspace } from '../../api/client';
 import { NewMessage } from './NewMessage';
 
 vi.mock('../../api/client', () => ({ api: vi.fn() }));
-const workspace: Workspace = { id: 'workspace-test', name: 'Test', role: 'operator' };
+const workspace: Workspace = { id: 'workspace-test', name: 'Test', default_language: 'en', role: 'operator' };
 afterEach(() => vi.resetAllMocks());
+
+test('workspace default preselects language but explicit message choice wins', async () => {
+  vi.mocked(api).mockResolvedValue({ run_id: 'new-run' });
+  render(<NewMessage workspace={{ ...workspace, default_language: 'ja' }} onCreated={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByLabelText('Response language')).toHaveValue('ja');
+  fireEvent.change(screen.getByLabelText('Response language'), { target: { value: 'zh' } });
+  fireEvent.change(screen.getByLabelText('Customer message'), { target: { value: '退款期限是什么？' } });
+  await act(async () => fireEvent.submit(screen.getByRole('form', { name: 'New customer message' })));
+  expect(JSON.parse(vi.mocked(api).mock.calls[0][1]!.body as string).language).toBe('zh');
+});
 
 test('late successful submission does not invoke navigation after unmount', async () => {
   let resolve!: (value: unknown) => void;

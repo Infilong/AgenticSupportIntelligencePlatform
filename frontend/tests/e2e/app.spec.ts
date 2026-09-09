@@ -16,7 +16,8 @@ test('admin signs in, inspects members, preserves last admin and signs out', asy
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await login(page, 'admin');
-  await page.getByRole('link', { name: 'Members', exact: true }).click();
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
+  await page.getByRole('link', { name: 'Manage members →', exact: true }).click();
   await expect(page.getByText('admin@asterworks.example', { exact: true })).toHaveCount(2);
   await page.getByLabel('Role for Demo Admin').selectOption('viewer');
   await expect(page.getByRole('alert')).toHaveText('Keep at least one administrator in this workspace');
@@ -33,7 +34,7 @@ test('viewer denied member management and foreign workspace, narrow layout remai
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page, 'viewer');
   const home = page.url();
-  await expect(page.getByRole('link', { name: 'Members', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(0);
   await page.goto(`${home}/members`);
   await expect(page.getByRole('heading', { name: 'Administrator access required' })).toBeVisible();
   await page.goto(`${base}/w/00000000-0000-0000-0000-000000000001`);

@@ -1,21 +1,21 @@
 {
   "project": {
-    "fingerprint": "c70aed303815aed7a0965077f483fe434650b37e8b60fa72f4b68d1eb5860446",
+    "fingerprint": "c8bd00f710a233686d37dbf185a662c8aa9e14f2a42a4b56a5345d53a1139ec4",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/entrypoints/activeimportplan review against saved141PG305.18s,46unit,25focused,31frontend,2initial+1finalbrowser andChromeapprovedJA report. Currentdemo priority andparkedcapacity clearlydistinguished;previousrunless/importspending claims corrected,fullgoal remainsincomplete. Internalapproval isnotcustomersend orpaidAPIproof."
+    "rationale": "Independent STATUS/architecture/entrypoint review against18focusedPG and7browser25.5s savedreports. Currentsettingsusage slice,33frontend/build andpreviousimport141PG clearlydistinguished. Configurationavailability,recordedcost,missingmeasurements andQualitynoevaluationUI limits explicit;fullgoal/window remainsincomplete."
   },
   "frontend": {
-    "fingerprint": "38d37a15432aa5c3468f19141fcb651bdbf0abf3aba9b490031e48ddfc583af4",
+    "fingerprint": "5f45d3b1a285073a41ec3f5c5e7138e8e88433aed2f8a43b1e9c607738fb9084",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent ImportMessages/SavedMessage/inbox navigation and nullable generatedcontract review against architecture. Sameform retrykey/abortguard,explicitselectedprocessing,labels andnotprocessedfilter match source. Inspected2initialbrowser30s and1final7.5s JSONresults;31component/build evidence scoped;no bulkAI or externalgeneration claim."
+    "rationale": "Independent Settings/Quality/NewMessage/Shell review against frontendguide/architecture:adminsettings,manualformdefault only,existingimports languagespreserved,configurationnothealthprobe. Qualityshowsledgerusage/unknowncounts notanswerquality;7realbrowser25.5s report confirms scopedjourneys,33frontend/build evidence retained. No automaticgeneration or evaluationUI inferred."
   },
   "tooling": {
-    "fingerprint": "c58c13a3a4f7f1db567ae45a395e0b295b386054bb56f296bfb8f949dc51fa44",
+    "fingerprint": "c53a34035263419f8f12e01555831c31f2340a92014d31faffde034e70a7a1fb",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK API/JSONLformat/limits/idempotency review against parser/routes/frontend. Corrected invalidUTF8 file error versus per-rowline numbers;1MiB/100rows/10labels/32chars andworkspacequota accurate. Runtime/toolingsource restored beforeimports,commandsunchanged;no claimofcontentdedup orrequestabortrollback."
+    "rationale": "Independent RUNBOOK/guides review against new settingsandusage endpoints:GET/PUTadminscope,days1–90,UI1/7/30/90,20groups andknown-vs-missingmetrics accurate. Toolingcommands unchanged;generatedAPI/sourceinventory reflectnewmodules. Full141PG remains historical rather than falselyrenewed by18focusedchecks."
   },
   "evaluation": {
     "fingerprint": "010c71d274fe02c2a2c8cecb9b4601fd9c72386533a2d1182531e80eae65c358",
@@ -24,15 +24,15 @@
     "rationale": "Independent sharedACCEPTANCE review: scopedDATAimport-label-filter-select-process gate now supported by realPG/browser and persistedJapaneseapprovedimport evidence. RemainingROUTE/REVIEW/EVAL/RESTORE/fullUX gates explicit;unchanged RAGcomparison and deferred50kchunk experiment not misrepresented ascurrentSQL orsemanticproof."
   },
   "backend": {
-    "fingerprint": "71fc6115c73a24f94917ea632c8c1cf241bcb71801e710e78d3a888859db7df9",
+    "fingerprint": "5471faebfece913733347d53da60c1ca568b2c34712f16ea9973d119ef5742ea",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent import semantic review:conversations format/service/routes,migration0012,support initial-run extraction and saved-row projections align with architecture/acceptance. Wholebatch atomicity,actor-boundreplay,workspace50kquota,concurrentfirststart,labels and importer authority covered by inspected tests;141PG and46unit unchanged-source logs retained. Importsqueue nojobs untilselectedstart;not trustedknowledge."
+    "rationale": "Independent settings/usage review: adminGET/PUTdefaults with explicitlanguage only,migration0013 defaulten,providerconfiguration projection andmember-scoped boundedusage SQL match owningdocs. Totals/modelgroups share oneaggregate snapshot,missing counts retained,top20groups do nottruncate totals.18focusedPG retainedreport sourceunchanged;prior141fullsuite explicitly predates newcode."
   },
   "infrastructure": {
-    "fingerprint": "48e5d5adab88745cbb5c343ca6e22c8ac08b7a834ebe01218560897d85ed63a0",
+    "fingerprint": "940ade86b3c0451ebedc8a30ff8c3ac45d89f752d68f0976bb4b4ca35c37b4a0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent migration0012/sharedarchitecture/runbook review: additivebatchtable plusworkspaceboundoptionalimportref/labels preserveexistingoriginals. Existingguardedlocalruntime andnamespaceunchanged;no newservice,externaldeployment orRAGcapacitypatch included. Runtimehealthy claim remains scoped startup,notrestore orproductionreadiness."
+    "rationale": "Independent unchanged deployment/runtime boundary and additiveworkspace defaultlanguage migration0013 review against sharedarchitecture/RUNBOOK. Localmodelidentities areconfiguration,notlivehealth;automaticgenerationunavailable. No newprovider,cloudservice,billingreconciliation orproduction/restore claim;existingguardedmigration lifecycle retained."
   }
 }

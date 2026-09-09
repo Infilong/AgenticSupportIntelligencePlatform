@@ -1,6 +1,6 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for saved customer imports, labels and explicit selected-message processing.
+Updated 2026-09-09 for saved customer imports, settings and recorded usage views.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
@@ -34,7 +34,8 @@ AgenticSupportIntelligencePlatform/
 │   ├── src/app/               # Shell and routing
 │   ├── src/api/               # Client and generated API types
 │   ├── src/features/auth/     # Login and session state
-│   ├── src/features/settings/ # Workspace members
+│   ├── src/features/settings/ # Workspace defaults, provider configuration and members
+│   ├── src/features/quality/  # Workspace model-call usage and measurement gaps
 │   ├── src/features/workbench/ # Inbox, run details, citations, development and review
 │   ├── src/features/knowledge/ # Upload, search and source inspection
 │   └── tests/e2e/             # Browser journeys
@@ -47,7 +48,7 @@ AgenticSupportIntelligencePlatform/
 
 Each substantive area has a local `AGENTS.md`, linked from the root director. These paths
 exist now. The [target topology](../REBUILD_PLAN.md#target-project-topology) includes future
-modules: separate retrieval and quality features are not yet implemented. Support currently owns original messages and their processing runs; retrieval
+modules: a separate retrieval module and evaluation-results UI are not yet implemented. Support currently owns original messages and their processing runs; retrieval
 remains in knowledge. Do not create empty target directories.
 
 ## Implemented knowledge data flow
@@ -307,3 +308,20 @@ The importer and processing actor must retain authority. Concurrent initial star
 one run/job; subsequent retries use the existing attempt flow. A saved-message detail exposes
 original, language, filename and labels, with Start processing or Open processing as appropriate.
 The run remains linked through response, sources, workflow and history. See RUNBOOK for limits.
+
+
+## Settings and recorded usage
+
+Settings groups member access with an administrator-only default language and the configured
+local embedding/reranking identities. Migration0013 adds a constrained workspace default (en);
+new manual-message forms preselect it, while every admitted message keeps its explicit language.
+The configuration endpoint never returns credentials, connection strings or cache paths.
+Development generation is explicitly attributed and automatic external generation is unavailable;
+configuration values are not a live provider-health probe.
+
+Quality currently exposes model usage only, not evaluation/answer-quality results. Authorized
+members query1–90 days of their workspace ledger. One SQL statement gives totals and the20
+most-used model/operation/revision groups the same snapshot; totals include omitted groups.
+Known token/cost/duration sums retain separate missing-value counts and call status counts.
+Durations are summed call time, not workflow wall time; handoff waits are not automatic model
+calls. No customer text appears in aggregates. See [usage guide](../backend/app/modules/usage/AGENTS.md).

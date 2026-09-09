@@ -13,7 +13,7 @@ beforeEach(() => { fixture.run = {
   model_calls: [], steps: [], review: null, handoff: null,
 } as unknown as Run; });
 function show(role: 'admin' | 'viewer' = 'admin') {
-  return render(<MemoryRouter><RunView workspace={{ id: 'ws', name: 'Test', role }} runId="run" /></MemoryRouter>);
+  return render(<MemoryRouter><RunView workspace={{ id: 'ws', name: 'Test', default_language: 'en', role }} runId="run" /></MemoryRouter>);
 }
 test('review text survives keyboard tab navigation; cancellation stays available in workflow', () => {
   show(); fireEvent.change(screen.getByLabelText('Reason for your decision'), { target: { value: 'Checked policy evidence' } });
