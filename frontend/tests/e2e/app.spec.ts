@@ -92,7 +92,8 @@ test('operator message survives reload and asks for clarification without a mode
   await page.getByRole('button', { name: 'New message', exact: true }).click();
   await page.getByLabel('Customer message', { exact: true }).fill('w');
   await page.getByRole('button', { name: 'Start processing', exact: true }).click();
-  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Clarification needed', { timeout: 15000 });
+  await expect(page.locator('.run-heading').getByRole('status')).toHaveText('Completed', { timeout: 15000 });
+  await expect(page.getByRole('heading', { name: 'Clarification needed', exact: true })).toBeVisible();
   await page.reload();
   await expect(page.locator('.original-message')).toHaveText('w');
   await expect(page.locator('.response-text')).toContainText('describe your question');

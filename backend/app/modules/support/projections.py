@@ -1,6 +1,7 @@
 """Typed public run projections; internal checkpoint state is not an API contract."""
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -23,6 +24,7 @@ class HandoffSummary(BaseModel):
     submitted_at: datetime | None
     contributor_id: UUID | None
     handoff_elapsed_ms: float | None
+    timing_status: Literal["pending", "recorded", "clock_anomaly"]
 
 
 class StepSummary(BaseModel):

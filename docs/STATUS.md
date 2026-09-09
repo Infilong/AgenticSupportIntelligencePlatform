@@ -1,7 +1,7 @@
 # Current status
 
 Goal: **M1–M6 active and incomplete; resumed by the user on 2026-09-09**.
-Current milestone: M2. On 2026-09-09 the user authorized an independent documentation audit,
+Current implementation slice: M3 human review; M2 release gaps remain open. On 2026-09-09 the user authorized an independent documentation audit,
 corrections and the [documentation freshness harness](plans/completed/documentation-freshness.md).
 Those bounded tooling tasks did not resume application work; the subsequent app-goal resume did.
 The harness now provides generated source references, six source/document review mappings and
@@ -12,13 +12,19 @@ provider and documentation-workflow clarifications; it is now covered by project
 The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
 tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
-[M2 execution plan](plans/active/m2-real-retrieval.md) owns current decisions and evidence;
+[M3 execution plan](plans/active/m3-human-review.md) owns current review implementation;
+[M2 execution plan](plans/active/m2-real-retrieval.md) retains retrieval decisions and evidence;
 [M1 history](plans/active/m1-foundation.md) retains foundation work.
 Normal verified commits/pushes to this branch are authorized. No merge/deploy/paid API authority.
 The new work window starts **2026-09-09 00:44:58 UTC** and ends **04:44:58 UTC**
 (13:44:58 Tokyo time), retaining the four-hour limit. Previous cutoff/evidence remain historical.
 
 ## Verified current behavior
+
+The human-review slice has verified distinct execution/outcome fields, immutable review decisions,
+operator/admin enforcement, durable review continuation and connected approve/edit/reject controls.
+M3 remains incomplete: linked attempts, remaining routing and broader recovery are still required.
+The detailed failure and repair record belongs to the M3 plan.
 
 - Real login, sessions, workspace roles and server-enforced permissions.
 - PostgreSQL jobs with claims, leases, cancellation and fenced publication; one worker.
@@ -34,6 +40,36 @@ The new work window starts **2026-09-09 00:44:58 UTC** and ends **04:44:58 UTC**
   resume/publication. Clarification and insufficient evidence are separate terminal outcomes.
 - Connected workbench: searchable paginated messages, selected original/draft, exact citations,
   expandable graph/model records, cancellation and admin development-response controls.
+- Review preserves original drafts/citations and stores a separate final response; policy exceptions
+  and unclassified legacy drafts require admin approval. Viewer inspection is read-only.
+
+## September 9 human-review evidence
+
+Built on pushed workbench `281b169` (CI `34301042398` passed). Migration `0008_reviews` ran in
+the isolated runtime, preserving earlier drafts as unclassified and unapproved.
+- 79 PostgreSQL tests passed: `.artifacts/m0/integration-20260909T023808458445Z`.
+- 16 backend unit tests passed: `.artifacts/m0/backend-20260909T023856099226Z`.
+- Seven browser journeys passed: `.artifacts/m3/review-ui-final`, including EN operator approval,
+  JA editing, ZH rejection, administrator-only policy approval, draft-arrival/polling regression,
+  source focus, viewer widths and cancellation. Desktop/narrow screenshots and the final 360px
+  operator policy-exception review screen were inspected; no overflow/overlap found.
+- Six baseline browser cases passed: `.artifacts/m3/baseline-final`, covering sessions,
+  member permissions, workspace denial and persisted model-free clarification.
+- TypeScript/Vite build, Ruff and four component tests passed. These are boundary checks,
+  not the complete release acceptance matrix.
+- Chrome run `a98f393d-1b37-453b-ab66-e3a1e938f6ae`: actual local retrieval and Codex-authored
+  development response; saved review interrupt survived a real worker restart and browser approval.
+  `.artifacts/m3/restart-review-result.json` confirms one decision/job and preserved draft/final.
+- Independent backend/UI reviews found and corrected legacy-classification, failed-node recovery
+  and empty editor initialization issues. Failed resumed tasks may report empty graph `next`;
+  errors/interrupts and completed output are now checked explicitly.
+
+The preceding broad run passed 74/76 but found missing indexed data and negative handoff elapsed
+(-544.771ms). Their causes remain unresolved. Expanded indexing diagnostics retain job/time/source
+state; reversed timestamps now explicitly report `clock_anomaly` with null elapsed and preserved
+raw timestamps. A 1,200-sample, 61.68-second database-clock observation found no backward jump;
+it does not exclude an intermittent adjustment outside that window. No scheduler/host-clock
+change was made. Full failures and follow-up evidence remain in the M3 execution record.
 
 ## September 9 connected workbench evidence
 
@@ -121,7 +157,8 @@ service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-
 
 ## Next connected slice
 
-Finish the reviewed workbench checkpoint, then implement governed human review and linked
+The workbench checkpoint `281b169` is pushed and CI `34301042398` passed. Finish verification
+of the governed human-review slice, then implement linked
 retry/clarification attempts with distinct execution/outcome fields. Preserve original drafts,
 exact sources and attributable decisions; enforce operator/admin versus policy-exception roles.
 Prove conflicting decisions cannot double-finalize and real worker restart resumes correctly.

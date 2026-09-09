@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "ec0111b40fff8033babce1cc1a8744ae4caf66e8e887f221b2884e0b95b708c2",
+    "fingerprint": "a9207a62d40d23d25369414597b281d48649669348466a947ce93c04be868e6d",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Compared updated README and STATUS with connected workbench source and retained test reports. Unknown resume-claim cause and baseline throttle failure remain explicit; historical backend evidence and unfinished review/recovery are distinguished."
+    "rationale": "Compared README and STATUS with implemented review source and retained test/restart evidence; human review slice is verified while full M3, semantic quality and unknown timing/indexing causes remain incomplete."
   },
   "frontend": {
-    "fingerprint": "6a82fd870a5a41ee1b1b71c50d0b9c16cf78812c8d48276124ad1188e58865ae",
+    "fingerprint": "d0d8f47dc2e188231231266a3e635e4dbf733fbd38cd6e5a531e243a942db080",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed connected inbox, run/source/details, development form, polling and submission lifecycle against owning claims and six-pass browser report. CSS content doubling is explicitly distinct from native zoom; human review remains pending."
+    "rationale": "Verified draft-identity keyed review editor fixes initial empty editing state; reviewed role controls and separate draft/final/history. Retained final seven-browser report passes; timing anomaly is visible, not clamped."
   },
   "tooling": {
-    "fingerprint": "0894e2d90c04349d901f263b9d031225ad27fabb5b4d9dae62e1c7c4705a03b2",
+    "fingerprint": "9f7d99c98459c0a2f0b2a77b72a9cfb4397d027b1851e5f79576ddbc082101fe",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed workbench demo and verification recipe against component labels, browser tests and existing commands; retained baseline five-of-six plus isolated passing case is honestly distinguished from one green suite."
+    "rationale": "Compared updated runbook review API and UI recipe against source states, review payload and controls; retained final six-case baseline and seven-case review reports agree, no new test run by reviewer."
   },
   "evaluation": {
-    "fingerprint": "611c3cb49ec81da3bfb72d3d5365fde1737a2908b4896eeb56ff33b9e6d2d6e1",
+    "fingerprint": "752468512dcb314a20248c58170ebd42624b8d20d77bb7dc758910b38c81eef1",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed partial TRACE and UX evidence updates without changing release thresholds. Stored six-pass workbench report supports bounded journeys, not generation quality or full release acceptance."
+    "rationale": "Reviewed partial review/recovery/UX evidence without changing generation or release thresholds; real restart result has one decision/job and preserved draft, not proof of full recovery matrix."
   },
   "backend": {
-    "fingerprint": "867d1e858e97f97a2bbae6fc1281f163549b597fe854a77097842cb996ef656c",
+    "fingerprint": "414529781f8b5e9a43e8bbb592f9b100859b108fac6975bfabebebab3e76e306",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed typed support projections and shared retrieval passage contract against routes, tests and architecture; retained final 62 PostgreSQL log passes. No semantic generation or full recovery claim."
+    "rationale": "Reviewed review authorization, immutable decision and fenced response publication against architecture/acceptance; retained 79 PostgreSQL and 16 unit logs pass. Recovery and timing-anomaly limitations remain explicit."
   },
   "infrastructure": {
-    "fingerprint": "68e5ee6fbf2b50ad4dd3e88c73a09ee4f6b99deba5f8c3ed81e9075addd12221",
+    "fingerprint": "1ae634a54b42a1e48438c430ea2bed3c1d457e29d0ee4378f1d05fa9981dda4f",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed shared architecture/runbook changes: connected UI and typed public projections described accurately, runtime topology unchanged; no new deployment or readiness claims."
+    "rationale": "Reviewed shared architecture/runtime claims for separate durable review continuation and migration; topology and isolation unchanged. Restart artifact supports bounded wait recovery, not deployment readiness."
   }
 }

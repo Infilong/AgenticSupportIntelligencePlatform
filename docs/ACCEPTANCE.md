@@ -49,7 +49,9 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   remains to be checked with the completed application.
 - TENANT/JOB: foundation, knowledge and support message/graph paths have real PostgreSQL
   coverage, including concurrent claims/submissions, lease takeover, revocation, cancellation
-  and source withdrawal/replacement. Human review and actual process-kill recovery remain pending.
+  and source withdrawal/replacement. Human-review concurrency, revocation, publication fencing
+  and graph recovery have focused PostgreSQL evidence. Worker restart at review wait succeeds;
+  the complete process-kill/recovery matrix remains pending.
 - KNOW: real TXT/Markdown upload, indexing, exact originals, versions, replacement failure,
   withdrawal/restore and desktop/mobile knowledge journeys pass.
 - RAG: frozen local retrieval gate passes (26/26 evidence cases, 27/27 source groups,
@@ -60,7 +62,7 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
 - TRACE: the workbench exposes graph steps and local embedding/reranking records, including
   identity, duration, tokens and external charge. Complete generation accounting and abandoned
   synchronous-call reconciliation remain incomplete.
-- UX: connected draft/source/cancellation journeys pass, including 360/768/1440px, keyboard
+- UX: connected draft/source/cancellation and approve/edit/reject journeys pass, including 360/768/1440px, keyboard
   source focus and doubled content size. Browser-native zoom and full release journeys remain open.
 - ROUTE/REVIEW/DATA/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
 

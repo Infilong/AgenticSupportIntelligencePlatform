@@ -7,6 +7,7 @@ export function DevelopmentResponse({ path, onSubmitted }: { path: string; onSub
   const [sourceId, setSourceId] = useState('');
   const [quote, setQuote] = useState('');
   const [answer, setAnswer] = useState('');
+  const [category, setCategory] = useState('ordinary');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -20,7 +21,7 @@ export function DevelopmentResponse({ path, onSubmitted }: { path: string; onSub
     event.preventDefault(); if (!handoff || pending || !source || !quote.trim() || !answer.trim()) return;
     setPending(true); setError('');
     try {
-      await api(`${path}/development-handoff/${handoff.id}`, { method: 'POST', body: JSON.stringify({ context_hash: handoff.context_hash, answer, citations: [{ chunk_id: sourceId, quote }] }) });
+      await api(`${path}/development-handoff/${handoff.id}`, { method: 'POST', body: JSON.stringify({ context_hash: handoff.context_hash, answer, review_category: category, citations: [{ chunk_id: sourceId, quote }] }) });
       onSubmitted();
     } catch (err) { setError((err as Error).message); }
     finally { setPending(false); }
@@ -32,6 +33,8 @@ export function DevelopmentResponse({ path, onSubmitted }: { path: string; onSub
       {source && <blockquote className="source-excerpt">{source.text}</blockquote>}
       <label htmlFor="development-quote">Exact supporting quote</label><textarea id="development-quote" value={quote} rows={3} maxLength={2000} required onChange={e => setQuote(e.target.value)} />
       <label htmlFor="development-answer">Development answer</label><textarea id="development-answer" value={answer} rows={5} maxLength={8000} required onChange={e => setAnswer(e.target.value)} />
+      <label htmlFor="development-category">Review category</label><select id="development-category" value={category} onChange={e => setCategory(e.target.value)}><option value="ordinary">Ordinary response</option><option value="policy_exception">Policy exception</option><option value="conflicting_evidence">Conflicting evidence</option></select>
+      <p className="muted">Your attributed development annotation controls review permissions. It is not automated policy detection.</p>
       <button className="primary" disabled={pending || !source || !source.text.includes(quote) || !quote.trim() || !answer.trim()}>{pending ? 'Submitting…' : 'Submit development draft'}</button>
     </form>}
   </div>;

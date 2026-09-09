@@ -11,8 +11,8 @@
 .message-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .message-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 12px; font-size: 11px; color: #657261; }
 .run-state { display: inline-block; font-size: 11px; padding: 5px 8px; border-radius: 5px; background: #f0f2ee; color: #485543; }
-.run-state.draft { background: #e7f1e7; color: #285136; }.run-state.failed { background: #fff0ec; color: #8c342f; }
-.run-state.waiting_development,.run-state.clarification { background: #f8f1df; color: #775b24; }
+.run-state.completed { background: #e7f1e7; color: #285136; }.run-state.failed,.run-state.rejected { background: #fff0ec; color: #8c342f; }
+.run-state.waiting_for_input,.run-state.awaiting_review { background: #f8f1df; color: #775b24; }
 .message-detail { min-width: 0; }.run-view,.message-composer { padding: 26px; }
 .inbox-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 22px; color: #6b7d62; text-align: center; }
 .inbox-empty h2 { font-size: 17px; margin: 0; color: #394e32; }.inbox-empty p { max-width: 320px; line-height: 1.7; font-size: 13px; }
@@ -38,5 +38,9 @@
 .message-composer textarea,.development-form textarea { display: block; width: 100%; resize: vertical; border: 1px solid #d7dfd1; border-radius: 7px; padding: 12px; font: inherit; font-size: 14px; line-height: 1.7; }
 .composer-footer select { display: block; margin-top: 8px; }.workbench-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 .development-form select { width: 100%; }.development-form button { margin-top: 16px; }
+.review-panel { border-top: 1px solid #e6ebe2; margin-top: 24px; padding-top: 20px; }
+.review-panel label { display: block; font-size: 12px; font-weight: 600; margin: 16px 0 8px; }
+.review-panel textarea { width: 100%; resize: vertical; border: 1px solid #d7dfd1; border-radius: 7px; padding: 12px; font: inherit; font-size: 14px; line-height: 1.7; }
+.review-panel select { max-width: 100%; }.review-panel button { margin-top: 12px; }
 @media (max-width: 1050px) { .workbench-grid { grid-template-columns: minmax(210px,.8fr) minmax(0,1.4fr); }.run-view,.message-composer { padding: 20px; } }
 @media (max-width: 800px) { .workbench-grid { display: block; min-height: 420px; }.message-list { border-right: 0; }.workbench-grid:not(.has-selection) .message-detail { display: none; }.workbench-grid.has-selection .message-list { display: none; }.workbench-heading { align-items: flex-start; flex-wrap: wrap; }.run-view,.message-composer { padding: 20px; } }

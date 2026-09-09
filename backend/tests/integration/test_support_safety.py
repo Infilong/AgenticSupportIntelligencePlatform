@@ -185,7 +185,7 @@ def test_checkpoint_before_domain_publication_replays_once(system, completed):
         publication.publish(db, job)
     assert run_support(system)
     result = system["client"].get(base(system, run)).json()
-    assert result["state"] == ("draft" if completed else "waiting_development"), result
+    assert result["state"] == ("awaiting_review" if completed else "waiting_for_input"), result
     assert any(s["status"] == "uncertain" for s in result["steps"])
     with Session(system["engine"]) as db:
         assert db.scalar(select(func.count()).select_from(Handoff)) == 1
@@ -216,5 +216,5 @@ def test_worker_retries_after_durable_interrupt_without_retrieving_again(system)
         job.available_at = db.scalar(select(func.clock_timestamp()))
     assert run_support(system)
     result = system["client"].get(base(system, run)).json()
-    assert result["state"] == "waiting_development"
+    assert result["state"] == "waiting_for_input"
     assert sum(step["node"] == "retrieve_evidence" for step in result["steps"]) == 1

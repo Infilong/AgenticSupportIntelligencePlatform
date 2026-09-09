@@ -1,8 +1,8 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for the connected workbench slice built on `8cff3bb`.
+Updated 2026-09-09 for the human-review slice built on `281b169`.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
-The workbench UI is connected; human review remains unfinished. [STATUS](STATUS.md) owns verification.
+The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
 ## Current project topology
 
@@ -24,6 +24,7 @@ AgenticSupportIntelligencePlatform/
 │   │   │   ├── workspaces/    # Membership and roles
 │   │   │   ├── knowledge/     # Documents, ingestion, retrieval and sources
 │   │   │   ├── support/       # Original messages, runs, handoffs and cited drafts
+│   │   │   ├── reviews/       # Attributable decisions and fenced final responses
 │   │   │   └── usage/         # Model-call records
 │   │   ├── providers/         # Local embeddings/reranker and recorded calls
 │   │   └── workflows/         # LangGraph orchestration and PostgreSQL checkpoints
@@ -33,19 +34,19 @@ AgenticSupportIntelligencePlatform/
 │   ├── src/api/               # Client and generated API types
 │   ├── src/features/auth/     # Login and session state
 │   ├── src/features/settings/ # Workspace members
-│   ├── src/features/workbench/ # Inbox, run details, citations and development response
+│   ├── src/features/workbench/ # Inbox, run details, citations, development and review
 │   ├── src/features/knowledge/ # Upload, search and source inspection
 │   └── tests/e2e/             # Browser journeys
 ├── evals/                     # Frozen multilingual corpus and retrieval evaluation
 ├── scripts/                   # Runtime, seeding, checks and evidence
 ├── infra/                     # Infrastructure guidance; Compose is at root
-├── docs/plans/active/          # M1 history and M2 execution record
+├── docs/plans/active/          # M1 history, M2 gaps and M3 execution record
 └── .github/workflows/         # Verification CI
 ```
 
 Each substantive area has a local `AGENTS.md`, linked from the root director. These paths
 exist now. The [target topology](../REBUILD_PLAN.md#target-project-topology) includes future
-modules: separate retrieval, conversations/reviews and quality features are not
+modules: separate retrieval, conversations and quality features are not
 implemented. Support currently owns original messages and their processing runs; retrieval
 remains in knowledge. Do not create empty target directories.
 
@@ -100,7 +101,7 @@ belongs to that stack; it is not part of the rebuild. New volumes must carry the
 Current retrieval uses vector candidates plus neural reranking. The original lexical/fusion
 requirement remains an explicit discrepancy pending comparison or a release-plan decision;
 the measured reranker evidence does not prove that original requirement completed.
-Application message/run records and graph integration now exist; human-review records remain planned.
+Application messages/runs, graph integration and human-review records now exist.
 
 Refer to REBUILD_PLAN for the target repository topology; create files only when needed.
 
@@ -141,7 +142,7 @@ These choices cannot weaken the release contract; material changes need approval
 Expired jobs are reclaimed or terminated after three attempts. Retry backoff is bounded.
 Workspace authorization and publication use the same workspace-first lock order as membership
 changes. Handlers execute outside transactions and cannot publish after revocation/cancellation.
-The worker registers database diagnostics, document indexing and support processing. Indexing checks
+The worker registers database diagnostics, document indexing, support processing and review. Indexing checks
 between bounded split/embedding operations and activates versions only after fenced publication.
 Failed replacements preserve the previous active version.
 
@@ -183,12 +184,30 @@ the document view. Technical IDs remain in optional details.
 
 Operators/admins enter messages and cancel active runs; viewers inspect records. The admin-only
 development section loads authorized handoff evidence and submits a draft with an exact quote.
-It is separate from human approval, which is not implemented yet. Typed public projections
+It is separate from human approval. Typed public projections
 generate frontend contracts without exposing checkpoints.
 
 Resource reads are keyed to route/workspace and aborted on navigation. Transient polling failures
 preserve an unfinished answer; authorization failures clear protected data. Late message POST
 responses cannot navigate back after leaving the screen. Aborting a request does not undo its
 server write; retries of unchanged input reuse the same idempotency key within the form.
-Run-state changes refresh the inbox. Review filters, linked retries and decision history remain
-the next workflow slice; the current UI does not claim those controls exist.
+Run-state changes refresh the inbox. Review filters and linked retries remain unfinished.
+
+## Governed human review
+
+Runs keep execution state separate from outcome. A cited draft enters `awaiting_review`;
+approve/edit/reject stores an immutable actor/reason decision bound to the draft hash and revision.
+The original draft and citations remain unchanged; the approved response is stored separately.
+Operators/admins review ordinary drafts. Approval/edit of policy exceptions or unclassified legacy
+drafts requires admin; rejection remains available to operators. Development routing annotations
+are attributed inputs, not proof of semantic policy detection.
+
+A separate `review-v1:{workspace}:{run}` LangGraph thread preserves completed generation history.
+New drafts initialize a durable interrupt; migrated drafts initialize it when reviewed. The decision
+and resume job commit atomically. Final publication rechecks the live lease, cancellation, original
+requester, contributor, reviewer, exact decision and all contextual sources. Rejection publishes no
+answer and can reject withdrawn evidence. Concurrency permits only one decision and continuation.
+Pending task errors/interrupts are checked even when LangGraph reports an empty `next` list.
+
+Handoff timestamps remain raw evidence. Reversed timestamps produce `clock_anomaly` and no elapsed
+value, never a fabricated zero. This flags inconsistent timing; it does not diagnose or fix clocks.

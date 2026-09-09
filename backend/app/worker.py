@@ -43,7 +43,18 @@ def support_run(engine, job):
     return process(engine, job)
 
 
-HANDLERS = {"database_check": diagnostic, "index_document": index_document, "support_run": support_run}
+def support_review(engine, job):
+    from app.modules.reviews.processing import process
+
+    return process(engine, job)
+
+
+HANDLERS = {
+    "database_check": diagnostic,
+    "index_document": index_document,
+    "support_run": support_run,
+    "support_review": support_review,
+}
 
 
 def run_once(engine, handlers=None, health_callback=lambda: None):

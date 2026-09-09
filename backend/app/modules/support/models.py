@@ -45,8 +45,7 @@ class SupportRun(Base):
             ["workspace_id", "retrieval_id"], ["retrieval_traces.workspace_id", "retrieval_traces.id"]
         ),
         CheckConstraint(
-            "state IN ('queued','waiting_development','draft','clarification',"
-            "'insufficient_evidence','cancelled')",
+            "state IN ('queued','waiting_for_input','awaiting_review','completed','rejected','cancelled')",
             name="support_run_state",
         ),
     )
@@ -56,6 +55,11 @@ class SupportRun(Base):
     job_id: Mapped[uuid.UUID]
     retrieval_id: Mapped[uuid.UUID | None]
     state: Mapped[str] = mapped_column(String(24), default="queued")
+    outcome: Mapped[str | None] = mapped_column(String(32))
+    review_kind: Mapped[str] = mapped_column(String(24), default="ordinary")
+    review_version: Mapped[int] = mapped_column(default=0)
+    reviewed_response: Mapped[str | None] = mapped_column(Text)
+    drafted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     draft: Mapped[str | None] = mapped_column(Text)
     citations: Mapped[list] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

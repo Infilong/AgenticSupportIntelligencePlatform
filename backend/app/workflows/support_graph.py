@@ -159,12 +159,20 @@ def execute(engine, job, retrieval=retrieve):
             handoff = handoff_for(db, run)
             submitted = handoff is not None and handoff.response is not None
             initial = {"original": message.original, "language": message.language}
-        if saved.values and not saved.next:
+        failed_task = any(task.error is not None for task in saved.tasks)
+        if saved.values and not (saved.next or saved.interrupts or failed_task):
             return saved.values  # Completed checkpoint, domain publication may still need replay.
         if saved.values:
             if saved.interrupts and not submitted:
                 return saved.values
-            request = Command(resume=True) if saved.interrupts else None
+            request = Command(resume=True) if saved.interrupts and not failed_task else None
         else:
             request = initial
-        return graph.invoke(request, config, durability="sync")
+        result = graph.invoke(request, config, durability="sync")
+        recovered = graph.get_state(config)
+        if submitted and recovered.interrupts:
+            if any(i.value.get("reason") != "development_generation" for i in recovered.interrupts):
+                raise ValueError("Expected a development-generation interrupt")
+            checkpoint()
+            result = graph.invoke(Command(resume=True), config, durability="sync")
+        return result

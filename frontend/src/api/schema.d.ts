@@ -331,6 +331,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspace_id}/runs/{run_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review */
+        post: operations["review_api_workspaces__workspace_id__runs__run_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -425,6 +442,32 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** DecisionSummary */
+        DecisionSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Actor Id
+             * Format: uuid
+             */
+            actor_id: string;
+            /** Action */
+            action: string;
+            /** Reason */
+            reason: string;
+            /** Response */
+            response: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Revision */
+            revision: number;
+        };
         /** DevelopmentContext */
         DevelopmentContext: {
             /** Original */
@@ -446,6 +489,12 @@ export interface components {
             answer: string;
             /** Citations */
             citations: components["schemas"]["CitationInput"][];
+            /**
+             * Review Category
+             * @default ordinary
+             * @enum {string}
+             */
+            review_category: "ordinary" | "policy_exception" | "conflicting_evidence";
         };
         /** DocumentDetail */
         DocumentDetail: {
@@ -526,6 +575,11 @@ export interface components {
             contributor_id: string | null;
             /** Handoff Elapsed Ms */
             handoff_elapsed_ms: number | null;
+            /**
+             * Timing Status
+             * @enum {string}
+             */
+            timing_status: "pending" | "recorded" | "clock_anomaly";
         };
         /** MemberResponse */
         MemberResponse: {
@@ -602,6 +656,8 @@ export interface components {
             run_id: string;
             /** State */
             state: string;
+            /** Outcome */
+            outcome: string | null;
             /** Error Code */
             error_code: string | null;
         };
@@ -675,6 +731,22 @@ export interface components {
             /** Rank Score */
             rank_score: number;
         };
+        /** ReviewInput */
+        ReviewInput: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "approve" | "edit" | "reject";
+            /** Reason */
+            reason: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Draft Hash */
+            draft_hash: string;
+            /** Response */
+            response?: string | null;
+        };
         /** RoleChange */
         RoleChange: {
             /**
@@ -701,6 +773,17 @@ export interface components {
             language: string;
             /** State */
             state: string;
+            /** Outcome */
+            outcome: string | null;
+            /** Review Kind */
+            review_kind: string;
+            /** Review Version */
+            review_version: number;
+            /** Draft Hash */
+            draft_hash: string | null;
+            /** Reviewed Response */
+            reviewed_response: string | null;
+            review: components["schemas"]["DecisionSummary"] | null;
             /**
              * Job Id
              * Format: uuid
@@ -1532,6 +1615,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DevelopmentResponse"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_api_workspaces__workspace_id__runs__run_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewInput"];
             };
         };
         responses: {

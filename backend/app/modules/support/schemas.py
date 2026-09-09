@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.modules.reviews.schemas import DecisionSummary
 from app.modules.support.projections import CallSummary, CitedPassage, HandoffSummary, StepSummary
 
 
@@ -31,6 +32,7 @@ class DevelopmentResponse(BaseModel):
     context_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
     answer: str = Field(min_length=1, max_length=8000)
     citations: list[CitationInput] = Field(min_length=1, max_length=5)
+    review_category: Literal["ordinary", "policy_exception", "conflicting_evidence"] = "ordinary"
 
     @field_validator("answer", "context_hash")
     @classmethod
@@ -53,6 +55,7 @@ class MessageSummary(BaseModel):
     created_at: datetime
     run_id: UUID
     state: str
+    outcome: str | None
     error_code: str | None
 
 
@@ -67,6 +70,12 @@ class RunDetail(BaseModel):
     original: str
     language: str
     state: str
+    outcome: str | None
+    review_kind: str
+    review_version: int
+    draft_hash: str | None
+    reviewed_response: str | None
+    review: DecisionSummary | None
     job_id: UUID
     error_code: str | None
     draft: str | None

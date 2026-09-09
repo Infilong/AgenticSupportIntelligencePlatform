@@ -139,7 +139,7 @@ disposable test data; never run `down -v` against the old project.
 
 API/database, authentication, frontend and worker foundation now exist.
 TXT/Markdown ingestion, real retrieval and the connected message-to-cited-draft workbench exist;
-human review remains unfinished. Development generation uses explicitly attributed Codex-assisted
+human-review verification is in progress. Development generation uses explicitly attributed Codex-assisted
 responses; the user requires real local embeddings and retrieval. Live provider access and paid
 spending remain unavailable; API connectivity/quality gates cannot be inferred from development data.
 
@@ -263,19 +263,30 @@ Under `/api/workspaces/{workspace_id}`, an operator/admin posts `/messages` with
 All members can read paginated `/messages` and `/runs/{run_id}`. Poll the latter for state,
 original input, draft, exact citations, graph steps and model records.
 
-When state is `waiting_development`, an admin exports `/runs/{run_id}/development-handoff`.
+When state is `waiting_for_input`, an admin exports `/runs/{run_id}/development-handoff`.
 Read its actual bounded context and author an answer from those sources. Submit to
 `/runs/{run_id}/development-handoff/{handoff_id}` with its `context_hash`, `answer` and
 `citations: [{chunk_id, quote}]`, using exact nonempty source quotes. Normal session, CSRF and
-Origin requirements apply. Submission schedules continuation; poll until `draft` or failure.
+Origin requirements apply. Include `review_category` (`ordinary`, `policy_exception` or
+`conflicting_evidence`); the default for new submissions is ordinary. Submission schedules
+continuation; poll until `awaiting_review` or failure. Legacy contributions without this field
+remain unclassified and require administrator approval.
 The original requester must retain operator/admin access. Source withdrawal/replacement,
 cancellation or revoked authority blocks publication. Identical submissions are safe to repeat;
 different submissions return conflict. Operator/admin cancellation uses `/runs/{run_id}/cancel`.
 
 These are development contributions with contributor identity and handoff elapsed time, not
 OpenAI API calls or inference latency. Exact citations prove source provenance, not semantic
-support. Drafts remain unverified and are not approved customer responses. Human-review actions
-remain the next application work.
+support. Drafts remain unverified until an authorized review; exact citations alone do not prove
+semantic support. Reversed raw timestamps show `timing_status: clock_anomaly` and null elapsed.
+
+POST `/runs/{run_id}/review` with `action` (`approve`, `edit`, `reject`), a nonempty `reason`,
+the current `expected_revision` and `draft_hash`. Edit also requires `response`. Operators/admins
+may review ordinary drafts; approving/editing policy exceptions or unclassified drafts requires
+admin. Submission returns 202 and schedules continuation. Poll state/outcome until completed,
+rejected or failed; approval records a response internally and does not send it to a customer.
+Same actor/payload retries are idempotent; conflicting decisions return 409. Original drafts,
+citations and decision history survive cancellation/publication failure.
 
 ## Workbench demo and verification
 
@@ -284,6 +295,8 @@ Select **New message**, enter a customer question and response language, then **
 The selected message shows progress. For an evidence-backed question, open **Development response
 controls**, choose a retrieved passage, supply an exact quote and a response grounded in that
 evidence, then **Submit development draft**. The worker resumes and persists the draft.
+In **Review response**, choose approve/edit/reject and give a reason. After completion, the
+approved response is primary; expand the preserved original draft and review decision as needed.
 Select a numbered citation to inspect its saved excerpt, then open the exact document version.
 Expand **Processing details** for graph steps, model identity, timings, tokens and external charges.
 Use **Cancel processing** while a run is queued, processing or waiting; cancellation is a server
@@ -293,6 +306,6 @@ With indexed synthetic refund-policy smoke knowledge present, run
 `npx playwright test tests/e2e/workbench.spec.ts` from `frontend` using the browser/evidence
 environment variables described above. The suite uses actual local retrieval and deterministic
 development contributions, plus explicit network-failure injection. It covers EN/JA/ZH drafts,
-sources, cancellation, viewer access, 360/768/1440px, keyboard focus and doubled content size.
+sources, approve/edit/reject, cancellation, viewer access, 360/768/1440px, keyboard focus and doubled content size.
 This is not a browser-native zoom or live generation-quality measurement. Baseline `test:app`
 also exercises a persisted clarification flow without prepared models, including in CI.

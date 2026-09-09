@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 import pytest
 from sqlalchemy import func, select
@@ -25,7 +26,7 @@ def test_real_graph_retrieval_handoff_and_cited_draft(system, original, language
     client = system["client"]
     path = base(system, run)
     waiting = client.get(path).json()
-    assert waiting["state"] == "waiting_development", waiting
+    assert waiting["state"] == "waiting_for_input", waiting
     assert waiting["original"] == original
     assert waiting["model_calls"] and waiting["retrieval_id"]
     assert client.get(path + "/development-handoff").status_code == 403
@@ -39,16 +40,23 @@ def test_real_graph_retrieval_handoff_and_cited_draft(system, original, language
     # New graph and database connection resume the saved interrupt.
     assert run_support(system), system.get("claim_diagnostic")
     result = client.get(path).json()
-    assert result["state"] == "draft", result
+    assert result["state"] == "awaiting_review", result
+    assert result["outcome"] == "grounded_draft" and result["reviewed_response"] is None
     assert result["draft"] == answer
     assert result["citations"][0]["quote"] in handoff["context"]["sources"][0]["text"]
     assert result["support_status"] == "not_verified"
     assert result["handoff"]["provider"] == "codex_assisted_development"
-    assert result["handoff"]["handoff_elapsed_ms"] >= 0
+    timing = result["handoff"]
+    delta = (
+        datetime.fromisoformat(timing["submitted_at"]) - datetime.fromisoformat(timing["created_at"])
+    ).total_seconds() * 1000
+    assert timing["timing_status"] == ("clock_anomaly" if delta < 0 else "recorded")
+    assert timing["handoff_elapsed_ms"] == (None if delta < 0 else delta)
     assert {s["node"] for s in result["steps"]} == {
         "validate_input",
         "retrieve_evidence",
         "development_generation",
+        "human_review",
     }
     assert all(call["api_cost_usd"] == 0 for call in result["model_calls"])
 
@@ -92,7 +100,7 @@ def test_meaningless_input_requests_clarification_without_review(system):
     run = create(system, "w")
     assert run_support(system)
     result = system["client"].get(base(system, run)).json()
-    assert result["state"] == "clarification"
+    assert result["state"] == "completed" and result["outcome"] == "clarification_needed"
     assert result["handoff"] is None and result["retrieval_id"] is None
     assert "describe" in result["draft"]
 
@@ -104,7 +112,7 @@ def test_missing_sources_is_distinct_from_review(system):
     run = create(system)
     assert run_support(system)
     result = system["client"].get(base(system, run)).json()
-    assert result["state"] == "insufficient_evidence"
+    assert result["state"] == "completed" and result["outcome"] == "insufficient_evidence"
     assert result["handoff"] is None
 
 

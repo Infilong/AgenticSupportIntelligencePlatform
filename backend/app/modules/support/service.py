@@ -102,7 +102,7 @@ def submit_response(db, workspace_id, actor_id, run_id, handoff_id, data):
         if handoff.response_hash != response_hash:
             raise HTTPException(409, "A different response has already been submitted")
         return run
-    if run.state != "waiting_development":
+    if run.state != "waiting_for_input":
         raise HTTPException(409, "This processing attempt is not waiting for a response")
     validate_sources(db, workspace_id, handoff.context)
     citations(handoff.context, response)
@@ -119,7 +119,7 @@ def submit_response(db, workspace_id, actor_id, run_id, handoff_id, data):
 def cancel_run(db, workspace_id, actor_id, run_id):
     authorize(db, workspace_id, actor_id)
     run = get_run(db, workspace_id, run_id)
-    if run.state in {"draft", "clarification", "insufficient_evidence"}:
+    if run.state in {"completed", "rejected"}:
         raise HTTPException(409, "Processing has already finished")
     request_cancel(db, workspace_id, actor_id, run.job_id)
     run.state = "cancelled"

@@ -1,9 +1,10 @@
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.modules.knowledge.models import Chunk
+from app.jobs.models import Job
+from app.modules.knowledge.models import Chunk, Document
 from app.modules.knowledge.retrieval import retrieve
 from app.modules.knowledge.retrieval_models import RetrievalTrace
 from app.modules.knowledge.service import set_withdrawn
@@ -33,13 +34,35 @@ def search(system, ranking_provider=None, **kwargs):
     )
 
 
+def ingest_checked(system, version):
+    worked = ingest(system)
+    with Session(system["engine"]) as db:
+        job = db.get(Job, version.job_id)
+        document = db.get(Document, version.document_id)
+        chunks = db.scalar(select(func.count()).select_from(Chunk).where(Chunk.version_id == version.id))
+        diagnostic = {
+            "worked": worked,
+            "job_state": job.state,
+            "attempts": job.attempts,
+            "error_code": job.error_code,
+            "available_at": str(job.available_at),
+            "database_now": str(db.scalar(select(func.clock_timestamp()))),
+            "active_version": str(document.active_version_id),
+            "expected_version": str(version.id),
+            "chunks": chunks,
+        }
+        assert worked and job.state == "succeeded" and document.active_version_id == version.id and chunks, (
+            diagnostic
+        )
+
+
 def test_real_sql_vector_ranking_active_filters_and_ledger(system):
     first = add_version(system)
-    ingest(system)
+    ingest_checked(system, first)
     second = add_version(system, b"# Current\nRefund deadline is thirty days.", first.document_id)
-    ingest(system)
+    ingest_checked(system, second)
     unrelated = add_version(system, b"# Cafeteria\nLunch is served at noon.")
-    ingest(system)
+    ingest_checked(system, unrelated)
     with Session(system["engine"]) as db, db.begin():
         chunk = db.scalar(select(Chunk).where(Chunk.version_id == unrelated.id))
         chunk.embedding = [0.0, 1.0] + [0.0] * 382
@@ -184,8 +207,8 @@ def test_rerank_revalidates_sources_and_permissions_after_inference(system, chan
 
 @pytest.mark.parametrize("scores", [[], [float("nan")], [float("inf")]])
 def test_malformed_reranking_is_an_explicit_recorded_failure(system, scores):
-    add_version(system)
-    ingest(system)
+    version = add_version(system)
+    ingest_checked(system, version)
 
     class Malformed(TestReranker):
         def score(self, *_):

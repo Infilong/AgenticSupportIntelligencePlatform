@@ -12,19 +12,20 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 | `backend/app/core/` | 4 |
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |
-| `backend/app/modules/` | 27 |
+| `backend/app/modules/` | 32 |
 | `backend/app/providers/` | 5 |
-| `backend/app/workflows/` | 2 |
+| `backend/app/workflows/` | 3 |
 | `frontend/src/` | 2 |
 | `frontend/src/api/` | 2 |
 | `frontend/src/app/` | 2 |
-| `frontend/src/features/` | 19 |
+| `frontend/src/features/` | 20 |
 | `frontend/src/test/` | 1 |
 
 ## Backend module directories
 
 - `backend/app/modules/identity/`
 - `backend/app/modules/knowledge/`
+- `backend/app/modules/reviews/`
 - `backend/app/modules/support/`
 - `backend/app/modules/usage/`
 - `backend/app/modules/workspaces/`
