@@ -3,7 +3,16 @@
 Latest user direction on2026-09-09: **continue M1–M6, prioritize a working demo; defer RAG tuning**.
 Current unattended window:06:04:24–10:04:24 UTC (stop19:04:24 Tokyo). Full goal remains incomplete.
 
-Current slice: [settings and usage](plans/active/m4-settings-usage.md). Admin-only response-language
+Current slice: [isolated restoration drill](plans/active/m6-restore-drill.md), actual drill passed.
+Evidence: `.artifacts/m6/restore-20260909T095111Z/report.json`, wrapper
+`.artifacts/m0/restore-20260909T095110422764Z`. All 22 public tables and extension metadata match
+the same exported backup snapshot; the schema has no public sequences. The disposable restored
+database processed a fresh `w` through authenticated ASGI requests and the real worker/LangGraph:
+clarification_needed, succeeded job, three checkpoints, zero model calls. Original runtime was
+not redirected. This is not restored network/browser operation, inherited-job replay or RAG quality.
+Next: finish independent review and checkpoint this verification slice; full release gaps remain.
+The previous [settings and usage slice](plans/active/m4-settings-usage.md) is committed/pushed as
+73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped
 recorded model activity with unknown measurements retained. Migration0013 is applied and the
 rebuild stack is healthy.18 focused PostgreSQL checks pass at

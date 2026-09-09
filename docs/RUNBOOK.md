@@ -449,3 +449,21 @@ exclude missing measurements; missing counts remain visible. External charge is 
 not verified billing or total operating cost. Started/uncertain records remain distinct from
 success/failure. At most20 groups are shown; aggregate totals include all groups. Quality does
 not yet expose evaluation reports or certify answer correctness.
+
+
+## Fresh snapshot restoration drill
+
+`python scripts/manage.py verify-restore` is a local verification operation. It validates the
+rebuild PostgreSQL container, captures a read-only exported snapshot and dumps that same snapshot
+under `.artifacts/m6/restore-<timestamp>/`. It creates a new random `asi_restore_<hex>` database;
+there is no existing-target overwrite or database-drop operation. Original app/archive databases
+and existing Compose API/worker connections remain unchanged.
+
+The drill compares every public table's row count and SHA-256 of ordered JSON rows (UTC), plus
+extension versions and sequence values, before any clone login. Only after parity does it cancel
+inherited active jobs in the disposable clone and create a separate synthetic account/workspace.
+ASGI TestClient and the real worker/LangGraph process a new ambiguous message to clarification,
+checking job success and persisted checkpoints without model calls. It retains the dump, manifest
+and disposable database for review. Dumps contain application data and stay local/ignored.
+This is a fresh-backup/API-worker proof, not an old-backup recovery point, network-server/browser
+restore check, safe replay of inherited jobs or restored RAG/generation quality claim.

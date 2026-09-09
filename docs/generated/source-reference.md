@@ -48,6 +48,7 @@ python scripts/manage.py verify-inbox-capacity
 python scripts/manage.py verify-ingestion
 python scripts/manage.py verify-integration
 python scripts/manage.py verify-prep
+python scripts/manage.py verify-restore
 python scripts/manage.py verify-worker
 ```
 

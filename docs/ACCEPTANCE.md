@@ -88,7 +88,13 @@ and exact artifact paths are recorded in [status](STATUS.md) and the
   imports EN/JA/ZH, edits labels, starts one and returns to two unprocessed rows; Chrome also
   completes a Japanese imported message through an attributed draft and internal approval.
   This proves the scoped DATA flow, not bulk processing or semantic generation quality.
-- ROUTE/REVIEW/EVAL/RESTORE and full BOOT/UX release coverage remain incomplete.
+- ROUTE/REVIEW/EVAL and full BOOT/UX release coverage remain incomplete.
+- RESTORE passed a fresh-snapshot drill on 2026-09-09:
+  `.artifacts/m6/restore-20260909T095111Z/report.json`. All 22 public-table fingerprints and
+  extension metadata match before clone mutations; no public sequences exist. Authenticated
+  ASGI requests and the real worker/LangGraph completed a new clarification with three persisted
+  checkpoints and no model calls. This does not prove restored network/browser deployment,
+  old-backup recovery objectives, inherited-job replay or restored RAG/generation quality.
 
 ## Evaluation expansion gate before M2 tuning
 

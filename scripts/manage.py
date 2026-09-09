@@ -13,7 +13,7 @@ def main():
     parser.add_argument("command", choices=["doctor", "verify-prep", "verify-browser", "evidence",
                                             "init-env", "up", "migrate", "down", "verify-backend",
                                             "verify-integration", "verify-inbox-capacity", "seed-demo", "verify-worker", "prepare-model",
-                                            "verify-ingestion"])
+                                            "verify-ingestion", "verify-restore"])
     parser.add_argument("--offline", action="store_true", help="Skip registry probes in doctor")
     args = parser.parse_args()
     if args.offline and args.command != "doctor":
@@ -28,6 +28,9 @@ def main():
         from seed_demo import main as seed
         return seed()
     from evidence import run_checked, summarize
+    if args.command == "verify-restore":
+        return run_checked("restore", [shutil.which("uv") or "uv", "run", "--frozen", "python",
+                           str(ROOT / "scripts" / "restore_drill.py")], ROOT / "backend", timeout=240)
     if args.command == "verify-ingestion":
         return run_checked("ingestion", [shutil.which("uv") or "uv", "run", "--frozen", "python",
                            "-m", "app.ingestion_probe"], ROOT / "backend")

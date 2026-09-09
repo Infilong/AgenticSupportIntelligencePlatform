@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "c8bd00f710a233686d37dbf185a662c8aa9e14f2a42a4b56a5345d53a1139ec4",
+    "fingerprint": "86531d138ceb33de92833aaca8fab075a9346a051e9d0f54cf6b7703ab18a598",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/architecture/entrypoint review against18focusedPG and7browser25.5s savedreports. Currentsettingsusage slice,33frontend/build andpreviousimport141PG clearlydistinguished. Configurationavailability,recordedcost,missingmeasurements andQualitynoevaluationUI limits explicit;fullgoal/window remainsincomplete."
+    "rationale": "Independent STATUS/active-restorationplan/entrypoint review against actualreport andhash.22tables/extensions match;no sequences,noinheritedactivejobs,newclarification3checkpoints0calls. RESTORE explicitlyfreshsnapshotASGI/inprocess proof,fullrelease incomplete;priorsettings andothergates not silentlyupgraded."
   },
   "frontend": {
     "fingerprint": "5f45d3b1a285073a41ec3f5c5e7138e8e88433aed2f8a43b1e9c607738fb9084",
@@ -12,27 +12,27 @@
     "rationale": "Independent Settings/Quality/NewMessage/Shell review against frontendguide/architecture:adminsettings,manualformdefault only,existingimports languagespreserved,configurationnothealthprobe. Qualityshowsledgerusage/unknowncounts notanswerquality;7realbrowser25.5s report confirms scopedjourneys,33frontend/build evidence retained. No automaticgeneration or evaluationUI inferred."
   },
   "tooling": {
-    "fingerprint": "c53a34035263419f8f12e01555831c31f2340a92014d31faffde034e70a7a1fb",
+    "fingerprint": "bbd3657accbe1ef0f11d46160f5c6997361db5dce00f5be53346a625f2b7cec5",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK/guides review against new settingsandusage endpoints:GET/PUTadminscope,days1–90,UI1/7/30/90,20groups andknown-vs-missingmetrics accurate. Toolingcommands unchanged;generatedAPI/sourceinventory reflectnewmodules. Full141PG remains historical rather than falselyrenewed by18focusedchecks."
+    "rationale": "Independent restore_drill/dispatcher/generatedreference/RUNBOOK review. Read-only exportedsnapshot sharedwithdump,randomfreshcreatedb/nooverwrite,paritybeforeclonewrites,localretaineddump/report match source. Savedwrapperexit0/sourceunchanged anddumpSHA256 verified. Deadlineguards exist but forcedwrapper-timeoutcleanup not asserted."
   },
   "evaluation": {
-    "fingerprint": "010c71d274fe02c2a2c8cecb9b4601fd9c72386533a2d1182531e80eae65c358",
+    "fingerprint": "4cd214d0e84bd381d5e7d7ce54cc43f985d13b9c3d6a536abced8153fed32fc7",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent sharedACCEPTANCE review: scopedDATAimport-label-filter-select-process gate now supported by realPG/browser and persistedJapaneseapprovedimport evidence. RemainingROUTE/REVIEW/EVAL/RESTORE/fullUX gates explicit;unchanged RAGcomparison and deferred50kchunk experiment not misrepresented ascurrentSQL orsemanticproof."
+    "rationale": "Independent sharedACCEPTANCE restorationgate review: freshsnapshot parity andnewdeterministic request satisfy statedscopedRESTOREflow;explicit exclusions preserve network/browser,oldbackupRPO,inheritedjob andRAGgeneration limits. No new semanticquality,evaluationpipeline or provider proof inferred."
   },
   "backend": {
-    "fingerprint": "5471faebfece913733347d53da60c1ca568b2c34712f16ea9973d119ef5742ea",
+    "fingerprint": "9b070682058d042f81274055f302a59b12f0c91f4e9d03f72e6b8e6c4fd8e23c",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent settings/usage review: adminGET/PUTdefaults with explicitlanguage only,migration0013 defaulten,providerconfiguration projection andmember-scoped boundedusage SQL match owningdocs. Totals/modelgroups share oneaggregate snapshot,missing counts retained,top20groups do nottruncate totals.18focusedPG retainedreport sourceunchanged;prior141fullsuite explicitly predates newcode."
+    "rationale": "Independent unchanged product backend and sharedACCEPTANCE review against restoreDrill exercise. Freshrestoredclone authenticatedASGI request plusrealinprocessworker/LangGraph completesclarification with3checkpoints/0calls.22publictable parity beforemutations verified from report;no inheritedactivejobs/sequences present,so replayandsequencebehavior not claimed proven."
   },
   "infrastructure": {
-    "fingerprint": "940ade86b3c0451ebedc8a30ff8c3ac45d89f752d68f0976bb4b4ca35c37b4a0",
+    "fingerprint": "6aedb62b95172b45d139011bc42771cd692f516fedc358f135d900cbb6552e27",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged deployment/runtime boundary and additiveworkspace defaultlanguage migration0013 review against sharedarchitecture/RUNBOOK. Localmodelidentities areconfiguration,notlivehealth;automaticgenerationunavailable. No newprovider,cloudservice,billingreconciliation orproduction/restore claim;existingguardedmigration lifecycle retained."
+    "rationale": "Independent restorationoperational boundary review: validatesrebuildcontainer,newasi_restore target withoutdrop/overwrite,sourceconnectionsunchanged,clonejobs quiesced onlyafterparity. Verified reporttarget/snapshot/dumphash/tablemetadata. Localretainedclone/dump not networkdeployment,oldbackup recoveryobjective,RAGperformance orforcedtimeoutcleanup proof."
   }
 }
