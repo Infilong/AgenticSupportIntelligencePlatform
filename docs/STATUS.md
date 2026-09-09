@@ -7,20 +7,29 @@ the completed [RAG span/context repair](plans/completed/rag-span-context.md) and
 the completed [workflow and inbox scale plan](plans/completed/m4-workflow-inbox-scale.md).
 The latest user approval renews full-goal execution, not just the audit.
 
-Current slice: internal SQL BM25/RRF and lexical metadata foundation. The HTTP/default path
-remains vector→reranker; strategy/trace integration and measured comparison are next.
-120 PostgreSQL tests pass (`.artifacts/m0/integration-20260909T073947426228Z`, 286.35s) and 42 unit
-checks pass (`.artifacts/m0/backend-20260909T074003564706Z`). Runtime backfill has 1,284 chunks and
-zero incomplete metadata rows. A pre-migration dump is retained at
-`.artifacts/rag-hardening/before-lexical-20260909.dump`; restoration is not yet verified.
-Independent review fixed a JSON-null completeness hole and identified the old-writer migration
-race. Runtime commands now build, finish stopping API/worker, migrate without dependency startup,
-then restart only after success (`migrate` alone leaves writers stopped). Three ordering/failure
-tests pass; guarded real startup completed with all four services healthy. Its completion tail
-is `.artifacts/rag-hardening/guarded-up-tail-20260909T0752.log` (build/stop prefix excluded).
-Final seven focused checks pass at `.artifacts/m0/hybrid-foundation-20260909T075059400220Z`.
-Initial revision-chain and
-SQL-null fixture sequencing failures remain in the saved evidence; no thresholds were weakened.
+Current slice: five explicit retrieval strategies and bounded candidate traces are implemented.
+Knowledge search and Workflow → Retrieve evidence expose actual vector/BM25/fusion/reranker/final
+ranks and exact source links. BM25-only invokes no model; the message/default path remains
+vector-rerank. Hybrid superiority and50k-chunk performance are not yet established.
+
+Verification: initial29 focused PostgreSQL checks passed at
+`.artifacts/m0/hybrid-strategies-20260909T080916720578Z`. Full suite ran130 passing and one failed
+in305.67s at `.artifacts/m0/integration-20260909T081149738658Z`: recovery failure injection still
+named the extracted function. Updating the hook, without changing assertions, gives15 focused
+strategy/recovery passes at `.artifacts/m0/hybrid-strategies-fixed-20260909T081906294913Z`.
+42 units pass at `.artifacts/m0/backend-20260909T081519680780Z`;27 frontend tests and build pass.
+Two final browser journeys pass in18.0s at
+`.artifacts/rag-hardening/strategy-browser-compact-20260909`, including360/768/1440 layouts
+and five-candidate preview/full-list expansion. The preceding fixed run also passed in21.9s.
+Initial browser timing/selector failures remain in the adjacent strategy-browser directory.
+Independent reviews found and fixed lexical preflight ordering and running-trace wording.
+Chrome also inspected the Japanese ERROR-8422 hybrid result and exact source offset7956.
+
+Foundation checkpoint `b904b90` is pushed; GitHub CI `34326510482` passed. Migration0010 backfilled
+1284 retained chunks; migration0011 adds stage records without reconstructing old history.
+Runtime guards stop old writers before migrations; all four rebuild services are healthy after
+startup. The retained pre-migration dump is not restoration proof. Next: same frozen-corpus
+comparison and separately measured50k-chunk retrieval; retain the current default until evidence.
 
 Latest repair: **repetitive-source provenance and context retention verified**. The position-carrying
 LangChain adapter fixes ambiguous occurrences; packing retains later fitting top-five evidence.

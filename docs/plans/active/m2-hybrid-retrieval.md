@@ -83,3 +83,39 @@ Real guarded `up` completed after observed build → API/worker stopped → migr
 healthy API/frontend/worker/PostgreSQL. Final output tail (excluding build/stop prefix) is retained
 at `.artifacts/rag-hardening/guarded-up-tail-20260909T0752.log`. Code review supports the ordering;
 no simultaneous legacy writer was injected during real Docker shutdown.
+
+Foundation checkpoint `b904b90` is pushed. Preparation 40 passed at
+`.artifacts/m0/prep-20260909T075542147939Z`. Next connected slice: explicit vector, BM25, hybrid,
+vector-rerank and hybrid-rerank strategies, bounded persisted candidate traces, permission-gated
+trace read API and progressive UI inspection. Keep the vector-rerank default during comparison.
+Missing cosine/rank stays absent; BM25-only dispatches no embedding/reranking call. Older traces
+remain labelled as lacking stage evidence rather than being reconstructed. Verify branch budgets,
+provider selection, failure/withdrawal/permission denial and browser trace navigation.
+
+
+## Strategy/trace slice evidence
+
+Five explicit strategies, additive0011 stage history, workspace-authorized read API and progressive
+knowledge/workflow inspectors are connected. Candidate stage commits before reranking; failures
+retain discovery without fabricated final scores. Final revalidation covers the entire union.
+Default remains vector-rerank. The inspector shows missing scores as absent and old histories as
+unavailable; BM25-only invokes no provider.
+
+Independent reviews: fixed lexical128-term preflight before embedding and active traces incorrectly
+labelled stopped. Initial29 focused PG checks passed. Full suite130 passed/1 failed because the
+ownership-loss injector named the removed candidates function; moved it to collect without changing
+assertions. Fifteen focused strategy/recovery checks now pass (STATUS links exact reports).
+42 unit checks,27 frontend tests and TypeScript/Vite build pass. A first UI regression test used an
+unsupported fireEvent.toggle helper; dispatching the native toggle event repairs the harness.
+Browser failures were navigation-before-assertion and a5s wait behind a10.5s cold ingestion job;
+explicit document-heading navigation and30s queued-work wait preserve the behavioral assertions.
+Two repaired real journeys pass with source navigation, strategy scores, workflow cancellation,
+and360/768/1440 screenshots. No retrieval latency criterion was changed. Initial failures retained.
+Next comparison keeps all frozen corpus inputs/scoring/thresholds unchanged; measure candidate
+source discovery separately from final passage sufficiency, and do not mistake candidate union
+recall for final answer quality. No generation quality or50k-chunk proof yet.
+
+Screenshot review found an overly long expanded mobile inspector. A five-record preview with
+explicit full-list expansion now passes both real journeys in18.0s at
+`.artifacts/rag-hardening/strategy-browser-compact-20260909`; all recorded candidates remain
+inspectable. Documentation review corrected the release plan’s historical nonimplementation note.

@@ -1,0 +1,9 @@
+.retrieval-trace { min-width: 0; overflow-wrap: anywhere; }
+.trace-candidates { list-style: none; padding: 0; display: grid; gap: 12px; }
+.trace-candidates > li { border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.trace-source { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.trace-source strong { font-size: .8rem; }
+.trace-scores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 0; }
+.trace-scores dt { color: var(--muted); font-size: .8rem; }
+.trace-scores dd { margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) { .trace-scores { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

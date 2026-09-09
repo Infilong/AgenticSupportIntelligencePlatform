@@ -101,7 +101,7 @@ def test_exception_cleanup_after_owner_loss_cannot_report_a_known_failure(system
         raise ValueError("Injected candidate failure after ownership loss")
 
     monkeypatch.setattr(module, "RetrievalOwner", capture)
-    monkeypatch.setattr(module, "candidates", fail_after_disconnect)
+    monkeypatch.setattr(module, "collect", fail_after_disconnect)
     with pytest.raises(RetrievalOwnershipLost):
         search(system)
     assert reconcile(system["engine"])[1] == 1

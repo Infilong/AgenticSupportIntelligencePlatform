@@ -245,6 +245,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/workspaces/{workspace_id}/retrieval/{trace_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trace Detail */
+        get: operations["trace_detail_api_workspaces__workspace_id__retrieval__trace_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/workspaces/{workspace_id}/runs/{run_id}/attempts": {
         parameters: {
             query?: never;
@@ -473,7 +490,7 @@ export interface components {
             /** Checksum */
             checksum: string;
             /** Cosine Similarity */
-            cosine_similarity: number;
+            cosine_similarity: number | null;
             /** Rank Score */
             rank_score: number;
             /** Quote */
@@ -730,6 +747,12 @@ export interface components {
              * @default 5
              */
             limit: number;
+            /**
+             * Strategy
+             * @default vector_rerank
+             * @enum {string}
+             */
+            strategy: "vector" | "bm25" | "hybrid" | "vector_rerank" | "hybrid_rerank";
         };
         /** RetrievalResult */
         RetrievalResult: {
@@ -775,7 +798,7 @@ export interface components {
             /** Checksum */
             checksum: string;
             /** Cosine Similarity */
-            cosine_similarity: number;
+            cosine_similarity: number | null;
             /** Rank Score */
             rank_score: number;
         };
@@ -919,6 +942,87 @@ export interface components {
             job_attempt: number;
             /** Error Code */
             error_code: string | null;
+        };
+        /** TraceCandidate */
+        TraceCandidate: {
+            /**
+             * Chunk Id
+             * Format: uuid
+             */
+            chunk_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+            /** Title */
+            title: string;
+            /** Section */
+            section: string;
+            /** Start Offset */
+            start_offset: number;
+            /** Currently Active */
+            currently_active: boolean;
+            /** Vector Rank */
+            vector_rank?: number | null;
+            /** Cosine Similarity */
+            cosine_similarity?: number | null;
+            /** Bm25 Rank */
+            bm25_rank?: number | null;
+            /** Bm25 Score */
+            bm25_score?: number | null;
+            /** Fusion Rank */
+            fusion_rank?: number | null;
+            /** Fusion Score */
+            fusion_score?: number | null;
+            /** Reranker Rank */
+            reranker_rank?: number | null;
+            /** Reranker Score */
+            reranker_score?: number | null;
+            /** Final Rank */
+            final_rank?: number | null;
+            /**
+             * Selected For Reranker
+             * @default false
+             */
+            selected_for_reranker: boolean;
+            /** Exclusion */
+            exclusion?: string | null;
+        };
+        /** TraceDetail */
+        TraceDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Query */
+            query: string;
+            /** Status */
+            status: string;
+            /** Strategy */
+            strategy: string;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Error Code */
+            error_code: string | null;
+            /** Trace Version */
+            trace_version: string | null;
+            /** Phase */
+            phase: string;
+            /** Candidate Queries Ms */
+            candidate_queries_ms: number | null;
+            /** Parameters */
+            parameters: {
+                [key: string]: number | string;
+            };
+            /** Candidates */
+            candidates: components["schemas"]["TraceCandidate"][];
         };
         /** UploadResult */
         UploadResult: {
@@ -1488,6 +1592,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RetrievalResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trace_detail_api_workspaces__workspace_id__retrieval__trace_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                trace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraceDetail"];
                 };
             };
             /** @description Validation Error */

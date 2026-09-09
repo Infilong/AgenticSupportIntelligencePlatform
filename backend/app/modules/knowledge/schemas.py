@@ -66,5 +66,5 @@ class RetrievedPassage(BaseModel):
     start_offset: int
     end_offset: int
     checksum: str
-    cosine_similarity: float
+    cosine_similarity: float | None
     rank_score: float

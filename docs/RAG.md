@@ -3,7 +3,7 @@
 Owner: backend retrieval/ingestion/workflow plus evaluation. Reviewed against checkpoint `83f4f8d`
 on 2026-09-09. [The execution record](plans/completed/rag-design-hardening.md) owns subsequent fixes
 and verification. This document separates current code from the required target; it does not
-claim that integrated hybrid search, automated grounding validation or external generation already work.
+claim that hybrid superiority, automated grounding validation or external generation already work.
 
 ## RAG AUDIT
 
@@ -17,7 +17,7 @@ inference and before publication; pinned local models; fenced jobs; retained unc
 exact-quote provenance; separate original/draft/approved result and human decision.
 
 **Weak at audit baseline:** safety-block chunk continuity, evidence-quality scoring, token budgeting, duplicate
-evidence handling and trace completeness. **Missing:** BM25/fusion workflow integration, full model-call
+evidence handling and trace completeness. **Missing:** measured hybrid default selection, full model-call
 correlation/accounting, source-bound semantic validation and four comparable answer pipelines.
 **Unnecessary complexity:** no additional search service, Redis, ANN index, graph database or
 agent framework is justified. Keep PostgreSQL exact search until measurements justify a change.
@@ -72,8 +72,8 @@ The current middleware creates HTTP IDs, but does not persist this entire correl
 | 4. Metadata/versioning | Workspace/version/chunk IDs, section, offsets, checksum, token count, embedding space; atomic active-version switch. [models](../backend/app/modules/knowledge/models.py), [ingestion](../backend/app/modules/knowledge/ingestion.py) | Persist source language and chunker/index recipe; page only for a supported parser, never invented for TXT. Document model-change/reindex lifecycle. |
 | 5. Embeddings | Real pinned multilingual E5-small, 384 dimensions, normalized query/passage vectors, 512-token rejection; no runtime fallback. [provider](../backend/app/providers/local_embeddings.py) | Validate returned batch identity/dimension against the configured space; test incompatible same-dimension models. Current production provider is fixed, so live mixing was not demonstrated. |
 | 6. Vector retrieval | Exact cosine SQL top 20; default final 5, API maximum 10. Workspace/current-version/model-space filters precede materialization. [retrieval](../backend/app/modules/knowledge/retrieval.py) | Compare candidate/final K explicitly; similarity is not calibrated relevance probability. |
-| 7. Lexical retrieval | Internal SQL BM25 uses persisted term frequencies, length and active scoped collection statistics; Unicode recipe and populated backfill tested. [BM25](../backend/app/modules/knowledge/bm25.py) | HTTP integration, real-corpus comparison and 50k-chunk performance remain pending. Unique-term overlap is not BM25. |
-| 8. Hybrid retrieval | Pure equal-weight RRF preserves branch scores and identity ranks. [fusion](../backend/app/modules/knowledge/fusion.py) | Not connected to HTTP/workflow yet. Union <=40 must narrow to 20 before existing reranker; trace and comparison remain pending. |
+| 7. Lexical retrieval | HTTP-selectable SQL BM25 uses persisted term frequencies, length and active scoped collection statistics; Unicode recipe and populated backfill tested. [BM25](../backend/app/modules/knowledge/bm25.py) | Real-corpus comparison and 50k-chunk performance remain pending. Unique-term overlap is not BM25. |
+| 8. Hybrid retrieval | Pure equal-weight RRF preserves branch scores and identity ranks. [fusion](../backend/app/modules/knowledge/fusion.py) | Explicit hybrid strategies connect a union <=40 to top20 before optional reranking. Default workflow remains vector-rerank pending comparison. |
 | 9. ACL/security | Workspace membership before embedding/search; source/actor rechecks; foreign IDs denied. [retrieval tests](../backend/tests/integration/test_retrieval.py) | Retain the same restrictions in BM25, fusion, trace lookup and citation inspection. No leak was found in this bounded audit; this is not a completed security certification. |
 | 10. Reranking/dedup/context | Pinned multilingual cross-encoder scores up to 20 pairs, truncated to 512 pair tokens. No explicit overlap/diversity suppression. [reranker](../backend/app/providers/local_reranker.py) | Trace truncation and evidence lost from model input. Measure vector vs reranked quality/cost. Deduplicate by provenance/overlap; do not collapse genuine policy conflicts. |
 | 10. Context budget | Consider the existing top five in rank order; omit oversized complete snapshots and try later candidates within 24,000 UTF-8 JSON bytes. Context hash, no source-string truncation. [context](../backend/app/modules/support/context.py) | Full tokenizer-aware prompt+query+conversation+evidence+reserved-output budget; record excluded sources/reasons and token counts. Bytes are a transport bound, not a model budget or deduplication. |
@@ -82,7 +82,7 @@ The current middleware creates HTTP IDs, but does not persist this entire correl
 | 13. No-source/review | Empty evidence routes to insufficient evidence; short input clarifies; drafts require human review | Nonempty nearest neighbours can still be irrelevant. No calibrated relevance/semantic abstention gate exists. Conflict/policy categories are development annotations, not automated detectors. |
 | 14. Multilingual behavior | EN/JA/ZH queries, same-language instruction, multilingual embedding/reranker | Test output language and forced cross-language source directions independently; UI language acceptance is not multilingual RAG proof. |
 | 15. Evaluation | Frozen real API retrieval runner, per-language success@5/section recall@5, leakage and latency. [runner](../evals/run_retrieval.py) | No full Precision/Recall@K sweep, held-out generalization, answer/citation support or direct/vector/hybrid/system comparison. |
-| 16. Observability | Retrieval final IDs/scores, graph steps, embedding/rerank input tokens/duration/charge, uncertainty and human decisions | Save all bounded candidate/ranking stages, context selection and origin IDs. Output tokens, generation pricing/version and complete failure taxonomy remain missing. |
+| 16. Observability | Retrieval final IDs/scores, graph steps, embedding/rerank input tokens/duration/charge, uncertainty and human decisions | Bounded vector/BM25/fusion/reranker/final candidate stages and exclusions are now saved and visible. Context selection and full origin correlation remain pending. Output tokens, generation pricing/version and complete failure taxonomy remain missing. |
 
 ## Retrieval and context decisions
 
@@ -96,17 +96,21 @@ identifiers plus useful components, EN terms and a documented CJK n-gram baselin
 fullwidth digits/hyphens and mixed-script identifiers need regressions. Keep punctuation handling
 versioned. Lexical search need not translate; vector retrieval supplies cross-language recall.
 
-The current internal recipe is `nfkc-identifiers-cjk-bigrams-v1`: NFKC/casefold derived keys,
+The current recipe is `nfkc-identifiers-cjk-bigrams-v1`: NFKC/casefold derived keys,
 ASCII words/whole hyphen-or-underscore identifiers plus components, CJK overlapping bigrams
 and single-character runs. Length counts all emitted occurrences, not unique keys or model
 tokens. Query terms are unique and limited to 128; excess is rejected without truncation.
 Initial BM25 uses positive IDF `ln(1+(N-df+0.5)/(df+0.5))`, k1=1.2, b=0.75; zero-length chunks
-remain in scoped population statistics but never match. Internal branches return at most 20;
+remain in scoped population statistics but never match. Each branch returns at most 20;
 RRF uses one-based ranks, k=60, equal weights and chunk-ID ties. Missing ranks contribute nothing.
 These are frozen starting parameters, not tuned superiority. Migration 0010 preserves historical
 evidence while backfilling frequencies/length/recipe in bounded reads. Missing SQL/JSON metadata
-fails closed. Strategy/provider selection, ranking traces and default switching are later work in
-the [hybrid plan](plans/active/m2-hybrid-retrieval.md).
+fails closed. Five explicit strategies are implemented: vector, BM25, hybrid, vector-rerank and
+hybrid-rerank. BM25-only invokes no model; hybrid query bounds are checked before embedding.
+Candidate stages commit before reranking so failures retain discovery evidence without invented
+final ranks. Post-inference revalidation covers every candidate. Migration0011 leaves old stage
+history unavailable. A workspace-authorized trace API powers progressive inspection and exact
+source links. Default switching and comparison remain in the [hybrid plan](plans/active/m2-hybrid-retrieval.md).
 
 Use rank fusion because BM25 scores and cosine similarities have incompatible scales. Version
 the reciprocal-rank constant/weights and tie-breaking rule; record each branch's contribution.
@@ -207,7 +211,7 @@ above. Fresh hardening evidence and any score changes must be reported without o
 - **P0:** no confirmed cross-workspace leak in this audit; zero leakage remains mandatory.
 - **P1 resolved here:** demonstrated chunk-boundary evidence loss. Missing semantic validation/
   abstention and provider-generation gates still block a full production RAG claim.
-- **P2 resolved here:** demonstrated scorer false positives/result bounds. Remaining: BM25/fusion integration,
+- **P2 resolved here:** demonstrated scorer false positives/result bounds. Remaining: measured hybrid selection,
   complete traces/token accounting, source-aware evaluation and runtime failure categories in coherent slices.
 - **P3:** remove avoidable candidate metadata round trips or add caches only after profiling.
 

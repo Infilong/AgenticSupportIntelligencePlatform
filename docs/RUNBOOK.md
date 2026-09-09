@@ -226,8 +226,15 @@ Migration 0010 adds lexical frequencies, length and recipe without replacing sto
 vectors or citations. It reads at most 500 rows per batch in the migration transaction and
 backfills every retained chunk; failure rolls the transaction back. This is a local maintenance
 operation, not an online backfill service. New ORM inserts derive metadata from immutable text.
-The HTTP search still uses vector/reranker; internal BM25 rejects incomplete active metadata,
+The default search uses vector/reranker; explicit BM25/hybrid strategies reject incomplete active metadata,
 including SQL NULL, JSON null and unsupported recipe versions. See [RAG design](RAG.md).
+
+Migration0011 adds `retrieval_traces.stages`; historical traces keep an empty object, not
+reconstructed candidate history. POST retrieval accepts `strategy`: `vector`, `bm25`, `hybrid`,
+`vector_rerank` (default), `hybrid_rerank`. GET the same path plus `/{trace_id}` returns
+permission-gated candidate history (maximum40). BM25-only records no model call. Knowledge
+search has an optional Search method selector; workflow defaults are unchanged. Expand Retrieval
+evidence to inspect ranks and exact sources. Missing branch scores are not zero confidence.
 
 ## Real retrieval smoke
 

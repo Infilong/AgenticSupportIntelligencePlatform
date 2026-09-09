@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { duration, outcomeLabel, stateLabel, type Run } from './types';
 import { nodeState, workflowNodes } from './workflow';
 import './workflow.css';
+import { RetrievalTrace } from '../knowledge/RetrievalTrace';
 
-export function WorkflowView({ run }: { run: Run }) {
+export function WorkflowView({ run, workspaceId }: { run: Run; workspaceId: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const node = workflowNodes.find(item => item.id === selected);
   const state = node ? nodeState(run, node.id) : null;
@@ -26,6 +27,7 @@ export function WorkflowView({ run }: { run: Run }) {
       <h3>{node.title}</h3><p>{node.detail}</p>
       {node.id === 'validate_input' && <blockquote lang={run.language}>{run.input_text}</blockquote>}
       {node.id === 'retrieve_evidence' && <><p>Retrieval record: <code>{run.retrieval_id ?? 'Not recorded'}</code></p>
+        {run.retrieval_id && <RetrievalTrace workspaceId={workspaceId} traceId={run.retrieval_id} />}
         {run.model_calls.map(call => <div className="workflow-call" key={call.id}><strong>{call.operation === 'embed_query' ? 'Embed query' : call.operation === 'rerank' ? 'Rank evidence' : call.operation}</strong>
           <span>{call.model}</span><span>{call.status} · {duration(call.duration_ms)} · {call.input_tokens ?? 'Unknown'} input tokens</span>
           <span>External charge: {call.api_cost_usd == null ? 'Unknown' : `$${call.api_cost_usd.toFixed(4)}`}</span>

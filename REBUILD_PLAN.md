@@ -209,12 +209,15 @@ Ingestion: persist original → validate/decode → normalize → split → embe
 
 Retrieval:
 
-Implementation note (2026-09-09, checkpoint `2379915`): current search selects 20 cosine
+Historical implementation note (2026-09-09, checkpoint `2379915`): that search selected 20 cosine
 candidates and uses a local multilingual neural reranker. The measured need and frozen-corpus
 results are recorded in [M2](docs/plans/active/m2-real-retrieval.md). Steps 3–4 below describe
-the release requirement, not current code. The user's earlier topology names BM25 candidates;
+the release requirement, not code at that checkpoint. The user's earlier topology names BM25 candidates;
 the subsequent audit brief requires measured lexical/hybrid comparison. See [RAG design](docs/RAG.md).
 BM25/fusion parameters remain a measured design choice; reranker results do not complete this work.
+Current explicit BM25/hybrid strategies and candidate inspection are tracked in the
+[hybrid plan](docs/plans/active/m2-hybrid-retrieval.md). The default remains vector-rerank;
+measured comparison and the remaining release gates are incomplete.
 
 1. Apply workspace, active-version and allowed-knowledge filters before model context.
 2. Use database-side exact pgvector search, not application-side scanning of all vectors.

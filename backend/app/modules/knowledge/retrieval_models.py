@@ -18,6 +18,7 @@ class RetrievalTrace(Base):
     status: Mapped[str] = mapped_column(String(20), default="started")
     strategy: Mapped[str] = mapped_column(String(64), default="cosine20-mmarco-rerank-v2")
     results: Mapped[list] = mapped_column(JSONB, default=list)
+    stages: Mapped[dict] = mapped_column(JSONB, default=dict)
     duration_ms: Mapped[float | None]
     error_code: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

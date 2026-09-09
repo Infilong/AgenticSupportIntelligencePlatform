@@ -51,7 +51,7 @@ export function RunView({ workspace, runId }: { workspace: Workspace; runId: str
       {workspace.role === 'admin' && run.state === 'waiting_for_input' && <details className="development-controls" onToggle={event => setDevelopmentOpen(event.currentTarget.open)}><summary>Development response controls</summary>{developmentOpen && <DevelopmentResponse path={path} onSubmitted={changed} />}</details>}
       <AttemptControls showHistory={false} search={search} run={run} workspace={workspace} onCreated={id => { navigate(`/w/${workspace.id}/runs/${id}${search}`); }} />
       </div>
-      <div role="tabpanel" id="run-panel-Workflow" aria-labelledby="run-tab-Workflow" hidden={tab !== 'Workflow'}><WorkflowView run={run} /><ProcessingDetails run={run} /></div>
+      <div role="tabpanel" id="run-panel-Workflow" aria-labelledby="run-tab-Workflow" hidden={tab !== 'Workflow'}><WorkflowView run={run} workspaceId={workspace.id} /><ProcessingDetails run={run} /></div>
       <div role="tabpanel" id="run-panel-Sources" aria-labelledby="run-tab-Sources" hidden={tab !== 'Sources'}>
         <h2>Supporting sources</h2><p className="muted">Saved citations link the response to the exact document version used.</p>
         {!run.citations.length && <p>No response citations recorded yet.</p>}
