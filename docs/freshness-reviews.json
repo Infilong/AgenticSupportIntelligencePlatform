@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "260e9db4963d7f5abd927d39a61459061cefb9708a74c246fa2acc2d849f9991",
+    "fingerprint": "7b1fa1500c4cc93053dfebac72d81c69e5ba2df6fa4b7071307170c9b140c510",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS, completed profile plan and entry-point scope review against saved final browser, database and API logs. Timing ranges and corpus counts match; 158 successful 200 and seven 202 responses retained. Full prior suite is explicitly historical; current checkpoint and unfinished generation/release gates remain honest."
+    "rationale": "Independent STATUS and active CI plan review against retained browser report: three expected cases, zero failures, 8381.528ms local baseline. Prior five-session profile remains historical and scoped. Hosted CI explicitly awaits push; no production, real-model capacity or full release gate completion claim."
   },
   "frontend": {
     "fingerprint": "a1beb0838a5390cadf5a7b6dc999e77fbaaf1dbe2ad901421a414ae8d1f5113a",
@@ -12,10 +12,10 @@
     "rationale": "Independent small-team browser harness review and retained final browser/profile evidence: five distinct sessions of one operator, two uploads, real retrieval inspection and cancellation; one test passed with no page errors. Promise settlement preserves failed evidence. No UI product change or generation quality claim."
   },
   "tooling": {
-    "fingerprint": "6cfe6325b6000ab4bb9b6452af63efa562557b1cdf2f4bd5fb0c784cc7fbf7e1",
+    "fingerprint": "07d05ebfba5cc77aac67950908a944df9d593280dfab127d98b94c64dbdeb241",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK commands compared with browser environment handling and local profile CLI. Exact five run/two document arguments, second document background meaning, trusted local authorization boundary and retained failure artifacts are accurate. No scripts behavior change; generated inventory includes the new backend helper."
+    "rationale": "Independent RUNBOOK recipe review against release_runtime and release.spec.ts: repository command working directories, generated credentials and 8011 origin align; clarification asserts zero model calls. Cleanup wording now acknowledges cancellation/timeout interruption. Existing scripts unchanged; local baseline is not hosted verification."
   },
   "evaluation": {
     "fingerprint": "f7eb08beb69fadfcaf9567b15674340d4296b82af9b3d948e25cb999eebad75e",
@@ -30,9 +30,9 @@
     "rationale": "Independent review of profile_release and five SQL checks: read-only repeatable snapshot, exact workspace-bound sets, unknown/negative timing and persisted interval overlap agree with docs. Final stored report has five cancelled runs, seven succeeded jobs and collection-time corpus 5 documents/128 chunks. No runtime, API or schema change; prior full suite predates this helper."
   },
   "infrastructure": {
-    "fingerprint": "de1c1820b921b8bdcc9e0213c3027ff9c4cfc47034b0c2bf8e9c197b7463e451",
+    "fingerprint": "cd396821935a25a635e57ed29e6ba3b40d2622c00dbe0a1fec97b2f7ad798c98",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent release profile RUNBOOK and existing runtime boundary review: test targets isolated built release with prepared local models, preserves previous synthetic data, uses a read-only local DB collector. No infrastructure configuration change or new deployment, pristine benchmark, simultaneous model inference or full production readiness assertion."
+    "rationale": "Independent review of separate release-smoke workflow against existing Docker release commands and three-case browser harness. Fresh build, migration/checkpoints, disposable identities, protected same-origin worker path, bounded failure logs and best-effort cleanup match RUNBOOK. Hosted execution remains pending; no model downloads, generation or new runtime behavior claimed."
   }
 }

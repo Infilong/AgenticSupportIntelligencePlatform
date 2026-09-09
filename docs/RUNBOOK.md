@@ -573,3 +573,12 @@ includes pre-node work. Null means unmeasured; negative values remain clock anom
 Current corpus counts describe collection time, not an inferred historical snapshot.
 Inspect bounded worker/API logs and screenshots before drawing conclusions. See the
 [recorded profile](plans/completed/m6-small-team-profile.md) for sample timings and limits.
+
+The Verify workflow also runs release.spec.ts in a separate Ubuntu release-smoke job. Each job
+builds fresh packaged assets, migrates/checkpoints and seeds disposable CI identities, then checks
+same-origin assets, worker clarification, nested refresh, CSRF/logout and workspace/viewer denial.
+It uses the existing release commands and always attempts to stop its isolated stack; it never downloads
+inference weights or calls generation providers. Failed runs print bounded service logs before
+cleanup. Job cancellation or timeout can interrupt cleanup; browser files currently remain on the
+ephemeral runner rather than being uploaded. This is a packaged no-API smoke, not the real-model
+five-session or full release matrix.

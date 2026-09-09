@@ -39,9 +39,12 @@ Historical results are pushed as855d1e1; GitHub CI34351992984 passed;46 preparat
 assets: five independent operator sessions inspect actual retrieval and cancel at development
 handoff while real knowledge ingestion proceeds. Final browser evidence is
 `.artifacts/m6/small-team-final-20260909`; database intervals confirm admitted-work overlap.
-Five focused PostgreSQL measurement checks pass. Current: finish independent documentation review
-and checkpoint this profile, then select the next bounded release-verification gap. Keep RAG tuning
-deferred; five retrieval strategies do not complete EVAL and this profile does not exercise generation.
+Five focused PostgreSQL measurement checks pass. Profile checkpoint48f9409 is pushed; independent
+code/documentation review closed and46 preparation checks passed at
+`.artifacts/m0/prep-20260909T130840658739Z`. Current: add the
+[packaged release CI smoke](plans/active/m6-release-ci.md), reusing the existing no-API journey;
+local baseline passes three checks in8.4s. Keep RAG tuning deferred; five retrieval strategies
+do not complete EVAL and the workload profile does not exercise generation.
 The previous [settings and usage slice](plans/completed/m4-settings-usage.md) is committed/pushed as
 73e60a6;45 preparation checks pass at `.artifacts/m0/prep-20260909T094443836621Z`. Admin-only response-language
 defaults and explicit provider configuration are implemented; Quality displays member-scoped
