@@ -6,7 +6,6 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modules.knowledge.ingestion import embeddings
 from app.modules.knowledge.lexical import query_terms
 from app.modules.knowledge.models import Document
 from app.modules.knowledge.recovery import RetrievalOwner, RetrievalOwnershipLost
@@ -14,6 +13,7 @@ from app.modules.knowledge.retrieval_models import RetrievalTrace
 from app.modules.knowledge.selection import DEFAULT_STRATEGY, STRATEGIES, collect, finish, trace_start
 from app.modules.workspaces.models import Workspace
 from app.modules.workspaces.service import membership
+from app.providers.local_models import embeddings
 from app.providers.local_reranker import reranker
 from app.providers.recorded_embeddings import encode_recorded
 from app.providers.recorded_reranking import score_recorded, start_reranking

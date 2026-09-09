@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, ForeignKeyConstraint, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.jobs.models import Job  # noqa: F401 -- register the ledger's composite foreign-key target
 from app.modules.knowledge.retrieval_models import RetrievalTrace  # noqa: F401
 
 

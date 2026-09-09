@@ -1,26 +1,17 @@
 """Bounded in-memory staging; vectors and active version publish in one fenced transaction."""
 
 import uuid
-from functools import lru_cache
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.settings import Settings
 from app.jobs.contracts import Publication
 from app.jobs.queue import JobCancelled, owned
 from app.modules.knowledge.models import Chunk, DocumentVersion
 from app.modules.knowledge.service import admin_scope, get_document
 from app.modules.knowledge.splitting import lexical_terms, split_document
-from app.providers.local_embeddings import MODEL, REVISION, LocalEmbeddings
+from app.providers.local_models import SPACE, embeddings
 from app.providers.recorded_embeddings import encode_recorded
-
-SPACE = f"{MODEL}:{REVISION}:normalized-query-passage-v1"
-
-
-@lru_cache(maxsize=1)
-def embeddings():
-    return LocalEmbeddings(Settings().embedding_cache)
 
 
 def check_active(db, job, document_id, version_id):

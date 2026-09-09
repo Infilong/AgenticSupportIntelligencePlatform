@@ -1,15 +1,15 @@
 {
   "project": {
-    "fingerprint": "ec5d4ce747ba56ba3b5bed960781cae47b78e14d23a1e57a031a09aa799d0ccf",
+    "fingerprint": "5cb50b45872498b00ba8179f5050897b0cd1d0ca11e9deb646ac8f1843650aa4",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS and timeout plan against prior failed420s wrapper and current two-test Windows evidence. New slice addresses orphan capture/cleanup only; cold retrieval startup and full regression remain unresolved before M5 continuation. No runtime/provider/application success inferred and no timeout-budget increase."
+    "rationale": "Independent STATUS/startup plan against final7-check log and child phases: targeted child dispatch succeeds within unchanged20s before intentional kill, yielding uncertain records. Initial73 units and26/1 PG are explicitly earlier; no fresh full-suite claim. Parent-verified all-five CI34373738322 pertains prior timeout repair, distinct from current startup source; next M5 remains incomplete."
   },
   "frontend": {
-    "fingerprint": "0021c0ae3a484db5ae20dc0b72c19450144a4a76f5afba3480b1f0fbf8101b27",
+    "fingerprint": "7738549aae917cc8550397ea274828f1a30fa49b5c9e9bc96b85409b818a098e",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent generated handoff projection and DevelopmentResponse binding review: updated submission carries exported request_hash while legacy omission remains accepted under server context checks. Saved real browser report1pass43.0s and trace proof confirm hash-bearing POST202 followed by existing approval flow.42 component/build evidence retained; no inference or new generation UI claim."
+    "rationale": "Independent shared ARCHITECTURE claim review for backend-only import extraction. No frontend/API shape or submission behavior changed; retrieval starts without document-splitting/Torch imports, with actual model loading still deferred. Existing UI evidence is not represented as a newly run browser suite."
   },
   "tooling": {
     "fingerprint": "68949a5b75cfa2ab16e19bfb46fad1512c92f8ae1c31ec784a72048142cc70ee",
@@ -24,15 +24,15 @@
     "rationale": "Independent shared ACCEPTANCE updates against prior ten-distinct packaged workbench reports and new saved-restore evidence. Historical evaluation data is included in table parity but no new evaluation was run. Native zoom, semantic generation, network restoration and full release coverage remain unverified; existing corpus/scorer unchanged."
   },
   "backend": {
-    "fingerprint": "0f69d201c3ba190cc522a3ac1b2960d7bc3dfa7d5a4108e389fd69edd42bcc8b",
+    "fingerprint": "8ea2b4394eea710f19bd03e2e810b54c863b6a0f9ed7d0c2295b0a2733d75dd9",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Reviewed added backend guide requirement to run both Ruff lint and format checking from backend before checkpoint; matches existing hosted gate and addresses observed lint-only verification omission. Prior four Python AST comparisons confirmed formatting-only code changes; no runtime/API/migration behavior change. Failed hosted backend gate and skipped tests remain distinct from local corrected checks."
+    "rationale": "Independent lazy-model extraction and explicit Job FK registration review against prior factory: same first-call Settings, cached callable and embedding SPACE, no ranking/model change. Fresh-process test checks forbidden heavy imports and actual FK resolution. Saved final7 tests9.84s and phases1.328s imports/1.422s dispatch verify targeted ownership recovery; initial missing-Job failure and old full timeout remain retained."
   },
   "infrastructure": {
-    "fingerprint": "74105f8bda37ac63104f18a3516f84cb187813e23fb0ca17cd9e6d66d968aa2d",
+    "fingerprint": "470b2c7d045f5640bec3b0b9e949857c08d9dd9ba8831ad91201d412a9764b29",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared RUNBOOK cleanup boundary review against owned tree/process-group implementation: launched Windows descendants targeted, unrelated sibling preserved in real regression; denied cleanup reported rather than hidden. Existing service configuration and budgets unchanged. POSIX and detached-process limits explicit, no broad runtime reliability claim."
+    "rationale": "Independent shared ARCHITECTURE runtime boundary review: provider configuration extraction removes ingestion import dependency, keeps pinned models and same cache/space, no service/deployment change. Targeted startup evidence is distinguished from OS-level DLL diagnosis and full regression; hosted verification for current change remains pending."
   }
 }

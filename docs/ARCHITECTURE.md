@@ -366,3 +366,9 @@ LangChain replay and fenced domain publication, including completed-checkpoint r
 The replay runs outside the database snapshot transaction. It consumes only the authenticated
 stored contribution; it is not inference and creates no ModelCall. External generation dispatch,
 usage accounting and four distinct generation pipelines remain unimplemented.
+
+
+Shared local embedding configuration lives in providers/local_models.py. Ingestion and retrieval
+share its first-call cached factory and unchanged embedding-space identity; population selection
+does not import ingestion merely to read that identity. Importing retrieval therefore does not
+initialize document splitting or Torch; actual model execution still loads the pinned local model.

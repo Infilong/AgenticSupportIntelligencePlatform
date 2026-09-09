@@ -12,15 +12,20 @@ and pushes to `codex/fresh-start` are authorized; merging, public deployment and
 The [status-navigation checkpoint](plans/completed/m6-status-navigation.md) preserves prior evidence.
 The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-generation-pipelines.md).
 The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
-Current: generation request contract committed/pushed asdfbcac5; review and verify the
-[command-timeout cleanup](plans/active/m6-command-timeout.md). Next: resolve the observed cold
-retrieval import startup failure, then continue provider dispatch and the four-way runner. Keep RAG tuning deferred. The previous
+Current: generation request contract pushed asdfbcac5 and timeout/CI-format repair asd92068e.
+Verify the [retrieval startup repair](plans/active/m6-retrieval-startup.md), then continue provider
+dispatch and the four-way runner. [Timeout cleanup](plans/completed/m6-command-timeout.md) retains
+its Windows evidence; hosted run34373738322 passed all five jobs, including POSIX cleanup. Keep RAG tuning deferred. The previous
 window checkpoint records the earlier stop; it does not impose a current deadline.
 
 [REBUILD_GOAL](REBUILD_GOAL.md) and [release plan](../REBUILD_PLAN.md) own the goal and scope;
 [ACCEPTANCE](ACCEPTANCE.md) owns gates. This file routes current work, not historical execution.
 
 ## Latest verified checkpoint
+
+- Startup dependency repair: final7 focused tests pass; the real child reached recorded dispatch
+  in1.422s under its unchanged20-second deadline. Original timeout and the extraction's missing
+  Job-model registration failure remain in the [repair record](plans/active/m6-retrieval-startup.md).
 
 - M5 request contract:25 initial focused PostgreSQL checks,9 final contract/recovery checks,
   frontend build/42 tests and one real development browser approval journey pass. Exact evidence

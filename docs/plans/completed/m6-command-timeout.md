@@ -32,3 +32,8 @@ full backend Ruff lint and158-file format check pass. No application behavior ch
 
 Final local preparation:55 passed in19.073s, .artifacts/m0/prep-20260909T155711072717Z.
 Independent review closed the fallback termination finding; doc receipts are current. CI pending.
+
+
+Hosted checkpointd92068e, run34373738322: all five jobs passed, including Windows and Linux
+preparation (actual process-tree/group tests), backend regression, frontend and release smoke.
+This closes the harness slice; the original local regression timeout remains preserved evidence.

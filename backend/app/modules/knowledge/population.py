@@ -2,8 +2,8 @@
 
 from sqlalchemy import select
 
-from app.modules.knowledge.ingestion import SPACE
 from app.modules.knowledge.models import Chunk, Document, DocumentVersion
+from app.providers.local_models import SPACE
 
 
 def active_chunks(workspace_id):
