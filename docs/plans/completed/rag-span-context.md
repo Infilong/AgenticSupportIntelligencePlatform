@@ -50,3 +50,9 @@ Final 39-unit pass: `.artifacts/m0/backend-20260909T072159482639Z`. Frozen real 
 EN8/8, JA9/9, ZH9/9, warm p95 2.672s; four generation/routing cases remain unverified.
 The corpus/thresholds stayed unchanged and all 30 queries ran. No semantic-quality or live-API
 claim follows. Chrome showed the recorded workflow for the approved Japanese support example.
+
+Checkpoint `ffc730a` pushed. Preparation37 passed at `.artifacts/m0/prep-20260909T072811123359Z`.
+After receipt review, Chrome searched ERROR-8422 in the fresh boundary workspace and opened
+Boundary-ja.txt version4ef4001c-a423-4ec6-b517-65e258ba9c4b at offset7956; the complete Japanese
+fact was visible. This is scoped source navigation, not a rerun of all knowledge browser flows.
+Next: the independently reviewed BM25/hybrid design, retaining the current default until measured.

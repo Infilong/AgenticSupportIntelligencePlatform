@@ -1,6 +1,6 @@
 # Architecture and current topology
 
-Updated 2026-09-09 for workflow inspection and measured inbox capacity built on `bf983df`.
+Updated 2026-09-09 for the internal lexical retrieval foundation following `ffc730a`.
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
@@ -101,8 +101,14 @@ belongs to that stack; it is not part of the rebuild. New volumes must carry the
 - Maintain distinct original message, linked attempt, draft, reviewed final and decision history.
 - Use exact SQL vector search and a measured bounded lexical baseline; no broad new search stack.
 
-Current retrieval uses vector candidates plus neural reranking. Independent BM25 and fusion
-remain unimplemented requirements; the measured reranker evidence does not prove their completion.
+The HTTP/default retrieval path still uses vector candidates plus neural reranking. Internal
+[SQL BM25](../backend/app/modules/knowledge/bm25.py) and [RRF](../backend/app/modules/knowledge/fusion.py)
+now exist, but strategy integration, trace UI and measured comparison remain unfinished.
+Both candidate implementations use the same active workspace/version/embedding-space population;
+the shared query helper requires its caller to authorize the actor and hold the workspace lock.
+Migration 0010 backfills versioned term frequencies and lexical length from immutable chunk text;
+new ORM inserts derive the same metadata. Missing/wrong-version/non-object metadata fails closed
+for lexical search. This foundation is not a 50k-chunk capacity or hybrid-quality claim.
 [RAG design and audit](RAG.md) owns stage contracts, failure taxonomy and measured hardening gaps.
 Application messages/runs, graph integration and human-review records now exist.
 

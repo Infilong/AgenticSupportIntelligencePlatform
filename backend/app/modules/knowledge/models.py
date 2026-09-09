@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    CheckConstraint,
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
@@ -12,10 +13,11 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.modules.knowledge.lexical import LEXICAL_VERSION, default_frequencies, default_length
 
 
 class Document(Base):
@@ -70,6 +72,7 @@ class DocumentVersion(Base):
 class Chunk(Base):
     __tablename__ = "document_chunks"
     __table_args__ = (
+        CheckConstraint("lexical_length IS NULL OR lexical_length >= 0", name="ck_chunk_lexical_length"),
         ForeignKeyConstraint(
             ["workspace_id", "version_id"], ["document_versions.workspace_id", "document_versions.id"]
         ),
@@ -87,3 +90,6 @@ class Chunk(Base):
     embedding: Mapped[list[float]] = mapped_column(Vector(384))
     embedding_space: Mapped[str] = mapped_column(String(160))
     lexical_terms: Mapped[list[str]] = mapped_column(ARRAY(Text))
+    lexical_frequencies: Mapped[dict | None] = mapped_column(JSONB, default=default_frequencies)
+    lexical_length: Mapped[int | None] = mapped_column(default=default_length)
+    lexical_version: Mapped[str | None] = mapped_column(String(64), default=LEXICAL_VERSION)

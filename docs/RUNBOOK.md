@@ -26,13 +26,19 @@ uv run --project backend ruff format --check backend
 
 `init-env` generates a database password in ignored `.env` without displaying it; existing
 files are preserved. `up` starts the fixed `asi-rebuild-v1` database, builds the API and frontend,
-applies migrations and explicitly initializes the supported PostgreSQL LangGraph checkpointer,
+waits for API/worker shutdown (30-second container stop bound), then applies migrations and
+explicitly initializes the supported PostgreSQL LangGraph checkpointer,
 then starts and waits for the API, frontend and worker as well.
 The frontend image contains its source: host edits/builds alone do not update the served
 container. Run `up` to rebuild before collecting browser evidence for changed UI code.
 Health endpoints: `http://127.0.0.1:8010/api/health/live` and `/api/health/ready`.
 Readiness requires database access, current Alembic revision and pgvector extension.
-`python scripts/manage.py migrate` reapplies pending migrations; `down` preserves volumes.
+`python scripts/manage.py migrate` builds the current API image and completes API/worker shutdown
+before applying migrations. It leaves both stopped; run `up` afterward. Migration/checkpoint
+failure also leaves writers stopped for repair, without removing volumes or restarting an old image.
+Both migration paths use one-off containers with `--no-deps` after database readiness. A build
+failure occurs before shutdown. This prevents old application writers inserting rows after backfill.
+`down` preserves volumes.
 
 `python scripts/verify_runtime.py` performs a controlled stop/restart of only the rebuild
 database, checks 200→503→200 readiness, API liveness during outage and request-log correlation.
@@ -215,6 +221,13 @@ real headings reset overlap, and sentence separators remain with preceding text.
 chunks require normal versioned re-ingestion to receive these repairs. Opaque ASCII tokens
 longer than 4,096 characters fail.
 Original bytes and checksum remain available separately from normalized text.
+
+Migration 0010 adds lexical frequencies, length and recipe without replacing stored chunks,
+vectors or citations. It reads at most 500 rows per batch in the migration transaction and
+backfills every retained chunk; failure rolls the transaction back. This is a local maintenance
+operation, not an online backfill service. New ORM inserts derive metadata from immutable text.
+The HTTP search still uses vector/reranker; internal BM25 rejects incomplete active metadata,
+including SQL NULL, JSON null and unsupported recipe versions. See [RAG design](RAG.md).
 
 ## Real retrieval smoke
 

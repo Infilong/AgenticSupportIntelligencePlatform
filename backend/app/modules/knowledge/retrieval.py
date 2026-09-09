@@ -6,8 +6,9 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modules.knowledge.ingestion import SPACE, embeddings
+from app.modules.knowledge.ingestion import embeddings
 from app.modules.knowledge.models import Chunk, Document, DocumentVersion
+from app.modules.knowledge.population import active_chunks
 from app.modules.knowledge.recovery import RetrievalOwner, RetrievalOwnershipLost
 from app.modules.knowledge.retrieval_models import RetrievalTrace
 from app.modules.workspaces.models import Workspace
@@ -27,16 +28,8 @@ def access(db, workspace_id, actor_id):
 
 def candidates(db, workspace_id, vector):
     distance = Chunk.embedding.cosine_distance(vector)
-    base = (
-        select(Chunk, Document.title, DocumentVersion.checksum, distance.label("distance"))
-        .join(
-            Document,
-            (Document.active_version_id == Chunk.version_id) & (Document.workspace_id == Chunk.workspace_id),
-        )
-        .join(DocumentVersion, DocumentVersion.id == Chunk.version_id)
-        .where(
-            Chunk.workspace_id == workspace_id, Document.withdrawn.is_(False), Chunk.embedding_space == SPACE
-        )
+    base = active_chunks(workspace_id).with_only_columns(
+        Chunk, Document.title, DocumentVersion.checksum, distance.label("distance")
     )
     results = []
     for chunk, title, checksum, value in db.execute(base.order_by(distance, Chunk.id).limit(MAX_CANDIDATES)):

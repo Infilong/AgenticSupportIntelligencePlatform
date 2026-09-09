@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "69c5d0e0f41afb5e70c529031d0f6f43a04f0e1eabbd322d4a6db18a92ef7876",
+    "fingerprint": "861417fffdb6fb522723ace8faaa5e77286f3aa8abf6108186dbb946ccff101b",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/plan/entry-point review: resumed window preserved; capacity checkpoint15e3218 correctly historical,span/context latest bounded repair.39unit/116PG and26case27group2.672s evidence verified from logs/reports. Re-ingestion requirement and full-goal/semantic limits explicit; no invented source-UI verification inferred from Chrome workflow observation."
+    "rationale": "Independent STATUS/activeplan/README/release review: internalfoundation distinguished from unchangedHTTPdefault;42unit/120PG plus final7focused evidence inspected. Earlier revision-chain/null-fixture failures retained;backup not restoration proof,guarded-up tail explicitly lacks build/stop prefix. Fullgoal/window and next strategy/comparison boundaries preserved."
   },
   "frontend": {
-    "fingerprint": "5496d9888acb4d5b4d6f59bcf75fb3775f3d05b14a9a73dd64db3e2db140fd6c",
+    "fingerprint": "a2e3020ce7c50d04dabba359b915440e417b391b70059726c6ff4febd1f6746a",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged frontend boundary review against shared architecture: source offsets originate in repaired backend spans; no new frontend/API contract claimed. Current documentation distinguishes source snapshots and context byte bounds. Existing browser history retained; final Chrome workflow observation is not treated as renewed source-navigation verification."
+    "rationale": "Independent shared architecture review with unchanged frontend/API source: BM25/RRF are internal foundations,not selectable search strategies or new trace UI. Existing source inspection and workbench behavior remain current; no fresh frontend feature or hybrid browser evidence inferred."
   },
   "tooling": {
-    "fingerprint": "8689fb02acd49f8f8cd934766aba098656d6f017a4628b7aa98bc46bda38c73e",
+    "fingerprint": "63d4cda2ef3b9925a6978528d845065d4f7c17285e45ce9cf0f18fe85c41ea3f",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent owning-runbook review: splitting recipe now accurately names position-carrying LangChain adapter,private-hook compatibility tests and normal versioned re-ingestion. Commands/harness unchanged; generated inventory includes adapter/tests and plan move. Retained test failures and final source-bound logs support scoped verification only."
+    "rationale": "Independent runtime.py and migration-order tests review against RUNBOOK:up/migrate build then synchronously stopapi/worker,oneoff no-deps migration,up initializescheckpoints and restarts only on success;migrate leaves stopped. Failure paths preserve codes. Three ordering tests are mocked orchestration evidence;retained live completiontail confirmshealthyservices,not fullstoplog or concurrency injection."
   },
   "evaluation": {
-    "fingerprint": "2c3204e6b6c5d8362f78c793e21a48be610093a17e5a32b5bbc5fff6da6b3ade",
+    "fingerprint": "b1f4c4b2b7c5a46ee49bc804c89b6870ba1a06cc4e01fb2d295ce6a80eabaca4",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent review of unchanged scorer/corpus and updated RAG contract against fresh report072217Z:26/26evidence cases,27/27groups,p952.672,runtime/source stable. Four generation outcomes remain unverified; adapter and context repairs do not establish source entailment,token budget,deduplication or held-out quality. PDF/DOC deferral matches release exclusions."
+    "rationale": "Independent unchanged evaluation boundary review against updatedRAG/acceptance: lexical formula and migration tests are software correctness,not frozen-corpus hybrid comparison or four generation baselines. Initial parameters/128terms/20branch limits are documented accurately;quality,trace integration and50kchunk gates remain pending."
   },
   "backend": {
-    "fingerprint": "b30117caee1bf7eeecfca8b6040a5f290cd14da96dc655a2dff63c5bd6417693",
+    "fingerprint": "9e63ebbf48a9505a6f7dc8b8d94a82855515a925e1e6a26cec4f4bbf2c9f5571",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent span/context semantic review: inspected SourceSpan sequential partitions, LangChain merge/join reuse,actual-span carry and top-five continue-on-oversize packing against architecture/RAG/runbook. Known-position repetition,coverage,whitespace,token-overhead compatibility and exact-byte tests match bounded claims.39unit/116PG logs and fresh3boundary report verified; no schema/authority or semantic validation change."
+    "rationale": "Independent foundation review of lexical recipe,SQL BM25,shared population,RRF,ORM metadata and migration0010 against architecture/RAG. Formula/scoped-statistics/null guards and populated504row rollback/retry tests inspected;final7focused/120PG/42unit reports/logs pass with stable sources. Internal query helper requires caller authority/lock;HTTPvector-reranker remains unchanged. No hybrid quality/50kchunk claim."
   },
   "infrastructure": {
-    "fingerprint": "4537c826b3bb5add44bb324a0982192de96825659d3a982ddb8d8b97893a9cc1",
+    "fingerprint": "a7643790a0c20890664f4e8c51eb6975708badb9e07d923c7c4febe5b80923fb",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent unchanged infrastructure boundary review against architecture/runbook: no migration,service,provider or deployment change. Existing documents remain immutable; fresh versioned ingestion gets position repair. Context24k-byte transport policy retained without claiming model-token capacity; test/runtime evidence does not establish new production guarantees."
+    "rationale": "Independent operational review of guarded runtime commands and migration0010 with RUNBOOK/architecture:maintenancebackfill uses500row reads intransaction preserving text/offsets/vectors;APIworker quiesced before migration and remainstopped on migrationfailure. Finalsavedtail showsfourhealthyservices;no backuprestore,onlinebackfill,legacywriterinjection or deployment claim inferred."
   }
 }

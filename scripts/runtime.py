@@ -32,18 +32,24 @@ def compose(*arguments):
 def execute(command):
     if command == "init-env":
         return init_env()
-    if command == "up":
-        for args in [("up", "-d", "--wait", "postgres"),
-                     ("build", "api", "frontend"),
-                     ("run", "--rm", "api", "uv", "run", "--frozen", "alembic", "upgrade", "head"),
-                     ("run", "--rm", "api", "uv", "run", "--frozen", "python", "-m", "app.workflows.checkpoints"),
-                     ("up", "-d", "--wait", "api", "frontend", "worker")]:
+    if command in {"up", "migrate"}:
+        steps = [("up", "-d", "--wait", "postgres"),
+                 ("build", "api", "frontend") if command == "up" else ("build", "api"),
+                 # Wait for old writers to finish before backfilling derived metadata.
+                 ("stop", "--timeout", "30", "api", "worker"),
+                 ("run", "--rm", "--no-deps", "api", "uv", "run", "--frozen", "alembic", "upgrade", "head")]
+        if command == "up":
+            steps.extend([
+                ("run", "--rm", "--no-deps", "api", "uv", "run", "--frozen", "python", "-m", "app.workflows.checkpoints"),
+                ("up", "-d", "--wait", "api", "frontend", "worker"),
+            ])
+        for args in steps:
             code = compose(*args)
             if code:
                 return code
+        if command == "migrate":
+            print("Migrations completed; API and worker remain stopped. Run up to start the current images.")
         return 0
-    if command == "migrate":
-        return compose("run", "--rm", "api", "uv", "run", "--frozen", "alembic", "upgrade", "head")
     if command == "down":
         return compose("down")  # No volume removal; only the fixed rebuild project.
     raise ValueError("Unknown runtime command")

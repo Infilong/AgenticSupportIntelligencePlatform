@@ -2,9 +2,25 @@
 
 Goal resumed by the user on 2026-09-09: **M1–M6 active and incomplete**.
 Current window: **06:04:24–10:04:24 UTC** (stop 19:04:24 Tokyo).
-[RAG span/context repair](plans/active/rag-span-context.md) owns the current slice, following
+[Measured hybrid retrieval](plans/active/m2-hybrid-retrieval.md) owns the current slice, following
+the completed [RAG span/context repair](plans/completed/rag-span-context.md) and
 the completed [workflow and inbox scale plan](plans/completed/m4-workflow-inbox-scale.md).
 The latest user approval renews full-goal execution, not just the audit.
+
+Current slice: internal SQL BM25/RRF and lexical metadata foundation. The HTTP/default path
+remains vector→reranker; strategy/trace integration and measured comparison are next.
+120 PostgreSQL tests pass (`.artifacts/m0/integration-20260909T073947426228Z`, 286.35s) and 42 unit
+checks pass (`.artifacts/m0/backend-20260909T074003564706Z`). Runtime backfill has 1,284 chunks and
+zero incomplete metadata rows. A pre-migration dump is retained at
+`.artifacts/rag-hardening/before-lexical-20260909.dump`; restoration is not yet verified.
+Independent review fixed a JSON-null completeness hole and identified the old-writer migration
+race. Runtime commands now build, finish stopping API/worker, migrate without dependency startup,
+then restart only after success (`migrate` alone leaves writers stopped). Three ordering/failure
+tests pass; guarded real startup completed with all four services healthy. Its completion tail
+is `.artifacts/rag-hardening/guarded-up-tail-20260909T0752.log` (build/stop prefix excluded).
+Final seven focused checks pass at `.artifacts/m0/hybrid-foundation-20260909T075059400220Z`.
+Initial revision-chain and
+SQL-null fixture sequencing failures remain in the saved evidence; no thresholds were weakened.
 
 Latest repair: **repetitive-source provenance and context retention verified**. The position-carrying
 LangChain adapter fixes ambiguous occurrences; packing retains later fitting top-five evidence.
@@ -15,6 +31,10 @@ LangChain adapter fixes ambiguous occurrences; packing retains later fitting top
 `.artifacts/m2/retrieval-eval-20260909T072217Z`. Development generation remains unverified.
 Independent code review found no blocker and its tokenizer-overhead coverage request was added.
 Existing documents need normal versioned re-ingestion; no historical chunks were rewritten.
+Repair checkpoint `ffc730a` is pushed; preparation 37 passed at
+`.artifacts/m0/prep-20260909T072811123359Z`. Chrome opened the freshly indexed Japanese
+Boundary-ja.txt version at offset 7956 after actual retrieval; the complete policy fact was visible.
+Its GitHub CI `34324082636` passed.
 
 Preceding application slice: **workflow inspection and 50,000-message stored-state capacity verified**.
 UI checkpoint `bf983df` is pushed; GitHub CI `34319742288` passed. Response/Workflow/Sources/History
