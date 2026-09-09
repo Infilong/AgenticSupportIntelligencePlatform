@@ -1,16 +1,19 @@
 # Multilingual Support Workbench
 
-Fresh rebuild on `codex/fresh-start`. **M1 in progress: API/database foundation exists; product UI is pending.**
+Fresh rebuild on `codex/fresh-start`. Foundation and knowledge ingestion/search UI exist;
+the application message-to-draft workflow is unfinished. See [current status](docs/STATUS.md)
+for the milestone, execution boundary and dated verification evidence.
 The scoped product is a local EN/JA/ZH support workbench using LangChain, LangGraph and
 PostgreSQL/pgvector, with one worker and no Redis or cloud platform.
 
-- [Release plan and topology](REBUILD_PLAN.md)
+- [Current topology and data flow](docs/ARCHITECTURE.md#current-project-topology)
+- [Release plan and target topology](REBUILD_PLAN.md#target-project-topology)
 - [Current status and next step](docs/STATUS.md)
 - [Acceptance gates](docs/ACCEPTANCE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Preparation runbook](docs/RUNBOOK.md)
 
-## Verify M0
+## Preparation checks
 
 From the repository root with Python 3.12+, Node.js 22+, npm, uv, Git and Docker Desktop:
 
@@ -26,8 +29,9 @@ The browser command tests an environment probe; it does not demonstrate the plan
 Evidence lives under `.artifacts/m0/` and is intentionally excluded from Git.
 
 For the isolated API/database, use `init-env`, then `up` from the [runbook](docs/RUNBOOK.md).
-`migrate`, `down` and `verify-backend` also exist. `seed-demo`, `verify-live`, backup and restore
-remain to implement. Do not start the archived app as
+`up` starts the API, frontend, worker and PostgreSQL. `seed-demo` creates synthetic sign-in
+accounts; follow the runbook for model preparation and actual knowledge journeys.
+`verify-live`, backup and restore remain to implement. Do not start the archived app as
 proof of this rebuild. API spending is zero until explicitly authorized.
 
 The previous implementation and history remain on `archive/previous-platform-2026-09-08`.

@@ -1,7 +1,8 @@
 # Backend guidance
 
 Scope: this directory and its descendants. Read the [root director](../AGENTS.md).
-M1 has health, request logging, session/workspace APIs and migrations; see STATUS for progress.
+See [STATUS](../docs/STATUS.md) for progress and [architecture](../docs/ARCHITECTURE.md)
+for implemented modules. This guide owns backend rules, not a duplicate milestone summary.
 
 ## Ownership
 

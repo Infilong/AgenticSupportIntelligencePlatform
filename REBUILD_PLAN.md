@@ -209,6 +209,12 @@ Ingestion: persist original → validate/decode → normalize → split → embe
 
 Retrieval:
 
+Implementation note (2026-09-09, checkpoint `2379915`): current search selects 20 cosine
+candidates and uses a local multilingual neural reranker. The measured need and frozen-corpus
+results are recorded in [M2](docs/plans/active/m2-real-retrieval.md). Steps 3–4 below describe
+the original release requirement, not current code; lexical/fusion comparison or an explicit
+scope decision remains outstanding. Do not infer their completion from reranker test results.
+
 1. Apply workspace, active-version and allowed-knowledge filters before model context.
 2. Use database-side exact pgvector search, not application-side scanning of all vectors.
 3. Retrieve a bounded lexical candidate set with documented Unicode-aware EN/JA/ZH behavior.
@@ -275,6 +281,9 @@ Preserve old secrets, databases, backups and ignored local directories. Use a di
 project, database, volumes and ports. Never reset or delete previous application data.
 
 ### Target project topology
+
+For implemented paths and runtime flow, see [current architecture](docs/ARCHITECTURE.md).
+This target tree includes modules that do not exist yet.
 
 This is the intended structure, not a request to generate empty directories. Create each
 module during its owning milestone. The API and worker share the same backend package.

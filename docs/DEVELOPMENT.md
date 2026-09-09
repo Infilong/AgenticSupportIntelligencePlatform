@@ -130,6 +130,10 @@ This organization follows [OpenAI's nested instruction guidance](https://develop
 - Fold small, related documentation cleanup into each slice; track unrelated debt without
   expanding scope or creating unsolicited recurring tasks. Keep decisions and review dispositions
   in the repository so future work does not depend on remembered chat history.
+- Before checkpointing, compare changed behavior/commands with README, architecture, status
+  and the affected area guide. Update the owning fact and link it elsewhere; do not duplicate
+  milestone snapshots in instruction files. Record implementation/plan differences explicitly.
+  Documentation link checks cannot detect semantic drift: review against code and dated evidence.
 
 These practices adapt the articles' short-lived changes, agent feedback loops, environment
 improvement and mechanical enforcement. Frequent verified branch pushes are explicitly the

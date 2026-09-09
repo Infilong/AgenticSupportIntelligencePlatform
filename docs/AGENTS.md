@@ -2,8 +2,8 @@
 
 Scope: this directory; also read for root Markdown changes. Read the [root director](../AGENTS.md).
 
-- Keep one owner per fact: [release plan](../REBUILD_PLAN.md) for scope/topology,
-  [architecture](ARCHITECTURE.md) for design, [acceptance](ACCEPTANCE.md) for gates,
+- Keep one owner per fact: [release plan](../REBUILD_PLAN.md) for scope/target topology,
+  [architecture](ARCHITECTURE.md) for current topology/design, [acceptance](ACCEPTANCE.md) for gates,
   [runbook](RUNBOOK.md) for commands, [status](STATUS.md) for current evidence/next action,
   and [development](DEVELOPMENT.md) for the execution protocol.
 - Keep the root `AGENTS.md` a short director. Put area-specific instructions in that area's
@@ -16,3 +16,10 @@ Scope: this directory; also read for root Markdown changes. Read the [root direc
 - Use stable revision references and exact evidence paths; retain failures and limitations.
 - Check relative links and review documentation diffs. For preparation contract changes,
   run the existing preparation checks described in [runbook](RUNBOOK.md).
+- Before closing a slice, compare changed behavior and commands against their owning docs;
+  update current statements, label plans, and retain dated evidence instead of rewriting history.
+- Review entry points (README, architecture, status and affected local guides) for contradictions.
+  A passing link/size check does not verify semantic freshness; inspect code and evidence too.
+- Record scope deviations as explicit gaps or decisions. Do not silently rewrite acceptance
+  requirements to match the implementation. Older conversation paths may belong to the archive;
+  resolve against this branch rather than recreating obsolete documents.

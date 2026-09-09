@@ -1,6 +1,6 @@
 # Local development runbook
 
-## M1 API/database foundation
+## Development stack
 
 From the repository root, with Docker Desktop, Python 3.12 and uv installed:
 
@@ -15,8 +15,10 @@ uv run --project backend ruff format --check backend
 ```
 
 `init-env` generates a database password in ignored `.env` without displaying it; existing
-files are preserved. `up` starts only the fixed `asi-rebuild-v1` database, builds the API,
-applies migrations, then waits for API health. It currently starts no worker or frontend.
+files are preserved. `up` starts the fixed `asi-rebuild-v1` database, builds the API and frontend,
+applies migrations, then starts and waits for the API, frontend and worker as well.
+The frontend image contains its source: host edits/builds alone do not update the served
+container. Run `up` to rebuild before collecting browser evidence for changed UI code.
 Health endpoints: `http://127.0.0.1:8010/api/health/live` and `/api/health/ready`.
 Readiness requires database access, current Alembic revision and pgvector extension.
 `python scripts/manage.py migrate` reapplies pending migrations; `down` preserves volumes.
@@ -124,7 +126,8 @@ disposable test data; never run `down -v` against the old project.
 ## Current limitations
 
 API/database, authentication, frontend and worker foundation now exist.
-Ingestion and RAG remain to implement. Development generation will use explicit mock/Codex-assisted
+TXT/Markdown ingestion and real retrieval exist; application generation/workflow remains unfinished.
+Development generation will use explicit mock/Codex-assisted
 responses; the user requires real local embeddings and retrieval. Live provider access and paid
 spending remain unavailable; API connectivity/quality gates cannot be inferred from development data.
 

@@ -1,6 +1,10 @@
 # Current status
 
-Goal: **M1–M6 authorized and active; not complete**. Current milestone: M2.
+Goal: **M1–M6 scope authorized; implementation paused at the unattended cutoff; not complete**.
+Current milestone: M2. On 2026-09-09 the user authorized an independent documentation audit
+and corrections only; this does not resume the remaining application implementation.
+The [documentation reconciliation record](plans/completed/2026-09-09-documentation-reconciliation.md)
+tracks the independent findings and maintenance lessons separately from application progress.
 Branch: `codex/fresh-start`. Goal starting revision: `2c292d08b5ff9d577276c8513fc53582a1ba93d4`.
 [M2 execution plan](plans/active/m2-real-retrieval.md) owns current decisions and evidence;
 [M1 history](plans/active/m1-foundation.md) retains foundation work.
@@ -29,7 +33,7 @@ The existing unattended cutoff is **2026-09-08 17:34 UTC**; this checkpoint does
 | Frontend | TypeScript/build and two component tests pass; baseline browser suite also passed |
 | Models | Explicit preparation/inference passed for both pinned local models |
 | Graph prerequisite | Supported LangGraph/PostgreSQL interrupt and failed-node recovery pass after connection reconstruction; application workflow remains pending |
-| Git/CI | Retrieval `01ee83f`, CI `34254935876` passed; UI clarification `1a0e0e6`, CI `34255679023` passed |
+| Git/CI | Last application checkpoint `2379915bcee9a14c64739e28b19b81c021d322d7`; CI `34257383552` recorded successful |
 
 Final stable retrieval evidence: `.artifacts/m2/retrieval-eval-20260908T170142Z`.
 Final label/browser evidence: `.artifacts/m2/provider-label-rebuilt-ui`.
@@ -39,6 +43,8 @@ Latest PostgreSQL evidence: `.artifacts/m0/integration-20260908T172545791661Z`.
 The real retrieval smoke still passes after dependency installation; the full frozen quality
 measurement above belongs to the earlier retrieval snapshot and was not rerun for this lock change.
 No full production-readiness, generated-answer quality or completed release claim is supported.
+These are retained results from September 8, not newly executed application tests or a live
+service-health claim. The checkpoint record is `.artifacts/m2/unattended-resume-checkpoint.json`.
 
 ## Failures and limits
 
@@ -52,7 +58,9 @@ No full production-readiness, generated-answer quality or completed release clai
   comes from the actual application browser suite; do not call it a completed Chrome demo.
 - Upstream AnyIO and model cache-argument deprecation warnings remain visible.
 - Synchronous model/retrieval records abandoned by a process crash need reconciliation.
-- Generated responses, message processing, LangGraph checkpoints, review, imports, complete
+- The release plan's lexical/fusion requirement differs from the implemented vector-plus-reranker
+  path; comparative evidence or an explicit scope decision remains outstanding.
+- Generated responses, message processing, application LangGraph integration, review, imports, complete
   observability, comparative evaluation and restoration remain incomplete.
 
 ## Next connected slice
@@ -62,7 +70,8 @@ explicit Codex-assisted development answer, then validate and persist a cited dr
 planned LangGraph/PostgreSQL checkpoint path; keep handoff waiting separate from human review.
 Recheck permissions and source validity on resume. Never import evaluation expected answers
 as runtime responses, invent API usage, or treat citation-ID validity as semantic support proof.
-Continue within the existing goal and time boundary; missing APIs do not block real local search.
+Resume implementation only after renewed work-window authority; missing APIs do not block
+real local search. Current topology and implementation boundaries are in [architecture](ARCHITECTURE.md).
 
 ## Preserved history
 
