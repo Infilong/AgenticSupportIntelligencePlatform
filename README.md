@@ -1,58 +1,185 @@
 # Multilingual Support Workbench
 
-Fresh rebuild on `codex/fresh-start`. Foundation and knowledge ingestion/search UI exist.
-The connected workbench processes messages into cited drafts, exposes sources and
-processing records, and supports cancellation and attributable approve/edit/reject/clarify decisions.
-Administrators can record a clarification question without approving or sending the draft.
-Optional local Ollama generation routes new ordinary messages to automatic supported answers,
-exception review, missing-support intervention or retained set-aside outcomes;
-see the [demo guide](docs/DEMO.md). Manual mode remains the default for offline checks.
-Linked retries and customer clarifications preserve original messages and attempt history.
-Inbox views separate messages needing attention, automatic or approved responses, processing and failures.
-Linked-attempt database/browser checks pass; the full release gates remain unfinished.
-See [current status](docs/STATUS.md)
-for the milestone, execution boundary and dated verification evidence.
-The scoped product is a local EN/JA/ZH support workbench using LangChain, LangGraph and
-PostgreSQL/pgvector, with one worker and no Redis or cloud platform.
+A local RAG application for a small support team. Upload company knowledge, process customer
+questions, inspect the AI's evidence and execution, and intervene when a response needs review.
+The interface is branded **Aster** and supports English, Japanese and Chinese questions.
 
-- [Current topology and data flow](docs/ARCHITECTURE.md#current-project-topology)
-- [Release plan and target topology](REBUILD_PLAN.md#target-project-topology)
-- [Current status and next step](docs/STATUS.md)
-- [Acceptance gates](docs/ACCEPTANCE.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [RAG design, audit and failure contract](docs/RAG.md)
-- [Preparation runbook](docs/RUNBOOK.md)
+**Status: working local demo.** The core workflow is implemented and tested, but answer-quality
+and production-release gates are not all met. See [verification and limitations](#verification-and-limitations).
 
-## Preparation checks
-
-From the repository root with Python 3.12+, Node.js 22+, npm, uv, Git and Docker Desktop:
+## How it works
 
 ```text
-python scripts/manage.py doctor
-python scripts/manage.py verify-prep
-python scripts/manage.py verify-browser
-python scripts/manage.py evidence
+Customer question → database → authorized retrieval → AI processing
+                 → answer, citations and execution records → administrator inspection/intervention
 ```
 
-For first-time Playwright installation, follow the [runbook](docs/RUNBOOK.md).
-The browser command tests an environment probe; it does not demonstrate the planned app.
-Evidence lives under `.artifacts/m0/` and is intentionally excluded from Git.
+1. An administrator uploads policies in **Knowledge**. The worker splits and indexes them.
+2. An operator submits a question in **Workbench**, or imports messages from a JSONL file.
+3. The workflow retrieves permitted knowledge and passes bounded evidence to the local model.
+4. The result is an automatic cited answer, a request for review, a request for missing
+   knowledge/details, or a retained **Set aside** outcome for irrelevant input.
+5. Staff inspect **Response**, **Workflow**, **Sources** and **History**, then take the permitted
+   next action. Linked retries and clarifications preserve the original message and prior attempts.
 
-For the isolated API/database, use `init-env`, then `up` from the [runbook](docs/RUNBOOK.md).
-`up` starts the API, frontend, worker and PostgreSQL. `seed-demo` creates synthetic sign-in
-accounts; follow the runbook for model preparation and actual knowledge journeys.
-For the packaged local app, use `release-up`, `release-seed` and `release-prepare-model`;
-open `http://127.0.0.1:8011`. It serves built assets from FastAPI and has separate database/model
-volumes. [The runbook](docs/RUNBOOK.md#built-local-release) explains setup and verification.
-`verify-restore` creates a fresh backup snapshot, restores a new disposable database, checks
-table fingerprints and exercises the restored API/worker. It preserves the source and existing
-databases. `backup` exports the isolated development database without creating a restore clone;
-see the [backup runbook](docs/RUNBOOK.md#standalone-development-database-backup) for scope and limits.
-`verify-restore --backup-dir .artifacts/m6/backup-<timestamp>` checks a trusted saved backup in a
-new disposable database without replacing current data.
-`verify-live` remains unimplemented; no external
-generation has been verified. Do not use the archived app as proof of this rebuild.
-API spending is zero until explicitly authorized.
+New messages default to **Match question**. The backend detects EN/JA/ZH from the question's
+script, and the model is instructed to answer in that language even when the evidence uses
+another language. Citation quotations retain their original language. An explicit language
+choice is available for ambiguous input, including Japanese written entirely in kanji.
 
-The previous implementation and history remain on `archive/previous-platform-2026-09-08`.
-This branch will not import its database or reuse its dependencies automatically.
+Answers and approvals stay inside the workbench. The app does not send customer messages,
+issue refunds or execute account deletion.
+
+## Main areas
+
+| Area | What you can do |
+| --- | --- |
+| Workbench | Submit/import messages, search and filter the inbox, inspect responses, cancel processing and manage linked attempts. |
+| Knowledge | Upload UTF-8 TXT/Markdown, inspect originals and versions, test retrieval, replace documents and withdraw/restore knowledge. |
+| Quality | Inspect model usage, historical retrieval evaluations and direct/vector/hybrid/governed answer comparisons. |
+| Settings | Set the language fallback, inspect provider configuration, and change/remove existing workspace memberships. |
+
+The backend enforces permissions and workspace boundaries:
+
+| Role | Capabilities |
+| --- | --- |
+| Viewer | Inspect permitted workspace data, sources and processing records. |
+| Operator | Also submit/import messages, cancel work, and perform reviews allowed for the case type. |
+| Admin | Also manage knowledge and memberships/settings, and approve/edit policy-exception or unclassified drafts. |
+
+Missing-evidence responses cannot be approved as supported answers. Request clarification or
+add knowledge and start a new attempt. Cancellation prevents later publication, but an
+in-flight model call may finish. It does not undo an already recorded approval.
+
+## Run locally
+
+For the packaged demo, install **Docker Desktop with Compose**, **Python 3.12**, and **Ollama**.
+Keep Docker and Ollama running. Initial container and model downloads require internet access
+and local disk space. Run from the repository root:
+
+```powershell
+python scripts/manage.py release-up
+python scripts/manage.py release-seed
+python scripts/manage.py release-prepare-model
+ollama pull qwen2.5:7b
+```
+
+The preparation command downloads the embedding and reranking models; Ollama downloads the
+answer model. Enable automatic generation by adding or updating these entries in the generated
+`.artifacts/m6/release.env`, preserving its existing database password:
+
+```dotenv
+ASI_GENERATION_MODE=local_ollama
+ASI_OLLAMA_MODEL=qwen2.5:7b
+ASI_OLLAMA_URL=http://host.docker.internal:11434
+```
+
+Apply the configuration:
+
+```powershell
+python scripts/manage.py release-up
+```
+
+Open [localhost:8011](http://localhost:8011). Sign in with a generated account from
+`.artifacts/m6/release-credentials.json`. Keep this file private; there is no shared default
+password or public registration flow. Seeding creates synthetic accounts and workspaces,
+not a populated knowledge base.
+
+For your first question, sign in as an administrator, upload a policy in **Knowledge**, wait
+for indexing, and ask about it in **Workbench**. [Sample synthetic policies](evals/corpus/v1)
+are available for experimentation. [The runbook](docs/RUNBOOK.md) covers setup, credentials,
+model preparation and troubleshooting.
+
+Without the `local_ollama` setting, generation defaults to **manual development mode** and
+waits for an attributable human contribution. Retrieval is still real. This mode does not call
+an OpenAI API. Automatic local generation uses the configured Ollama model.
+
+The packaged app serves built frontend assets from FastAPI and uses separate database/model
+volumes under Compose project `asi-release-v1`. Stop it while preserving data with:
+
+```powershell
+python scripts/manage.py release-down
+```
+
+## Architecture
+
+- **Frontend:** React, TypeScript and Vite.
+- **Backend:** FastAPI, SQLAlchemy and PostgreSQL.
+- **RAG:** local multilingual embeddings, pgvector search, BM25, rank fusion and reranking.
+- **Workflow:** LangGraph with PostgreSQL checkpoints and a durable job worker.
+- **Model integration:** LangChain text splitting and ChatOllama for local generation.
+- **Records:** original messages, document versions, retrieval traces, model calls, responses
+  and attributable human decisions.
+
+One worker runs the bounded support workflow. There is no Redis or required cloud platform.
+This is a support-processing application, not a general-purpose agent builder.
+
+```text
+backend/app/modules/    Authentication, workspaces, knowledge, messages, reviews and quality
+backend/app/workflows/  LangGraph orchestration and persistent checkpoints
+backend/app/providers/ Retrieval models and response generation
+frontend/src/features/ Workbench, knowledge, quality, settings and login
+backend/tests/         Unit and PostgreSQL integration tests
+frontend/tests/e2e/    Browser journeys
+evals/                 Synthetic policies, frozen cases and scoring tools
+scripts/               Runtime, provisioning, verification and backup commands
+infra/                 Packaged image and Compose configuration
+docs/                  Architecture, contracts, evidence and development guides
+```
+
+See [the detailed topology and data flow](docs/ARCHITECTURE.md) and [RAG design](docs/RAG.md).
+
+## Verification and limitations
+
+At source checkpoint `d0e278d`, [CI passed](https://github.com/Infilong/AgenticSupportIntelligencePlatform/actions/runs/34445784085).
+The language-matching fix passed 132 backend unit tests, 49 frontend tests and three focused
+PostgreSQL tests. Chrome verified a Chinese answer backed by an English source.
+[Current status](docs/STATUS.md) records dated evidence and failures.
+
+The last independently reviewed local batch scored **20/30 for the governed workflow**, below
+its unchanged **27/30** target. That batch predates the later routing/language fixes and has
+not been rerun as a complete benchmark. Incorrect claims, missing facts and misclassification
+remain possible. Valid source quotations establish provenance, not semantic correctness.
+
+Current limits include:
+
+- **Document formats:** TXT/Markdown only; no PDF, DOC/DOCX or OCR ingestion.
+- **Agent features:** a fixed workflow; no configurable agents, arbitrary tool actions or embedded admin copilot.
+- **Administration:** seeded accounts/workspaces and existing-member management; no signup, invitations or workspace-creation UI.
+- **Providers:** manual or local Ollama generation; no remote OpenAI-compatible generation adapter.
+- **Accounting:** recorded model identity, input tokens, duration, failures and external charge; output-token aggregation and total operating cost are incomplete.
+- **Operations:** broader recovery/security validation and native 200% browser zoom verification remain open.
+- **Backups:** current backup/restore scripts target the development database, not the packaged database; offsite recovery is not established.
+
+## Development and documentation
+
+For development and tests, also install **Node.js 22**, **npm** and **uv**. The development
+stack uses frontend port **5180**, API **8010** and PostgreSQL **5440**, separately from the
+packaged demo:
+
+```powershell
+python scripts/manage.py init-env
+python scripts/manage.py up
+python scripts/manage.py seed-demo
+python scripts/manage.py prepare-model
+uv sync --project backend --frozen
+python scripts/manage.py verify-prep
+python scripts/manage.py verify-backend
+python scripts/manage.py verify-integration
+```
+
+Run `npm ci`, `npm run build` and `npm test` from `frontend/`. See the
+[runbook](docs/RUNBOOK.md) for development Ollama configuration and application browser tests.
+`verify-browser` checks only the browser environment. `scripts/manage.py` is an operations
+and testing dispatcher; a unified end-user business CLI is not implemented.
+
+Local evidence in `.artifacts/` is excluded from Git. Committed execution records summarize
+its scope, results and limitations. For agent-assisted development, start with [AGENTS.md](AGENTS.md)
+and follow the relevant module guide and [development workflow](docs/DEVELOPMENT.md).
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [RAG design and failure handling](docs/RAG.md)
+- [Acceptance criteria](docs/ACCEPTANCE.md)
+- [Current status and evidence](docs/STATUS.md)
+- [Commands and recovery](docs/RUNBOOK.md)
+- [Documentation freshness](docs/DOC_FRESHNESS.md)
