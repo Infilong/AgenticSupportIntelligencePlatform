@@ -6,6 +6,13 @@ incorporates later user instructions; the original attached goal remains a histo
 The user removed the execution time limit on 2026-09-10 (Tokyo). Continue within the
 authorized scope without a fixed unattended deadline; retain other authority constraints.
 
+Latest user direction (2026-09-10): deliver a successful demo product soon. Prioritize the
+core user journey and fix only demo-blocking issues. Pause exhaustive corpus response/scoring
+work, minor refinements and broad production hardening. M1–M6 remain the roadmap, not a reason
+to delay this demo. The immediate deliverable is a usable local knowledge-to-answer workflow
+with real retrieval, visible agent processing, and administrator review/intervention. Keep the
+development response mode explicit. Production/live-provider gates remain deferred, not passed.
+
 Rebuild AgenticSupportIntelligencePlatform in this repository through M1–M6, following
 [REBUILD_PLAN.md](../REBUILD_PLAN.md), the [acceptance matrix](ACCEPTANCE.md) and applicable
 root/local AGENTS.md instructions.

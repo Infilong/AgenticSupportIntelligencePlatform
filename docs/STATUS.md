@@ -4,6 +4,9 @@
 
 M1–M6 remain authorized and incomplete. Latest direction: prioritize a working demo and defer
 RAG tuning/perfection. On 2026-09-10 (Tokyo), the user removed the execution time limit.
+Later that day, the user explicitly prioritized a successful demo soon. Stop extending exhaustive
+evaluation and production-hardening work now; deliver the core knowledge → question → retrieval/
+agent details → administrator review/intervention → result journey. Fix only blockers to that demo.
 There is no fixed unattended deadline; continue the authorized goal until verified completion,
 a genuine blocker or a new user instruction. Earlier execution windows are historical.
 Preserve the archive, all existing databases, unrelated edits and secrets. Small verified commits
@@ -29,9 +32,16 @@ source review pass. Runner checkpointacede51 is committed/pushed; hosted CI34427
 Current: frozen generation rubric and source-bound scorer are implemented. Ten regressions
 pass; independent review closed invalid-batch/configuration false-pass findings. The real
 unfinished batch retains120 observations and zero reviewed successes, with all targets false.
-Finish documentation review and checkpoint this scorer before collecting responses/judgments.
-Next: contribute responses and independently review them with the frozen rubric. External provider
-dispatch/accounting remains required work.
+Scorer checkpointe10c2ae is pushed and hosted CI34428243871 passed. Twelve contributions for
+en01–en03 are saved and independently reviewed. Nine source-backed responses satisfy those cases;
+three direct answers preserve uncertainty but omit the required policy facts. Full120 observations
+remain counted and no pipeline passes its full-batch gate. Further batch filling is paused.
+Demo verified in native Chrome: real handbook retrieval, visible workflow/model records, exact
+citation inspection, development draft submission, administrator edit/approval and completed result.
+See the [short demo guide](DEMO.md) for the verified result and operating boundaries. Chrome is
+available for user exploration; do not overwrite an in-progress user draft to restore the demo.
+Next: address concrete demo blockers found during use; further corpus work remains paused.
+External provider dispatch/accounting and broad release gates are deferred beyond this demo.
 [Timeout cleanup](plans/completed/m6-command-timeout.md) retains Windows evidence and hosted
 run34373738322 passed all five jobs, including POSIX cleanup; evidence is revision-specific. Keep RAG tuning deferred. The previous
 window checkpoint records the earlier stop; it does not impose a current deadline.

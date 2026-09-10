@@ -331,3 +331,26 @@ Scorer checkpoint final preparation56 tests pass18.198s at
 lock and real zero-review output, then renewed all six receipts. Ruff lint/176-file formatting
 checks pass. Runner checkpointacede51 passed hosted CI34427298842. This historical evidence
 append follows checks without changing application or mapped documentation.
+
+### Attributed batch response collection
+
+Normal runtime verification, one contribution owner. Work through the unchanged batch in case
+order, reading only each exported request to author its response; do not use expected-fact files
+to generate. Submit through the guarded CLI/API and retain responses, failures and collection
+snapshots. Independently review saved observations against the frozen rubric, then score without
+dropping remaining cases. Codex has prior project context: these assisted development contributions
+are not a blinded model experiment or live quality result. No source/prompt tuning in this slice.
+
+Collected en01–en03:12 accepted contributions, nine completed baselines and three governed
+drafts awaiting review; en02 correctly records policy_review_required. Fermat independently
+reviewed all12. Nine retrieved drafts satisfy these cases; three direct answers safely abstain
+but fail completeness/routing. Combined score retains120 observations and no full-batch pass:
+`.artifacts/m5/frozen-generation-fixed-20260910/en01-en03-reviewed-score.json`.
+The initial en03 observation was still running; settled bindings were collected before review.
+Browser verification covered saved four-answer display, pagination,390/1440 widths and the linked
+governed draft; screenshots and en01-browser-trace.zip are in the same directory. Visually inspected
+mobile comparison and desktop review views have no overlap. No source or prompts were tuned.
+
+User correction: deliver a successful demo soon; stop exhaustive evaluation and small refinements.
+Pause further batch contributions/scoring here. Preserve this evidence and focus on the core
+local demo. Full-corpus and production gates remain unpassed, deferred beyond the immediate demo.

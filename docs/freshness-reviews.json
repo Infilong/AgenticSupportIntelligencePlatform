@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "30ce7434a2850081bb2878cd4b49fc2c13d8a0c1a2fde1c56e31eabeb7806133",
+    "fingerprint": "a48ccc960df41cf6a7d5862f1a31f71332ad045dbdc268d60158e2477ce7278c",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/ACCEPTANCE/M5 record review: new frozen development90/80 targets do not replace retrieval criteria or live gates. Scorer implementation separated from incomplete batch responses/reviews; actual unreviewed report remains false. Parent-observed runner CI34427298842 applies acede51 only; no scorer hosted or semantic-quality success inferred."
+    "rationale": "Independent latest demo-priority document review: user-directed pause of exhaustive corpus/hardening work preserves roadmap and unpassed production/live gates. Parsed actual120-row score with12 reviews/9 successes and no full-pipeline pass. Parent-observed Chrome run is ordinary real retrieval plus attributed contribution/edit/approval, not autonomous API inference; PDF/DOC and this upload unverified. DEMO now records Not allowed as observation and skill-suggested setting as untested remedy. User in-progress draft explicitly preserved; no source changes."
   },
   "frontend": {
     "fingerprint": "4b15a513995fa70f24b08507d3323f119f97d2c9f5d1c1ff1397c3cf536af390",
