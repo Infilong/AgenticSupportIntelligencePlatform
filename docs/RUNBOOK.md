@@ -210,7 +210,25 @@ the frozen-input checks. Failed ingestion requires a new directory; collection/a
 can resume with existing keys. Original failed evidence is retained.
 Use the single-case CLI above for attributed contributions, then collect again. Zero exit status
 means snapshot collection succeeded, including unfinished cases, not that answers passed quality.
-Full semantic scoring and external-provider verification remain unimplemented.
+Full response/review collection and external-provider verification remain incomplete.
+
+### Generation review scoring
+
+From the repository root, run `uv run --project backend --frozen python evals/score_generation.py
+--directory .artifacts/m5/BATCH --judgments .artifacts/m5/JUDGMENTS.json
+--output .artifacts/m5/NEW_SCORE.json`. The output must be new. An empty JSON array of judgments
+produces all120 observation hashes with no reviewed successes; it does not generate answers.
+Review one original response at a time against its request, active source versions and frozen
+case facts. Keep these evaluator inputs away from response generation. A judgment has case_id,
+pipeline, observation_hash from the score output, reviewer, kind (human or codex_assisted),
+rationale (at least20 characters) and checks. checks contains exactly the five boolean keys
+from evals/generation-review-v1.json. Explain source support and uncertainty in the rationale;
+do not assert entailment merely because quotes match. Use a reviewer separate from the response
+author where possible and record attribution honestly. Names are assertions, not authentication.
+Recollect after contributions, then generate fresh bindings. Edited system replies are excluded
+from original-response scoring. A changed observation invalidates its old judgment. Exit0 means
+the score report was produced; inspect development_target_met and per-language denominators.
+No local review result establishes external-provider quality, inference latency or billing.
 
 Development uses Vite's same-origin API proxy; frontend container file ownership permits
 temporary config/cache writes by its non-root user. No external font service is required.

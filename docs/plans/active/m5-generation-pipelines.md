@@ -299,3 +299,35 @@ Batch checkpoint final preparation56 tests pass16.558s at
 `.artifacts/m0/prep-20260910T015253646829Z`. Independent documentation review corrected stale
 runner wording and clarified sequential collection, then renewed all six receipts. This appended
 historical evidence note does not change the tested application or mapped documentation.
+
+### Generation review contract and scorer
+
+Deep evaluator slice, one owner. Freeze the review rubric before collecting batch responses.
+Score all30 cases/four pipelines without dropping failed or unanswered entries. Validate request,
+response/contributor and active document-version/quote identities mechanically; accept semantic
+judgments only with explicit reviewer attribution, rationale and exact observation binding.
+Never equate exact quotation with entailment or development review with live model performance.
+Use90% overall/80% per-language composite development targets and zero invalid-source/citation
+cases; these are new frozen generation targets, not a change to existing retrieval thresholds.
+Incomplete judgments cannot pass. Preserve original responses separately from edited output.
+Verify stale/tampered binding, foreign/superseded citations, missing cases and false-positive
+summary resistance. Run on the real unfinished batch to prove it remains unverified.
+
+Implemented the frozen generation-review-v1 rubric/lock, structural scorer and read-only scoring
+command. Independent source review found invalid batch status and changed configurations could
+escape gate checks. Both now fail closed; configuration participates in observation binding.
+Positive-control mutation regressions verify each fix. No-answer completion is reviewable only
+for governed clarification/insufficient-evidence exits, never an empty baseline response.
+Ten focused tests pass0.10s; follow-up independent review found no further critical issues.
+The real existing batch scored with empty judgments produces120 observations,30 per pipeline
+and10 per language, all zero reviewed/passed and all development targets false:
+`.artifacts/m5/frozen-generation-fixed-20260910/unreviewed-score.json`.
+No responses were generated or judged in this slice. Structural validity is not semantic truth;
+named reviewer assertions do not authenticate independence. Full-corpus response/review work
+and external generation gates remain incomplete.
+
+Scorer checkpoint final preparation56 tests pass18.198s at
+`.artifacts/m0/prep-20260910T020703239872Z`. Independent documentation review verified the rubric
+lock and real zero-review output, then renewed all six receipts. Ruff lint/176-file formatting
+checks pass. Runner checkpointacede51 passed hosted CI34427298842. This historical evidence
+append follows checks without changing application or mapped documentation.

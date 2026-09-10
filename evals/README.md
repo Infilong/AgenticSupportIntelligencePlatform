@@ -80,7 +80,7 @@ authenticated API; see the [runbook](../docs/RUNBOOK.md#development-generation-c
 It does not load the evaluator corpus, expected facts or scoring fixtures. Direct has no
 retrieval; vector/hybrid baselines and the actual hybrid support graph retain distinct traces.
 Manual contributions and reviewed system responses remain separate. The full frozen-case
-generation response/scoring work and external-provider verification remain open.
+generation responses/reviews and external-provider verification remain open.
 
 `run_generation.py prepare --directory .artifacts/m5/NEW_BATCH` ingests the frozen corpus in
 fresh development workspaces and admits all30 cases. `collect` with the same directory resumes
@@ -95,3 +95,14 @@ sequential API reads are not one database snapshot. It is not a passing generati
 The 118 prepared requests in the September10 run await attributed contributions; two governed
 cases exited for clarification. Submit through generation_cli.py, then recollect. Request files
 contain one rendered request and its bindings; evaluator facts never enter application inputs.
+
+`score_generation.py` validates the frozen [review rubric](generation-review-v1.json) against
+its adjacent SHA256 lock and scores the original responses. Mechanical checks bind requests,
+contributor/response hashes and exact active-version citation spans. Named reviewers judge
+factual completeness, support, language, routing and safety with rationale; those assertions
+are not authenticated proof of reviewer independence or automated semantic entailment.
+The scorer requires a successfully validated collection report; invalid batch envelopes,
+changed strategies and stale review bindings are rejected. Missing judgments stay in30/10
+denominators. All cases need review before a pipeline can meet the frozen90%/80% development
+target; invalid evidence or an unsafe judgment prevents a pass regardless of the aggregate.
+See the [scoring command and review format](../docs/RUNBOOK.md#generation-review-scoring).

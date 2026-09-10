@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "17fedce3c875887eced07d1813f6d9052c8e1948b56cc3f27078b2a01e2d28d0",
+    "fingerprint": "30ce7434a2850081bb2878cd4b49fc2c13d8a0c1a2fde1c56e31eabeb7806133",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/M5 record and source/evidence review: distinguishes implemented full-corpus preparation from incomplete responses/semantic scoring/provider dispatch. Actual118exports and30/10 denominators match report; first failed lifecycle and subsequent repair retained. Architecture stale full-runner claim and snapshot certainty corrected; no goal narrowing."
+    "rationale": "Independent STATUS/ACCEPTANCE/M5 record review: new frozen development90/80 targets do not replace retrieval criteria or live gates. Scorer implementation separated from incomplete batch responses/reviews; actual unreviewed report remains false. Parent-observed runner CI34427298842 applies acede51 only; no scorer hosted or semantic-quality success inferred."
   },
   "frontend": {
-    "fingerprint": "5c3a2952dd566e345ced164cc9af74a20945375eba87735577e2bb8f1725e329",
+    "fingerprint": "4b15a513995fa70f24b08507d3323f119f97d2c9f5d1c1ff1397c3cf536af390",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ARCHITECTURE runner boundary correction: full30-case prepare/collect now implemented, while responses/scoring and external generation remain open. Existing Quality comparison UI unchanged; no newly executed browser or completed-answer claim."
+    "rationale": "Independent shared ARCHITECTURE scoring boundary review: evaluator structural checks and attributed judgments are separate from unchanged Quality UI and edited system wording. No new browser/scoring UI or automatic entailment feature claimed; full response/review work remains incomplete."
   },
   "tooling": {
-    "fingerprint": "116aeaa7de2fd048f0232c4b77d0602f6e72d0e627690e6a4e8630ac575fd4f9",
+    "fingerprint": "7cd2a04862558dbc0c328f18b216dd824181b4e47de1fb3a9ff8e897a93de80e",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK prepare/collect recipe and runtime lifecycle review: fresh directories/workspaces for ingestion, stable keys for resuming admissions, one collector per directory, atomic report/request writes and preserved first lifecycle failure. Exit0 explicitly permits unfinished pipeline outcomes; CLI contributions then recollection required. No existing command budget or authority change."
+    "rationale": "Independent RUNBOOK scoring command and judgment-format review: new output file, empty judgments generate hashes without answers, exact fiveboolean checks/attribution/rationale and stale observation rejection. Recollect before judgments; Exit0 denotes report generation not gate success. No runtime/provider/command budget changes."
   },
   "evaluation": {
-    "fingerprint": "58f55675396377e9d835cfefb2acd09d3a6e60b4db57f3977a3ddd886e50a879",
+    "fingerprint": "a4183367b04f972ce50df0a28d7a6c6be566d77e25fb6cfd0fe84db7d8cba0a0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent run_generation/generation_batch and evals README review: frozen case/runtime/config checks, isolated corpus ingestion, whitelisted question/language admission, fixed denominators and retained failure history; individual exports contain no scoring facts. Parsed report30cases12entries118exports with90 baseline/28system waiting and2clarifications, zero collection errors. Sequential validated collection is not an atomic DB snapshot or quality pass."
+    "rationale": "Independent scorer/CLI/frozen rubric review: verified rubric SHA lock,90overall80language with all reviews required and safety/evidence veto,30/10 denominators, request/response/contributor/source bytes and offsets, original-only observation hashes. Parsed actual120 rows with zero reviewed/passed and all targetsfalse. Named judgments are not authenticated independence or automatic entailment; live quality unverified."
   },
   "backend": {
-    "fingerprint": "0983c4064e8ce8449a0cabebd8899500136aa916058064149c0287c44a4e9570",
+    "fingerprint": "89a500b1535bac2df51226c7e02153aeb5c17fa60296c066111ee6c960272c07",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent new generation-batch unit tests review: failed admission retains30/10 denominators and stable keys, existing admission IDs prevent duplicate POST, changed request/identity/corpus/config reject, interrupted exports recover atomically. No backend application behavior changed; tests are synthetic transport checks complemented by actual batch evidence."
+    "rationale": "Independent generation-scoring regression review: positive control mutations cover invalid envelope/configuration, safety aggregate veto, stale review, retained failed observations and source/response integrity. No application backend change. Tests support scorer mechanics only; actual120-row unreviewed report retains zero passes."
   },
   "infrastructure": {
-    "fingerprint": "4fd1a85234b64ee219847232d177ebd50e4043012c67ed87a1d3fcc3bb52762c",
+    "fingerprint": "978323a2aafdac0f8f10acc6a7adc52551ea60b098b2900b08088681ec160fee",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ARCHITECTURE/RUNBOOK review: runner uses existing isolated development workspace/API/model stack with runtime checks; no new service/deployment. New evaluation workspaces and preserved failures correctly stated. Snapshot collection and local retrieval do not establish production capacity, inference quality or complete release."
+    "rationale": "Independent shared ARCHITECTURE/RUNBOOK scope review: offline evaluator reads retained trusted local evidence and frozen source files, no API generation, deployment or model services. Exact citation identity distinct from semantic support; unchanged provider accounting/live boundaries remain open."
   }
 }

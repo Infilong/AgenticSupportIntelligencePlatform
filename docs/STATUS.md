@@ -25,8 +25,12 @@ inspected. Checkpointf48597b is pushed; hosted CI34426506103 passed.
 Current: frozen batch preparation/collection now admits all30 cases in new workspaces and
 preserves fixed four-pipeline denominators. The real run prepared118 requests with no collection
 errors; two system cases completed with clarification_needed. Seven unit tests and independent
-source review pass. Finish documentation/verification and commit this runner slice.
-Next: contribute responses and implement source-bound generation scoring. External provider
+source review pass. Runner checkpointacede51 is committed/pushed; hosted CI34427298842 passed.
+Current: frozen generation rubric and source-bound scorer are implemented. Ten regressions
+pass; independent review closed invalid-batch/configuration false-pass findings. The real
+unfinished batch retains120 observations and zero reviewed successes, with all targets false.
+Finish documentation review and checkpoint this scorer before collecting responses/judgments.
+Next: contribute responses and independently review them with the frozen rubric. External provider
 dispatch/accounting remains required work.
 [Timeout cleanup](plans/completed/m6-command-timeout.md) retains Windows evidence and hosted
 run34373738322 passed all five jobs, including POSIX cleanup; evidence is revision-specific. Keep RAG tuning deferred. The previous
@@ -110,8 +114,8 @@ latency, exact quote matching as semantic entailment, or mock output as model qu
 ## Open gates and retained uncertainty
 
 - M5: four attributed development pipelines, their administration view and full-corpus
-  preparation/collection are implemented; full-corpus responses and semantic scoring remain
-  incomplete. Quality also shows
+  preparation/collection and an attributed-review scorer are implemented; full-corpus responses
+  and semantic reviews remain incomplete. Quality also shows
   historical retrieval reports. `comparable` only means unchanged corpus/not cancelled, not
   complete or correct outputs. Contributions remain in the development CLI.
 - External generation-provider integration, generation accounting and semantic support/language/

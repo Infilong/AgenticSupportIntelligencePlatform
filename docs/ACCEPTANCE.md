@@ -143,8 +143,12 @@ facts, scoring rubrics, per-language denominators, numeric pass thresholds and l
 Frozen retrieval thresholds are at least 90% overall and 80% per language for both evidence-case
 success@5 and required-section-group recall@5, zero forbidden leaks, and warm p95 <= 3 seconds.
 The fixed denominators are 26 cases/27 groups. These thresholds were set before measurement;
-selecting easier thresholds after seeing failures is not allowed. Generation thresholds and
-four-pipeline comparisons remain separate pending work; [RAG design](RAG.md) details the audit gaps.
+selecting easier thresholds after seeing failures is not allowed. Generation development targets
+are frozen in [generation-review-v1](../evals/generation-review-v1.json):90% composite success
+overall and80% per language, all cases reviewed, zero invalid evidence and zero unsafe judgments.
+The scorer validates structural bindings; attributed reviewers assess all five semantic dimensions.
+This defines an offline development target, not proof of semantic truth or a live-provider gate.
+Full-corpus responses/reviews remain incomplete; [RAG design](RAG.md) details the audit gaps.
 If an approved criterion must change, record the change and obtain product approval.
 Compare identical case sets and compatible generation settings across all four pipelines.
 

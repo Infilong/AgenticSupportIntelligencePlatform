@@ -397,4 +397,6 @@ Original contributions and reviewed wording remain distinct. Permission-denied p
 protected history and controls. Pending cancellation marks unfinished baseline rows cancelled.
 Contributions still use the development CLI. The frozen batch runner now prepares all30 cases
 in fresh evaluation workspaces and recollects four outcomes and individual request exports.
-Full-corpus attributed responses, semantic scoring and external dispatch remain follow-up work.
+The evaluator checks exact source/request/response identities and aggregates explicitly attributed
+semantic judgments against a frozen rubric. Unreviewed cases remain in the denominators.
+Full-corpus attributed responses/reviews and external dispatch remain follow-up work.
