@@ -21,8 +21,12 @@ pass. Frozen controls checkpoint4002e78 is pushed and hosted CI34381303388 passe
 The comparison administration UI now supports admission, bounded history, four outcomes,
 separate reviewed wording, retrieval evidence and cancellation. Eight focused PostgreSQL tests
 and a real create/inspect/cancel/denial browser journey pass; mobile/desktop screenshots were
-inspected. Independent source review closed. Finish documentation review and commit this slice.
-Next: expand the frozen corpus runner. External provider
+inspected. Checkpointf48597b is pushed; hosted CI34426506103 passed.
+Current: frozen batch preparation/collection now admits all30 cases in new workspaces and
+preserves fixed four-pipeline denominators. The real run prepared118 requests with no collection
+errors; two system cases completed with clarification_needed. Seven unit tests and independent
+source review pass. Finish documentation/verification and commit this runner slice.
+Next: contribute responses and implement source-bound generation scoring. External provider
 dispatch/accounting remains required work.
 [Timeout cleanup](plans/completed/m6-command-timeout.md) retains Windows evidence and hosted
 run34373738322 passed all five jobs, including POSIX cleanup; evidence is revision-specific. Keep RAG tuning deferred. The previous
@@ -105,8 +109,9 @@ latency, exact quote matching as semantic entailment, or mock output as model qu
 
 ## Open gates and retained uncertainty
 
-- M5: four single-case attributed development pipelines and their administration view are
-  implemented; full-corpus execution and semantic scoring remain incomplete. Quality also shows
+- M5: four attributed development pipelines, their administration view and full-corpus
+  preparation/collection are implemented; full-corpus responses and semantic scoring remain
+  incomplete. Quality also shows
   historical retrieval reports. `comparable` only means unchanged corpus/not cancelled, not
   complete or correct outputs. Contributions remain in the development CLI.
 - External generation-provider integration, generation accounting and semantic support/language/

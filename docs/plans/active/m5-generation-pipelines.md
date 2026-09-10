@@ -267,3 +267,35 @@ Final comparison UI checkpoint: independent documentation review found no contra
 renewed five affected receipts. Ruff lint and172-file format check pass. Preparation56 tests
 pass17.119s at `.artifacts/m0/prep-20260910T014037309113Z`. This historical note is appended
 after verification; application and mapped documentation were unchanged during the check.
+
+### Frozen generation batch runner
+
+Deep tooling slice, one implementation owner. Prepare the unchanged frozen corpus in new isolated
+evaluation workspaces, admit all30 EN/JA/ZH cases with persisted idempotency keys, and collect all
+four pipeline outcomes and single-request exports. Resume admission/collection from saved state
+without duplicating comparisons. Retain failed/unadmitted/unfinished rows in fixed language and
+pipeline denominators. Bind reports to corpus, source/runtime and server configuration; reject
+changed inputs. Keep evaluator facts out of application requests and blind exports. Use existing
+development contribution commands, then recollect answers/review outcomes; no simulated completion
+or automatic quality pass. Verify failure/resume/denominator behavior and run the real corpus.
+Semantic scoring and external provider verification remain separate required work.
+
+Implemented run_generation.py and generation_batch.py with fixed30/10 denominators, persisted
+admission keys, configuration/corpus/runtime checks and single-request exports. Independent
+review caught interrupted direct export writes; atomic .tmp replacement plus a recovery regression
+fixed it. Seven focused tests pass0.42s. Ruff lint and175-file format checks pass.
+Initial live attempt `.artifacts/m5/frozen-generation-20260910/report.json` failed before workspace
+creation because the already-open authenticated HTTP client was entered twice. ExitStack close
+registration fixed the lifecycle; retained the original report. Independent follow-up review
+confirmed both fixes with no further actionable findings.
+Fresh real run `.artifacts/m5/frozen-generation-fixed-20260910/report.json` ingested12 corpus
+entries, admitted30 cases and recollected successfully. All90 baseline requests and28 system
+requests await contributions; en09/ja10 system routes completed with clarification_needed.
+118 single-request files are saved; no collection errors. This proves real preparation and
+resumable collection, not complete generation or semantic quality. Prior UI checkpointf48597b
+passed hosted CI34426506103. Full-corpus response/scoring work remains next.
+
+Batch checkpoint final preparation56 tests pass16.558s at
+`.artifacts/m0/prep-20260910T015253646829Z`. Independent documentation review corrected stale
+runner wording and clarified sequential collection, then renewed all six receipts. This appended
+historical evidence note does not change the tested application or mapped documentation.

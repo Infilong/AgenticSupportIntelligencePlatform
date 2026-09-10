@@ -80,4 +80,18 @@ authenticated API; see the [runbook](../docs/RUNBOOK.md#development-generation-c
 It does not load the evaluator corpus, expected facts or scoring fixtures. Direct has no
 retrieval; vector/hybrid baselines and the actual hybrid support graph retain distinct traces.
 Manual contributions and reviewed system responses remain separate. The full frozen-case
-generation runner, per-language semantic scoring and external-provider verification remain open.
+generation response/scoring work and external-provider verification remain open.
+
+`run_generation.py prepare --directory .artifacts/m5/NEW_BATCH` ingests the frozen corpus in
+fresh development workspaces and admits all30 cases. `collect` with the same directory resumes
+admission using stored keys and refreshes outcomes/individual request exports. Run from the
+repository root with `uv run --project backend --frozen python evals/run_generation.py ...`.
+Run one collector per directory. A failed ingestion is preserved and requires a new preparation;
+admission or collection failures can be resumed. Reports reject changed frozen cases, runtime
+or pipeline configuration. Each pipeline retains30 cases overall and10 per language, including
+not-observed/failed/unfinished entries. Collection errors remain explicit beside last observations.
+Exit0 means a validated collection snapshot, which can include unfinished/failed pipeline outcomes;
+sequential API reads are not one database snapshot. It is not a passing generation-quality gate.
+The 118 prepared requests in the September10 run await attributed contributions; two governed
+cases exited for clarification. Submit through generation_cli.py, then recollect. Request files
+contain one rendered request and its bindings; evaluator facts never enter application inputs.

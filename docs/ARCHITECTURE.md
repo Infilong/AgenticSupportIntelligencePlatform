@@ -395,4 +395,6 @@ Quality includes an administrator-only comparison view with bounded history, que
 admission, four pipeline outcomes, lazy retrieval evidence and a link to the governed workflow.
 Original contributions and reviewed wording remain distinct. Permission-denied polling clears
 protected history and controls. Pending cancellation marks unfinished baseline rows cancelled.
-Contributions still use the development CLI. The frozen full-corpus runner remains follow-up work.
+Contributions still use the development CLI. The frozen batch runner now prepares all30 cases
+in fresh evaluation workspaces and recollects four outcomes and individual request exports.
+Full-corpus attributed responses, semantic scoring and external dispatch remain follow-up work.

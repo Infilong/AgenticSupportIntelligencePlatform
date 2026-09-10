@@ -1,38 +1,38 @@
 {
   "project": {
-    "fingerprint": "1f5da4cf0db6599768a77b0915a60ce5b6ae3acce8e9c47439e88fc0abe44bbd",
+    "fingerprint": "17fedce3c875887eced07d1813f6d9052c8e1948b56cc3f27078b2a01e2d28d0",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent STATUS/M5 record against implemented administration slice and saved browser report. Eight focused PG,47frontend/build and one browserjourney recorded with failed review finding repaired; existing historical full-suite timeout not relabeled. Corpus execution/scoring/external dispatch/accounting remain open; no goal narrowing or semantic-quality claim."
+    "rationale": "Independent STATUS/M5 record and source/evidence review: distinguishes implemented full-corpus preparation from incomplete responses/semantic scoring/provider dispatch. Actual118exports and30/10 denominators match report; first failed lifecycle and subsequent repair retained. Architecture stale full-runner claim and snapshot certainty corrected; no goal narrowing."
   },
   "frontend": {
-    "fingerprint": "728238ca0c27d443fa3dc37b7da164865eb9c515683f65802e724e78fe370b26",
+    "fingerprint": "5c3a2952dd566e345ced164cc9af74a20945375eba87735577e2bb8f1725e329",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent Quality comparison components, role gate, resource polling and tests review: all four outcomes, original/reviewed wording, lazy traces and real workflow link remain distinct.403-cleared resource removes creation/history, reviewed regression covers open draft removal. Parsed actual browser1pass7.936s; final47 tests/build evidence recorded. No automatic inference or full-corpus UI claim."
+    "rationale": "Independent shared ARCHITECTURE runner boundary correction: full30-case prepare/collect now implemented, while responses/scoring and external generation remain open. Existing Quality comparison UI unchanged; no newly executed browser or completed-answer claim."
   },
   "tooling": {
-    "fingerprint": "763147b71cb2448e9ac41cbd61ab386610dcbc6df4bfe9fbbaa25fbeafc67b0e",
+    "fingerprint": "116aeaa7de2fd048f0232c4b77d0602f6e72d0e627690e6a4e8630ac575fd4f9",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK comparison navigation and browser recipe review: create/inspect/cancel in Quality, contribution/export remain CLI, dedicated comparisons.spec separate from baseline. Injected403 proves UI cleanup, not real membership expiry; API integration separately verifies authority. No command/runtime behavior changes."
+    "rationale": "Independent RUNBOOK prepare/collect recipe and runtime lifecycle review: fresh directories/workspaces for ingestion, stable keys for resuming admissions, one collector per directory, atomic report/request writes and preserved first lifecycle failure. Exit0 explicitly permits unfinished pipeline outcomes; CLI contributions then recollection required. No existing command budget or authority change."
   },
   "evaluation": {
-    "fingerprint": "71ec7eed6fbc916627be2fa7fc821464ebb03347d339d921564d07312ff3b73f",
+    "fingerprint": "58f55675396377e9d835cfefb2acd09d3a6e60b4db57f3977a3ddd886e50a879",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent generation CLI/session and evals README/M5 guardrail review: consumes whitelisted input/attributed responses, no evaluator fixtures, per-pipeline exports separate from admin inspection. Parsed final demo fourcompleted, direct no trace and three distinct local embedding ledgers; manual nonblind plumbing only. Full frozen corpus, semantic scoring and external provider remain incomplete; comparable is identity/cancellation only."
+    "rationale": "Independent run_generation/generation_batch and evals README review: frozen case/runtime/config checks, isolated corpus ingestion, whitelisted question/language admission, fixed denominators and retained failure history; individual exports contain no scoring facts. Parsed report30cases12entries118exports with90 baseline/28system waiting and2clarifications, zero collection errors. Sequential validated collection is not an atomic DB snapshot or quality pass."
   },
   "backend": {
-    "fingerprint": "e158846b4cd42fb6ada69b22a368f22cee7cc3c92cd0fd47c764b7dcf43bc5cc",
+    "fingerprint": "0983c4064e8ce8449a0cabebd8899500136aa916058064149c0287c44a4e9570",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent typed comparison projections/cancellation review: existing admin/workspace routes retain guards, response schemas expose domain records, unfinished baseline rows now reflect cancellation while completed history preserved. Eight focused PG evidence retained; no schema or generation transport change."
+    "rationale": "Independent new generation-batch unit tests review: failed admission retains30/10 denominators and stable keys, existing admission IDs prevent duplicate POST, changed request/identity/corpus/config reject, interrupted exports recover atomically. No backend application behavior changed; tests are synthetic transport checks complemented by actual batch evidence."
   },
   "infrastructure": {
-    "fingerprint": "cced12668704ade80217ac48a38cdcea6f8625ce5a1c3ed127a803e49c068a72",
+    "fingerprint": "4fd1a85234b64ee219847232d177ebd50e4043012c67ed87a1d3fcc3bb52762c",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ARCHITECTURE/RUNBOOK boundary review for local Quality comparison view: existing API/session/workspace and retrieval services, no new deployment or provider configuration. Browser layout/injected denial evidence stays scoped, completed comparison history preserved, CLI/manual-generation boundary explicit."
+    "rationale": "Independent shared ARCHITECTURE/RUNBOOK review: runner uses existing isolated development workspace/API/model stack with runtime checks; no new service/deployment. New evaluation workspaces and preserved failures correctly stated. Snapshot collection and local retrieval do not establish production capacity, inference quality or complete release."
   }
 }

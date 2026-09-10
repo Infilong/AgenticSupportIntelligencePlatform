@@ -198,6 +198,20 @@ This dedicated test covers create/inspect/cancel, desktop/mobile layout and inje
 denial; actual membership revocation is covered by PostgreSQL integration tests. It is separate
 from the baseline `test:app` command and does not measure semantic quality.
 
+### Frozen generation batch
+
+From the repository root, run `uv run --project backend --frozen python evals/run_generation.py
+prepare --directory .artifacts/m5/NEW_BATCH` with the development runtime/model and seeded users
+ready. This creates new isolated evaluation workspaces, ingests the frozen corpus and admits30
+cases. Run the same command with `collect` and the same directory to refresh all four outcomes
+and save available requests under `requests/CASE/PIPELINE.json`. Use one process per directory.
+The ignored report stores comparison IDs and stable admission keys; never edit them to bypass
+the frozen-input checks. Failed ingestion requires a new directory; collection/admission failures
+can resume with existing keys. Original failed evidence is retained.
+Use the single-case CLI above for attributed contributions, then collect again. Zero exit status
+means snapshot collection succeeded, including unfinished cases, not that answers passed quality.
+Full semantic scoring and external-provider verification remain unimplemented.
+
 Development uses Vite's same-origin API proxy; frontend container file ownership permits
 temporary config/cache writes by its non-root user. No external font service is required.
 Built release serving has separate setup and evidence below; remaining release gates are incomplete.
