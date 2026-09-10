@@ -1,40 +1,47 @@
 # Current status
 
-## Authority and next action
+## Final demo disposition
 
-Current slice: [local four-pipeline comparisons](plans/active/m5-local-comparisons.md).
-Routing prerequisite f4c998b is pushed and CI34439841295 passed. Explicit local comparison
+Final demo checkpoint: [local four-pipeline comparisons](plans/completed/m5-local-comparisons.md).
+The user approved demo acceptance and deferral of remaining quality/release gaps. Earlier
+full-release instructions below are historical to that decision; frozen failed gates remain
+unchanged. Source CI and documentation checkpoint checks are complete; no further tuning scope
+is implied.
+Routing prerequisite f4c998b is pushed and CI 34439841295 passed. Explicit local comparison
 admission, provider selection and a separately versioned frozen runner/scorer are implemented.
 
 ## Local batch and release evidence — 2026-09-10
 
-The fixed batch `.artifacts/m5/local-live-fixed-20260910/reviewed-score.json` has120 technically
+The fixed batch `.artifacts/m5/local-live-fixed-20260910/reviewed-score.json` has 120 technically
 completed outcomes with response-bound judgments from three independent language reviewers.
-Composite successes: direct7/30, vector22/30, hybrid20/30, system20/30. EN2/8/9/9, JA2/8/6/7,
-ZH3/6/5/4 respectively, each out of10. Every frozen local quality target FAILED. Unsupported
-claims, omitted conflicts, language and routing errors remain visible. System24 completed and6
+Composite successes: direct 7/30, vector 22/30, hybrid 20/30, system 20/30. EN 2/8/9/9, JA 2/8/6/7,
+ZH 3/6/5/4 respectively, each out of 10. Every frozen local quality target FAILED. Unsupported
+claims, omitted conflicts, language and routing errors remain visible. System 24 completed and 6
 awaited review; terminal execution is not semantic success. Initial batch
-`.artifacts/m5/local-live-20260910` retains30 direct-format failures and90 terminal RAG outcomes.
+`.artifacts/m5/local-live-20260910` retains 30 direct-format failures and 90 terminal RAG outcomes.
 An explicit JSON-string example repaired direct formatting; no retrieval tuning was added.
 
-117 units passed47.18s and final lint passes. Full PostgreSQL
-`.artifacts/m0/integration-20260910T053351305052Z` timed out420s after138 displayed passes;
+117 units passed in 47.18s and final lint passes. Full PostgreSQL
+`.artifacts/m0/integration-20260910T053351305052Z` timed out at 420s after 138 displayed passes;
 it is incomplete, not a pass. Packaged local-mode runtime built/became healthy at
 `.artifacts/m0/release-up-20260910T054054753277Z`. Optional release model/mode/URL keys retain
 manual mode by default. Chrome provider selection/new local comparison and chrome-comparison.png
 were inspected at the baseline viewport; no overlap observed by the coordinator.
 
-Fresh restore `.artifacts/m6/restore-20260910T054137Z/report.json` passed25-table parity and a new
-clone API/worker clarification with3 checkpoints/0 model calls; wrapper `.artifacts/m0/restore-20260910T054135417022Z`. No restored
+Fresh restore `.artifacts/m6/restore-20260910T054137Z/report.json` passed 25-table parity and a new
+clone API/worker clarification with 3 checkpoints/0 model calls; wrapper `.artifacts/m0/restore-20260910T054135417022Z`. No restored
 semantic-generation/browser claim. M5 evaluation executed but quality acceptance failed;
-M6 native zoom and broader release/security evidence remain incomplete. Continue bounded M6
-checks without lowering targets or starting speculative RAG perfection work.
+M6 native zoom and broader release/security evidence remain incomplete and are deferred under
+approved demo acceptance. No further release checks or tuning are part of this checkpoint.
 
 Packaged five-session follow-up `.artifacts/m6/local-release-final/profile.json` observed EN/JA
-answers, Chinese routine-timing over-review, missing intervention and set-aside, with viewer403
-and foreign404. Observed38.7–54.3s is not simultaneous-inference/SLO evidence. A narrow personal-
-request regex repair and localized review reasons pass22 units1.65s; live confirmation is pending.
-Prior120 semantic scores are unchanged historical evidence, not post-repair verification.
+answers, Chinese routine-timing over-review, missing intervention and set-aside, with viewer 403
+and foreign 404. Observed 38.7–54.3s is not simultaneous-inference/SLO evidence. A narrow personal-
+request regex repair and localized review reasons pass 22 units in 1.65s; live confirmation now
+passes at `.artifacts/m6/local-release-final/polite-routing-retry.json`: Chinese completed/answered
+with two citations, preserving the previous cancelled attempt. Chrome inspected the answer
+and screenshot `chrome-chinese-answered.png`; the user tab remains on localhost:8011.
+Prior 120 semantic scores are unchanged historical evidence, not post-repair verification.
 
 Previous routing checkpoint:
 The user now requires supported automatic answers, exception review, missing-support intervention
@@ -71,22 +78,22 @@ The remaining M5 boundary is assessed in [generation pipelines](plans/active/m5-
 The [packaged admin journeys](plans/completed/m6-release-admin-journeys.md) are reviewed and pushed.
 Current: four-pipeline checkpoint81e68b0 is committed/pushed. Its real CLI/browser demo and
 cold-worker first-attempt preparation pass;17 focused database tests,77 units and56 prep checks
-pass. Full local regression timed out420s after126 displayed passes; hosted CI34380249837
+pass. Full local regression timed out at 420s after126 displayed passes; hosted CI34380249837
 passed all five jobs, including real PostgreSQL regression. Frozen-run controls are repaired;
 2 focused database and2 component checks, frontend build and real frozen/ordinary browser views
 pass. Frozen controls checkpoint4002e78 is pushed and hosted CI34381303388 passed.
 The comparison administration UI now supports admission, bounded history, four outcomes,
 separate reviewed wording, retrieval evidence and cancellation. Eight focused PostgreSQL tests
 and a real create/inspect/cancel/denial browser journey pass; mobile/desktop screenshots were
-inspected. Checkpointf48597b is pushed; hosted CI34426506103 passed.
+inspected. Checkpointf48597b is pushed; hosted CI 34426506103 passed.
 Current: frozen batch preparation/collection now admits all30 cases in new workspaces and
 preserves fixed four-pipeline denominators. The real run prepared118 requests with no collection
 errors; two system cases completed with clarification_needed. Seven unit tests and independent
-source review pass. Runner checkpointacede51 is committed/pushed; hosted CI34427298842 passed.
+source review pass. Runner checkpointacede51 is committed/pushed; hosted CI 34427298842 passed.
 Current: frozen generation rubric and source-bound scorer are implemented. Ten regressions
 pass; independent review closed invalid-batch/configuration false-pass findings. The real
 unfinished batch retains120 observations and zero reviewed successes, with all targets false.
-Scorer checkpointe10c2ae is pushed and hosted CI34428243871 passed. Twelve contributions for
+Scorer checkpointe10c2ae is pushed and hosted CI 34428243871 passed. Twelve contributions for
 en01–en03 are saved and independently reviewed. Nine source-backed responses satisfy those cases;
 three direct answers preserve uncertainty but omit the required policy facts. Full120 observations
 remain counted and no pipeline passes its full-batch gate. Further batch filling is paused.
@@ -203,3 +210,17 @@ latency, exact quote matching as semantic entailment, or mock output as model qu
 No full production-readiness or release-completion claim is supported. Detailed prior evidence,
 failures, revisions and superseded status text are preserved exactly in
 [September9 status history](STATUS_HISTORY_2026-09-09.md) and the linked execution records.
+
+
+## Final demo checkpoint — source CI passed
+
+86deae5 is pushed. CI 34442804796 completed successfully with all five jobs, including full real PostgreSQL
+regression. This hosted result is separate from the retained local 420s timeout. Latest packaged startup
+`.artifacts/m0/release-up-20260910T054838297425Z` became healthy. The live Chinese repair run
+1bd0013a-f2e4-4616-a4b1-67e0b20f857c correctly distinguishes two business days from 21 calendar
+days, using Qwen 7B, with 1984 input tokens and 10174.7589ms recorded generation duration. This single
+repair does not replace the prior 120-case evaluation or change its failed quality gates.
+The user explicitly approved finishing the demo and documenting/deferring remaining quality
+and release gaps. M5/M6 close under this bounded demo acceptance; the strict 90%/80% targets
+remain failed and unchanged. Source checkpoint CI is verified; documentation review is complete. This is not a quality
+waiver in the benchmark or a production-readiness claim.

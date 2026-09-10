@@ -1,9 +1,9 @@
 {
   "project": {
-    "fingerprint": "a85fb341bccf759dcfacb3f0f2ec45ffb84b0cabe864d18149391d3566a308db",
+    "fingerprint": "0c3037358ca6f6e8e4af91e28486bbf74e57127a4a00e461105d96d380d632e8",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Independently parsed120-case reviewed-score report and25-table restore report plus five-session profile. Coordinator independently reviewed final STATUS/plan edits against those artifacts and source. Quality gates failed,138 displayed PG passes followed by420s timeout is incomplete, narrow routing repair not yet live remeasured."
+    "rationale": "Applied coordinator independently reviewed exact final STATUS corrections: documentation review complete and clearer Qwen usage wording. No source, evidence, authority or acceptance change; failed quality targets remain unchanged."
   },
   "frontend": {
     "fingerprint": "417208a7b476d7ef0e56b83e431e475aa00f9afc19e038b4afd0253434b385e5",
@@ -18,16 +18,16 @@
     "rationale": "Reviewed local prepare/collect/score command arguments and existing frozen-corpus reuse against runner source. Coordinator reviewed authored runbook and evidence. Generation commands remain distinct from manual contributions; full regression timeout retained, no completed milestone claim."
   },
   "evaluation": {
-    "fingerprint": "11112c4cf7222bffa0436dded8d16e04869efbde5b870d86edba6d4131d131d0",
+    "fingerprint": "173ad699e6b86f973c495bbde64cbccfa2b663d1cd3dd1d4083f373f40deb9c2",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Independently inspected local runner/scorer request/source bindings, fixed denominators and safety veto, reviewed40 Japanese observations, and parsed full120 judged report:7/22/20/20 of30, all targets false. Coordinator reviewed authored evaluation/RAG docs. Manual corpus/reports/targets preserved; new live routing confirmation remains pending."
+    "rationale": "Reviewed explicit approved-demo disposition against unchanged120-observation scores and failed90/80 thresholds. No scorer, corpus, rubric or numerical assertion changed. Coordinator independently reviewed authored acceptance wording; quality failures remain deferred, not passed."
   },
   "backend": {
-    "fingerprint": "bc3b7d8a65570df111c34feb68294a672c6d34ab77c5ddb70c3825d39b320528",
+    "fingerprint": "2ae2d1643e40667676698770d689771f7c9902bdb9934d54a0062bea89b11a1f",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Independently reviewed explicit local comparison admission/settings, direct empty context, persisted dispatch and machine request/response/ledger identity, guarded publication and personal-action routing regex refinement. Coordinator independently reviewed authored owning docs. Focused PG success predates later normalization; full420s regression remains incomplete, real120 scores historical before final routing fix."
+    "rationale": "Reviewed unchanged source against amended acceptance authority: later explicit user demo acceptance defers strict release gaps without changing failed benchmarks or implying production readiness. Coordinator independently reviewed authored acceptance/status wording; prior source and live repair evidence review retained."
   },
   "infrastructure": {
     "fingerprint": "4c2d570f32a01f4b70903466d5c3958afed0af299767c27e73f69ed5396224f4",

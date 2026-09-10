@@ -1,5 +1,19 @@
 # Reusable full-rebuild goal
 
+## Approved demo acceptance — 2026-09-10
+
+The user explicitly approved: “Finish the demo; document and defer remaining quality/release
+gaps.” This later instruction closes M5/M6 under bounded demo acceptance, superseding strict
+release completion for this deliverable. The local knowledge/retrieval, automatic supported
+answers, exception review, missing-support intervention, retained set-aside input, processing
+inspection and administration form the accepted scope. Final checkpoint/CI evidence is owned by
+STATUS and [execution record](plans/completed/m5-local-comparisons.md).
+
+Frozen quality thresholds and assertions are unchanged: all measured local pipeline targets
+remain FAILED. Remaining semantic-quality and strict production-release gaps are documented
+and deferred, not passed. This is a demo acceptance decision, not production readiness, a paid
+provider verification claim or permission for further tuning/deployment.
+
 Status: activated by the user on 2026-09-08; synchronized with approved clarifications on
 2026-09-09. [STATUS](STATUS.md) records current execution and constraints. This reusable goal
 incorporates later user instructions; the original attached goal remains a historical record.

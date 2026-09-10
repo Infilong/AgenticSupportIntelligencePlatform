@@ -1,5 +1,19 @@
 # Multilingual Support Workbench — local V1 rebuild plan
 
+## Approved demo acceptance — 2026-09-10
+
+The user explicitly approved: “Finish the demo; document and defer remaining quality/release
+gaps.” This later instruction closes M5/M6 under bounded demo acceptance, superseding strict
+release completion for this deliverable. The local knowledge/retrieval, automatic supported
+answers, exception review, missing-support intervention, retained set-aside input, processing
+inspection and administration form the accepted scope. Final checkpoint/CI evidence is owned by
+STATUS and [execution record](docs/plans/completed/m5-local-comparisons.md).
+
+Frozen quality thresholds and assertions are unchanged: all measured local pipeline targets
+remain FAILED. Remaining semantic-quality and strict production-release gaps are documented
+and deferred, not passed. This is a demo acceptance decision, not production readiness, a paid
+provider verification claim or permission for further tuning/deployment.
+
 Status: full M1–M6 execution authorized on 2026-09-08. Follow STATUS for current progress;
 authorization and this plan are not readiness claims.
 
