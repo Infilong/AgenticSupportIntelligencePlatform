@@ -14,4 +14,5 @@ test('zero recorded charge retains unknown measurements and the development limi
   expect(screen.getByText('2 calls without cost measurements')).toBeVisible();
   expect(screen.getByText(/not an answer-quality score/)).toBeVisible();
   expect(screen.getByText(/not automatic model calls/)).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Generation comparisons' })).not.toBeInTheDocument();
 });

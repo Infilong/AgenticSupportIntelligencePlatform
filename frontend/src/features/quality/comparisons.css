@@ -1,0 +1,14 @@
+.generation-comparisons { min-width: 0; font-size: 14px; line-height: 1.7; }
+.comparison-create { display: grid; gap: 10px; margin-bottom: 24px; }
+.comparison-create h3 { margin: 0; }.comparison-create textarea { width: 100%; resize: vertical; }
+.comparison-create select,.comparison-create button { justify-self: start; }
+.comparison-history { display: grid; gap: 8px; margin: 20px 0; }
+.comparison-history select { width: 100%; min-width: 0; text-overflow: ellipsis; }
+.comparison-detail h3,.comparison-answer { overflow-wrap: anywhere; white-space: pre-wrap; }
+.comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 20px 0; }
+.comparison-grid article { min-width: 0; }.comparison-grid h4 { font-size: 17px; margin: 0; }
+.comparison-grid h5 { font-size: 13px; margin: 20px 0 5px; }.comparison-answer { margin-top: 5px; }
+.comparison-state { color: #315c46; font-weight: 600; }.comparison-grid a { display: inline-block; margin: 12px 0; }
+.comparison-provenance { font-size: 12px; margin-top: 20px; overflow-wrap: anywhere; }
+.comparison-provenance dd { margin: 0 0 8px; }.comparison-provenance dt { color: #62725c; }
+@media (max-width: 800px) { .comparison-grid { grid-template-columns: 1fr; } }

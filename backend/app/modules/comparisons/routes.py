@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.jobs.queue import authorize
 from app.modules.comparisons import reading, service
 from app.modules.comparisons.models import Comparison
+from app.modules.comparisons.schemas import ComparisonCreated, ComparisonDetail, ComparisonList
 from app.modules.identity.dependencies import CurrentUser, Database
 from app.modules.support.schemas import MessageInput
 from app.modules.workspaces.service import membership
@@ -14,7 +15,7 @@ from app.modules.workspaces.service import membership
 router = APIRouter(prefix="/api/workspaces/{workspace_id}/comparisons", tags=["comparisons"])
 
 
-@router.post("", status_code=202)
+@router.post("", status_code=202, response_model=ComparisonCreated)
 def create(
     workspace_id: UUID,
     data: MessageInput,
@@ -27,7 +28,7 @@ def create(
     return {"id": identity}
 
 
-@router.get("")
+@router.get("", response_model=ComparisonList)
 def listing(workspace_id: UUID, user: CurrentUser, db: Database, offset: int = Query(0, ge=0, le=1000)):
     authorize(db, workspace_id, user.id)
     membership(db, workspace_id, user.id, {"admin"})
@@ -46,7 +47,7 @@ def listing(workspace_id: UUID, user: CurrentUser, db: Database, offset: int = Q
     }
 
 
-@router.get("/{comparison_id}")
+@router.get("/{comparison_id}", response_model=ComparisonDetail)
 def detail(workspace_id: UUID, comparison_id: UUID, user: CurrentUser, db: Database):
     return reading.detail(db, workspace_id, user.id, comparison_id)
 

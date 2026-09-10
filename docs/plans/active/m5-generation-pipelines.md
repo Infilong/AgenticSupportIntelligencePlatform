@@ -236,3 +236,34 @@ including the configured real PostgreSQL suite. That does not turn the local420s
 UI repair final preparation:56 tests passed20.894s at
 `.artifacts/m0/prep-20260909T170807807961Z`. Independent source and documentation reviews closed.
 This appended historical evidence note changes no tested application or mapped documentation.
+
+### Comparison administration view
+
+Normal scoped UI/API-contract slice; root owns comparison response schemas and Quality components.
+Add a clearly named administrator-only generation-comparison view beside existing usage and
+retrieval history. Provide bounded history, question/language admission with idempotent retry,
+four pipeline statuses and initial answers, separate reviewed system wording, and a link to the
+real support workflow. Cancel through the existing guarded API. Keep manual request contribution
+in the CLI for this slice; state that boundary instead of inventing automatic model output.
+Expose typed read contracts, handle loading/failure/permission revocation and workspace changes,
+and preserve unknown quality. Verify API serialization, UI deny/loading/failure behavior and
+real browser create/inspect/cancel flows at mobile and desktop widths. Independent review and
+documentation freshness precede commit. Full corpus and external provider gates remain open.
+
+Implemented the scoped administration view and typed read projections. Cancellation now marks
+unfinished baseline rows cancelled rather than leaving a misleading contribution status.
+Independent review found stale parent history after permission revocation; history polling now
+clears protected selections/forms on denial. Follow-up source review confirmed closure with no
+further actionable findings. Final frontend47 tests pass10.67s and TypeScript/Vite build passes.
+Eight focused PostgreSQL tests pass57.13s at
+`.artifacts/m0/comparison-ui-api-20260909T171857389543Z`.
+Real browser create/inspect/cancel and injected history denial pass7.9s at
+`.artifacts/m5/comparison-ui-20260910`; desktop1440/mobile390 screenshots were visually inspected
+without overlap or horizontal overflow. This case does not supply generation contributions or
+measure answer quality; previous CLI/review evidence covers attributed responses. Actual
+membership revocation remains a backend test boundary, not the injected browser response.
+
+Final comparison UI checkpoint: independent documentation review found no contradictions and
+renewed five affected receipts. Ruff lint and172-file format check pass. Preparation56 tests
+pass17.119s at `.artifacts/m0/prep-20260910T014037309113Z`. This historical note is appended
+after verification; application and mapped documentation were unchanged during the check.

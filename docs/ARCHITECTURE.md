@@ -391,4 +391,8 @@ show whether execution finished. It is not a correctness or generation-quality s
 Cancellation fences pending work while retaining completed history. Exports include only one
 rendered request; admin inspection separates initial contributions from reviewed responses.
 These manual development outputs do not establish inference latency, billing or semantic quality.
-The frozen full-corpus runner and comparison UI remain follow-up work.
+Quality includes an administrator-only comparison view with bounded history, question/language
+admission, four pipeline outcomes, lazy retrieval evidence and a link to the governed workflow.
+Original contributions and reviewed wording remain distinct. Permission-denied polling clears
+protected history and controls. Pending cancellation marks unfinished baseline rows cancelled.
+Contributions still use the development CLI. The frozen full-corpus runner remains follow-up work.

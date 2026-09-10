@@ -165,4 +165,6 @@ def cancel(db, workspace_id, actor_id, comparison_id):
                 cancel_run(db, workspace_id, actor_id, run.id)
         else:
             request_cancel(db, workspace_id, actor_id, item.job_id)
+            if item.state in {"queued", "waiting_for_input"}:
+                item.state = "cancelled"
     row.cancelled = True

@@ -189,6 +189,15 @@ the actual support run and need the ordinary Workbench review. `list` returns a 
 Existing output files are never overwritten. Corpus changes require a new comparison; completed
 history remains inspectable. This is attributed development work, not a live model quality test.
 
+Administrators can also open Quality → Generation comparisons to create, inspect and cancel a
+comparison. Expand retrieval evidence or open the governed workflow for review; original answers
+and reviewed wording are separate. Request export/contribution still uses the CLI above.
+With the development stack and seeded accounts available, run `npx playwright test
+tests/e2e/comparisons.spec.ts` from frontend using the browser/evidence environment above.
+This dedicated test covers create/inspect/cancel, desktop/mobile layout and injected history
+denial; actual membership revocation is covered by PostgreSQL integration tests. It is separate
+from the baseline `test:app` command and does not measure semantic quality.
+
 Development uses Vite's same-origin API proxy; frontend container file ownership permits
 temporary config/cache writes by its non-root user. No external font service is required.
 Built release serving has separate setup and evidence below; remaining release gates are incomplete.

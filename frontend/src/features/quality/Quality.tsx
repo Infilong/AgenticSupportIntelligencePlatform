@@ -3,6 +3,7 @@ import type { Workspace } from '../../api/client';
 import type { components } from '../../api/schema';
 import { useResource } from '../workbench/useResource';
 import { Evaluations } from './Evaluations';
+import { Comparisons } from './Comparisons';
 import './quality.css';
 
 type Usage = components['schemas']['UsageReport'];
@@ -12,9 +13,10 @@ export function Quality({ workspace }: { workspace: Workspace }) {
   const [days, setDays] = useState(7);
   const report = useResource<Usage>(`/workspaces/${workspace.id}/usage?days=${days}`, 30000);
   const totals = report.data?.totals;
+  const currentView = view === 'comparisons' && workspace.role !== 'admin' ? 'usage' : view;
   return <><div className="page-heading"><p className="eyebrow">WORKSPACE ACTIVITY</p><h1>Quality</h1><p className="muted">Inspect model activity, saved retrieval checks and measurement gaps.</p></div>
-    <nav className="quality-views" aria-label="Quality views"><button aria-pressed={view === 'usage'} onClick={() => setView('usage')}>Model usage</button><button aria-pressed={view === 'retrieval'} onClick={() => setView('retrieval')}>Retrieval checks</button></nav>
-    {view === 'retrieval' ? <Evaluations key={workspace.id} workspaceId={workspace.id} /> : <>
+    <nav className="quality-views" aria-label="Quality views"><button aria-pressed={currentView === 'usage'} onClick={() => setView('usage')}>Model usage</button><button aria-pressed={currentView === 'retrieval'} onClick={() => setView('retrieval')}>Retrieval checks</button>{workspace.role === 'admin' && <button aria-pressed={currentView === 'comparisons'} onClick={() => setView('comparisons')}>Generation comparisons</button>}</nav>
+    {currentView === 'comparisons' ? <Comparisons key={workspace.id} workspace={workspace} /> : currentView === 'retrieval' ? <Evaluations key={workspace.id} workspaceId={workspace.id} /> : <>
     <div className="usage-toolbar"><h2>Model usage</h2><label>Period <select value={days} onChange={event => setDays(Number(event.target.value))}><option value={1}>Last 24 hours</option><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option></select></label></div>
     {report.error && <div><p className="error" role="alert">{report.error}</p><button onClick={report.refresh}>Try again</button></div>}
     {!report.data && !report.error && <p role="status">Loading usage…</p>}

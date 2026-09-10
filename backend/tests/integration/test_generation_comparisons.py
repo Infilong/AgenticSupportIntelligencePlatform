@@ -137,7 +137,9 @@ def test_cancel_and_corpus_change_deny_export_submission_and_system_resume(syste
         assert client.get(f"{path}/{name}/request").status_code == 409
         assert client.post(f"{path}/{name}/response", headers=auth, json=payload(request)).status_code == 409
     assert client.post(path + "/cancel", headers=auth).status_code == 200
-    assert client.get(path).json()["cancelled"]
+    cancelled = client.get(path).json()
+    assert cancelled["cancelled"]
+    assert all(p["state"] == "cancelled" for p in cancelled["pipelines"])
     assert client.get(path + "/direct_llm/request").status_code == 409
 
 

@@ -17,8 +17,12 @@ cold-worker first-attempt preparation pass;17 focused database tests,77 units an
 pass. Full local regression timed out420s after126 displayed passes; hosted CI34380249837
 passed all five jobs, including real PostgreSQL regression. Frozen-run controls are repaired;
 2 focused database and2 component checks, frontend build and real frozen/ordinary browser views
-pass. Finish documentation review and commit this UI repair before the next comparison slice.
-Next: expand the frozen corpus runner and comparison presentation. External provider
+pass. Frozen controls checkpoint4002e78 is pushed and hosted CI34381303388 passed.
+The comparison administration UI now supports admission, bounded history, four outcomes,
+separate reviewed wording, retrieval evidence and cancellation. Eight focused PostgreSQL tests
+and a real create/inspect/cancel/denial browser journey pass; mobile/desktop screenshots were
+inspected. Independent source review closed. Finish documentation review and commit this slice.
+Next: expand the frozen corpus runner. External provider
 dispatch/accounting remains required work.
 [Timeout cleanup](plans/completed/m6-command-timeout.md) retains Windows evidence and hosted
 run34373738322 passed all five jobs, including POSIX cleanup; evidence is revision-specific. Keep RAG tuning deferred. The previous
@@ -101,9 +105,10 @@ latency, exact quote matching as semantic entailment, or mock output as model qu
 
 ## Open gates and retained uncertainty
 
-- M5: four single-case attributed development pipelines are implemented; full-corpus execution,
-  semantic scoring and comparison UI remain incomplete. Quality still shows historical retrieval
-  reports. `comparable` only means unchanged corpus/not cancelled, not complete or correct outputs.
+- M5: four single-case attributed development pipelines and their administration view are
+  implemented; full-corpus execution and semantic scoring remain incomplete. Quality also shows
+  historical retrieval reports. `comparable` only means unchanged corpus/not cancelled, not
+  complete or correct outputs. Contributions remain in the development CLI.
 - External generation-provider integration, generation accounting and semantic support/language/
   routing quality remain incomplete. No API access/spending authority is available; continue
   independent offline work without calling LIVE gates passed.

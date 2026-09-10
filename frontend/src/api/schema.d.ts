@@ -728,6 +728,55 @@ export interface components {
             /** Quote End */
             quote_end: number;
         };
+        /** ComparisonCreated */
+        ComparisonCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /** ComparisonDetail */
+        ComparisonDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Question */
+            question: string;
+            /** Language */
+            language: string;
+            /** Cancelled */
+            cancelled: boolean;
+            /** Corpus Hash */
+            corpus_hash: string;
+            /** Comparable */
+            comparable: boolean;
+            /** Generation Quality */
+            generation_quality: string;
+            /** Pipelines */
+            pipelines: components["schemas"]["PipelineResult"][];
+        };
+        /** ComparisonList */
+        ComparisonList: {
+            /** Items */
+            items: components["schemas"]["ComparisonSummary"][];
+        };
+        /** ComparisonSummary */
+        ComparisonSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Question */
+            question: string;
+            /** Language */
+            language: string;
+            /** Cancelled */
+            cancelled: boolean;
+        };
         /** Credentials */
         Credentials: {
             /** Email */
@@ -1134,6 +1183,54 @@ export interface components {
             model: string;
             /** Revision */
             revision: string;
+        };
+        /** PipelineConfiguration */
+        PipelineConfiguration: {
+            /** Strategy */
+            strategy: string | null;
+            /** Limit */
+            limit: number;
+            /** Context Bytes */
+            context_bytes: number;
+            /** Transport */
+            transport: string;
+            /** Version */
+            version: number;
+        };
+        /** PipelineResult */
+        PipelineResult: {
+            /** Name */
+            name: string;
+            configuration: components["schemas"]["PipelineConfiguration"];
+            /** State */
+            state: string;
+            /** Outcome */
+            outcome?: string | null;
+            /** Error Code */
+            error_code: string | null;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Attempts */
+            attempts: number;
+            /** Retrieval Id */
+            retrieval_id: string | null;
+            /** Run Id */
+            run_id: string | null;
+            /** Initial Response */
+            initial_response: {
+                [key: string]: unknown;
+            } | null;
+            /** Response Hash */
+            response_hash: string | null;
+            /** Request Hash */
+            request_hash: string | null;
+            /** Contributor Id */
+            contributor_id: string | null;
+            /** Reviewed Response */
+            reviewed_response: string | null;
         };
         /** ProcessingDefaults */
         ProcessingDefaults: {
@@ -2638,7 +2735,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ComparisonList"];
                 };
             };
             /** @description Validation Error */
@@ -2675,7 +2772,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ComparisonCreated"];
                 };
             };
             /** @description Validation Error */
@@ -2707,7 +2804,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ComparisonDetail"];
                 };
             };
             /** @description Validation Error */
