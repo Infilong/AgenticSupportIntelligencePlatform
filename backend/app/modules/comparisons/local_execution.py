@@ -129,6 +129,7 @@ def execute(engine, job, context, inference=None):
             .values(
                 status="succeeded",
                 input_tokens=usage.get("input_tokens"),
+                output_tokens=usage.get("output_tokens"),
                 duration_ms=(time.monotonic() - started) * 1000,
                 api_cost_usd=0,
             )

@@ -1182,6 +1182,10 @@ export interface components {
             started: number;
             /** Input Tokens */
             input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Missing Output Tokens */
+            missing_output_tokens: number;
             /** Missing Tokens */
             missing_tokens: number;
             /** Recorded Cost Usd */
@@ -1198,8 +1202,6 @@ export interface components {
             provider: string;
             /** Model */
             model: string;
-            /** Revision */
-            revision: string;
         };
         /** PipelineConfiguration */
         PipelineConfiguration: {
@@ -1656,6 +1658,10 @@ export interface components {
             started: number;
             /** Input Tokens */
             input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Missing Output Tokens */
+            missing_output_tokens: number;
             /** Missing Tokens */
             missing_tokens: number;
             /** Recorded Cost Usd */

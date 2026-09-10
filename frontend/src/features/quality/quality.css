@@ -1,6 +1,6 @@
 .usage-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .usage-toolbar h2 { margin: 0; font-size: 17px; }.usage-toolbar label { font-size: 13px; }
-.usage-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.usage-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .usage-cards h3 { font-size: 12px; color: #61735f; font-weight: 500; }.usage-cards strong { font-size: 28px; overflow-wrap: anywhere; }
 .usage-cards p,.usage-note { font-size: 12px; line-height: 1.8; }.usage-note { margin: 20px 0; color: #69786a; }
 .usage-table-scroll { overflow-x: auto; }.usage-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 820px; }

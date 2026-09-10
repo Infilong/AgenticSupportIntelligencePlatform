@@ -240,7 +240,7 @@ that the model interpreted it correctly. Routing and semantic accuracy remain im
 Admins can follow a message into its attempts, retrieval trace, selected context, model-call
 records, answer, citations and human decisions. **Workflow** exposes recorded stages and
 durations; **Sources** opens exact document-version passages; **History** preserves interventions.
-The ledger records provider/model identity, input tokens, duration, external charge and failures.
+The ledger records provider/model identity, input and generated output tokens, duration, external charge and failures.
 
 The evaluation tools compare retrieval strategies and the four answer pipelines against frozen
 multilingual cases. Software regressions use deterministic providers; local-model evaluations
@@ -266,7 +266,7 @@ Current limits include:
 - **Agent features:** a fixed workflow; no configurable agents, arbitrary tool actions or embedded admin copilot.
 - **Administration:** seeded accounts/workspaces and existing-member management; no signup, invitations or workspace-creation UI.
 - **Providers:** manual or local Ollama generation; no remote OpenAI-compatible generation adapter.
-- **Accounting:** recorded model identity, input tokens, duration, failures and external charge; output-token aggregation and total operating cost are incomplete.
+- **Accounting:** recorded model identity, input and generated output tokens, duration, failures and external charge; total operating cost remains incomplete.
 - **Operations:** broader recovery/security validation and native 200% browser zoom verification remain open.
 - **Backups:** current backup/restore scripts target the development database, not the packaged database; offsite recovery is not established.
 

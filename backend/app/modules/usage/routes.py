@@ -22,6 +22,8 @@ class UsageTotals(BaseModel):
     uncertain: int
     started: int
     input_tokens: int
+    output_tokens: int
+    missing_output_tokens: int
     missing_tokens: int
     recorded_cost_usd: float
     missing_cost: int
@@ -33,7 +35,6 @@ class ModelUsage(UsageTotals):
     operation: str
     provider: str
     model: str
-    revision: str
 
 
 class UsageReport(BaseModel):
@@ -52,6 +53,10 @@ def metrics():
             func.count().filter(ModelCall.status == state).label(state)
             for state in ("succeeded", "failed", "uncertain", "started")
         ),
+        func.coalesce(func.sum(ModelCall.output_tokens), 0).label("output_tokens"),
+        func.count()
+        .filter((ModelCall.operation == "generate") & ModelCall.output_tokens.is_(None))
+        .label("missing_output_tokens"),
         func.coalesce(func.sum(ModelCall.input_tokens), 0).label("input_tokens"),
         func.count().filter(ModelCall.input_tokens.is_(None)).label("missing_tokens"),
         func.coalesce(func.sum(ModelCall.api_cost_usd), 0).label("recorded_cost_usd"),
@@ -73,7 +78,7 @@ def usage(workspace_id: UUID, user: CurrentUser, db: Database, days: int = Query
         ModelCall.created_at < until,
     )
     totals = select(*metrics()).where(*scope).cte("usage_totals")
-    groups = [ModelCall.operation, ModelCall.provider, ModelCall.model, ModelCall.revision]
+    groups = [ModelCall.operation, ModelCall.provider, ModelCall.model]
     grouped = (
         select(*groups, *metrics())
         .where(*scope)
@@ -90,7 +95,6 @@ def usage(workspace_id: UUID, user: CurrentUser, db: Database, days: int = Query
                 grouped.c.operation,
                 grouped.c.provider,
                 grouped.c.model,
-                grouped.c.revision,
             )
         )
     ).scalar_subquery()

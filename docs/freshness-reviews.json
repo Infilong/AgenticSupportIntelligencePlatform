@@ -1,15 +1,15 @@
 {
   "project": {
-    "fingerprint": "86aea7a9c8294cd8c138cdfc20005960bfa0f71c6468536bf3e0b020c7ce67b2",
-    "reviewer": "docs_review",
+    "fingerprint": "f6034ef94a7cff886e497905dd4adc859d010d8947edbeb1009d8285820be4d8",
+    "reviewer": "usage_review",
     "outcome": "updated",
-    "rationale": "Independently reviewed README packaged architecture and five-step RAG description against selection vector_rerank default/top20 collection, hybrid fusion, comparison strategies, context first5/24000UTF8 cap, active-version publication, lexical recipe and current provider identities. Local documentation links exist. No claims of semantic entailment, hybrid superiority, external actions or full quality acceptance; no runtime test needed for this docs-only explanation."
+    "rationale": "Reviewed README output-accounting correction and scoped STATUS checkpoint against implementation and coordinator-reported verification. Prior release gaps remain; unavailable Chrome visual verification is explicit."
   },
   "frontend": {
-    "fingerprint": "33311a43de8fbd2e9b5b20262b92deb7cd1dbaecad9f8a9710ef704857a8eea2",
-    "reviewer": "docs_review_with_coordinator_semantic_review",
+    "fingerprint": "d4f982d8806cb31aacf1e377229c5d464785cd014fcd9c74d01b9885442d2433",
+    "reviewer": "usage_review",
     "outcome": "updated",
-    "rationale": "Independently reviewed disabled pending composer controls, corrected local routing configuration copy and browser settings/fallback contract; parsed final browser report2expected0unexpected0flaky in7.395s. Coordinator independently reviewed authored docs and inspected Chrome clarification/workflow. Current49frontend tests distinguished from prior132backend units; no complete benchmark/reliability claim."
+    "rationale": "Reviewed model role labels, combined rows, output totals and not-applicable rendering against generated API and architecture. Historical usage is distinguished from loaded model status; browser visual verification remains explicitly unverified."
   },
   "tooling": {
     "fingerprint": "13ecfa4d7f62f1a0e0f52c188a66cb7a06efff2e8d7dab3ac183aef65a77d016",
@@ -18,21 +18,21 @@
     "rationale": "Compared updated runbook fallback language semantics with actual server heuristic and unchanged imported/existing message behavior. Coordinator independently reviewed authored wording; no new tool commands or scope. Full unit permission-error rerun distinction retained."
   },
   "evaluation": {
-    "fingerprint": "173ad699e6b86f973c495bbde64cbccfa2b663d1cd3dd1d4083f373f40deb9c2",
-    "reviewer": "docs_review_with_coordinator_semantic_review",
+    "fingerprint": "1d54d0e139eaa1b137b32562e5b80304246469a651a1c5aeeaad802488a87b8f",
+    "reviewer": "usage_review",
     "outcome": "updated",
-    "rationale": "Reviewed explicit approved-demo disposition against unchanged120-observation scores and failed90/80 thresholds. No scorer, corpus, rubric or numerical assertion changed. Coordinator independently reviewed authored acceptance wording; quality failures remain deferred, not passed."
+    "rationale": "Reviewed corrected RAG accounting claims against ledger and report implementation. No evaluation scorer or acceptance threshold changed; semantic quality and generation pricing limitations remain."
   },
   "backend": {
-    "fingerprint": "8b8c8a43496f4035664f889b32b950930de8e7430583faaa58e2533a39203272",
-    "reviewer": "docs_review_with_coordinator_semantic_review",
+    "fingerprint": "fe13a880fad7ba28ce7f3aadc3aa258f22c1b981ab8ea14f3ab57a1fd8b7d19c",
+    "reviewer": "usage_review",
     "outcome": "updated",
-    "rationale": "Independently reviewed MessageInput auto default, server-resolved kana/Han/Latin language with workspace fallback, explicit override, and ComparisonInput explicit-language restriction closing inherited-schema issue. Prompt translates facts without changing original quotations. Coordinator independently reviewed authored docs/evidence;132 units pass after retained temp-permission failures. No broader quality claim."
+    "rationale": "Independent review verified workspace-scoped grouping, preserved dispatch hashes, both output persistence writers, numeric workspace-call-hash migration matching and explicit unknown counts against corrected architecture and RAG docs. Coordinator owns runtime test evidence."
   },
   "infrastructure": {
-    "fingerprint": "407d514c760b0ed2209f3c756f00dec296ec8d36a35d517164b04a8237e1590c",
-    "reviewer": "docs_review_with_coordinator_semantic_review",
-    "outcome": "updated",
-    "rationale": "Reviewed architecture/runbook language-default changes and release startup evidence without configuration or deployment scope expansion. Coordinator reviewed authored documentation and screenshot; no generic linguistic accuracy, account-deletion execution or strict production-readiness claim."
+    "fingerprint": "6851166c25a188b579c6a6f116155e88a33e0eb226c5732dd74db174ba485362",
+    "reviewer": "usage_review",
+    "outcome": "no-doc-impact",
+    "rationale": "Architecture accounting section changed; compose configuration and startup commands remain unchanged. Reviewed release topology and runbook claims; no infrastructure readiness expansion."
   }
 }

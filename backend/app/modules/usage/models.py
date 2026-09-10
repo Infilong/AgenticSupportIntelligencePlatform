@@ -29,6 +29,7 @@ class ModelCall(Base):
     revision: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(16), default="started")
     input_tokens: Mapped[int | None]
+    output_tokens: Mapped[int | None]
     duration_ms: Mapped[float | None]
     api_cost_usd: Mapped[float | None]
     error_code: Mapped[str | None] = mapped_column(String(64))

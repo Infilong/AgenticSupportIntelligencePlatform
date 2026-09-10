@@ -74,6 +74,8 @@ def test_usage_counts_unknowns_and_filters_workspace_and_time(system):
         "uncertain": 1,
         "started": 1,
         "input_tokens": 16,
+        "output_tokens": 0,
+        "missing_output_tokens": 0,
         "missing_tokens": 2,
         "recorded_cost_usd": 0,
         "missing_cost": 3,
@@ -116,3 +118,27 @@ def test_usage_empty_and_model_output_bound_with_complete_totals(system):
     assert report["totals"]["calls"] == 22 and report["totals"]["input_tokens"] == 44
     assert len(report["models"]) == 20 and report["more_models"]
     assert [row["model"] for row in report["models"]] == [f"model-{i:02d}" for i in range(20)]
+
+
+def test_generation_groups_request_hashes_and_preserves_unknown_output(system):
+    ws = system["workspace"]
+    with Session(system["engine"]) as db, db.begin():
+        for revision, tokens in [("request-a", 43), ("request-b", 41), ("request-c", None)]:
+            db.add(
+                ModelCall(
+                    workspace_id=ws,
+                    actor_id=system["users"]["admin"].id,
+                    operation="generate",
+                    provider="local_ollama",
+                    model="qwen2.5:7b",
+                    revision=revision,
+                    status="succeeded",
+                    output_tokens=tokens,
+                )
+            )
+    login(system["client"])
+    report = system["client"].get(f"/api/workspaces/{ws}/usage").json()
+    assert len(report["models"]) == 1
+    assert report["models"][0]["calls"] == 3
+    assert report["totals"]["output_tokens"] == 84
+    assert report["totals"]["missing_output_tokens"] == 1

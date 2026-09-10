@@ -354,6 +354,12 @@ The run remains linked through response, sources, workflow and history. See RUNB
 
 ## Settings and recorded usage
 
+Usage rows combine provider, model and operation across request hashes. Individual ledger
+revisions retain dispatch provenance. Generated output tokens are stored separately from input
+tokens; missing generation measurements stay explicit, and non-generation output is not applicable.
+Migration 0017 recovers available output counts from matching workspace/request response records.
+
+
 Settings groups member access with an administrator-only default language and the configured
 local embedding/reranking identities. Migration0013 adds a constrained workspace default (en);
 new manual-message forms default to “Match question”. The server resolves optional `auto`
@@ -368,7 +374,7 @@ configuration values are not a live provider-health probe.
 Quality separates model usage from registered historical retrieval checks; answer quality remains
 unverified. Authorized
 members query1–90 days of their workspace ledger. One SQL statement gives totals and the20
-most-used model/operation/revision groups the same snapshot; totals include omitted groups.
+most-used provider/model/operation groups the same snapshot; totals include omitted groups.
 Known token/cost/duration sums retain separate missing-value counts and call status counts.
 Durations are summed call time, not workflow wall time; handoff waits are not automatic model
 calls. No customer text appears in aggregates. See [usage guide](../backend/app/modules/usage/AGENTS.md).

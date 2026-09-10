@@ -1,5 +1,15 @@
 # Current status
 
+## Admin usage clarity — 2026-09-10
+
+Model usage now groups provider/model/role across dispatch hashes, with generated output-token
+totals and explicit missing counts. Migration0017 recovered 811 output tokens across15 local
+Qwen calls in the packaged database; request provenance is unchanged. Non-generation output
+is labelled not applicable. Seven focused PostgreSQL tests, frontend usage test/build and
+backend lint/format pass. Packaged database/API/worker are healthy after rebuild and migration.
+Chrome control was unavailable, so fresh visual/responsive verification remains unverified.
+
+
 ## Final demo review complete
 
 [Final review](plans/completed/final-demo-review.md) verifies the accepted demo and closes this task,

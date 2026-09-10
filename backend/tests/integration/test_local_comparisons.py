@@ -60,6 +60,7 @@ def test_local_four_paths_preserve_machine_provenance(system, monkeypatch):
     with Session(system["engine"]) as db:
         calls = list(db.scalars(select(ModelCall).where(ModelCall.operation == "generate")))
         assert len(calls) == 4 and all(c.status == "succeeded" for c in calls)
+        assert all(c.output_tokens == 8 for c in calls)
         assert all(c.model != "changed-after-admission" and c.input_tokens == 10 for c in calls)
         direct = db.scalar(select(Pipeline).where(Pipeline.name == "direct_llm"))
         assert direct.context["sources"] == []
