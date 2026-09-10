@@ -1,9 +1,11 @@
 # Multilingual Support Workbench
 
 Fresh rebuild on `codex/fresh-start`. Foundation and knowledge ingestion/search UI exist.
-The connected workbench processes messages into cited development drafts, exposes sources and
+The connected workbench processes messages into cited drafts, exposes sources and
 processing records, and supports cancellation and attributable approve/edit/reject/clarify decisions.
 Administrators can record a clarification question without approving or sending the draft.
+Optional local Ollama generation removes manual draft entry for new ordinary messages;
+see the [demo guide](docs/DEMO.md). Manual mode remains the default for offline checks.
 Linked retries and customer clarifications preserve original messages and attempt history.
 Inbox views separate messages needing attention, approved responses, processing and failures.
 Linked-attempt database/browser checks pass; the full release gates remain unfinished.

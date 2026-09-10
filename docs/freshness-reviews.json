@@ -1,21 +1,21 @@
 {
   "project": {
-    "fingerprint": "a48ccc960df41cf6a7d5862f1a31f71332ad045dbdc268d60158e2477ce7278c",
+    "fingerprint": "ed68274f7d1e11786204167d49d7dad3cc05057baa8d1d331f6e763f5c735741",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent latest demo-priority document review: user-directed pause of exhaustive corpus/hardening work preserves roadmap and unpassed production/live gates. Parsed actual120-row score with12 reviews/9 successes and no full-pipeline pass. Parent-observed Chrome run is ordinary real retrieval plus attributed contribution/edit/approval, not autonomous API inference; PDF/DOC and this upload unverified. DEMO now records Not allowed as observation and skill-suggested setting as untested remedy. User in-progress draft explicitly preserved; no source changes."
+    "rationale": "Reviewed README, reusable goal and STATUS against explicit local-model demo authorization and six saved EN/JA/ZH runs. Automatic ordinary drafts now coexist with manual historical/frozen runs. Failures, partial policy summaries, unchanged full regression limitations and paused exhaustive evaluation remain explicit; no production or semantic-quality completion claim."
   },
   "frontend": {
-    "fingerprint": "4b15a513995fa70f24b08507d3323f119f97d2c9f5d1c1ff1397c3cf536af390",
+    "fingerprint": "0d3dcb2e24564ab3fa5b4aa7d2236e843382197320c9d0cb2a5cf4b5c3d27e01",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ARCHITECTURE scoring boundary review: evaluator structural checks and attributed judgments are separate from unchanged Quality UI and edited system wording. No new browser/scoring UI or automatic entailment feature claimed; full response/review work remains incomplete."
+    "rationale": "Reviewed local versus manual result attribution, workflow generation ledger display, settings configuration wording and final review guidance against architecture and demo evidence. Existing review permissions remain; output usage is not claimed as an exposed ledger column. Documentation distinguishes prior frontend build/tests from final copy-only correction and bounded Chrome inspection."
   },
   "tooling": {
-    "fingerprint": "7cd2a04862558dbc0c328f18b216dd824181b4e47de1fb3a9ff8e897a93de80e",
+    "fingerprint": "6e06f4ba907eea76fc84704d2e3bbc2358a4fafcacfbbc6d60f994f8451a3690",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent RUNBOOK scoring command and judgment-format review: new output file, empty judgments generate hashes without answers, exact fiveboolean checks/attribution/rationale and stale observation rejection. Recollect before judgments; Exit0 denotes report generation not gate success. No runtime/provider/command budget changes."
+    "rationale": "Reviewed runbook local Ollama setup, configurable 7B demo selection versus 3B source default, host endpoints, restart/new-attempt instructions and unchanged manual comparison behavior. No-source and invalid-provider outcomes are distinguished; configured availability is not a health probe. Tooling implementation is unchanged."
   },
   "evaluation": {
     "fingerprint": "a4183367b04f972ce50df0a28d7a6c6be566d77e25fb6cfd0fe84db7d8cba0a0",
@@ -24,15 +24,15 @@
     "rationale": "Independent scorer/CLI/frozen rubric review: verified rubric SHA lock,90overall80language with all reviews required and safety/evidence veto,30/10 denominators, request/response/contributor/source bytes and offsets, original-only observation hashes. Parsed actual120 rows with zero reviewed/passed and all targetsfalse. Named judgments are not authenticated independence or automatic entailment; live quality unverified."
   },
   "backend": {
-    "fingerprint": "89a500b1535bac2df51226c7e02153aeb5c17fa60296c066111ee6c960272c07",
+    "fingerprint": "ddefef62c14a2318962c467e7d4dec49c04db072dec3eb832ea309bc6f3343d2",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent generation-scoring regression review: positive control mutations cover invalid envelope/configuration, safety aggregate veto, stale review, retained failed observations and source/response integrity. No application backend change. Tests support scorer mechanics only; actual120-row unreviewed report retains zero passes."
+    "rationale": "Independently reviewed optional local-generation graph, persisted request/call attribution, source validation, conditional ledger completion and approval fences against architecture. JSON mode uses Pydantic and server source IDs; no-source outcome is insufficient evidence. Verified final nine-case PostgreSQL log and six saved successful local-model draft records; no semantic benchmark or new full regression claim."
   },
   "infrastructure": {
-    "fingerprint": "978323a2aafdac0f8f10acc6a7adc52551ea60b098b2900b08088681ec160fee",
+    "fingerprint": "e6c6662cc863b1328fc558057f55aa50628d284cae80c53f7cb032710b6d1955",
     "reviewer": "docs_review",
     "outcome": "updated",
-    "rationale": "Independent shared ARCHITECTURE/RUNBOOK scope review: offline evaluator reads retained trusted local evidence and frozen source files, no API generation, deployment or model services. Exact citation identity distinct from semantic support; unchanged provider accounting/live boundaries remain open."
+    "rationale": "Reviewed Compose API/worker local mode/model environment defaults and fixed host Ollama endpoint against settings validation and runbook. Manual remains default, active 7B is configurable, no schema or paid/cloud deployment was added. Architecture correctly separates request-hash revision from model weights and zero external charge from local computation."
   }
 }

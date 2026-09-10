@@ -23,6 +23,9 @@ services:
     environment:
       ASI_DATABASE_URL: postgresql+psycopg://asi_rebuild:${ASI_DATABASE_PASSWORD:?Run init-env}@postgres:5432/asi_rebuild
       ASI_PROVIDER_MODE: mock
+      ASI_GENERATION_MODE: ${ASI_GENERATION_MODE:-manual}
+      ASI_OLLAMA_URL: http://host.docker.internal:11434
+      ASI_OLLAMA_MODEL: ${ASI_OLLAMA_MODEL:-qwen2.5:3b}
       ASI_EMBEDDING_CACHE: /home/workbench/models
     volumes:
       - embedding_models:/home/workbench/models
@@ -42,6 +45,9 @@ services:
     environment:
       ASI_DATABASE_URL: postgresql+psycopg://asi_rebuild:${ASI_DATABASE_PASSWORD:?Run init-env}@postgres:5432/asi_rebuild
       ASI_PROVIDER_MODE: mock
+      ASI_GENERATION_MODE: ${ASI_GENERATION_MODE:-manual}
+      ASI_OLLAMA_URL: http://host.docker.internal:11434
+      ASI_OLLAMA_MODEL: ${ASI_OLLAMA_MODEL:-qwen2.5:3b}
       ASI_EMBEDDING_CACHE: /home/workbench/models
     volumes:
       - embedding_models:/home/workbench/models

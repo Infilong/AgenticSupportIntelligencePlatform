@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
 
+from app.core.settings import GenerationSettings
 from app.jobs.queue import authorize
 from app.modules.identity.dependencies import CurrentUser, Database
 from app.modules.knowledge.selection import DEFAULT_STRATEGY
@@ -35,10 +36,12 @@ class WorkspaceSettings(ProcessingDefaults):
 
 
 def projection(workspace):
+    configuration = GenerationSettings()
+    automatic = configuration.generation_mode == "local_ollama"
     return {
         "default_language": workspace.default_language,
-        "generation_mode": "codex_assisted_development",
-        "automatic_generation_available": False,
+        "generation_mode": "local_ollama" if automatic else "codex_assisted_development",
+        "automatic_generation_available": automatic,
         "embedding_model": EMBEDDING_MODEL,
         "embedding_revision": EMBEDDING_REVISION,
         "reranker_model": RERANKER_MODEL,

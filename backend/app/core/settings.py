@@ -1,12 +1,36 @@
 from pathlib import Path
+from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class GenerationSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="ASI_", hide_input_in_errors=True)
 
+    generation_mode: Literal["manual", "local_ollama"] = "manual"
+    ollama_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "qwen2.5:3b"
+
+    @field_validator("ollama_url")
+    @classmethod
+    def local_endpoint(cls, value):
+        parsed = urlparse(value)
+        if (
+            parsed.scheme != "http"
+            or parsed.hostname not in {"127.0.0.1", "localhost", "host.docker.internal"}
+            or parsed.username
+            or parsed.password
+            or parsed.path not in {"", "/"}
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("Use the local Ollama HTTP endpoint")
+        return value.rstrip("/")
+
+
+class Settings(GenerationSettings):
     database_url: SecretStr
     provider_mode: str = "mock"
     embedding_cache: str | None = None

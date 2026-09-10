@@ -12,8 +12,8 @@ See [architecture](../ARCHITECTURE.md) for responsibilities and runtime data flo
 | `backend/app/core/` | 5 |
 | `backend/app/db/` | 3 |
 | `backend/app/jobs/` | 3 |
-| `backend/app/modules/` | 60 |
-| `backend/app/providers/` | 7 |
+| `backend/app/modules/` | 61 |
+| `backend/app/providers/` | 8 |
 | `backend/app/workflows/` | 3 |
 | `frontend/src/` | 2 |
 | `frontend/src/api/` | 2 |

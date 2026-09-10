@@ -31,7 +31,7 @@ export function ReviewPanel({ run, workspace, path, onSubmitted }: { run: Run; w
   if (run.state !== 'awaiting_review') return null;
   if (workspace.role === 'viewer') return <p className="muted">An operator or administrator must review this draft before it becomes an approved response.</p>;
   return <section className="review-panel"><h2>Review response</h2>
-    {adminRequired && <p className="muted">{run.review_kind === 'unclassified' ? 'This earlier draft has no review classification.' : 'This draft requests a policy exception.'} Administrator approval is required. Operators can reject it or request clarification.</p>}
+    {adminRequired && <p className="muted">{run.review_kind === 'unclassified' ? 'This draft has not been classified for operator approval.' : 'This draft requests a policy exception.'} Administrator approval is required. Operators can reject it or request clarification.</p>}
     <form onSubmit={submit}>
       <label htmlFor="review-action">Decision</label><select id="review-action" value={selected} onChange={e => setAction(e.target.value)} disabled={pending}>
         {mayApprove && <><option value="approve">Approve draft</option><option value="edit">Edit and approve</option></>}<option value="clarify">Request clarification</option><option value="reject">Reject response</option>

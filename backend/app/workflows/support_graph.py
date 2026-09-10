@@ -10,6 +10,7 @@ from langgraph.types import Command, interrupt
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
+from app.core.settings import GenerationSettings
 from app.jobs.queue import authorize
 from app.modules.knowledge.retrieval import retrieve
 from app.modules.support.context import digest, pack, validate_sources
@@ -20,6 +21,9 @@ from app.workflows.checkpoints import locked_graph
 
 
 class State(TypedDict, total=False):
+    generation_mode: str
+    generation_model: str
+    generation_endpoint: str
     original: str
     latest_input: str
     language: str
@@ -143,20 +147,35 @@ def execute(engine, job, retrieval=retrieve):
         response = replay.invoke(record)
         return {"response": response, "outcome": "draft"}
 
+    def local_generate(state):
+        from app.modules.support.local_response import execute as local_response
+
+        response = local_response(engine, job, state, lambda db: guard(db, job, run_id))
+        return {
+            "response": response,
+            "outcome": "draft" if response["citations"] else "insufficient_evidence",
+        }
+
     builder = StateGraph(State)
     builder.add_node("validate_input", traced("validate_input", validate))
     builder.add_node("retrieve_evidence", traced("retrieve_evidence", search))
     builder.add_node("development_generation", traced("development_generation", generate))
+    builder.add_node("local_generation", traced("local_generation", local_generate))
     builder.add_edge(START, "validate_input")
     builder.add_conditional_edges(
         "validate_input", lambda s: s["outcome"], {"retrieve": "retrieve_evidence", "clarification": END}
     )
     builder.add_conditional_edges(
         "retrieve_evidence",
-        lambda s: s["outcome"],
-        {"generate": "development_generation", "insufficient_evidence": END},
+        lambda s: (
+            "local"
+            if s["outcome"] == "generate" and s.get("generation_mode") == "local_ollama"
+            else s["outcome"]
+        ),
+        {"generate": "development_generation", "local": "local_generation", "insufficient_evidence": END},
     )
     builder.add_edge("development_generation", END)
+    builder.add_edge("local_generation", END)
     config = {"configurable": {"thread_id": f"support:{job.workspace_id}:{run_id}"}}
     checkpoint()
     with locked_graph(engine, run_id) as checkpointer:
@@ -183,6 +202,19 @@ def execute(engine, job, retrieval=retrieve):
                 "language": message.language,
                 "latest_input": latest_details if latest_details is not None else message.original,
             }
+            if not saved.values:
+                from app.modules.comparisons.access import linked
+
+                settings = GenerationSettings()
+                initial.update(
+                    {
+                        "generation_mode": "manual"
+                        if linked(db, run.workspace_id, run.id)
+                        else settings.generation_mode,
+                        "generation_model": settings.ollama_model,
+                        "generation_endpoint": settings.ollama_url,
+                    }
+                )
         failed_task = any(task.error is not None for task in saved.tasks)
         if saved.values and not (saved.next or saved.interrupts or failed_task):
             return saved.values  # Completed checkpoint, domain publication may still need replay.

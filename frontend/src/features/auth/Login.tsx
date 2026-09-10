@@ -31,7 +31,7 @@ export function Login({ onLogin }: { onLogin: (email: string, password: string) 
         <button className="primary" disabled={pending} type="submit">{pending ? 'Signing in…' : 'Sign in'}<ArrowRight size={17} /></button>
       </form>
       <p className="access-note">Need access? Contact your workspace administrator.</p>
-      <span className="mode-badge">Development · Simulated responses</span>
+      <span className="mode-badge">Local support workbench</span>
     </div></section>
   </main>;
 }

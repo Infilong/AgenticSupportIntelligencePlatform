@@ -35,6 +35,10 @@ def validate_approval(db, run):
     handoff = handoff_for(db, run)
     if handoff is None or handoff.response is None:
         raise HTTPException(409, "This run has no attributable development draft")
+    if handoff.provider == "local_ollama":
+        from app.modules.support.local_response import snapshot
+
+        snapshot(db, handoff)
     validate_sources(db, run.workspace_id, handoff.context)
 
 

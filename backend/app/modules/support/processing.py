@@ -50,7 +50,12 @@ def process(engine, job, retrieval=None):
                 )
                 db.add(handoff)
             if outcome == "draft":
-                snapshot(handoff)  # Revalidate identities even after a completed-checkpoint replay.
+                if handoff.provider == "local_ollama":
+                    from app.modules.support.local_response import snapshot as local_snapshot
+
+                    local_snapshot(db, handoff)
+                else:
+                    snapshot(handoff)  # Revalidate identities even after a completed-checkpoint replay.
                 if handoff.response != result["response"]:
                     raise ValueError("Completed graph response differs from stored contribution")
                 run.citations = citations(handoff.context, handoff.response)
@@ -69,6 +74,13 @@ def process(engine, job, retrieval=None):
             run.state = "completed"
             run.outcome = "clarification_needed" if outcome == "clarification" else "insufficient_evidence"
             run.draft = (CLARIFICATION if outcome == "clarification" else MISSING)[message.language]
+            if result.get("generation_mode") == "local_ollama" and result.get("response"):
+                from app.modules.support.local_response import snapshot as local_snapshot
+
+                response = local_snapshot(db, handoff_for(db, run))
+                if response != result["response"] or response["citations"]:
+                    raise ValueError("Unsupported response does not match its recorded evidence")
+                run.draft = response["answer"]
             run.finished_at = db.scalar(select(func.clock_timestamp()))
         return {"run_id": str(run.id), "state": run.state}
 

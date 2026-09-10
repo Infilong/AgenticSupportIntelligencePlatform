@@ -13,6 +13,11 @@ to delay this demo. The immediate deliverable is a usable local knowledge-to-ans
 with real retrieval, visible agent processing, and administrator review/intervention. Keep the
 development response mode explicit. Production/live-provider gates remain deferred, not passed.
 
+Subsequent clarification: ordinary EN/JA/ZH questions must produce automatic answers rather
+than wait for development contributions. The user authorized a local language model, including
+downloads if needed. Keep real retrieval and administrator review; identify local inference
+honestly. Manual contributions remain available for existing handoffs and frozen comparisons.
+
 Rebuild AgenticSupportIntelligencePlatform in this repository through M1–M6, following
 [REBUILD_PLAN.md](../REBUILD_PLAN.md), the [acceptance matrix](ACCEPTANCE.md) and applicable
 root/local AGENTS.md instructions.

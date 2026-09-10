@@ -2,6 +2,13 @@
 
 ## Authority and next action
 
+Demo blocker fixed: configured ordinary questions now receive automatic local-model drafts.
+The [local-generation slice](plans/active/demo-local-generation.md) connects LangChain/Ollama
+to the existing graph and admin review. Six actual EN/JA/ZH questions, including the user's two
+Chinese messages, reached cited drafts in6–18s with `qwen2.5:7b` and JSON mode. Chrome displays
+the Chinese policy answer and local-model workflow. Ten provider units, nine final focused
+PostgreSQL cases and independent source review pass. Frozen evaluation work remains paused.
+
 M1–M6 remain authorized and incomplete. Latest direction: prioritize a working demo and defer
 RAG tuning/perfection. On 2026-09-10 (Tokyo), the user removed the execution time limit.
 Later that day, the user explicitly prioritized a successful demo soon. Stop extending exhaustive
@@ -116,8 +123,9 @@ Development: `asi-rebuild-v1`, app8010/frontend5180/PostgreSQL5440. Packaged rel
 operating on them; these names are configuration, not a perpetual health assertion.
 [Architecture](ARCHITECTURE.md) and [runbook](RUNBOOK.md) own topology, setup and commands.
 
-Local CPU embedding/reranking and retrieval are real. Responses are explicitly attributed
-Codex-assisted or fixed test contributions at a development interrupt. No external generation
+Local CPU embedding/reranking and retrieval are real. Configured ordinary runs use local-model
+inference; existing manual waits, frozen comparisons and offline tests use attributed development
+contributions. No paid/cloud generation
 adapter/API call or paid billing has been verified. Do not present handoff duration as inference
 latency, exact quote matching as semantic entailment, or mock output as model quality.
 

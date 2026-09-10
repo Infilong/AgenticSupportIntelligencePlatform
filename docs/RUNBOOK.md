@@ -1,5 +1,26 @@
 # Local development runbook
 
+## Automatic local demo answers
+
+Install/start Ollama locally and run `ollama pull qwen2.5:7b`. Set these nonsecret values in
+the ignored root `.env`, then run `python scripts/manage.py up`:
+
+```dotenv
+ASI_GENERATION_MODE=local_ollama
+ASI_OLLAMA_MODEL=qwen2.5:7b
+```
+
+Compose connects API/worker to `http://host.docker.internal:11434`; native backend processes
+default to `http://127.0.0.1:11434`. Only local HTTP hosts are accepted. No paid API is used.
+New ordinary messages produce cited drafts for admin review, or an insufficient-evidence
+response when the model selects no relevant source. That response is unverified and not an
+approved answer. Settings displays
+the configured mode, not a readiness probe. Existing manual waits remain manual: cancel/retry
+to create a fresh linked attempt. Frozen comparisons stay manual. Set mode `manual` and restart
+to return new ordinary runs to development contributions. Keep Ollama running during the demo.
+Source selection validates IDs and quotes server-held passages; it does not prove semantic
+entailment. Provider outages/invalid outputs produce inspectable failures, not canned answers.
+
 ## Documentation maintenance
 
 Run `python scripts/docs_freshness.py garden` for source-to-document review material,
@@ -520,7 +541,7 @@ the same form/file remains open; selecting a file again is a new import, not con
 Settings → Processing defaults lets an admin preselect en/ja/zh for new manual messages.
 Existing messages and JSONL imports retain their own explicit language. Settings also links
 member management and shows configured local model identities/revisions, alongside the explicit
-absence of an automatic generation API. This display does not probe provider readiness.
+configured manual/local generation mode. This display does not probe provider readiness.
 `GET/PUT /api/workspaces/{id}/settings` is admin-only; PUT accepts default_language only.
 
 Quality → Model usage shows the current workspace's last1,7,30 or90 days.

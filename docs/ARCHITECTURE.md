@@ -4,6 +4,17 @@ Updated 2026-09-09 for historical retrieval results and isolated built-asset pac
 Foundation, knowledge ingestion, real retrieval and the message-to-development-draft API exist.
 The workbench UI and human-review continuation are connected. [STATUS](STATUS.md) owns verification.
 
+Optional local generation: new ordinary graphs snapshot `ASI_GENERATION_MODE`, model and endpoint.
+`local_generation` calls LangChain ChatOllama with bounded authorized context and structured
+source selection. Existing manual checkpoints and frozen comparisons retain manual mode.
+The existing handoff table stores local request/response hashes with provider `local_ollama`,
+no human contributor, and a model-call reference. The ledger records dispatch before inference,
+actual input tokens/duration and zero external charge; returned output usage stays in the stored
+response. Its revision field binds the request hash, not a model-weights checksum. Publication
+and approval validate source freshness and machine attribution. Local drafts require an admin;
+a model cannot grant review authority. Uncertain dispatches require a fresh attempt, not silent
+regeneration. No schema migration, Redis or cloud generation was added.
+
 ## Current project topology
 
 ```text
@@ -190,15 +201,15 @@ LangGraph continuation and business-result publication remain distinct responsib
 
 ## Implemented support backend
 
-Original message → atomic run/job → LangGraph input check → real retrieval → durable development
-handoff → authenticated response submission → validated cited draft. A one-character input such
+Original message → atomic run/job → LangGraph input check → real retrieval → configured local
+inference or durable manual handoff → validated cited draft. A one-character input such
 as `w` requests clarification; an empty retrieval produces insufficient evidence. Neither is
 automatically routed to administrator review. Development waiting releases the worker.
 
 The [support guide](../backend/app/modules/support/AGENTS.md) owns local invariants. The graph
 uses server-derived workspace/run threads and a dedicated PostgreSQL advisory lock. Every
 processing/publication boundary checks the live job lease and original requester's authority;
-resume also checks the contributor. Every packed source is revalidated before export, submission
+manual resume also checks the contributor. Every packed source is revalidated before export, submission
 and publication, including uncited passages. Context is capped at five passages and 24,000 UTF-8
 JSON bytes. Among the existing top-five candidates, an oversized complete snapshot is omitted
 and later candidates are considered. No source text is truncated. This byte bound does not
@@ -339,7 +350,8 @@ Settings groups member access with an administrator-only default language and th
 local embedding/reranking identities. Migration0013 adds a constrained workspace default (en);
 new manual-message forms preselect it, while every admitted message keeps its explicit language.
 The configuration endpoint never returns credentials, connection strings or cache paths.
-Development generation is explicitly attributed and automatic external generation is unavailable;
+Manual generation is explicitly attributed; optional local generation is configured separately.
+Paid/cloud generation remains unavailable;
 configuration values are not a live provider-health probe.
 
 Quality separates model usage from registered historical retrieval checks; answer quality remains
