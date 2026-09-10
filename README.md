@@ -4,10 +4,11 @@ Fresh rebuild on `codex/fresh-start`. Foundation and knowledge ingestion/search 
 The connected workbench processes messages into cited drafts, exposes sources and
 processing records, and supports cancellation and attributable approve/edit/reject/clarify decisions.
 Administrators can record a clarification question without approving or sending the draft.
-Optional local Ollama generation removes manual draft entry for new ordinary messages;
+Optional local Ollama generation routes new ordinary messages to automatic supported answers,
+exception review, missing-support intervention or retained set-aside outcomes;
 see the [demo guide](docs/DEMO.md). Manual mode remains the default for offline checks.
 Linked retries and customer clarifications preserve original messages and attempt history.
-Inbox views separate messages needing attention, approved responses, processing and failures.
+Inbox views separate messages needing attention, automatic or approved responses, processing and failures.
 Linked-attempt database/browser checks pass; the full release gates remain unfinished.
 See [current status](docs/STATUS.md)
 for the milestone, execution boundary and dated verification evidence.

@@ -32,6 +32,10 @@ def reviewer_authority(db, run, actor_id, action):
 
 
 def validate_approval(db, run):
+    if not run.citations or run.outcome == "insufficient_evidence":
+        raise HTTPException(
+            409, "No supporting evidence. Request clarification or add knowledge and start a fresh attempt."
+        )
     handoff = handoff_for(db, run)
     if handoff is None or handoff.response is None:
         raise HTTPException(409, "This run has no attributable development draft")

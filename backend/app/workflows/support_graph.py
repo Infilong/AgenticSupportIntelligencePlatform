@@ -21,6 +21,7 @@ from app.workflows.checkpoints import locked_graph
 
 
 class State(TypedDict, total=False):
+    routing_version: str
     generation_mode: str
     generation_model: str
     generation_endpoint: str
@@ -101,7 +102,13 @@ def execute(engine, job, retrieval=retrieve):
 
     def validate(state):
         meaningful = sum(c.isalnum() for c in state.get("latest_input", state["original"])) >= 2
-        return {"outcome": "retrieve" if meaningful else "clarification"}
+        return {
+            "outcome": "retrieve"
+            if meaningful
+            else "set_aside"
+            if state.get("routing_version")
+            else "clarification"
+        }
 
     def search(state):
         with Session(engine) as db, db.begin():
@@ -131,7 +138,9 @@ def execute(engine, job, retrieval=retrieve):
             "retrieval_id": str(result["trace_id"]),
             "context": context,
             "context_hash": digest(context),
-            "outcome": "generate" if context["sources"] else "insufficient_evidence",
+            "outcome": "generate"
+            if context["sources"] or state.get("routing_version")
+            else "insufficient_evidence",
         }
 
     def generate(state):
@@ -151,9 +160,18 @@ def execute(engine, job, retrieval=retrieve):
         from app.modules.support.local_response import execute as local_response
 
         response = local_response(engine, job, state, lambda db: guard(db, job, run_id))
+        if state.get("routing_version") and response.get("routing"):
+            outcome = {
+                "answer": "answer",
+                "review": "draft",
+                "missing": "missing",
+                "irrelevant": "set_aside",
+            }[response["routing"]["decision"]]
+        else:
+            outcome = "draft" if response["citations"] else "insufficient_evidence"
         return {
             "response": response,
-            "outcome": "draft" if response["citations"] else "insufficient_evidence",
+            "outcome": outcome,
         }
 
     builder = StateGraph(State)
@@ -163,7 +181,9 @@ def execute(engine, job, retrieval=retrieve):
     builder.add_node("local_generation", traced("local_generation", local_generate))
     builder.add_edge(START, "validate_input")
     builder.add_conditional_edges(
-        "validate_input", lambda s: s["outcome"], {"retrieve": "retrieve_evidence", "clarification": END}
+        "validate_input",
+        lambda s: s["outcome"],
+        {"retrieve": "retrieve_evidence", "clarification": END, "set_aside": END},
     )
     builder.add_conditional_edges(
         "retrieve_evidence",
@@ -215,6 +235,8 @@ def execute(engine, job, retrieval=retrieve):
                         "generation_endpoint": settings.ollama_url,
                     }
                 )
+                if initial["generation_mode"] == "local_ollama":
+                    initial["routing_version"] = "support-routing-v1"
         failed_task = any(task.error is not None for task in saved.tasks)
         if saved.values and not (saved.next or saved.interrupts or failed_task):
             return saved.values  # Completed checkpoint, domain publication may still need replay.

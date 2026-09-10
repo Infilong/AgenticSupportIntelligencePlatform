@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 
 from app.jobs.contracts import Publication
 from app.modules.reviews.service import draft_identity
+from app.modules.support import routed_publication
 from app.modules.support.context import citations, digest, validate_sources
 from app.modules.support.models import Handoff
 from app.modules.support.service import handoff_for
@@ -23,8 +24,10 @@ MISSING = {
 def process(engine, job, retrieval=None):
     result = execute(engine, job, **({"retrieval": retrieval} if retrieval else {}))
     run_id = uuid.UUID(job.payload["run_id"])
-    if result["outcome"] == "draft":
-        quoted = citations(result["context"], result["response"])
+    if result["outcome"] == "draft" or (
+        result["outcome"] == "missing" and routed_publication.applies(result)
+    ):
+        quoted = citations(result["context"], result["response"]) if result["response"]["citations"] else []
         wait_for_review(engine, job, draft_identity(result["response"]["answer"], quoted))
 
     def publish(db, current):
@@ -33,6 +36,9 @@ def process(engine, job, retrieval=None):
             return {"run_id": str(run.id), "state": run.state}
         if result.get("retrieval_id"):
             run.retrieval_id = uuid.UUID(result["retrieval_id"])
+        if routed_publication.applies(result):
+            routed_publication.publish(db, run, message, result)
+            return {"run_id": str(run.id), "state": run.state}
         outcome = result["outcome"]
         if outcome in {"generate", "draft"}:
             validate_sources(db, run.workspace_id, result["context"])

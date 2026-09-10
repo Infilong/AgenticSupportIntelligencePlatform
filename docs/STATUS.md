@@ -2,18 +2,31 @@
 
 ## Authority and next action
 
-Demo blocker fixed: configured ordinary questions now receive automatic local-model drafts.
-The [local-generation slice](plans/active/demo-local-generation.md) connects LangChain/Ollama
-to the existing graph and admin review. Six actual EN/JA/ZH questions, including the user's two
-Chinese messages, reached cited drafts in6–18s with `qwen2.5:7b` and JSON mode. Chrome displays
-the Chinese policy answer and local-model workflow. Ten provider units, nine final focused
-PostgreSQL cases and independent source review pass. Frozen evaluation work remains paused.
+Current slice: [automatic answers and intervention routing](plans/active/demo-outcome-routing.md).
+The user now requires supported automatic answers, exception review, missing-support intervention
+and retained set-aside messages, then completion of M5/M6. This supersedes the earlier demo-only
+pause and blanket admin-review requirement. Actual local runtime evidence at
+`.artifacts/demo-routing/final/case-01..10.json` records four automatic answers, two policy
+reviews and four missing-support interventions. Weather/photosynthesis conservatively went to
+human intervention, not set-aside; this classifier limitation remains. Six separate EN/JA/ZH
+meaningless/spam cases are retained as completed/set_aside (`noise-01..06.json` in the parent
+directory). Initial ValidationError attempts remain preserved; reason-only abstentions now use
+their nonempty reason while retaining structured model output and dropping unrelated citations.
+Sixteen PostgreSQL checks passed55.29s before that provider normalization at
+`.artifacts/m0/demo-routing-api-20260910T044506954108Z`; final16 provider units passed1.38s and
+Ruff/182-file formatting pass. Final frontend build and48 tests pass9.79s. Chrome inspected an automatic answer/exact source
+and missing-support controls without approve/edit. First screenshot capture timed out; later
+chrome-missing.png and chrome-set-aside.png under `.artifacts/demo-routing/` were captured and
+visually inspected by the coordinator, with no review controls on the set-aside outcome.
+Next: connect separately versioned local generation to the frozen four-pipeline M5 comparison,
+preserving direct/no-retrieval behavior, comparable settings and full original denominators.
+This smoke is not full semantic evaluation, complete regression or M5/M6 completion.
 
-M1–M6 remain authorized and incomplete. Latest direction: prioritize a working demo and defer
-RAG tuning/perfection. On 2026-09-10 (Tokyo), the user removed the execution time limit.
-Later that day, the user explicitly prioritized a successful demo soon. Stop extending exhaustive
-evaluation and production-hardening work now; deliver the core knowledge → question → retrieval/
-agent details → administrator review/intervention → result journey. Fix only blockers to that demo.
+Earlier local-generation evidence remains valid for its historical draft-only behavior: six
+EN/JA/ZH questions reached cited drafts with Qwen7B; see the
+[local-generation record](plans/active/demo-local-generation.md). M1–M6 remain authorized and
+incomplete. Finish the agreed acceptance work after routing verification; avoid speculative
+features and deferred RAG tuning. The user removed the execution time limit on2026-09-10.
 There is no fixed unattended deadline; continue the authorized goal until verified completion,
 a genuine blocker or a new user instruction. Earlier execution windows are historical.
 Preserve the archive, all existing databases, unrelated edits and secrets. Small verified commits
@@ -137,8 +150,8 @@ latency, exact quote matching as semantic entailment, or mock output as model qu
   historical retrieval reports. `comparable` only means unchanged corpus/not cancelled, not
   complete or correct outputs. Contributions remain in the development CLI.
 - External generation-provider integration, generation accounting and semantic support/language/
-  routing quality remain incomplete. No API access/spending authority is available; continue
-  independent offline work without calling LIVE gates passed.
+  routing quality remain incomplete. No paid API access/spending authority is available. Authorized local inference supplies
+  local-live evidence; external-provider verification stays separate and unverified.
 - Broader release security/session and process-kill/recovery matrices remain incomplete.
 - Native Chrome200% zoom is unverified. Computer Use stopped at13:18 UTC because it could not
   identify the browser URL confidently enough for policy enforcement; keep it stopped for this

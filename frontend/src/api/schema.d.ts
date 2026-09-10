@@ -1359,6 +1359,8 @@ export interface components {
         };
         /** RunDetail */
         RunDetail: {
+            /** Routing Reason */
+            routing_reason?: string | null;
             /**
              * Id
              * Format: uuid

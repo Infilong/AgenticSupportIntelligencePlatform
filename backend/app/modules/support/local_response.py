@@ -87,6 +87,15 @@ def execute(engine, job, state, guard, inference=None):
     started = time.monotonic()
     try:
         response, usage = inference(request, state["context"])
+        if state.get("routing_version") and not response.get("routing"):
+            response = {
+                **response,
+                "routing": {
+                    "version": state["routing_version"],
+                    "decision": "review" if response["citations"] else "missing",
+                    "reason": "The model did not provide a complete routing decision; human input is needed.",
+                },
+            }
         if response["citations"]:
             citations(state["context"], response)
     except Exception as error:

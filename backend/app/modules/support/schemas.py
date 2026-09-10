@@ -77,6 +77,7 @@ class MessagePage(BaseModel):
 
 
 class RunDetail(BaseModel):
+    routing_reason: str | None = None
     id: UUID
     message_id: UUID
     parent_run_id: UUID | None

@@ -144,6 +144,7 @@ def test_local_model_can_report_insufficient_evidence(system, monkeypatch):
     run = create(system)
     assert run_support(system)
     result = system["client"].get(base(system, run)).json()
-    assert result["state"] == "completed" and result["outcome"] == "insufficient_evidence"
+    assert result["state"] == "awaiting_review" and result["outcome"] == "insufficient_evidence"
+    assert result["draft_hash"] and "routing decision" in result["routing_reason"]
     assert result["draft"] == "Please specify which policy you need."
     assert result["citations"] == [] and result["reviewed_response"] is None

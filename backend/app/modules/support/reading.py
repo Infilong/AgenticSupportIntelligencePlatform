@@ -53,7 +53,7 @@ def messages(db, workspace_id, actor_id, search, offset, limit, view="all", labe
                 SupportRun.outcome.in_(["clarification_needed", "insufficient_evidence"]),
             ),
         ),
-        "ready": and_(state == "completed", SupportRun.outcome == "approved_response"),
+        "ready": and_(state == "completed", SupportRun.outcome.in_(["approved_response", "answered"])),
         "processing": state.in_(["queued", "running"]),
         "failed": state == "failed",
         "unprocessed": SupportRun.id.is_(None),
@@ -180,7 +180,7 @@ def detail(db, workspace_id, actor_id, run_id):
         "outcome": run.outcome,
         "review_kind": run.review_kind,
         "review_version": run.review_version,
-        "draft_hash": draft_identity(run.draft, run.citations) if run.draft and run.citations else None,
+        "draft_hash": draft_identity(run.draft, run.citations) if run.draft else None,
         "reviewed_response": run.reviewed_response,
         "review": {
             "id": decision.id,
@@ -196,6 +196,7 @@ def detail(db, workspace_id, actor_id, run_id):
         "job_id": job.id,
         "error_code": job.error_code,
         "draft": run.draft,
+        "routing_reason": (handoff.response or {}).get("routing", {}).get("reason") if handoff else None,
         "citations": run.citations,
         "retrieval_id": run.retrieval_id,
         "handoff": {

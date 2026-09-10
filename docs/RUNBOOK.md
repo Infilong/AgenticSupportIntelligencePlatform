@@ -12,9 +12,11 @@ ASI_OLLAMA_MODEL=qwen2.5:7b
 
 Compose connects API/worker to `http://host.docker.internal:11434`; native backend processes
 default to `http://127.0.0.1:11434`. Only local HTTP hosts are accepted. No paid API is used.
-New ordinary messages produce cited drafts for admin review, or an insufficient-evidence
-response when the model selects no relevant source. That response is unverified and not an
-approved answer. Settings displays
+New versioned ordinary runs distinguish automatic cited answers, exceptions needing admin
+review, missing-support intervention and retained set-aside messages. Automatic answers are
+internal machine results, not human approval or an external send. Missing support cannot be
+approved or edited into an approval; clarify, reject or start a fresh linked attempt instead.
+Inspect the recorded routing reason and sources before acting. Settings displays
 the configured mode, not a readiness probe. Existing manual waits remain manual: cancel/retry
 to create a fresh linked attempt. Frozen comparisons stay manual. Set mode `manual` and restart
 to return new ordinary runs to development contributions. Keep Ollama running during the demo.

@@ -15,7 +15,9 @@ export function nodeState(run: Run, node: string) {
   if (!latest) {
     const skipped = run.state === 'completed' && (
       (run.outcome === 'clarification_needed' && !run.retrieval_id && node !== 'validate_input') ||
-      (run.outcome === 'insufficient_evidence' && ['development_generation', 'human_review'].includes(node))
+      (run.outcome === 'insufficient_evidence' && ['development_generation', 'human_review'].includes(node)) ||
+      (run.outcome === 'answered' && node === 'human_review') ||
+      (run.outcome === 'set_aside' && (node === 'human_review' || !run.retrieval_id && node !== 'validate_input'))
     );
     return { records, latest, tone: 'pending', label: skipped ? 'Skipped by outcome' : terminal ? 'Not reached' : 'Pending' };
   }

@@ -7,9 +7,15 @@ claim that hybrid superiority, automated grounding validation or external genera
 
 ## RAG AUDIT
 
-**Pipeline:** permission-gated knowledge → versioned chunks/vectors → authorized exact vector
+**Historical audit pipeline (2026-09-09):** permission-gated knowledge → versioned chunks/vectors → authorized exact vector
 search → local reranker → bounded evidence snapshot → durable development handoff → cited draft
-→ human review. This is real retrieval and workflow execution with simulated generation.
+→ human review. That checkpoint used real retrieval/workflow with simulated generation.
+
+Current ordinary local mode uses real LangChain/Ollama inference and versioned routing: supported
+automatic answer, exception review, missing-support intervention or retained set-aside outcome.
+Source IDs and publication authority are checked independently of the model; classification
+and claim support still require evaluation. Manual/frozen comparisons preserve their older mode.
+This update does not change frozen retrieval targets or establish full semantic-quality gates.
 
 **Correct boundaries inspected:** immutable original bytes/checksums; normalized-text offsets;
 workspace and active-version restrictions before candidate materialization; revalidation after
@@ -77,9 +83,9 @@ The current middleware creates HTTP IDs, but does not persist this entire correl
 | 9. ACL/security | Workspace membership before embedding/search; source/actor rechecks; foreign IDs denied. [retrieval tests](../backend/tests/integration/test_retrieval.py) | Retain the same restrictions in BM25, fusion, trace lookup and citation inspection. No leak was found in this bounded audit; this is not a completed security certification. |
 | 10. Reranking/dedup/context | Pinned multilingual cross-encoder scores up to 20 pairs, truncated to 512 pair tokens. No explicit overlap/diversity suppression. [reranker](../backend/app/providers/local_reranker.py) | Trace truncation and evidence lost from model input. Measure vector vs reranked quality/cost. Deduplicate by provenance/overlap; do not collapse genuine policy conflicts. |
 | 10. Context budget | Consider the existing top five in rank order; omit oversized complete snapshots and try later candidates within 24,000 UTF-8 JSON bytes. Context hash, no source-string truncation. [context](../backend/app/modules/support/context.py) | Full tokenizer-aware prompt+query+conversation+evidence+reserved-output budget; record excluded sources/reasons and token counts. Bytes are a transport bound, not a model budget or deduplication. |
-| 11. Generation | Actual LangGraph pauses for an authenticated, attributed development contribution. [graph](../backend/app/workflows/support_graph.py) | No external LLM generation path/quality proof yet. Persist real input/output usage when added; development wait is not LLM latency. |
+| 11. Generation | Manual graphs pause for attributed contributions; configured ordinary local graphs now call LangChain/Ollama and record usage and routing. [Current topology](ARCHITECTURE.md) | No paid/cloud connectivity or full semantic-quality proof. Local input usage is in the ledger, returned output usage in the stored response; development wait is not inference latency. |
 | 12. Citations | Supplied chunk ID, exact quote, current source/version, offset and checksum checks | Claim entailment/completeness is separate. Valid ID + plausible quote cannot establish that the answer is supported. |
-| 13. No-source/review | Empty evidence routes to insufficient evidence; short input clarifies; drafts require human review | Nonempty nearest neighbours can still be irrelevant. No calibrated relevance/semantic abstention gate exists. Conflict/policy categories are development annotations, not automated detectors. |
+| 13. No-source/review | New local routing separates automatic answers, exception review, missing-support intervention and set-aside input; historical manual behavior remains | Nonempty nearest neighbours can still be irrelevant. Model classification and conservative server backstops are not calibrated relevance, grounding or policy correctness proof. |
 | 14. Multilingual behavior | EN/JA/ZH queries, same-language instruction, multilingual embedding/reranker | Test output language and forced cross-language source directions independently; UI language acceptance is not multilingual RAG proof. |
 | 15. Evaluation | Frozen real API retrieval runner, per-language success@5/section recall@5, leakage and latency. [runner](../evals/run_retrieval.py) | No full Precision/Recall@K sweep, held-out generalization, answer/citation support or direct/vector/hybrid/system comparison. |
 | 16. Observability | Retrieval final IDs/scores, graph steps, embedding/rerank input tokens/duration/charge, uncertainty and human decisions | Bounded vector/BM25/fusion/reranker/final candidate stages and exclusions are now saved and visible. Context selection and full origin correlation remain pending. Output tokens, generation pricing/version and complete failure taxonomy remain missing. |

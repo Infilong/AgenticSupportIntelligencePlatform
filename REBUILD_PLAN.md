@@ -15,15 +15,22 @@ Help an internal support operator produce a defensible response faster.
 The main flow is:
 
 Customer message → save original → retrieve trusted knowledge → draft a response →
-inspect supporting evidence → approve, edit, reject or request clarification.
+inspect supporting evidence → automatic supported answer or authorized intervention.
+
+User clarification on 2026-09-10: routine supported answers need no human approval; policy
+exceptions require review, missing support requires intervention, and irrelevant/spam/meaningless
+messages are retained but set aside. Automatic answers are internal machine results, never
+fabricated human approvals or evidence that an external action was executed. Complete M5/M6
+after this routing repair; the earlier demo-only pause is superseded.
 
 Keep the original input, execution attempts, intermediate evidence, proposed response,
 final response and human decisions linked. An operator should understand what happened
 without reading JSON or learning the underlying frameworks.
 
 English, Japanese and Chinese are first-class input, evidence and response languages.
-Local-first means the application and database run locally. Live model and embedding
-requests send selected content to the configured external provider; explain this in setup.
+Local-first means the application and database run locally. Authorized local inference is real
+model execution without paid API access. Any future external provider sends selected content
+outside the local runtime and requires separate access/spending authority; explain this in setup.
 
 ## 2. Fixed V1 scope
 
@@ -102,13 +109,14 @@ Execution states: queued, running, waiting_for_input, awaiting_review, completed
 cancel_requested, cancelled, rejected.
 
 Response outcomes: grounded_draft, clarification_needed, insufficient_evidence,
-conflicting_evidence, policy_review_required, approved_response, rejected_response.
+conflicting_evidence, policy_review_required, approved_response, rejected_response, answered, set_aside.
 
 | Situation | Expected experience |
 | --- | --- |
-| Supported question | Draft with supporting citations; review/edit/copy controls |
-| Meaningless or ambiguous message | Specific clarification request; no automatic admin review |
-| Missing policy | Insufficient-evidence explanation; add knowledge or answer manually |
+| Supported routine question | Automatic internal answer with citations; inspect/copy without fabricated human approval |
+| Meaningless/spam/unrelated message | Retain and set aside; allow a fresh attempt with a meaningful question |
+| Relevant but ambiguous message | Request the missing details through intervention |
+| Missing policy | Insufficient-evidence intervention; clarify, reject or add knowledge and retry; no unsupported approval |
 | Conflicting active evidence | Show conflicting excerpts and require review |
 | Policy exception | Explain the exception and required review |
 | Provider failure | Technical failure with a safe retry action; no invented answer |
@@ -514,8 +522,9 @@ tested local profile, not an enterprise scale claim. Bound payloads and paginate
 | M5 | Four evaluation pipelines, per-language results and compact usage view |
 | M6 | Fresh-install, full browser/security/live checks, restoration and release evidence |
 
-Observability and tests begin in M1. M2's live gate remains unverified without spending
-authorization; continue only independent offline work, never declare it passed from mocks.
+Observability and tests begin in M1. Real authorized local models can supply local-live evidence;
+external-provider gates remain unverified without access/spending authority. Never count mocks
+as model-quality evidence or local inference as proof of external API connectivity.
 Complete the first usable RAG flow before building Quality or adding secondary administration.
 
 Use one implementation owner. Delegate bounded read-only review only when it improves evidence.

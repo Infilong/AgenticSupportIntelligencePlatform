@@ -8,7 +8,7 @@ import { RetrievalTrace } from '../knowledge/RetrievalTrace';
 export function WorkflowView({ run, workspaceId }: { run: Run; workspaceId: string }) {
   const local = run.handoff?.provider === 'local_ollama' || run.steps.some(step => step.node === 'local_generation');
   const workflowNodes = defaultNodes.map(item => local && item.id === 'development_generation'
-    ? { ...item, id: 'local_generation', detail: 'A local model generates a draft from retrieved evidence through LangChain. Administrator review is still required.' } : item);
+    ? { ...item, id: 'local_generation', detail: 'A local model uses retrieved knowledge through LangChain. Routine supported answers complete automatically; exceptions and missing evidence need human input.' } : item);
   const [selected, setSelected] = useState<string | null>(null);
   const node = workflowNodes.find(item => item.id === selected);
   const state = node ? nodeState(run, node.id) : null;
@@ -44,7 +44,7 @@ export function WorkflowView({ run, workspaceId }: { run: Run; workspaceId: stri
           <strong>{call.model}</strong><span>{call.status} · {duration(call.duration_ms)} · {call.input_tokens ?? 'Unknown'} input tokens</span>
           <span>External charge: {call.api_cost_usd == null ? 'Unknown' : `$${call.api_cost_usd.toFixed(4)}`}</span>
           {call.error_code && <code>{call.error_code}</code>}</div>)}
-        <p className="muted">Runs on this computer. Citations identify retrieved passages; an administrator must check the answer.</p></>}
+        <p className="muted">Runs on this computer. Citations identify retrieved passages. The recorded outcome determines whether human intervention is needed.</p></>}
       {node.id === 'human_review' && <p>{run.review ? `Recorded decision: ${run.review.action}. ${run.review.reason}` : 'No human decision recorded.'}</p>}
       {state.records.length ? <><h3>Recorded invocations</h3><ol className="workflow-records">{state.records.map(step => <li key={step.id}>
         <span>{step.status} · {duration(step.duration_ms)} · job attempt {step.job_attempt}</span>{step.error_code && <code>{step.error_code}</code>}

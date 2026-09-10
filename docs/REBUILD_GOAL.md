@@ -6,17 +6,17 @@ incorporates later user instructions; the original attached goal remains a histo
 The user removed the execution time limit on 2026-09-10 (Tokyo). Continue within the
 authorized scope without a fixed unattended deadline; retain other authority constraints.
 
-Latest user direction (2026-09-10): deliver a successful demo product soon. Prioritize the
-core user journey and fix only demo-blocking issues. Pause exhaustive corpus response/scoring
-work, minor refinements and broad production hardening. M1–M6 remain the roadmap, not a reason
-to delay this demo. The immediate deliverable is a usable local knowledge-to-answer workflow
-with real retrieval, visible agent processing, and administrator review/intervention. Keep the
-development response mode explicit. Production/live-provider gates remain deferred, not passed.
+Latest user direction (2026-09-10): repair routing, then finish the agreed M5/M6 gates.
+Routine supported EN/JA/ZH questions should receive automatic answers. Policy exceptions need
+administrator review; missing support needs human intervention; spam, meaningless and clearly
+unrelated messages are retained but set aside. Automatic results are internal machine answers,
+not human approvals or externally executed actions. This supersedes the earlier demo-only pause
+and blanket administrator-review rule without weakening acceptance targets.
 
-Subsequent clarification: ordinary EN/JA/ZH questions must produce automatic answers rather
-than wait for development contributions. The user authorized a local language model, including
-downloads if needed. Keep real retrieval and administrator review; identify local inference
-honestly. Manual contributions remain available for existing handoffs and frozen comparisons.
+The user authorized local model inference and downloads. Keep real retrieval and attributable
+model processing. Existing manual handoffs and frozen development comparisons retain their
+recorded mode; never relabel their contributions as actual inference. Local-live evidence is
+valid for the local product; paid/cloud connectivity and spending remain separately unauthorized.
 
 Rebuild AgenticSupportIntelligencePlatform in this repository through M1–M6, following
 [REBUILD_PLAN.md](../REBUILD_PLAN.md), the [acceptance matrix](ACCEPTANCE.md) and applicable

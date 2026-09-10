@@ -3,20 +3,27 @@
 Open [the workbench](http://127.0.0.1:5180). Startup and local login instructions live in
 the [runbook](RUNBOOK.md); do not put credentials in this guide.
 
-The local-generation update adds automatic drafts for new ordinary questions when configured
+New ordinary runs use four-way routing: routine supported automatic answers, exception review,
+missing-support intervention and retained set-aside outcomes. Automatic answers are internal
+machine results, not human approval or an external send. Missing support cannot be approved;
+request clarification, reject or retry with better information. The current local smoke covers four automatic answers, two reviews, four missing-support
+interventions and six set-aside noise/spam messages; see [status](STATUS.md). Weather and
+photosynthesis still went to intervention, so unrelated-topic classification is not fully correct.
+
+The previous local-generation update added automatic drafts when configured
 using the [local model setup](RUNBOOK.md#automatic-local-demo-answers). Existing manual waits
 and frozen comparisons keep their original mode. The walkthrough below records the earlier
 manual demo; it is not an automatic-generation test.
 
-## Automatic demo — verified 2026-09-10
+## Earlier automatic-draft demo — verified 2026-09-10
 
 The active local setup uses `qwen2.5:7b` through LangChain/Ollama. Open the
 [Chinese policy answer](http://127.0.0.1:5180/w/e3e3017b-13bc-42f1-8443-96b99fa2e6de/runs/17fd3a43-ad8d-476d-8ada-5ca19a763d29)
 or [Chinese team question](http://127.0.0.1:5180/w/e3e3017b-13bc-42f1-8443-96b99fa2e6de/runs/b0b7ea35-01eb-41d0-97a0-5964457d5b7a).
 Both have automatic drafts. Equivalent English/Japanese questions also produced cited drafts;
 six observed run times were6–18s, not a performance guarantee. Workflow shows the local model,
-input tokens, duration and external charge. **Needs review** now means the draft is ready for
-an administrator to check; it does not ask the administrator to write the answer.
+input tokens, duration and external charge. At that checkpoint, **Needs review** meant the draft is ready for
+an administrator to check; it did not ask the administrator to write the answer. These linked runs retain their historical mode.
 
 These are partial answers from available retrieved policies. Application roles are not a
 company organisation chart; missing company facts must be supplied through knowledge documents.
@@ -49,7 +56,7 @@ wording was an explicitly attributed development contribution, not a paid OpenAI
 ## Demo boundaries
 
 - Manual mode requires the development contribution step. Optional local Ollama mode generates
-  drafts automatically; no external paid LLM is configured. Retrieval and processing are real.
+  responses automatically with explicit routing; no external paid LLM is configured. Retrieval and processing are real.
 - Knowledge ingestion currently accepts TXT/Markdown; PDF/DOC support remains deferred.
 - The Chrome file chooser returned **Not allowed** before app upload. Chrome skill troubleshooting
   recommends enabling **Allow access to file URLs** in the ChatGPT extension's Details page.

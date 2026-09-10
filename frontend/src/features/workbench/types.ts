@@ -13,6 +13,7 @@ export const stateLabel = (state: string) => ({
 }[state] ?? state);
 
 export const outcomeLabel = (outcome: string | null) => ({
+  answered: 'Answered', set_aside: 'Set aside',
   grounded_draft: 'Response draft', policy_review_required: 'Policy exception review',
   conflicting_evidence: 'Conflicting evidence', clarification_needed: 'Clarification needed',
   insufficient_evidence: 'No supporting knowledge', approved_response: 'Approved response', rejected_response: 'Response rejected',

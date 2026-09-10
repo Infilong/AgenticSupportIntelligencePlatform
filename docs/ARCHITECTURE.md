@@ -11,8 +11,14 @@ The existing handoff table stores local request/response hashes with provider `l
 no human contributor, and a model-call reference. The ledger records dispatch before inference,
 actual input tokens/duration and zero external charge; returned output usage stays in the stored
 response. Its revision field binds the request hash, not a model-weights checksum. Publication
-and approval validate source freshness and machine attribution. Local drafts require an admin;
-a model cannot grant review authority. Uncertain dispatches require a fresh attempt, not silent
+and approval validate source freshness and machine attribution. New versioned local responses
+record a routing decision/reason: cited routine answers complete as `answered`, exceptions wait
+for administrator review, missing support waits for intervention without approve/edit, and
+irrelevant input completes as `set_aside`. Missing support permits clarification, rejection or a
+fresh linked attempt. No human decision or reviewed response is fabricated for an automatic
+answer. Conservative server checks can downgrade model decisions; they do not prove semantic
+support. Older/manual and comparison checkpoints retain their recorded behavior. A model cannot
+grant review authority. Uncertain dispatches require a fresh attempt, not silent
 regeneration. No schema migration, Redis or cloud generation was added.
 
 ## Current project topology
@@ -202,9 +208,10 @@ LangGraph continuation and business-result publication remain distinct responsib
 ## Implemented support backend
 
 Original message → atomic run/job → LangGraph input check → real retrieval → configured local
-inference or durable manual handoff → validated cited draft. A one-character input such
-as `w` requests clarification; an empty retrieval produces insufficient evidence. Neither is
-automatically routed to administrator review. Development waiting releases the worker.
+inference or durable manual handoff → validated response and explicit outcome. New local
+routing sets aside meaningless short input; missing support waits for human intervention even
+when retrieval is empty. Historical/manual graphs retain short-input clarification and their
+previous insufficient-evidence exit. Development waiting releases the worker.
 
 The [support guide](../backend/app/modules/support/AGENTS.md) owns local invariants. The graph
 uses server-derived workspace/run threads and a dedicated PostgreSQL advisory lock. Every

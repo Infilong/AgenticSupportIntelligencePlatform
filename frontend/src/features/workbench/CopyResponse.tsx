@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function CopyResponse({ response }: { response: string }) {
+export function CopyResponse({ response, automatic = false }: { response: string; automatic?: boolean }) {
   const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'failed'>('idle');
   async function copy() {
     if (status === 'copying') return;
@@ -14,10 +14,10 @@ export function CopyResponse({ response }: { response: string }) {
   }
   return <div className="copy-response">
     <button type="button" onClick={copy} disabled={status === 'copying'}>
-      {status === 'copying' ? 'Copying…' : 'Copy approved response'}
+      {status === 'copying' ? 'Copying…' : automatic ? 'Copy answer' : 'Copy approved response'}
     </button>
     <p role="status" className="muted">
-      {status === 'copied' ? 'Approved response copied.' : status === 'failed'
+      {status === 'copied' ? automatic ? 'Answer copied.' : 'Approved response copied.' : status === 'failed'
         ? 'Could not copy. Select the response text above and copy it manually, or try again.' : ''}
     </p>
   </div>;

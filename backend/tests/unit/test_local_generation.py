@@ -74,3 +74,32 @@ def test_no_relevant_sources_is_a_valid_model_outcome(monkeypatch):
         {"model": "test", "endpoint": "http://localhost:11434", "messages": []}, {"sources": []}
     )
     assert response["citations"] == []
+
+
+@pytest.mark.parametrize("decision", ["missing", "irrelevant"])
+def test_reason_only_abstention_never_displays_unrelated_citations(monkeypatch, decision):
+    class Model:
+        def __init__(self, **kwargs):
+            pass
+
+        def invoke(self, messages):
+            return AIMessage(
+                content=json.dumps(
+                    {
+                        "answer": "",
+                        "source_ids": [1],
+                        "decision": decision,
+                        "reason": "The policy does not contain this fact.",
+                    }
+                )
+            )
+
+    monkeypatch.setattr(provider, "ChatOllama", Model)
+    response, _ = provider.generate(
+        {"model": "test", "endpoint": "http://localhost:11434", "messages": []},
+        {"sources": [{"text": "Unrelated policy", "chunk_id": "1"}]},
+    )
+    assert response["answer"] == "The policy does not contain this fact."
+    assert response["citations"] == []
+    assert response["routing"]["decision"] == decision
+    assert response["model_output"]["source_ids"] == [1]
