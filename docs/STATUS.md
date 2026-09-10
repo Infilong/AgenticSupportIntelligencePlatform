@@ -1,6 +1,23 @@
 # Current status
 
-## Current narrow repair
+## Final demo review complete
+
+[Final review](plans/completed/final-demo-review.md) verifies the accepted demo and closes this task,
+without reopening deferred production scope. Six fresh EN/JA/ZH/routing cases and viewer403,
+foreign404, CSRF403/cancellation checks pass in `.artifacts/final-demo/report.json`. Fresh English
+knowledge produced a Chinese answer. Pending-form editing and Settings routing copy were fixed;
+frontend49 tests/build and current packaged startup pass. Chrome recorded human clarification while preserving the unapproved draft. Two settings E2E
+tests passed7.4s at360/768/1440px and restored the fallback; initial cache failure is retained.
+The inspected Chinese workflow records actual local model execution. A recent15-minute error
+filter was empty, not an exhaustive log audit. The final rebuilt-UI Chrome run
+8a95213b-13f8-430a-bb2f-157d9decebd7 completed with the correct Chinese12-day answer citing
+the new English policy; final-answer.png was visually inspected without overlap. The app stays
+running and the user tab is marked as the deliverable. The132 backend tests are prior language-repair
+evidence, not a fresh full regression. Final documentation review and preparation checks pass.
+Independent backend review found no P0/P1; a P2 late-embedding ledger overwrite after ingestion
+lease reclaim remains deferred, with domain publication fenced. No full reliability claim.
+
+## Previous narrow repair
 
 [Question-language matching](plans/completed/language-matching.md) repairs new Chinese questions
 being saved as English from the workspace default. New manual-message admission defaults to

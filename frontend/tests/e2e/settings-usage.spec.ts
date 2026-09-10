@@ -45,7 +45,11 @@ test('admin settings persist and usage remains readable at three widths', async 
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'AI configuration' })).toBeVisible();
-  await expect(page.getByText('Not configured', { exact: true })).toBeVisible();
+  const settingsUrl = new URL(page.url());
+  const settings = await page.request.get(`${settingsUrl.origin}/api/workspaces/${settingsUrl.pathname.split('/')[2]}/settings`);
+  expect(settings.status()).toBe(200);
+  const configuration = await settings.json();
+  await expect(page.getByText(configuration.automatic_generation_available ? 'Available' : 'Not configured', { exact: true })).toBeVisible();
   const original = await page.getByLabel('Default response language').inputValue();
   await preserveLanguage(page, original, async () => {
     const next = original === 'ja' ? 'zh' : 'ja';
@@ -56,8 +60,14 @@ test('admin settings persist and usage remains readable at three widths', async 
     await expect(page.getByLabel('Default response language')).toHaveValue(next);
     await page.getByRole('link', { name: 'Workbench', exact: true }).click();
     await page.getByRole('button', { name: 'New message', exact: true }).click();
-    await expect(page.getByLabel('Response language')).toHaveValue(next);
-    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(page.getByLabel('Response language')).toHaveValue('auto');
+    await page.getByLabel('Customer message', { exact: true }).fill('。');
+    await page.getByRole('button', { name: 'Start processing', exact: true }).click();
+    await expect(page).toHaveURL(/\/runs\/[a-f0-9-]+$/);
+    const runPath = new URL(page.url()).pathname.replace('/w/', '/api/workspaces/');
+    const run = await page.request.get(`${settingsUrl.origin}${runPath}`);
+    expect(run.status()).toBe(200);
+    expect((await run.json()).language).toBe(next);
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await page.getByLabel('Default response language').selectOption(original);
     await saveDefaults(page);

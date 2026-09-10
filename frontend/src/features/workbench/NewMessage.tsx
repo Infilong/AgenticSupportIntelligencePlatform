@@ -27,8 +27,8 @@ export function NewMessage({ workspace, onCreated, onClose }: { workspace: Works
   }
   return <form className="message-composer" onSubmit={submit} aria-label="New customer message">
     <h2>New message</h2><label htmlFor="customer-message">Customer message</label>
-    <textarea id="customer-message" autoFocus rows={5} maxLength={1000} value={original} onChange={e => setOriginal(e.target.value)} required placeholder="Paste the original question or request…" />
-    <div className="composer-footer"><label htmlFor="answer-language">Response language<select id="answer-language" value={language} onChange={e => setLanguage(e.target.value)}><option value="auto">Match question</option><option value="en">English</option><option value="ja">日本語</option><option value="zh">中文</option></select></label>
+    <textarea id="customer-message" autoFocus rows={5} maxLength={1000} value={original} onChange={e => setOriginal(e.target.value)} disabled={pending} required placeholder="Paste the original question or request…" />
+    <div className="composer-footer"><label htmlFor="answer-language">Response language<select id="answer-language" value={language} onChange={e => setLanguage(e.target.value)} disabled={pending}><option value="auto">Match question</option><option value="en">English</option><option value="ja">日本語</option><option value="zh">中文</option></select></label>
       <span className="muted">{original.length}/1,000</span></div>
     {error && <p className="error" role="alert">{error}</p>}
     <div className="workbench-actions"><button type="button" onClick={onClose} disabled={pending}>Cancel</button><button className="primary" disabled={pending || !original.trim()}>{pending ? 'Saving…' : 'Start processing'}</button></div>

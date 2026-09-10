@@ -32,6 +32,8 @@ test('late successful submission does not invoke navigation after unmount', asyn
   const view = render(<NewMessage workspace={workspace} onCreated={onCreated} onClose={vi.fn()} />);
   fireEvent.change(screen.getByLabelText('Customer message'), { target: { value: 'Refund question' } });
   fireEvent.submit(screen.getByRole('form', { name: 'New customer message' }));
+  expect(screen.getByLabelText('Customer message')).toBeDisabled();
+  expect(screen.getByLabelText('Response language')).toBeDisabled();
   const options = vi.mocked(api).mock.calls[0][1]!;
   view.unmount();
   expect(options.signal?.aborted).toBe(true);
@@ -46,6 +48,8 @@ test('retry preserves input and idempotency key after an uncertain network respo
   fireEvent.change(screen.getByLabelText('Customer message'), { target: { value: 'Refund question' } });
   fireEvent.submit(screen.getByRole('form', { name: 'New customer message' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Connection interrupted');
+  expect(screen.getByLabelText('Customer message')).toBeEnabled();
+  expect(screen.getByLabelText('Response language')).toBeEnabled();
   expect(screen.getByLabelText('Customer message')).toHaveValue('Refund question');
   await act(async () => fireEvent.submit(screen.getByRole('form', { name: 'New customer message' })));
   const calls = vi.mocked(api).mock.calls;
