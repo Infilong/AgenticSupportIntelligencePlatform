@@ -103,6 +103,32 @@ python scripts/manage.py release-down
 
 ## Architecture
 
+The packaged app has three Docker services: an API that also serves the built frontend,
+a background worker, and PostgreSQL. Ollama runs separately on the host. Browser requests
+go through the API; the browser never accesses the database or model directly.
+
+```mermaid
+flowchart TB
+    Browser[React admin workbench] -->|HTTP and session authentication| API[FastAPI API and built frontend]
+    API -->|Authorize, persist commands, enqueue jobs| DB[(PostgreSQL and pgvector)]
+    Worker[Python worker and LangGraph] -->|Claim jobs and save checkpoints| DB
+    Worker --> Retrieval[Local embeddings and retrieval]
+    Retrieval -->|Search active workspace chunks| DB
+    Retrieval --> Reranker[Local cross-encoder reranker]
+    Worker -->|Bounded evidence through ChatOllama| Ollama[Host Ollama model]
+    Worker -->|Responses, citations and execution records| DB
+    API -->|Read status, evidence and results| Browser
+    Browser -->|Cancel, clarify or review| API
+```
+
+The API owns authentication, workspace authorization and user commands. Long-running ingestion
+and answer generation run in the worker. Jobs use leases and publication checks; LangGraph
+checkpoints retain workflow state between executions. PostgreSQL is the source of truth for
+business data and processing records. The frontend polls the API for progress.
+
+Development uses a separate Vite frontend service instead of serving built assets from FastAPI.
+The development and packaged stacks have separate databases and model-cache volumes.
+
 - **Frontend:** React, TypeScript and Vite.
 - **Backend:** FastAPI, SQLAlchemy and PostgreSQL.
 - **RAG:** local multilingual embeddings, pgvector search, BM25, rank fusion and reranking.
@@ -128,6 +154,99 @@ docs/                  Architecture, contracts, evidence and development guides
 ```
 
 See [the detailed topology and data flow](docs/ARCHITECTURE.md) and [RAG design](docs/RAG.md).
+
+## How the RAG system works
+
+Retrieval-augmented generation supplies relevant company passages to the model when answering
+a question. Uploading a document indexes it for retrieval; it does not train the answer model.
+
+### 1. Ingest and version knowledge
+
+An authorized administrator uploads a UTF-8 TXT or Markdown file. The backend retains original
+bytes, a checksum and a document version, then queues ingestion. The worker normalizes text,
+splits it into bounded passages using the LangChain-based splitter, and preserves headings and
+character offsets so each passage can be traced back to its source.
+
+The local multilingual E5 model embeds the passages. PostgreSQL stores their text, vectors,
+lexical search data and version references. A completed indexing job activates the new version
+in one transaction. A failed replacement does not replace the previously active version.
+Withdrawn documents and superseded versions are excluded from new retrieval.
+
+### 2. Retrieve evidence for the question
+
+The API saves the original message and a processing job. The worker checks the current actor's
+workspace access before retrieving data. Ordinary questions currently use **vector search plus
+reranking**:
+
+```text
+Question → multilingual query embedding → active workspace chunks in pgvector
+         → top 20 by cosine similarity → cross-encoder reranking → up to 5 passages
+```
+
+The embedding model is `intfloat/multilingual-e5-small`; the reranker is
+`cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`. Embeddings allow a question and its supporting
+passage to use different languages. The reranker scores the question together with each
+candidate passage to improve their order. These scores measure relevance, not factual certainty.
+
+The retrieval engine also supports BM25 and hybrid strategies. BM25 matches lexical terms,
+including identifier tokens and Chinese/Japanese character pairs. Hybrid retrieval collects
+up to 20 vector and 20 BM25 candidates from the same eligible workspace sources, merges their
+rankings with reciprocal rank fusion, and keeps up to 20 candidates for final selection or
+optional reranking. It does not simply add incomparable cosine and BM25 scores.
+
+| Entry point | Current retrieval behavior |
+| --- | --- |
+| Ordinary Workbench message | Vector search plus reranking. |
+| `direct_llm` comparison | No retrieval. |
+| `vector_rag` comparison | Vector search. |
+| `hybrid_rag` comparison | Vector + BM25 with rank fusion. |
+| `system_v1` comparison | Hybrid retrieval through the governed support workflow. |
+
+Hybrid retrieval is implemented, but it is not the default for every message. The saved trace
+records the actual strategy, candidate IDs, available scores, exclusions and final ranking.
+
+### 3. Build context and generate the answer
+
+The worker packs up to five passages with their source identities into a context snapshot.
+The serialized context is limited to 24,000 UTF-8 bytes; passages that do not fit are omitted
+rather than silently truncated. This byte bound is not a guarantee against every model's token
+limit. The snapshot and generation request are hashed for provenance.
+
+In local mode, LangChain's `ChatOllama` sends the question and selected passages to Ollama.
+The model returns a structured answer, selected source IDs, a routing decision and a reason.
+It is instructed to use the evidence, preserve policy meaning and numbers, and translate the
+answer into the question's selected language. Original passages remain unchanged.
+In manual development mode, the graph pauses for a recorded human contribution instead.
+
+### 4. Validate, route and retain the evidence
+
+The backend validates selected sources and exact quotations and rechecks current permissions,
+active document versions and cancellation before publication. An answer cannot grant itself
+administrator approval or authorize an external action.
+
+| Outcome | What happens |
+| --- | --- |
+| Answer | A cited response is recorded automatically for a routine question. |
+| Review | An exception, conflict or sensitive request waits for human review. |
+| Missing support | Staff must supply knowledge/details or otherwise intervene; unsupported approval is blocked. |
+| Set aside | Irrelevant or meaningless input is retained without entering the review queue. |
+| Processing failure | The error and execution state remain inspectable; the app does not substitute a canned successful answer. |
+
+Source validation establishes where an answer's evidence came from. It does **not** prove
+that the model interpreted it correctly. Routing and semantic accuracy remain imperfect.
+
+### 5. Inspect and evaluate
+
+Admins can follow a message into its attempts, retrieval trace, selected context, model-call
+records, answer, citations and human decisions. **Workflow** exposes recorded stages and
+durations; **Sources** opens exact document-version passages; **History** preserves interventions.
+The ledger records provider/model identity, input tokens, duration, external charge and failures.
+
+The evaluation tools compare retrieval strategies and the four answer pipelines against frozen
+multilingual cases. Software regressions use deterministic providers; local-model evaluations
+measure answer facts, support, language, routing and unsafe claims separately. A successful
+demo case does not imply that the full quality benchmark passes. See the
+[evaluation guide](evals/README.md) and [RAG failure and evidence contract](docs/RAG.md).
 
 ## Verification and limitations
 
