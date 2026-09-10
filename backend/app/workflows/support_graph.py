@@ -226,13 +226,21 @@ def execute(engine, job, retrieval=retrieve):
                 from app.modules.comparisons.access import linked
 
                 settings = GenerationSettings()
+                comparison = linked(db, run.workspace_id, run.id)
+                local_config = (
+                    comparison.configuration
+                    if comparison and comparison.configuration["transport"] == "local_ollama"
+                    else {}
+                )
                 initial.update(
                     {
                         "generation_mode": "manual"
-                        if linked(db, run.workspace_id, run.id)
+                        if comparison and not local_config
+                        else "local_ollama"
+                        if local_config
                         else settings.generation_mode,
-                        "generation_model": settings.ollama_model,
-                        "generation_endpoint": settings.ollama_url,
+                        "generation_model": local_config.get("model", settings.ollama_model),
+                        "generation_endpoint": local_config.get("endpoint", settings.ollama_url),
                     }
                 )
                 if initial["generation_mode"] == "local_ollama":

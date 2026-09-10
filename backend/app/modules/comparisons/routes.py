@@ -7,9 +7,13 @@ from sqlalchemy import select
 from app.jobs.queue import authorize
 from app.modules.comparisons import reading, service
 from app.modules.comparisons.models import Comparison
-from app.modules.comparisons.schemas import ComparisonCreated, ComparisonDetail, ComparisonList
+from app.modules.comparisons.schemas import (
+    ComparisonCreated,
+    ComparisonDetail,
+    ComparisonInput,
+    ComparisonList,
+)
 from app.modules.identity.dependencies import CurrentUser, Database
-from app.modules.support.schemas import MessageInput
 from app.modules.workspaces.service import membership
 
 router = APIRouter(prefix="/api/workspaces/{workspace_id}/comparisons", tags=["comparisons"])
@@ -18,7 +22,7 @@ router = APIRouter(prefix="/api/workspaces/{workspace_id}/comparisons", tags=["c
 @router.post("", status_code=202, response_model=ComparisonCreated)
 def create(
     workspace_id: UUID,
-    data: MessageInput,
+    data: ComparisonInput,
     user: CurrentUser,
     db: Database,
     key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=100)],

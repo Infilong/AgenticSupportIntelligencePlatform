@@ -4,6 +4,7 @@ import { api, type Workspace } from '../../api/client';
 export function NewComparison({ workspace, onCreated, onBusy }: { workspace: Workspace; onCreated: (id: string) => void; onBusy: (busy: boolean) => void }) {
   const [question, setQuestion] = useState('');
   const [language, setLanguage] = useState(workspace.default_language);
+  const [mode, setMode] = useState('manual');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const request = useRef({ body: '', key: '' });
@@ -12,7 +13,7 @@ export function NewComparison({ workspace, onCreated, onBusy }: { workspace: Wor
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (pending || !question.trim()) return;
-    const body = JSON.stringify({ original: question, language });
+    const body = JSON.stringify({ original: question, language, ...(mode === 'local_ollama' ? { generation_mode: mode } : {}) });
     if (request.current.body !== body) request.current = { body, key: crypto.randomUUID() };
     controller.current = new AbortController();
     const signal = controller.current.signal;
@@ -31,7 +32,9 @@ export function NewComparison({ workspace, onCreated, onBusy }: { workspace: Wor
     <textarea id="comparison-question" value={question} onChange={event => setQuestion(event.target.value)} rows={3} maxLength={1000} required disabled={pending} />
     <label htmlFor="comparison-language">Answer language</label>
     <select id="comparison-language" value={language} onChange={event => setLanguage(event.target.value as typeof language)} disabled={pending}><option value="en">English</option><option value="ja">日本語</option><option value="zh">中文</option></select>
-    <p className="muted">Runs the same question through four paths. Retrieval is real; answers currently require attributed development contributions through the local CLI.</p>
+    <label htmlFor="comparison-mode">Answer provider</label>
+    <select id="comparison-mode" value={mode} onChange={event => setMode(event.target.value)} disabled={pending}><option value="manual">Manual development contribution</option><option value="local_ollama">Configured local model</option></select>
+    <p className="muted">Runs the same question through four paths. Local mode generates answers automatically when enabled on the server. Manual mode uses attributed contributions through the CLI.</p>
     {error && <p className="error" role="alert">{error}</p>}
     <button className="primary" disabled={pending || !question.trim()}>{pending ? 'Starting comparison…' : 'Start comparison'}</button>
   </form>;

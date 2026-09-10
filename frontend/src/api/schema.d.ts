@@ -758,6 +758,22 @@ export interface components {
             /** Pipelines */
             pipelines: components["schemas"]["PipelineResult"][];
         };
+        /** ComparisonInput */
+        ComparisonInput: {
+            /** Original */
+            original: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "ja" | "zh";
+            /**
+             * Generation Mode
+             * @default manual
+             * @enum {string}
+             */
+            generation_mode: "manual" | "local_ollama";
+        };
         /** ComparisonList */
         ComparisonList: {
             /** Items */
@@ -1196,6 +1212,8 @@ export interface components {
             transport: string;
             /** Version */
             version: number;
+            /** Model */
+            model?: string | null;
         };
         /** PipelineResult */
         PipelineResult: {
@@ -2764,7 +2782,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MessageInput"];
+                "application/json": components["schemas"]["ComparisonInput"];
             };
         };
         responses: {

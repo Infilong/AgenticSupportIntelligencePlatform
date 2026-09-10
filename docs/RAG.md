@@ -14,7 +14,8 @@ search → local reranker → bounded evidence snapshot → durable development 
 Current ordinary local mode uses real LangChain/Ollama inference and versioned routing: supported
 automatic answer, exception review, missing-support intervention or retained set-aside outcome.
 Source IDs and publication authority are checked independently of the model; classification
-and claim support still require evaluation. Manual/frozen comparisons preserve their older mode.
+and claim support still require evaluation. Existing manual comparisons preserve their mode; new comparisons can explicitly use real local
+generation with captured settings and separate machine-provenance evaluation.
 This update does not change frozen retrieval targets or establish full semantic-quality gates.
 
 **Correct boundaries inspected:** immutable original bytes/checksums; normalized-text offsets;
@@ -277,3 +278,14 @@ newly ingested real EN/JA/ZH boundary facts remain intact. The unchanged frozen 
 26/26 cases and 27/27 groups, warm p95 2.672s, with zero forbidden leakage. See
 `.artifacts/m2/retrieval-eval-20260909T072217Z/report.json` and the linked repair record.
 Generation remains unverified; these results do not add held-out semantic proof.
+
+
+## Local generation measurement — 2026-09-10
+
+The fixed30-case local batch has120 reviewed observations at
+`.artifacts/m5/local-live-fixed-20260910/reviewed-score.json`: direct7/30, vector22/30,
+hybrid20/30 and system20/30 composite success. All frozen90%/80% local targets failed.
+Three independent language reviewers recorded response-bound judgments. Wrong/unsupported
+claims, omitted conflicts, language and routing failures remain visible; no hybrid superiority
+or production-quality claim follows. Initial direct-format failures remain in the earlier batch.
+Manual reports and frozen targets were not rewritten. STATUS owns release/regression evidence.

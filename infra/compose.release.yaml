@@ -22,6 +22,9 @@ services:
       ASI_DATABASE_URL: postgresql+psycopg://asi_rebuild:${ASI_RELEASE_DATABASE_PASSWORD:?Initialize release credentials}@postgres:5432/asi_rebuild
       ASI_PROVIDER_MODE: mock
       ASI_EMBEDDING_CACHE: /home/workbench/models
+      ASI_GENERATION_MODE: ${ASI_GENERATION_MODE:-manual}
+      ASI_OLLAMA_MODEL: ${ASI_OLLAMA_MODEL:-qwen2.5:7b}
+      ASI_OLLAMA_URL: ${ASI_OLLAMA_URL:-http://host.docker.internal:11434}
       ASI_ALLOWED_ORIGINS: '["http://127.0.0.1:8011","http://localhost:8011"]'
     volumes:
       - release_models:/home/workbench/models

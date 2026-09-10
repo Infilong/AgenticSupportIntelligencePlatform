@@ -2,7 +2,41 @@
 
 ## Authority and next action
 
-Current slice: [automatic answers and intervention routing](plans/active/demo-outcome-routing.md).
+Current slice: [local four-pipeline comparisons](plans/active/m5-local-comparisons.md).
+Routing prerequisite f4c998b is pushed and CI34439841295 passed. Explicit local comparison
+admission, provider selection and a separately versioned frozen runner/scorer are implemented.
+
+## Local batch and release evidence — 2026-09-10
+
+The fixed batch `.artifacts/m5/local-live-fixed-20260910/reviewed-score.json` has120 technically
+completed outcomes with response-bound judgments from three independent language reviewers.
+Composite successes: direct7/30, vector22/30, hybrid20/30, system20/30. EN2/8/9/9, JA2/8/6/7,
+ZH3/6/5/4 respectively, each out of10. Every frozen local quality target FAILED. Unsupported
+claims, omitted conflicts, language and routing errors remain visible. System24 completed and6
+awaited review; terminal execution is not semantic success. Initial batch
+`.artifacts/m5/local-live-20260910` retains30 direct-format failures and90 terminal RAG outcomes.
+An explicit JSON-string example repaired direct formatting; no retrieval tuning was added.
+
+117 units passed47.18s and final lint passes. Full PostgreSQL
+`.artifacts/m0/integration-20260910T053351305052Z` timed out420s after138 displayed passes;
+it is incomplete, not a pass. Packaged local-mode runtime built/became healthy at
+`.artifacts/m0/release-up-20260910T054054753277Z`. Optional release model/mode/URL keys retain
+manual mode by default. Chrome provider selection/new local comparison and chrome-comparison.png
+were inspected at the baseline viewport; no overlap observed by the coordinator.
+
+Fresh restore `.artifacts/m6/restore-20260910T054137Z/report.json` passed25-table parity and a new
+clone API/worker clarification with3 checkpoints/0 model calls; wrapper `.artifacts/m0/restore-20260910T054135417022Z`. No restored
+semantic-generation/browser claim. M5 evaluation executed but quality acceptance failed;
+M6 native zoom and broader release/security evidence remain incomplete. Continue bounded M6
+checks without lowering targets or starting speculative RAG perfection work.
+
+Packaged five-session follow-up `.artifacts/m6/local-release-final/profile.json` observed EN/JA
+answers, Chinese routine-timing over-review, missing intervention and set-aside, with viewer403
+and foreign404. Observed38.7–54.3s is not simultaneous-inference/SLO evidence. A narrow personal-
+request regex repair and localized review reasons pass22 units1.65s; live confirmation is pending.
+Prior120 semantic scores are unchanged historical evidence, not post-repair verification.
+
+Previous routing checkpoint:
 The user now requires supported automatic answers, exception review, missing-support intervention
 and retained set-aside messages, then completion of M5/M6. This supersedes the earlier demo-only
 pause and blanket admin-review requirement. Actual local runtime evidence at
@@ -18,7 +52,7 @@ Ruff/182-file formatting pass. Final frontend build and48 tests pass9.79s. Chrom
 and missing-support controls without approve/edit. First screenshot capture timed out; later
 chrome-missing.png and chrome-set-aside.png under `.artifacts/demo-routing/` were captured and
 visually inspected by the coordinator, with no review controls on the set-aside outcome.
-Next: connect separately versioned local generation to the frozen four-pipeline M5 comparison,
+That checkpoint selected separately versioned local generation for the frozen M5 comparison,
 preserving direct/no-retrieval behavior, comparable settings and full original denominators.
 This smoke is not full semantic evaluation, complete regression or M5/M6 completion.
 
@@ -137,16 +171,17 @@ operating on them; these names are configuration, not a perpetual health asserti
 [Architecture](ARCHITECTURE.md) and [runbook](RUNBOOK.md) own topology, setup and commands.
 
 Local CPU embedding/reranking and retrieval are real. Configured ordinary runs use local-model
-inference; existing manual waits, frozen comparisons and offline tests use attributed development
+inference; explicitly local comparisons also use actual inference. Existing manual comparisons,
+manual waits and offline tests use attributed development
 contributions. No paid/cloud generation
 adapter/API call or paid billing has been verified. Do not present handoff duration as inference
 latency, exact quote matching as semantic entailment, or mock output as model quality.
 
 ## Open gates and retained uncertainty
 
-- M5: four attributed development pipelines, their administration view and full-corpus
-  preparation/collection and an attributed-review scorer are implemented; full-corpus responses
-  and semantic reviews remain incomplete. Quality also shows
+- M5: manual and explicit local four-pipeline modes, administration, full-corpus collection
+  and separate versioned scorers are implemented. All120 local observations have attributed review and all pipeline quality targets failed;
+  manual development reports stay separate. Quality also shows
   historical retrieval reports. `comparable` only means unchanged corpus/not cancelled, not
   complete or correct outputs. Contributions remain in the development CLI.
 - External generation-provider integration, generation accounting and semantic support/language/

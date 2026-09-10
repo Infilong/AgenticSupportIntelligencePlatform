@@ -35,8 +35,15 @@ def process(engine, job, retrieval=None):
     with Session(engine) as db, db.begin():
         row, item = guard(db, job)
         question, language, strategy = row.question, row.language, item.configuration["strategy"]
+        local = item.configuration["transport"] == "local_ollama"
+        dispatched = local and item.request is not None
         if item.state != "queued":
             return Publication(lambda db, current: {"pipeline_id": str(guard(db, current)[1].id)})
+
+    if dispatched:
+        from app.modules.comparisons.local_execution import resume
+
+        return resume(engine, job)
 
     def associate(db, trace_id):
         _, item = guard(db, job)
@@ -55,6 +62,10 @@ def process(engine, job, retrieval=None):
             execution_guard=lambda db: guard(db, job),
         )["results"]
     context = pack(question, language, results)
+    if local:
+        from app.modules.comparisons.local_execution import execute
+
+        return execute(engine, job, context)
     if strategy is None:
         context["prompt_version"] = "direct-development-v1"
         context["instruction"] = (

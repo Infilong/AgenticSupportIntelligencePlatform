@@ -15,6 +15,8 @@ from app.modules.support.service import handoff_for
 def export(db, workspace_id, actor_id, comparison_id, name):
     row = access.get(db, workspace_id, actor_id, comparison_id)
     item = service.pipeline(db, row, name)
+    if item.configuration["transport"] == "local_ollama":
+        raise HTTPException(409, "Local comparisons do not export development requests")
     if item.run_id:
         handoff = export_handoff(db, workspace_id, actor_id, item.run_id)
         return {key: handoff[key] for key in ("generation_request", "request_hash", "context_hash")}

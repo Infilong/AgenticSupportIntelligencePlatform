@@ -11,4 +11,6 @@ Never equate registration time with measurement time or historical scores with c
 Generation comparisons are administrator-only. Preserve all four outcomes, original contributions
 and separate reviewed wording; lazy-load retrieval evidence. Revalidate history and clear protected
 content/creation controls on authorization failure. Keep retries idempotent and lists bounded.
-Development contributions use the CLI; never imply automatic inference or measured answer quality.
+Manual development contributions use the CLI. Explicit local comparisons run actual inference;
+show the admitted provider and machine provenance separately from human review. Never infer
+measured answer quality from successful generation or silently switch an existing comparison.

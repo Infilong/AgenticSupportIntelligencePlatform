@@ -116,5 +116,9 @@ def generate(request, context):
     if result.decision:
         from app.providers.response_routing import route
 
-        response["routing"] = route(result.decision, result.reason, context, selected)
+        response["routing"] = (
+            {"version": "local-direct-v1", "decision": result.decision, "reason": result.reason}
+            if request.get("schema_version") == "local-direct-v1"
+            else route(result.decision, result.reason, context, selected)
+        )
     return response, message.usage_metadata or {}

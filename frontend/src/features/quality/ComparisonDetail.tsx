@@ -32,7 +32,7 @@ export function ComparisonDetail({ workspaceId, id }: { workspaceId: string; id:
   const unfinished = data.pipelines.some(item => !['completed', 'rejected', 'cancelled', 'failed', 'insufficient_evidence'].includes(item.state));
   return <section className="comparison-detail" aria-label="Comparison results">
     <h3>{data.question}</h3>
-    <p className="muted">Answer language: {data.language.toUpperCase()} · Development responses · Answer quality unverified</p>
+    <p className="muted">Answer language: {data.language.toUpperCase()} · {data.pipelines.some(item => item.configuration.transport === 'local_ollama') ? 'Local model responses' : 'Development responses'} · Answer quality unverified</p>
     {data.cancelled ? <p role="status">Comparison cancelled. Saved outcomes remain in history.</p> : !data.comparable && <p role="alert" className="error">Knowledge changed since this comparison started. Start a new comparison to use current sources.</p>}
     <div className="comparison-grid">{[...data.pipelines].sort((a, b) => pipelineOrder.indexOf(a.name) - pipelineOrder.indexOf(b.name)).map(item => {
       const answer = typeof item.initial_response?.answer === 'string' ? item.initial_response.answer : null;
@@ -41,7 +41,7 @@ export function ComparisonDetail({ workspaceId, id }: { workspaceId: string; id:
         {!answer && item.outcome === 'clarification_needed' && <p>More customer details are needed. Open the workflow to inspect the clarification.</p>}
         {!answer && item.outcome === 'insufficient_evidence' && <p>No supporting knowledge was found.</p>}
         {item.error_code && <p className="error">Processing error: {item.error_code}</p>}
-        {answer ? <><h5>Original contribution</h5><p className="comparison-answer" lang={data.language}>{answer}</p></> : <p className="muted">No generated answer recorded.</p>}
+        {answer ? <><h5>{item.configuration.transport === 'local_ollama' ? 'Generated answer' : 'Original contribution'}</h5><p className="comparison-answer" lang={data.language}>{answer}</p></> : <p className="muted">No generated answer recorded.</p>}
         {item.reviewed_response && <><h5>Reviewed response</h5><p className="comparison-answer" lang={data.language}>{item.reviewed_response}</p></>}
         {item.run_id && <Link to={`/w/${workspaceId}/runs/${item.run_id}`}>Open workflow and review</Link>}
         {item.retrieval_id && <RetrievalTrace workspaceId={workspaceId} traceId={item.retrieval_id} />}

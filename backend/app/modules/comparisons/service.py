@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from pydantic import Field
 from sqlalchemy import func, select
 
+from app.core.settings import GenerationSettings
 from app.jobs.queue import authorize, enqueue, request_cancel
 from app.modules.comparisons import access
 from app.modules.comparisons.models import Comparison, Pipeline
@@ -27,7 +28,10 @@ class Response(DevelopmentResponse):
 def create(db, workspace_id, actor_id, data, key):
     authorize(db, workspace_id, actor_id)
     membership(db, workspace_id, actor_id, {"admin"})
-    identity = digest({"actor": str(actor_id), **data.model_dump()})
+    input_data = data.model_dump()
+    if input_data.get("generation_mode") == "manual":
+        input_data.pop("generation_mode")
+    identity = digest({"actor": str(actor_id), **input_data})
     previous = db.scalar(
         select(Comparison).where(Comparison.workspace_id == workspace_id, Comparison.submission_key == key)
     )
@@ -41,6 +45,10 @@ def create(db, workspace_id, actor_id, data, key):
     if count >= 1000:
         raise HTTPException(409, "Workspace comparison limit reached")
     snapshot = access.corpus(db, workspace_id)
+    local = getattr(data, "generation_mode", "manual") == "local_ollama"
+    settings = GenerationSettings()
+    if local and settings.generation_mode != "local_ollama":
+        raise HTTPException(409, "Local generation is not enabled")
     row = Comparison(
         id=uuid.uuid4(),
         workspace_id=workspace_id,
@@ -82,8 +90,9 @@ def create(db, workspace_id, actor_id, data, key):
                     "strategy": strategy,
                     "limit": 5,
                     "context_bytes": 24000,
-                    "transport": "attributed_development",
-                    "version": 1,
+                    "transport": "local_ollama" if local else "attributed_development",
+                    "version": 2 if local else 1,
+                    **({"model": settings.ollama_model, "endpoint": settings.ollama_url} if local else {}),
                 },
             )
         )
@@ -117,6 +126,8 @@ def validate_request(db, row, item):
 def submit(db, workspace_id, actor_id, comparison_id, name, data):
     row = access.get(db, workspace_id, actor_id, comparison_id)
     item = pipeline(db, row, name)
+    if item.configuration["transport"] == "local_ollama":
+        raise HTTPException(409, "Local comparisons do not accept human generation contributions")
     if item.run_id:
         if not data.citations:
             raise HTTPException(422, "A cited system draft needs at least one source")

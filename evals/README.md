@@ -106,3 +106,15 @@ changed strategies and stale review bindings are rejected. Missing judgments sta
 denominators. All cases need review before a pipeline can meet the frozen90%/80% development
 target; invalid evidence or an unsafe judgment prevents a pass regardless of the aggregate.
 See the [scoring command and review format](../docs/RUNBOOK.md#generation-review-scoring).
+
+
+Local generation now has a separate execution/evidence path: `run_local_generation.py` prepares
+and collects all30 frozen cases from an existing ingested corpus report; `score_local_generation.py`
+uses `generation-review-local-v1.json` and its hash lock. See the
+[local comparison commands](../docs/RUNBOOK.md#local-four-pipeline-comparison). Actual local
+request/model/usage provenance has no fabricated human contributor. The prior manual reports,
+runner and rubric remain unchanged. The local rubric retains90% overall/80% per language and
+all five dimensions; it only reflects the approved automatic routine answer and set-aside
+meaningless-input routing. Missing/failed cases remain in the denominators. The fixed local batch has120 reviewed observations: direct7/30, vector22/30, hybrid20/30,
+system20/30. All frozen local targets failed; STATUS owns exact evidence. Attributed judgments
+are not external-provider proof or automatic semantic truth.

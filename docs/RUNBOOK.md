@@ -18,7 +18,8 @@ internal machine results, not human approval or an external send. Missing suppor
 approved or edited into an approval; clarify, reject or start a fresh linked attempt instead.
 Inspect the recorded routing reason and sources before acting. Settings displays
 the configured mode, not a readiness probe. Existing manual waits remain manual: cancel/retry
-to create a fresh linked attempt. Frozen comparisons stay manual. Set mode `manual` and restart
+to create a fresh linked attempt. Existing comparisons keep their admitted mode; new Quality comparisons can explicitly select
+local generation when configured. Manual remains the default. Set mode `manual` and restart
 to return new ordinary runs to development contributions. Keep Ollama running during the demo.
 Source selection validates IDs and quotes server-held passages; it does not prove semantic
 entailment. Provider outages/invalid outputs produce inspectable failures, not canned answers.
@@ -730,3 +731,34 @@ the wrapper terminates the launched Windows process tree or POSIX process group 
 exit124 and retained partial output. It does not target unrelated services. Cleanup uncertainty is
 explicit in command.log; deliberately detached processes are outside the tree guarantee. Timeout
 is a failed command, never a passing test result. Runtime commands keep their existing budgets.
+
+## Local four-pipeline comparison
+
+In Quality → Comparisons, choose the explicit local provider for a new comparison. The default
+remains manual; existing comparisons never silently switch mode. Local admission captures the
+configured model and endpoint. The direct baseline receives no retrieved sources; vector and
+hybrid retain their declared strategy, and system_v1 uses the real governed graph. Inspect
+machine provenance, original outputs, failures and separate human review; call success is not
+an answer-quality score.
+
+The separate local runner reuses an already ingested frozen corpus report; it does not ingest
+or alter its policies. From repository root:
+
+```text
+uv run --project backend --frozen python evals/run_local_generation.py prepare --directory .artifacts/m5/NEW_LOCAL_BATCH --corpus-report .artifacts/m5/EXISTING_BATCH/report.json
+uv run --project backend --frozen python evals/run_local_generation.py collect --directory .artifacts/m5/NEW_LOCAL_BATCH
+uv run --project backend --frozen python evals/score_local_generation.py --directory .artifacts/m5/NEW_LOCAL_BATCH --judgments .artifacts/m5/NEW_LOCAL_BATCH/judgments.json --output .artifacts/m5/NEW_LOCAL_BATCH/score.json
+```
+
+Use a new local batch directory and output filename. Preserve failed original attempts and all
+30 cases/four pipelines; collection may include unfinished or failed outcomes. The local scorer
+uses generation-review-local-v1, with the same90%/80% targets and five semantic checks. Only the
+explicitly approved routine-answer/single-character routing expectation differs from the older
+development rubric. Reviewer judgments are separately attributable; structural checks do not
+prove semantic support. No paid API access is needed for authorized local inference.
+
+
+Packaged release accepts optional `ASI_GENERATION_MODE`, `ASI_OLLAMA_MODEL` and `ASI_OLLAMA_URL`
+in its ignored release environment. Mode defaults to manual; local settings require reachable
+local Ollama. Rebuild/restart with `release-up` after changes. Configuration does not establish
+provider readiness or quality.

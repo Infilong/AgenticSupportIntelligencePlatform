@@ -1,9 +1,15 @@
 """Public comparison projections; no graph state or other generation requests are exposed."""
 
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.modules.support.schemas import MessageInput
+
+
+class ComparisonInput(MessageInput):
+    generation_mode: Literal["manual", "local_ollama"] = "manual"
 
 
 class ComparisonCreated(BaseModel):
@@ -27,6 +33,7 @@ class PipelineConfiguration(BaseModel):
     context_bytes: int
     transport: str
     version: int
+    model: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class PipelineResult(BaseModel):

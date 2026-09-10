@@ -6,7 +6,8 @@ The workbench UI and human-review continuation are connected. [STATUS](STATUS.md
 
 Optional local generation: new ordinary graphs snapshot `ASI_GENERATION_MODE`, model and endpoint.
 `local_generation` calls LangChain ChatOllama with bounded authorized context and structured
-source selection. Existing manual checkpoints and frozen comparisons retain manual mode.
+source selection. Existing manual checkpoints/comparisons retain manual mode; new comparisons explicitly select
+manual or local_ollama and snapshot model/endpoint at admission.
 The existing handoff table stores local request/response hashes with provider `local_ollama`,
 no human contributor, and a model-call reference. The ledger records dispatch before inference,
 actual input tokens/duration and zero external charge; returned output usage stays in the stored
@@ -409,7 +410,12 @@ The comparable flag only reports unchanged corpus/not cancelled; pipeline states
 show whether execution finished. It is not a correctness or generation-quality score.
 Cancellation fences pending work while retaining completed history. Exports include only one
 rendered request; admin inspection separates initial contributions from reviewed responses.
-These manual development outputs do not establish inference latency, billing or semantic quality.
+Manual remains the compatible default. Explicit `local_ollama` comparisons dispatch real local
+generation with the captured model/endpoint; direct still has no retrieval and the system uses
+the real graph. Dispatch/usage and machine request/response provenance are persisted without a
+human contributor. Manual outputs do not establish inference latency or billing; successful local
+calls alone do not establish semantic quality. Original machine outputs remain separate from
+subsequent human review. No paid/cloud adapter is implied.
 Quality includes an administrator-only comparison view with bounded history, question/language
 admission, four pipeline outcomes, lazy retrieval evidence and a link to the governed workflow.
 Original contributions and reviewed wording remain distinct. Permission-denied polling clears

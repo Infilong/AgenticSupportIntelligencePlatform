@@ -16,12 +16,21 @@ def route(decision, reason, context, source_ids):
     # Personal requests involving privileged operations remain reviewable even if a model
     # wrongly labels them informational. This is a backstop, not the semantic classifier.
     question = context.get("original", "").casefold()
-    personal = re.search(r"\b(my|me|our|please|i)\b|我|请|私|ください|お願い", question)
+    personal = re.search(
+        r"\b(my|me|our|i)\b|我|私|please\s+(?:refund|reimburse|delete|transfer|grant)"
+        r"|请(?:帮忙)?(?:退款|退费|删除|转移)|(?:返金|削除|移転)してください",
+        question,
+    )
     sensitive = re.search(
         r"refund|reimburse|delete|transfer|grant|breach|unauthorized|退款|退费|删除|转移|泄露|"
         r"返金|削除|移転|不正アクセス",
         question,
     )
     if decision == "answer" and personal and sensitive:
-        decision, reason = "review", "This request involves a sensitive account or policy decision."
+        decision = "review"
+        reason = {
+            "en": "This request involves a sensitive account or policy decision.",
+            "ja": "この依頼には、アカウント操作またはポリシー判断の確認が必要です。",
+            "zh": "此请求涉及敏感账户操作或政策决定，需要人工审核。",
+        }[context.get("language", "en")]
     return {"version": VERSION, "decision": decision, "reason": reason}
