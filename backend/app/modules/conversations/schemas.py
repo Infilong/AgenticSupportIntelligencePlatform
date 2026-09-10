@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
@@ -25,7 +25,7 @@ class Labels(BaseModel):
 
 
 class ImportRow(MessageInput, Labels):
-    pass
+    language: Literal["en", "ja", "zh"]
 
 
 class ImportResult(BaseModel):

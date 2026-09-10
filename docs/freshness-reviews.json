@@ -1,21 +1,21 @@
 {
   "project": {
-    "fingerprint": "0c3037358ca6f6e8e4af91e28486bbf74e57127a4a00e461105d96d380d632e8",
+    "fingerprint": "8c7d1e1e46ea66c3b27cde6c2610ec765e76403c67782e50de0a7638b23b6188",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Applied coordinator independently reviewed exact final STATUS corrections: documentation review complete and clearer Qwen usage wording. No source, evidence, authority or acceptance change; failed quality targets remain unchanged."
+    "rationale": "Reviewed narrow post-demo language repair against source and provided focused/full verification, exact Chrome run and English-source/Chinese-answer evidence. Coordinator independently reviewed authored STATUS/completed record. No reopening deferred M5/M6 gates; original build-source-change and setup failures preserved."
   },
   "frontend": {
-    "fingerprint": "417208a7b476d7ef0e56b83e431e475aa00f9afc19e038b4afd0253434b385e5",
+    "fingerprint": "7e4698c5700750ee946edfe97c8dd7dd31c766104d37d4f16fbd6a998dd89184",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Reviewed comparison mode selector/manual default, machine attribution and original/reviewed output distinction against owning guide and documented Chrome baseline inspection. Coordinator reviewed authored documentation and screenshot evidence. Prior48 tests/build retained; no native zoom or full browser release claim."
+    "rationale": "Reviewed composer Match question default and explicit EN/JA/ZH override against generated contract and owning architecture. Documented Chrome exact Chinese input produced Chinese answer from English evidence; coordinator inspected screenshot and reviewed authored docs.49 frontend tests/build pass; Han-only Japanese ambiguity remains explicit."
   },
   "tooling": {
-    "fingerprint": "0b60d18c7e6ae7fd33e5aa07aa23731228c2b2d542bb4839b7064d8915a67f17",
+    "fingerprint": "13ecfa4d7f62f1a0e0f52c188a66cb7a06efff2e8d7dab3ac183aef65a77d016",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Reviewed local prepare/collect/score command arguments and existing frozen-corpus reuse against runner source. Coordinator reviewed authored runbook and evidence. Generation commands remain distinct from manual contributions; full regression timeout retained, no completed milestone claim."
+    "rationale": "Compared updated runbook fallback language semantics with actual server heuristic and unchanged imported/existing message behavior. Coordinator independently reviewed authored wording; no new tool commands or scope. Full unit permission-error rerun distinction retained."
   },
   "evaluation": {
     "fingerprint": "173ad699e6b86f973c495bbde64cbccfa2b663d1cd3dd1d4083f373f40deb9c2",
@@ -24,15 +24,15 @@
     "rationale": "Reviewed explicit approved-demo disposition against unchanged120-observation scores and failed90/80 thresholds. No scorer, corpus, rubric or numerical assertion changed. Coordinator independently reviewed authored acceptance wording; quality failures remain deferred, not passed."
   },
   "backend": {
-    "fingerprint": "2ae2d1643e40667676698770d689771f7c9902bdb9934d54a0062bea89b11a1f",
+    "fingerprint": "8b8c8a43496f4035664f889b32b950930de8e7430583faaa58e2533a39203272",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Reviewed unchanged source against amended acceptance authority: later explicit user demo acceptance defers strict release gaps without changing failed benchmarks or implying production readiness. Coordinator independently reviewed authored acceptance/status wording; prior source and live repair evidence review retained."
+    "rationale": "Independently reviewed MessageInput auto default, server-resolved kana/Han/Latin language with workspace fallback, explicit override, and ComparisonInput explicit-language restriction closing inherited-schema issue. Prompt translates facts without changing original quotations. Coordinator independently reviewed authored docs/evidence;132 units pass after retained temp-permission failures. No broader quality claim."
   },
   "infrastructure": {
-    "fingerprint": "4c2d570f32a01f4b70903466d5c3958afed0af299767c27e73f69ed5396224f4",
+    "fingerprint": "407d514c760b0ed2209f3c756f00dec296ec8d36a35d517164b04a8237e1590c",
     "reviewer": "docs_review_with_coordinator_semantic_review",
     "outcome": "updated",
-    "rationale": "Compared optional release generation mode/model/URL defaults with runbook and healthy packaged evidence. Independently parsed25-table parity/new clone clarification3checkpoints0calls and five-session profile with denial flags. Coordinator reviewed authored docs. No restored semantic generation, simultaneous inference, native zoom or complete release-security claim."
+    "rationale": "Reviewed architecture/runbook language-default changes and release startup evidence without configuration or deployment scope expansion. Coordinator reviewed authored documentation and screenshot; no generic linguistic accuracy, account-deletion execution or strict production-readiness claim."
   }
 }

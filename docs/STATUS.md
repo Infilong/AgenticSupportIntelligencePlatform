@@ -1,6 +1,18 @@
 # Current status
 
-## Final demo disposition
+## Current narrow repair
+
+[Question-language matching](plans/completed/language-matching.md) repairs new Chinese questions
+being saved as English from the workspace default. New manual-message admission defaults to
+Match question with server-side script detection; explicit language overrides remain available.
+Chrome verified exact “删除账户确认” resolved to Chinese and produced a Chinese answer from
+an English DELETION-REQUEST source; quotations stayed English. Three focused PostgreSQL checks,
+21 focused units and frontend49 tests/build pass. Full backend132 units passed45.01s with a fresh workspace basetemp after the retained temporary-
+directory permission errors; one existing Starlette warning remains. Exact evidence is in the
+completed record. This fix does not reopen completed demo scope or
+the deferred M5/M6 quality/release gates.
+
+## Previous final demo disposition
 
 Final demo checkpoint: [local four-pipeline comparisons](plans/completed/m5-local-comparisons.md).
 The user approved demo acceptance and deferral of remaining quality/release gaps. Earlier

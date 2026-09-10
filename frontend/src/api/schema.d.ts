@@ -1129,9 +1129,10 @@ export interface components {
             original: string;
             /**
              * Language
+             * @default auto
              * @enum {string}
              */
-            language: "en" | "ja" | "zh";
+            language: "auto" | "en" | "ja" | "zh";
         };
         /** MessagePage */
         MessagePage: {

@@ -356,7 +356,10 @@ The run remains linked through response, sources, workflow and history. See RUNB
 
 Settings groups member access with an administrator-only default language and the configured
 local embedding/reranking identities. Migration0013 adds a constrained workspace default (en);
-new manual-message forms preselect it, while every admitted message keeps its explicit language.
+new manual-message forms default to “Match question”. The server resolves optional `auto`
+language from kana/Han/Latin scripts, falling back to the workspace language if none occurs.
+Explicit EN/JA/ZH selections win; every admitted message stores its resolved language. Han-only
+Japanese is ambiguous and needs an explicit override. Existing messages and imports are unchanged.
 The configuration endpoint never returns credentials, connection strings or cache paths.
 Manual generation is explicitly attributed; optional local generation is configured separately.
 Paid/cloud generation remains unavailable;

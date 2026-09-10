@@ -541,7 +541,10 @@ the same form/file remains open; selecting a file again is a new import, not con
 
 ## Settings and usage
 
-Settings → Processing defaults lets an admin preselect en/ja/zh for new manual messages.
+Settings → Processing defaults sets the fallback language when a new question has no recognized
+EN/JA/ZH script. The composer defaults to “Match question”: kana selects Japanese, otherwise Han
+selects Chinese, otherwise Latin letters select English. Explicit language selections override
+that heuristic; select Japanese manually for ambiguous Han-only wording.
 Existing messages and JSONL imports retain their own explicit language. Settings also links
 member management and shows configured local model identities/revisions, alongside the explicit
 configured manual/local generation mode. This display does not probe provider readiness.

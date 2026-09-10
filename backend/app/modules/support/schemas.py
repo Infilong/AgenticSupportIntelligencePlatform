@@ -17,7 +17,7 @@ from app.modules.support.projections import (
 class MessageInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     original: str = Field(min_length=1, max_length=1000)
-    language: Literal["en", "ja", "zh"]
+    language: Literal["auto", "en", "ja", "zh"] = "auto"
 
     @field_validator("original")
     @classmethod

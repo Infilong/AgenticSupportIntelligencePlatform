@@ -25,6 +25,7 @@ def test_requested_language_and_server_owned_citations(monkeypatch, language, na
 
         def invoke(self, messages):
             assert name in messages[0]["content"]
+            assert f"Translate supported facts into {name}" in messages[0]["content"]
             return AIMessage(content=json.dumps({"answer": "A draft", "source_ids": [1]}))
 
     monkeypatch.setattr(provider, "ChatOllama", Model)

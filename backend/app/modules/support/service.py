@@ -7,7 +7,9 @@ from sqlalchemy import func, select
 
 from app.jobs.queue import JobCancelled, authorize, enqueue, owned, request_cancel
 from app.modules.support.context import citations, digest, validate_sources
+from app.modules.support.language import question_language
 from app.modules.support.models import Handoff, Message, SupportRun
+from app.modules.workspaces.models import Workspace
 from app.modules.workspaces.service import membership
 from app.providers.development_generation import request_for
 
@@ -73,7 +75,11 @@ def create_message(db, workspace_id, actor_id, data, key):
         workspace_id=workspace_id,
         actor_id=actor_id,
         original=data.original,
-        language=data.language,
+        language=(
+            question_language(data.original, db.get(Workspace, workspace_id).default_language)
+            if data.language == "auto"
+            else data.language
+        ),
         submission_key=key,
         input_hash=value,
     )

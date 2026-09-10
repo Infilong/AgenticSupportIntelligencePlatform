@@ -9,6 +9,7 @@ from app.modules.support.schemas import MessageInput
 
 
 class ComparisonInput(MessageInput):
+    language: Literal["en", "ja", "zh"]
     generation_mode: Literal["manual", "local_ollama"] = "manual"
 
 
