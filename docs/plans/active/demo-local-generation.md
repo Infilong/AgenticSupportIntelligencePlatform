@@ -56,3 +56,14 @@ Final independent documentation review verified the six saved local-model runs a
 PostgreSQL evidence and renewed the five affected receipts. Final preparation56 tests pass16.33s
 at `.artifacts/m0/prep-20260910T031832113643Z`; final10 provider units pass1.15s and Ruff/format
 checks pass. The demo fix is complete; further RAG refinement remains deferred.
+
+Post-checkpoint Chrome verification: run `b80d0bb6-2a43-430d-abe9-e697d0d3b240`
+was approved after inspecting both saved source passages. The worker completed publication;
+an authenticated API check confirmed unchanged draft, citations and model-call IDs, the exact
+approved response, and the recorded administrator reason. Evidence:
+`.artifacts/demo-chinese-review/en-team-approved.json` and `chrome-local-approval-history.png`.
+This closes the real local-generation-to-approval browser journey; no customer message was sent.
+Source checkpoint `b967cbeb50961055ed14685f8fa88b19b16e5363` passed all five jobs in hosted
+CI34432941130, including real PostgreSQL regressions, frontend and packaged-release smoke.
+That CI smoke retains its configured manual mode; local inference proof comes from the native
+demo evidence above, not from the packaging check.
